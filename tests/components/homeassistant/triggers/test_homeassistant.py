@@ -4,21 +4,21 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.core import CoreState, menuai
+from menuai.helpers.typing import ConfigType
+from menuai.setup import async_setup_component
 
 from tests.common import async_mock_service
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             automation.DOMAIN: {
                 "alias": "hello",
-                "trigger": {"platform": "homeassistant", "event": "start"},
+                "trigger": {"platform": "menuai", "event": "start"},
                 "action": {
                     "service": "test.automation",
                     "data_template": {"id": "{{ trigger.id}}"},
@@ -27,44 +27,44 @@ from tests.common import async_mock_service
         }
     ],
 )
-@pytest.mark.usefixtures("mock_hass_config")
-async def test_if_fires_on_hass_start(
-    hass: HomeAssistant, hass_config: ConfigType
+@pytest.mark.usefixtures("mock_menuai_config")
+async def test_if_fires_on_menuai_start(
+    menuai: menuai, menuai_config: ConfigType
 ) -> None:
-    """Test the firing when Home Assistant starts."""
-    calls = async_mock_service(hass, "test", "automation")
-    hass.set_state(CoreState.not_running)
+    """Test the firing when MenuAI starts."""
+    calls = async_mock_service(menuai, "test", "automation")
+    menuai.set_state(CoreState.not_running)
 
-    assert await async_setup_component(hass, automation.DOMAIN, hass_config)
-    assert automation.is_on(hass, "automation.hello")
+    assert await async_setup_component(menuai, automation.DOMAIN, menuai_config)
+    assert automation.is_on(menuai, "automation.hello")
     assert len(calls) == 0
 
-    await hass.async_start()
-    await hass.async_block_till_done()
-    assert automation.is_on(hass, "automation.hello")
+    await menuai.async_start()
+    await menuai.async_block_till_done()
+    assert automation.is_on(menuai, "automation.hello")
     assert len(calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         automation.DOMAIN, automation.SERVICE_RELOAD, blocking=True
     )
 
-    assert automation.is_on(hass, "automation.hello")
+    assert automation.is_on(menuai, "automation.hello")
     assert len(calls) == 1
     assert calls[0].data["id"] == 0
 
 
-async def test_if_fires_on_hass_shutdown(hass: HomeAssistant) -> None:
-    """Test the firing when Home Assistant shuts down."""
-    calls = async_mock_service(hass, "test", "automation")
-    hass.set_state(CoreState.not_running)
+async def test_if_fires_on_menuai_shutdown(menuai: menuai) -> None:
+    """Test the firing when MenuAI shuts down."""
+    calls = async_mock_service(menuai, "test", "automation")
+    menuai.set_state(CoreState.not_running)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
                 "alias": "hello",
-                "trigger": {"platform": "homeassistant", "event": "shutdown"},
+                "trigger": {"platform": "menuai", "event": "shutdown"},
                 "action": {
                     "service": "test.automation",
                     "data_template": {"id": "{{ trigger.id}}"},
@@ -72,15 +72,15 @@ async def test_if_fires_on_hass_shutdown(hass: HomeAssistant) -> None:
             }
         },
     )
-    assert automation.is_on(hass, "automation.hello")
+    assert automation.is_on(menuai, "automation.hello")
     assert len(calls) == 0
 
-    await hass.async_start()
-    assert automation.is_on(hass, "automation.hello")
-    await hass.async_block_till_done()
+    await menuai.async_start()
+    assert automation.is_on(menuai, "automation.hello")
+    await menuai.async_block_till_done()
     assert len(calls) == 0
 
-    with patch.object(hass.loop, "stop"):
-        await hass.async_stop()
+    with patch.object(menuai.loop, "stop"):
+        await menuai.async_stop()
     assert len(calls) == 1
     assert calls[0].data["id"] == 0

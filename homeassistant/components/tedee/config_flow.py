@@ -13,15 +13,15 @@ from aiotedee import (
 )
 import voluptuous as vol
 
-from homeassistant.components.webhook import async_generate_id as webhook_generate_id
-from homeassistant.config_entries import (
+from menuai.components.webhook import async_generate_id as webhook_generate_id
+from menuai.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_WEBHOOK_ID
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_HOST, CONF_WEBHOOK_ID
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_LOCAL_ACCESS_TOKEN, DOMAIN, NAME
 
@@ -49,7 +49,7 @@ class TedeeConfigFlow(ConfigFlow, domain=DOMAIN):
             tedee_client = TedeeClient(
                 local_token=local_access_token,
                 local_ip=host,
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             try:
                 local_bridge = await tedee_client.get_local_bridge()

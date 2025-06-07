@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pyatv.interface import AppleTV as AppleTVInterface
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from . import AppleTVManager
 from .const import DOMAIN, SIGNAL_CONNECTED, SIGNAL_DISCONNECTED
@@ -30,8 +30,8 @@ class AppleTVEntity(Entity):
             name=name,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Handle when an entity is about to be added to Home Assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle when an entity is about to be added to MenuAI."""
 
         @callback
         def _async_connected(atv: AppleTVInterface) -> None:
@@ -53,12 +53,12 @@ class AppleTVEntity(Entity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, f"{SIGNAL_CONNECTED}_{self.unique_id}", _async_connected
+                self.menuai, f"{SIGNAL_CONNECTED}_{self.unique_id}", _async_connected
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SIGNAL_DISCONNECTED}_{self.unique_id}",
                 _async_disconnected,
             )

@@ -7,13 +7,13 @@ from freezegun.api import FrozenDateTimeFactory
 from py_aosmith import AOSmithUnknownException
 import pytest
 
-from homeassistant.components.aosmith.const import (
+from menuai.components.aosmith.const import (
     DOMAIN,
     FAST_INTERVAL,
     REGULAR_INTERVAL,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .conftest import build_device_fixture
 
@@ -28,27 +28,27 @@ async def test_config_entry_setup(init_integration: MockConfigEntry) -> None:
 
 
 async def test_config_entry_not_ready_get_devices_error(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test the config entry not ready when get_devices fails."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.aosmith.config_flow.AOSmithAPIClient.get_devices",
+        "menuai.components.aosmith.config_flow.AOSmithAPIClient.get_devices",
         side_effect=AOSmithUnknownException("Unknown error"),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_config_entry_not_ready_get_energy_use_data_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the config entry not ready when get_energy_use_data fails."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     get_devices_fixture = [
         build_device_fixture(
@@ -61,16 +61,16 @@ async def test_config_entry_not_ready_get_energy_use_data_error(
 
     with (
         patch(
-            "homeassistant.components.aosmith.config_flow.AOSmithAPIClient.get_devices",
+            "menuai.components.aosmith.config_flow.AOSmithAPIClient.get_devices",
             return_value=get_devices_fixture,
         ),
         patch(
-            "homeassistant.components.aosmith.config_flow.AOSmithAPIClient.get_energy_use_data",
+            "menuai.components.aosmith.config_flow.AOSmithAPIClient.get_energy_use_data",
             side_effect=AOSmithUnknownException("Unknown error"),
         ),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
@@ -91,20 +91,20 @@ async def test_config_entry_not_ready_get_energy_use_data_error(
 )
 async def test_update(
     freezer: FrozenDateTimeFactory,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     time_to_wait: timedelta,
     expected_call_count: int,
 ) -> None:
     """Test data update with differing intervals depending on device status."""
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert mock_client.get_devices.call_count == 1
 
     freezer.tick(time_to_wait)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert mock_client.get_devices.call_count == 1 + expected_call_count

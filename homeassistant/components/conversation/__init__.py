@@ -1,4 +1,4 @@
-"""Support for functionality to have conversations with Home Assistant."""
+"""Support for functionality to have conversations with MenuAI."""
 
 from __future__ import annotations
 
@@ -6,23 +6,23 @@ from collections.abc import Callable
 import logging
 from typing import Literal
 
-from hassil.recognize import RecognizeResult
+from menuaiil.recognize import RecognizeResult
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import MATCH_ALL
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry
+from menuai.const import MATCH_ALL
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, intent
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, intent
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
 
 from .agent_manager import (
     AgentInfo,
@@ -122,29 +122,29 @@ CONFIG_SCHEMA = vol.Schema(
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_set_agent(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     agent: AbstractConversationAgent,
 ) -> None:
     """Set the agent to handle the conversations."""
-    get_agent_manager(hass).async_set_agent(config_entry.entry_id, agent)
+    get_agent_manager(menuai).async_set_agent(config_entry.entry_id, agent)
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_unset_agent(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
 ) -> None:
     """Set the agent to handle the conversations."""
-    get_agent_manager(hass).async_unset_agent(config_entry.entry_id)
+    get_agent_manager(menuai).async_unset_agent(config_entry.entry_id)
 
 
 @callback
 def async_get_conversation_languages(
-    hass: HomeAssistant, agent_id: str | None = None
+    menuai: menuai, agent_id: str | None = None
 ) -> set[str] | Literal["*"]:
     """Return languages supported by conversation agents.
 
@@ -152,11 +152,11 @@ def async_get_conversation_languages(
     If no agent is specified, return a set with the union of languages supported by
     all conversation agents.
     """
-    agent_manager = get_agent_manager(hass)
+    agent_manager = get_agent_manager(menuai)
     agents: list[ConversationEntity | AbstractConversationAgent]
 
     if agent_id:
-        agent = async_get_agent(hass, agent_id)
+        agent = async_get_agent(menuai, agent_id)
 
         if agent is None:
             raise ValueError(f"Agent {agent_id} not found")
@@ -168,7 +168,7 @@ def async_get_conversation_languages(
         agents = [agent]
 
     else:
-        agents = list(hass.data[DATA_COMPONENT].entities)
+        agents = list(menuai.data[DATA_COMPONENT].entities)
         for info in agent_manager.async_get_agent_info():
             agent = agent_manager.async_get_agent(info.id)
             assert agent is not None
@@ -190,11 +190,11 @@ def async_get_conversation_languages(
 
 @callback
 def async_get_agent_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     agent_id: str | None = None,
 ) -> AgentInfo | None:
     """Get information on the agent or None if not found."""
-    agent = async_get_agent(hass, agent_id)
+    agent = async_get_agent(menuai, agent_id)
 
     if agent is None:
         return None
@@ -209,7 +209,7 @@ def async_get_agent_info(
             supports_streaming=agent.supports_streaming,
         )
 
-    manager = get_agent_manager(hass)
+    manager = get_agent_manager(menuai)
 
     for agent_info in manager.async_get_agent_info():
         if agent_info.id == agent_id:
@@ -219,10 +219,10 @@ def async_get_agent_info(
 
 
 async def async_prepare_agent(
-    hass: HomeAssistant, agent_id: str | None, language: str
+    menuai: menuai, agent_id: str | None, language: str
 ) -> None:
     """Prepare given agent."""
-    agent = async_get_agent(hass, agent_id)
+    agent = async_get_agent(menuai, agent_id)
 
     if agent is None:
         raise ValueError("Invalid agent specified")
@@ -231,20 +231,20 @@ async def async_prepare_agent(
 
 
 async def async_handle_sentence_triggers(
-    hass: HomeAssistant, user_input: ConversationInput
+    menuai: menuai, user_input: ConversationInput
 ) -> str | None:
     """Try to match input against sentence triggers and return response text.
 
     Returns None if no match occurred.
     """
-    default_agent = async_get_agent(hass)
+    default_agent = async_get_agent(menuai)
     assert isinstance(default_agent, DefaultAgent)
 
     return await default_agent.async_handle_sentence_triggers(user_input)
 
 
 async def async_handle_intents(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_input: ConversationInput,
     *,
     intent_filter: Callable[[RecognizeResult], bool] | None = None,
@@ -253,7 +253,7 @@ async def async_handle_intents(
 
     Returns None if no match occurred.
     """
-    default_agent = async_get_agent(hass)
+    default_agent = async_get_agent(menuai)
     assert isinstance(default_agent, DefaultAgent)
 
     return await default_agent.async_handle_intents(
@@ -261,22 +261,22 @@ async def async_handle_intents(
     )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Register the process service."""
-    entity_component = EntityComponent[ConversationEntity](_LOGGER, DOMAIN, hass)
-    hass.data[DATA_COMPONENT] = entity_component
+    entity_component = EntityComponent[ConversationEntity](_LOGGER, DOMAIN, menuai)
+    menuai.data[DATA_COMPONENT] = entity_component
 
     await async_setup_default_agent(
-        hass, entity_component, config.get(DOMAIN, {}).get("intents", {})
+        menuai, entity_component, config.get(DOMAIN, {}).get("intents", {})
     )
 
     # Temporary migration. We can remove this in 2024.10
-    from homeassistant.components.assist_pipeline import (  # pylint: disable=import-outside-toplevel
+    from menuai.components.assist_pipeline import (  # pylint: disable=import-outside-toplevel
         async_migrate_engine,
     )
 
     async_migrate_engine(
-        hass, "conversation", OLD_HOME_ASSISTANT_AGENT, HOME_ASSISTANT_AGENT
+        menuai, "conversation", OLD_HOME_ASSISTANT_AGENT, HOME_ASSISTANT_AGENT
     )
 
     async def handle_process(service: ServiceCall) -> ServiceResponse:
@@ -285,7 +285,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _LOGGER.debug("Processing: <%s>", text)
         try:
             result = await async_converse(
-                hass=hass,
+                menuai=menuai,
                 text=text,
                 conversation_id=service.data.get(ATTR_CONVERSATION_ID),
                 context=service.context,
@@ -293,7 +293,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 agent_id=service.data.get(ATTR_AGENT_ID),
             )
         except intent.IntentHandleError as err:
-            raise HomeAssistantError(f"Error processing {text}: {err}") from err
+            raise menuaiError(f"Error processing {text}: {err}") from err
 
         if service.return_response:
             return result.as_dict()
@@ -302,30 +302,30 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     async def handle_reload(service: ServiceCall) -> None:
         """Reload intents."""
-        await hass.data[DATA_DEFAULT_ENTITY].async_reload(
+        await menuai.data[DATA_DEFAULT_ENTITY].async_reload(
             language=service.data.get(ATTR_LANGUAGE)
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_PROCESS,
         handle_process,
         schema=SERVICE_PROCESS_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_RELOAD, handle_reload, schema=SERVICE_RELOAD_SCHEMA
     )
-    async_setup_conversation_http(hass)
+    async_setup_conversation_http(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)

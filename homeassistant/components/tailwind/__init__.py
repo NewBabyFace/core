@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .coordinator import TailwindConfigEntry, TailwindDataUpdateCoordinator
@@ -12,9 +12,9 @@ from .coordinator import TailwindConfigEntry, TailwindDataUpdateCoordinator
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.COVER, Platform.NUMBER]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TailwindConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TailwindConfigEntry) -> bool:
     """Set up Tailwind device from a config entry."""
-    coordinator = TailwindDataUpdateCoordinator(hass, entry)
+    coordinator = TailwindDataUpdateCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
@@ -22,7 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TailwindConfigEntry) -> 
     # Register the Tailwind device, since other entities will have it as a parent.
     # This prevents a child device being created before the parent ending up
     # with a missing via_device.
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, coordinator.data.device_id)},
@@ -32,11 +32,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: TailwindConfigEntry) -> 
         sw_version=coordinator.data.firmware_version,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TailwindConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TailwindConfigEntry) -> bool:
     """Unload Tailwind config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -28,8 +28,8 @@ from aioshelly.const import (
     MODEL_WALL_DISPLAY_X2,
 )
 
-from homeassistant.components.number import NumberMode
-from homeassistant.components.sensor import SensorDeviceClass
+from menuai.components.number import NumberMode
+from menuai.components.sensor import SensorDeviceClass
 
 DOMAIN: Final = "shelly"
 

@@ -8,10 +8,10 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.acaia.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.acaia.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -19,15 +19,15 @@ pytestmark = pytest.mark.usefixtures("init_integration")
 
 
 async def test_load_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test loading and unloading the integration."""
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -36,7 +36,7 @@ async def test_load_unload_config_entry(
     "exception", [AcaiaError, AcaiaDeviceNotFound("Boom"), TimeoutError]
 )
 async def test_update_exception_leads_to_active_disconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_scale: MagicMock,
     freezer: FrozenDateTimeFactory,
     exception: Exception,
@@ -47,8 +47,8 @@ async def test_update_exception_leads_to_active_disconnect(
     mock_scale.connected = False
 
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     mock_scale.device_disconnected_handler.assert_called_once()
 

@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for the Homeassistant Analytics integration."""
+"""DataUpdateCoordinator for the menuai Analytics integration."""
 
 from __future__ import annotations
 
@@ -6,16 +6,16 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from python_homeassistant_analytics import (
+from python_menuai_analytics import (
     CustomIntegration,
-    HomeassistantAnalyticsClient,
-    HomeassistantAnalyticsConnectionError,
-    HomeassistantAnalyticsNotModifiedError,
+    menuaiAnalyticsClient,
+    menuaiAnalyticsConnectionError,
+    menuaiAnalyticsNotModifiedError,
 )
-from python_homeassistant_analytics.models import Addon
+from python_menuai_analytics.models import Addon
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_TRACKED_ADDONS,
@@ -40,20 +40,20 @@ class AnalyticsData:
     custom_integrations: dict[str, int]
 
 
-class HomeassistantAnalyticsDataUpdateCoordinator(DataUpdateCoordinator[AnalyticsData]):
-    """A Homeassistant Analytics Data Update Coordinator."""
+class menuaiAnalyticsDataUpdateCoordinator(DataUpdateCoordinator[AnalyticsData]):
+    """A menuai Analytics Data Update Coordinator."""
 
     config_entry: AnalyticsInsightsConfigEntry
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AnalyticsInsightsConfigEntry,
-        client: HomeassistantAnalyticsClient,
+        client: menuaiAnalyticsClient,
     ) -> None:
-        """Initialize the Homeassistant Analytics data coordinator."""
+        """Initialize the menuai Analytics data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -73,11 +73,11 @@ class HomeassistantAnalyticsDataUpdateCoordinator(DataUpdateCoordinator[Analytic
             addons_data = await self._client.get_addons()
             data = await self._client.get_current_analytics()
             custom_data = await self._client.get_custom_integrations()
-        except HomeassistantAnalyticsConnectionError as err:
+        except menuaiAnalyticsConnectionError as err:
             raise UpdateFailed(
-                "Error communicating with Homeassistant Analytics"
+                "Error communicating with menuai Analytics"
             ) from err
-        except HomeassistantAnalyticsNotModifiedError:
+        except menuaiAnalyticsNotModifiedError:
             return self.data
         addons = {
             addon: get_addon_value(addons_data, addon) for addon in self._tracked_addons

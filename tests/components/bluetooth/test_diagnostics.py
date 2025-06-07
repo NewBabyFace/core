@@ -6,14 +6,14 @@ from bleak.backends.scanner import AdvertisementData, BLEDevice
 from bluetooth_adapters import DEFAULT_ADDRESS
 import pytest
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth import (
     MONOTONIC_TIME,
     BaseHaRemoteScanner,
     HaBluetoothConnector,
     HaScanner,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import (
     FakeScannerMixin,
@@ -43,11 +43,11 @@ class FakeHaScanner(FakeScannerMixin, HaScanner):
         }
 
 
-@patch("homeassistant.components.bluetooth.HaScanner", FakeHaScanner)
+@patch("menuai.components.bluetooth.HaScanner", FakeHaScanner)
 @pytest.mark.usefixtures("enable_bluetooth", "two_adapters")
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_bleak_scanner_start: MagicMock,
 ) -> None:
     """Test we can setup and unsetup bluetooth with multiple adapters."""
@@ -59,11 +59,11 @@ async def test_diagnostics(
 
     with (
         patch(
-            "homeassistant.components.bluetooth.diagnostics.platform.system",
+            "menuai.components.bluetooth.diagnostics.platform.system",
             return_value="Linux",
         ),
         patch(
-            "homeassistant.components.bluetooth.diagnostics.get_dbus_managed_objects",
+            "menuai.components.bluetooth.diagnostics.get_dbus_managed_objects",
             return_value={
                 "org.bluez": {
                     "/org/bluez/hci0": {
@@ -85,12 +85,12 @@ async def test_diagnostics(
         entry2 = MockConfigEntry(
             domain=bluetooth.DOMAIN, data={}, unique_id="00:00:00:00:00:02"
         )
-        entry2.add_to_hass(hass)
+        entry2.add_to_menuai(menuai)
 
-        assert await hass.config_entries.async_setup(entry2.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry2.entry_id)
+        await menuai.async_block_till_done()
 
-        diag = await get_diagnostics_for_config_entry(hass, hass_client, entry2)
+        diag = await get_diagnostics_for_config_entry(menuai, menuai_client, entry2)
         expected = {
             "adapters": {
                 "hci0": {
@@ -156,7 +156,7 @@ async def test_diagnostics(
                         "passive_scan": False,
                         "product": "Bluetooth Adapter 5.0",
                         "product_id": "aa01",
-                        "sw_version": "homeassistant",
+                        "sw_version": "menuai",
                         "vendor_id": "cc01",
                     },
                     "hci1": {
@@ -167,7 +167,7 @@ async def test_diagnostics(
                         "passive_scan": True,
                         "product": "Bluetooth Adapter 5.0",
                         "product_id": "aa01",
-                        "sw_version": "homeassistant",
+                        "sw_version": "menuai",
                         "vendor_id": "cc01",
                     },
                 },
@@ -252,12 +252,12 @@ async def test_diagnostics(
         )
 
 
-@patch("homeassistant.components.bluetooth.HaScanner", FakeHaScanner)
+@patch("menuai.components.bluetooth.HaScanner", FakeHaScanner)
 @pytest.mark.usefixtures(
     "macos_adapter", "mock_bleak_scanner_start", "mock_bluetooth_adapters"
 )
 async def test_diagnostics_macos(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test diagnostics for macos."""
     # Normally we do not want to patch our classes, but since bleak will import
@@ -272,11 +272,11 @@ async def test_diagnostics_macos(
 
     with (
         patch(
-            "homeassistant.components.bluetooth.diagnostics.platform.system",
+            "menuai.components.bluetooth.diagnostics.platform.system",
             return_value="Darwin",
         ),
         patch(
-            "homeassistant.components.bluetooth.diagnostics.get_dbus_managed_objects",
+            "menuai.components.bluetooth.diagnostics.get_dbus_managed_objects",
             return_value={},
         ),
     ):
@@ -286,14 +286,14 @@ async def test_diagnostics_macos(
             title="Core Bluetooth",
             unique_id=DEFAULT_ADDRESS,
         )
-        entry1.add_to_hass(hass)
+        entry1.add_to_menuai(menuai)
 
-        assert await hass.config_entries.async_setup(entry1.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry1.entry_id)
+        await menuai.async_block_till_done()
 
-        inject_advertisement(hass, switchbot_device, switchbot_adv)
+        inject_advertisement(menuai, switchbot_device, switchbot_adv)
 
-        diag = await get_diagnostics_for_config_entry(hass, hass_client, entry1)
+        diag = await get_diagnostics_for_config_entry(menuai, menuai_client, entry1)
         assert diag == {
             "adapters": {
                 "Core Bluetooth": {
@@ -439,7 +439,7 @@ async def test_diagnostics_macos(
         }
 
 
-@patch("homeassistant.components.bluetooth.HaScanner", FakeHaScanner)
+@patch("menuai.components.bluetooth.HaScanner", FakeHaScanner)
 @pytest.mark.usefixtures(
     "enable_bluetooth",
     "one_adapter",
@@ -447,7 +447,7 @@ async def test_diagnostics_macos(
     "mock_bluetooth_adapters",
 )
 async def test_diagnostics_remote_adapter(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test diagnostics for remote adapter."""
     manager = _get_manager()
@@ -475,15 +475,15 @@ async def test_diagnostics_remote_adapter(
 
     with (
         patch(
-            "homeassistant.components.bluetooth.diagnostics.platform.system",
+            "menuai.components.bluetooth.diagnostics.platform.system",
             return_value="Linux",
         ),
         patch(
-            "homeassistant.components.bluetooth.diagnostics.get_dbus_managed_objects",
+            "menuai.components.bluetooth.diagnostics.get_dbus_managed_objects",
             return_value={},
         ),
     ):
-        entry1 = hass.config_entries.async_entries(bluetooth.DOMAIN)[0]
+        entry1 = menuai.config_entries.async_entries(bluetooth.DOMAIN)[0]
         connector = (
             HaBluetoothConnector(MockBleakClient, "mock_bleak_client", lambda: False),
         )
@@ -492,9 +492,9 @@ async def test_diagnostics_remote_adapter(
         cancel = manager.async_register_scanner(scanner)
 
         scanner.inject_advertisement(switchbot_device, switchbot_adv)
-        inject_advertisement(hass, switchbot_device, switchbot_adv)
+        inject_advertisement(menuai, switchbot_device, switchbot_adv)
 
-        diag = await get_diagnostics_for_config_entry(hass, hass_client, entry1)
+        diag = await get_diagnostics_for_config_entry(menuai, menuai_client, entry1)
 
         expected = {
             "adapters": {

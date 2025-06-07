@@ -6,10 +6,10 @@ import time
 
 from ld2410_ble import LD2410BLE, LD2410BLEState
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -25,11 +25,11 @@ class LD2410BLECoordinator(DataUpdateCoordinator[None]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, ld2410_ble: LD2410BLE
+        self, menuai: menuai, config_entry: ConfigEntry, ld2410_ble: LD2410BLE
     ) -> None:
         """Initialise the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -40,7 +40,7 @@ class LD2410BLECoordinator(DataUpdateCoordinator[None]):
         self.connected = False
         self._last_update_time = NEVER_TIME
         self._debounce_cancel: CALLBACK_TYPE | None = None
-        self._debounced_update_job = HassJob(
+        self._debounced_update_job = menuaiJob(
             self._async_handle_debounced_update,
             f"LD2410 {ld2410_ble.address} BLE debounced update",
         )
@@ -63,7 +63,7 @@ class LD2410BLECoordinator(DataUpdateCoordinator[None]):
             return
         if self._debounce_cancel is None:
             self._debounce_cancel = async_call_later(
-                self.hass, DEBOUNCE_SECONDS, self._debounced_update_job
+                self.menuai, DEBOUNCE_SECONDS, self._debounced_update_job
             )
 
     @callback

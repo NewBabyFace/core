@@ -8,16 +8,16 @@ from screenlogicpy.const.data import ATTR, DEVICE, GROUP, VALUE
 from screenlogicpy.const.msg import CODE
 from screenlogicpy.device_const.system import EQUIPMENT_FLAG
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ScreenlogicDataUpdateCoordinator
 from .entity import (
@@ -102,7 +102,7 @@ SUPPORTED_SCG_NUMBERS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ScreenLogicConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -195,7 +195,7 @@ class ScreenLogicChemistryNumber(ScreenLogicPushNumber):
         try:
             await self.gateway.async_set_chem_data(**{self._data_key: value})
         except (ScreenLogicCommunicationError, ScreenLogicError) as sle:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set '{self._data_key}' to {value}: {sle.msg}"
             ) from sle
         _LOGGER.debug("Set '%s' to %s", self._data_key, value)
@@ -214,7 +214,7 @@ class ScreenLogicSCGNumber(ScreenLogicNumber):
         try:
             await self.gateway.async_set_scg_config(**{self._data_key: value})
         except (ScreenLogicCommunicationError, ScreenLogicError) as sle:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set '{self._data_key}' to {value}: {sle.msg}"
             ) from sle
         _LOGGER.debug("Set '%s' to %s", self._data_key, value)

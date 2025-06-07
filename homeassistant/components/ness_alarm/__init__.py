@@ -7,24 +7,24 @@ import logging
 from nessclient import ArmingMode, ArmingState, Client
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
     BinarySensorDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CODE,
     ATTR_STATE,
     CONF_HOST,
     CONF_SCAN_INTERVAL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.start import async_at_started
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.start import async_at_started
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ SERVICE_SCHEMA_AUX = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Ness Alarm platform."""
 
     conf = config[DOMAIN]
@@ -107,40 +107,40 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         update_interval=scan_interval.total_seconds(),
         infer_arming_state=infer_arming_state,
     )
-    hass.data[DATA_NESS] = client
+    menuai.data[DATA_NESS] = client
 
     async def _close(event):
         await client.close()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _close)
 
     async def _started(event):
-        # Force update for current arming status and current zone states (once Home Assistant has finished loading required sensors and panel)
+        # Force update for current arming status and current zone states (once MenuAI has finished loading required sensors and panel)
         _LOGGER.debug("invoking client keepalive() & update()")
-        hass.loop.create_task(client.keepalive())
-        hass.loop.create_task(client.update())
+        menuai.loop.create_task(client.keepalive())
+        menuai.loop.create_task(client.update())
 
-    async_at_started(hass, _started)
+    async_at_started(menuai, _started)
 
-    hass.async_create_task(
+    menuai.async_create_task(
         async_load_platform(
-            hass, Platform.BINARY_SENSOR, DOMAIN, {CONF_ZONES: zones}, config
+            menuai, Platform.BINARY_SENSOR, DOMAIN, {CONF_ZONES: zones}, config
         )
     )
-    hass.async_create_task(
-        async_load_platform(hass, Platform.ALARM_CONTROL_PANEL, DOMAIN, {}, config)
+    menuai.async_create_task(
+        async_load_platform(menuai, Platform.ALARM_CONTROL_PANEL, DOMAIN, {}, config)
     )
 
     def on_zone_change(zone_id: int, state: bool):
         """Receives and propagates zone state updates."""
         async_dispatcher_send(
-            hass, SIGNAL_ZONE_CHANGED, ZoneChangedData(zone_id=zone_id, state=state)
+            menuai, SIGNAL_ZONE_CHANGED, ZoneChangedData(zone_id=zone_id, state=state)
         )
 
     def on_state_change(arming_state: ArmingState, arming_mode: ArmingMode | None):
         """Receives and propagates arming state updates."""
         async_dispatcher_send(
-            hass, SIGNAL_ARMING_STATE_CHANGED, arming_state, arming_mode
+            menuai, SIGNAL_ARMING_STATE_CHANGED, arming_state, arming_mode
         )
 
     client.on_zone_change(on_zone_change)
@@ -152,10 +152,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def handle_aux(call: ServiceCall) -> None:
         await client.aux(call.data[ATTR_OUTPUT_ID], call.data[ATTR_STATE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_PANIC, handle_panic, schema=SERVICE_SCHEMA_PANIC
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_AUX, handle_aux, schema=SERVICE_SCHEMA_AUX
     )
 

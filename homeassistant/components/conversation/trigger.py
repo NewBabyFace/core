@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from hassil.recognize import RecognizeResult
-from hassil.util import (
+from menuaiil.recognize import RecognizeResult
+from menuaiil.util import (
     PUNCTUATION_END,
     PUNCTUATION_END_WORD,
     PUNCTUATION_START,
@@ -13,12 +13,12 @@ from hassil.util import (
 )
 import voluptuous as vol
 
-from homeassistant.const import CONF_COMMAND, CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.script import ScriptRunResult
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import UNDEFINED, ConfigType
+from menuai.const import CONF_COMMAND, CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.script import ScriptRunResult
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import UNDEFINED, ConfigType
 
 from .const import DATA_DEFAULT_ENTITY, DOMAIN
 from .models import ConversationInput
@@ -61,7 +61,7 @@ TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -70,7 +70,7 @@ async def async_attach_trigger(
     trigger_data = trigger_info["trigger_data"]
     sentences = config.get(CONF_COMMAND, [])
 
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     async def call_action(
         user_input: ConversationInput, result: RecognizeResult
@@ -104,7 +104,7 @@ async def async_attach_trigger(
         }
 
         # Wait for the automation to complete
-        if future := hass.async_run_hass_job(
+        if future := menuai.async_run_menuai_job(
             job,
             {"trigger": trigger_input},
         ):
@@ -122,4 +122,4 @@ async def async_attach_trigger(
         # two trigger copies for who will provide a response.
         return None
 
-    return hass.data[DATA_DEFAULT_ENTITY].register_trigger(sentences, call_action)
+    return menuai.data[DATA_DEFAULT_ENTITY].register_trigger(sentences, call_action)

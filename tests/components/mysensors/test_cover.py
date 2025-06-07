@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, call
 
 from mysensors.sensor import Sensor
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
     DOMAIN as COVER_DOMAIN,
@@ -17,12 +17,12 @@ from homeassistant.components.cover import (
     SERVICE_STOP_COVER,
     CoverState,
 )
-from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_BATTERY_LEVEL, ATTR_ENTITY_ID
+from menuai.core import menuai
 
 
 async def test_cover_node_percentage(
-    hass: HomeAssistant,
+    menuai: menuai,
     cover_node_percentage: Sensor,
     receive_message: Callable[[str], None],
     transport_write: MagicMock,
@@ -30,14 +30,14 @@ async def test_cover_node_percentage(
     """Test a cover percentage node."""
     entity_id = "cover.cover_node_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.CLOSED
     assert state.attributes[ATTR_CURRENT_POSITION] == 0
     assert state.attributes[ATTR_BATTERY_LEVEL] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -49,9 +49,9 @@ async def test_cover_node_percentage(
 
     receive_message("1;1;1;0;29;1\n")
     receive_message("1;1;1;0;3;50\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPENING
@@ -59,7 +59,7 @@ async def test_cover_node_percentage(
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -71,9 +71,9 @@ async def test_cover_node_percentage(
 
     receive_message("1;1;1;0;31;1\n")
     receive_message("1;1;1;0;3;50\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPEN
@@ -81,7 +81,7 @@ async def test_cover_node_percentage(
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -94,9 +94,9 @@ async def test_cover_node_percentage(
     receive_message("1;1;1;0;31;0\n")
     receive_message("1;1;1;0;29;1\n")
     receive_message("1;1;1;0;3;75\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPENING
@@ -104,9 +104,9 @@ async def test_cover_node_percentage(
 
     receive_message("1;1;1;0;29;0\n")
     receive_message("1;1;1;0;3;100\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPEN
@@ -114,7 +114,7 @@ async def test_cover_node_percentage(
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -126,9 +126,9 @@ async def test_cover_node_percentage(
 
     receive_message("1;1;1;0;30;1\n")
     receive_message("1;1;1;0;3;50\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.CLOSING
@@ -136,9 +136,9 @@ async def test_cover_node_percentage(
 
     receive_message("1;1;1;0;30;0\n")
     receive_message("1;1;1;0;3;0\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.CLOSED
@@ -146,7 +146,7 @@ async def test_cover_node_percentage(
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: entity_id, ATTR_POSITION: 25},
@@ -157,9 +157,9 @@ async def test_cover_node_percentage(
     assert transport_write.call_args == call("1;1;1;1;3;25\n")
 
     receive_message("1;1;1;0;3;25\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPEN
@@ -167,7 +167,7 @@ async def test_cover_node_percentage(
 
 
 async def test_cover_node_binary(
-    hass: HomeAssistant,
+    menuai: menuai,
     cover_node_binary: Sensor,
     receive_message: Callable[[str], None],
     transport_write: MagicMock,
@@ -175,12 +175,12 @@ async def test_cover_node_binary(
     """Test a cover binary node."""
     entity_id = "cover.cover_node_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.CLOSED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -192,16 +192,16 @@ async def test_cover_node_binary(
 
     receive_message("1;1;1;0;29;1\n")
     receive_message("1;1;1;0;2;1\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPENING
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -212,16 +212,16 @@ async def test_cover_node_binary(
     assert transport_write.call_args == call("1;1;1;1;31;1\n")
 
     receive_message("1;1;1;0;31;1\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPEN
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -233,25 +233,25 @@ async def test_cover_node_binary(
 
     receive_message("1;1;1;0;31;0\n")
     receive_message("1;1;1;0;29;1\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPENING
 
     receive_message("1;1;1;0;29;0\n")
     receive_message("1;1;1;0;2;1\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.OPEN
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -262,18 +262,18 @@ async def test_cover_node_binary(
     assert transport_write.call_args == call("1;1;1;1;30;1\n")
 
     receive_message("1;1;1;0;30;1\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.CLOSING
 
     receive_message("1;1;1;0;30;0\n")
     receive_message("1;1;1;0;2;0\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == CoverState.CLOSED

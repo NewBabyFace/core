@@ -23,17 +23,17 @@ from pyoverkiz.obfuscate import obfuscate_id
 from pyoverkiz.utils import generate_local_server, is_overkiz_gateway
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_TOKEN,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_API_TYPE, CONF_HUB, DEFAULT_SERVER, DOMAIN, LOGGER
 
@@ -56,7 +56,7 @@ class OverkizConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._api_type == APIType.LOCAL:
             user_input[CONF_VERIFY_SSL] = self._verify_ssl
             session = async_create_clientsession(
-                self.hass, verify_ssl=user_input[CONF_VERIFY_SSL]
+                self.menuai, verify_ssl=user_input[CONF_VERIFY_SSL]
             )
             client = OverkizClient(
                 username="",
@@ -67,7 +67,7 @@ class OverkizConfigFlow(ConfigFlow, domain=DOMAIN):
                 verify_ssl=user_input[CONF_VERIFY_SSL],
             )
         else:  # APIType.CLOUD
-            session = async_create_clientsession(self.hass)
+            session = async_create_clientsession(self.menuai)
             client = OverkizClient(
                 username=user_input[CONF_USERNAME],
                 password=user_input[CONF_PASSWORD],

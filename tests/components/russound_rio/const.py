@@ -1,7 +1,7 @@
 """Constants for russound_rio tests."""
 
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
 
 MODEL = "MCA-C5"
 HARDWARE_MAC = "00:11:22:33:44:55"

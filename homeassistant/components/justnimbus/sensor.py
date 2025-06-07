@@ -6,23 +6,23 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_CLIENT_ID,
     EntityCategory,
     UnitOfPressure,
     UnitOfTemperature,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import JustNimbusCoordinator
 from .const import DOMAIN
@@ -101,12 +101,12 @@ SENSOR_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the JustNimbus sensor."""
-    coordinator: JustNimbusCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: JustNimbusCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         JustNimbusSensor(
             device_id=entry.data[CONF_CLIENT_ID],

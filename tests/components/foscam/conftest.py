@@ -7,7 +7,7 @@ from libpyfoscam.foscam import (
     ERROR_FOSCAM_UNKNOWN,
 )
 
-from homeassistant.components.foscam import config_flow
+from menuai.components.foscam import config_flow
 
 from .const import (
     CAMERA_MAC,

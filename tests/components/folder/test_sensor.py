@@ -2,9 +2,9 @@
 
 import os
 
-from homeassistant.components.folder.sensor import CONF_FOLDER_PATHS
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.folder.sensor import CONF_FOLDER_PATHS
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 CWD = os.path.join(os.path.dirname(__file__))
 TEST_FOLDER = "test_folder"
@@ -26,25 +26,25 @@ def remove_test_file():
         os.rmdir(TEST_DIR)
 
 
-async def test_invalid_path(hass: HomeAssistant) -> None:
+async def test_invalid_path(menuai: menuai) -> None:
     """Test that an invalid path is caught."""
     config = {"sensor": {"platform": "folder", CONF_FOLDER_PATHS: "invalid_path"}}
-    assert await async_setup_component(hass, "sensor", config)
-    assert len(hass.states.async_entity_ids("sensor")) == 0
+    assert await async_setup_component(menuai, "sensor", config)
+    assert len(menuai.states.async_entity_ids("sensor")) == 0
 
 
-async def test_valid_path(hass: HomeAssistant) -> None:
+async def test_valid_path(menuai: menuai) -> None:
     """Test for a valid path."""
     if not os.path.isdir(TEST_DIR):
         os.mkdir(TEST_DIR)
     create_file(TEST_FILE)
 
-    hass.config.allowlist_external_dirs = {TEST_DIR}
+    menuai.config.allowlist_external_dirs = {TEST_DIR}
     config = {"sensor": {"platform": "folder", CONF_FOLDER_PATHS: TEST_DIR}}
-    assert await async_setup_component(hass, "sensor", config)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == 1
-    state = hass.states.get("sensor.test_folder")
+    assert await async_setup_component(menuai, "sensor", config)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == 1
+    state = menuai.states.get("sensor.test_folder")
     assert state.state == "0.0"
     assert state.attributes.get("number_of_files") == 1
 

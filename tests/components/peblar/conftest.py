@@ -16,9 +16,9 @@ from peblar import (
 )
 import pytest
 
-from homeassistant.components.peblar.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
+from menuai.components.peblar.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -40,7 +40,7 @@ def mock_config_entry() -> MockConfigEntry:
 @pytest.fixture
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
-    with patch("homeassistant.components.peblar.async_setup_entry", return_value=True):
+    with patch("menuai.components.peblar.async_setup_entry", return_value=True):
         yield
 
 
@@ -48,8 +48,8 @@ def mock_setup_entry() -> Generator[None]:
 def mock_peblar() -> Generator[MagicMock]:
     """Return a mocked Peblar client."""
     with (
-        patch("homeassistant.components.peblar.Peblar", autospec=True) as peblar_mock,
-        patch("homeassistant.components.peblar.config_flow.Peblar", new=peblar_mock),
+        patch("menuai.components.peblar.Peblar", autospec=True) as peblar_mock,
+        patch("menuai.components.peblar.config_flow.Peblar", new=peblar_mock),
     ):
         peblar = peblar_mock.return_value
         peblar.available_versions.return_value = PeblarVersions.from_json(
@@ -81,20 +81,20 @@ def mock_peblar() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_peblar: MagicMock,
     request: pytest.FixtureRequest,
 ) -> MockConfigEntry:
     """Set up the Peblar integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     context = nullcontext()
     if platform := getattr(request, "param", None):
-        context = patch("homeassistant.components.peblar.PLATFORMS", [platform])
+        context = patch("menuai.components.peblar.PLATFORMS", [platform])
 
     with context:
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return mock_config_entry

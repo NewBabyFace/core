@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.core import menuai
 
 from .coordinator import OneDriveConfigEntry
 
@@ -15,7 +15,7 @@ TO_REDACT = {"display_name", "email", CONF_ACCESS_TOKEN, CONF_TOKEN}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: OneDriveConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""

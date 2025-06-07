@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Awaitable
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.config_entry_flow import DiscoveryFlowHandler
+from menuai.config_entries import ConfigFlowResult
+from menuai.core import menuai
+from menuai.helpers.config_entry_flow import DiscoveryFlowHandler
 
 from .const import DOMAIN
 
 
-async def _async_has_devices(_: HomeAssistant) -> bool:
+async def _async_has_devices(_: menuai) -> bool:
     """MQTT is set as dependency, so that should be sufficient."""
     return True
 

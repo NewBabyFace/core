@@ -7,9 +7,9 @@ from openai import APIConnectionError, AuthenticationError, BadRequestError
 from openai.types.responses import Response, ResponseOutputMessage, ResponseOutputText
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.openai_conversation.config_flow import RECOMMENDED_OPTIONS
-from homeassistant.components.openai_conversation.const import (
+from menuai import config_entries
+from menuai.components.openai_conversation.config_flow import RECOMMENDED_OPTIONS
+from menuai.components.openai_conversation.const import (
     CONF_CHAT_MODEL,
     CONF_MAX_TOKENS,
     CONF_PROMPT,
@@ -30,23 +30,23 @@ from homeassistant.components.openai_conversation.const import (
     RECOMMENDED_REASONING_EFFORT,
     RECOMMENDED_TOP_P,
 )
-from homeassistant.const import CONF_LLM_HASS_API
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_LLM_menuai_API
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
     # Pretend we already set up a config entry.
-    hass.config.components.add("openai_conversation")
+    menuai.config.components.add("openai_conversation")
     MockConfigEntry(
         domain=DOMAIN,
         state=config_entries.ConfigEntryState.LOADED,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -54,20 +54,20 @@ async def test_form(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.openai_conversation.config_flow.openai.resources.models.AsyncModels.list",
+            "menuai.components.openai_conversation.config_flow.openai.resources.models.AsyncModels.list",
         ),
         patch(
-            "homeassistant.components.openai_conversation.async_setup_entry",
+            "menuai.components.openai_conversation.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "api_key": "bla",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == {
@@ -78,20 +78,20 @@ async def test_form(hass: HomeAssistant) -> None:
 
 
 async def test_options(
-    hass: HomeAssistant, mock_config_entry, mock_init_component
+    menuai: menuai, mock_config_entry, mock_init_component
 ) -> None:
     """Test the options form."""
-    options_flow = await hass.config_entries.options.async_init(
+    options_flow = await menuai.config_entries.options.async_init(
         mock_config_entry.entry_id
     )
-    options = await hass.config_entries.options.async_configure(
+    options = await menuai.config_entries.options.async_configure(
         options_flow["flow_id"],
         {
             "prompt": "Speak like a pirate",
             "max_tokens": 200,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert options["type"] is FlowResultType.CREATE_ENTRY
     assert options["data"]["prompt"] == "Speak like a pirate"
     assert options["data"]["max_tokens"] == 200
@@ -99,22 +99,22 @@ async def test_options(
 
 
 async def test_options_unsupported_model(
-    hass: HomeAssistant, mock_config_entry, mock_init_component
+    menuai: menuai, mock_config_entry, mock_init_component
 ) -> None:
     """Test the options form giving error about models not supported."""
-    options_flow = await hass.config_entries.options.async_init(
+    options_flow = await menuai.config_entries.options.async_init(
         mock_config_entry.entry_id
     )
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         options_flow["flow_id"],
         {
             CONF_RECOMMENDED: False,
             CONF_PROMPT: "Speak like a pirate",
             CONF_CHAT_MODEL: "o1-mini",
-            CONF_LLM_HASS_API: ["assist"],
+            CONF_LLM_menuai_API: ["assist"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"chat_model": "model_not_supported"}
 
@@ -141,17 +141,17 @@ async def test_options_unsupported_model(
         ),
     ],
 )
-async def test_form_invalid_auth(hass: HomeAssistant, side_effect, error) -> None:
+async def test_form_invalid_auth(menuai: menuai, side_effect, error) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.openai_conversation.config_flow.openai.resources.models.AsyncModels.list",
+        "menuai.components.openai_conversation.config_flow.openai.resources.models.AsyncModels.list",
         side_effect=side_effect,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "api_key": "bla",
@@ -203,36 +203,36 @@ async def test_form_invalid_auth(hass: HomeAssistant, side_effect, error) -> Non
             },
             {
                 CONF_RECOMMENDED: True,
-                CONF_LLM_HASS_API: ["assist"],
+                CONF_LLM_menuai_API: ["assist"],
                 CONF_PROMPT: "",
             },
             {
                 CONF_RECOMMENDED: True,
-                CONF_LLM_HASS_API: ["assist"],
+                CONF_LLM_menuai_API: ["assist"],
                 CONF_PROMPT: "",
             },
         ),
         (
             {
                 CONF_RECOMMENDED: True,
-                CONF_LLM_HASS_API: "assist",
+                CONF_LLM_menuai_API: "assist",
                 CONF_PROMPT: "",
             },
             {
                 CONF_RECOMMENDED: True,
-                CONF_LLM_HASS_API: ["assist"],
+                CONF_LLM_menuai_API: ["assist"],
                 CONF_PROMPT: "",
             },
             {
                 CONF_RECOMMENDED: True,
-                CONF_LLM_HASS_API: ["assist"],
+                CONF_LLM_menuai_API: ["assist"],
                 CONF_PROMPT: "",
             },
         ),
     ],
 )
 async def test_options_switching(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry,
     mock_init_component,
     current_options,
@@ -240,37 +240,37 @@ async def test_options_switching(
     expected_options,
 ) -> None:
     """Test the options form."""
-    hass.config_entries.async_update_entry(mock_config_entry, options=current_options)
-    options_flow = await hass.config_entries.options.async_init(
+    menuai.config_entries.async_update_entry(mock_config_entry, options=current_options)
+    options_flow = await menuai.config_entries.options.async_init(
         mock_config_entry.entry_id
     )
     if current_options.get(CONF_RECOMMENDED) != new_options.get(CONF_RECOMMENDED):
-        options_flow = await hass.config_entries.options.async_configure(
+        options_flow = await menuai.config_entries.options.async_configure(
             options_flow["flow_id"],
             {
                 **current_options,
                 CONF_RECOMMENDED: new_options[CONF_RECOMMENDED],
             },
         )
-    options = await hass.config_entries.options.async_configure(
+    options = await menuai.config_entries.options.async_configure(
         options_flow["flow_id"],
         new_options,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert options["type"] is FlowResultType.CREATE_ENTRY
     assert options["data"] == expected_options
 
 
 async def test_options_web_search_user_location(
-    hass: HomeAssistant, mock_config_entry, mock_init_component
+    menuai: menuai, mock_config_entry, mock_init_component
 ) -> None:
     """Test fetching user location."""
-    options_flow = await hass.config_entries.options.async_init(
+    options_flow = await menuai.config_entries.options.async_init(
         mock_config_entry.entry_id
     )
-    hass.config.country = "US"
-    hass.config.time_zone = "America/Los_Angeles"
-    hass.states.async_set(
+    menuai.config.country = "US"
+    menuai.config.time_zone = "America/Los_Angeles"
+    menuai.states.async_set(
         "zone.home", "0", {"latitude": 37.7749, "longitude": -122.4194}
     )
     with patch(
@@ -302,7 +302,7 @@ async def test_options_web_search_user_location(
             ],
         )
 
-        options = await hass.config_entries.options.async_configure(
+        options = await menuai.config_entries.options.async_configure(
             options_flow["flow_id"],
             {
                 CONF_RECOMMENDED: False,
@@ -317,7 +317,7 @@ async def test_options_web_search_user_location(
                 CONF_WEB_SEARCH_USER_LOCATION: True,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert (
         mock_create.call_args.kwargs["input"][0]["content"] == "Where are the following"
         " coordinates located: (37.7749, -122.4194)?"
@@ -342,22 +342,22 @@ async def test_options_web_search_user_location(
 
 
 async def test_options_web_search_unsupported_model(
-    hass: HomeAssistant, mock_config_entry, mock_init_component
+    menuai: menuai, mock_config_entry, mock_init_component
 ) -> None:
     """Test the options form giving error about web search not being available."""
-    options_flow = await hass.config_entries.options.async_init(
+    options_flow = await menuai.config_entries.options.async_init(
         mock_config_entry.entry_id
     )
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         options_flow["flow_id"],
         {
             CONF_RECOMMENDED: False,
             CONF_PROMPT: "Speak like a pirate",
             CONF_CHAT_MODEL: "o1-pro",
-            CONF_LLM_HASS_API: ["assist"],
+            CONF_LLM_menuai_API: ["assist"],
             CONF_WEB_SEARCH: True,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"web_search": "web_search_not_supported"}

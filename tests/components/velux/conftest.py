@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.velux import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PASSWORD
+from menuai.components.velux import DOMAIN
+from menuai.const import CONF_HOST, CONF_MAC, CONF_PASSWORD
 
 from tests.common import MockConfigEntry
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.velux.async_setup_entry", return_value=True
+        "menuai.components.velux.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -25,7 +25,7 @@ def mock_velux_client() -> Generator[AsyncMock]:
     """Mock a Velux client."""
     with (
         patch(
-            "homeassistant.components.velux.config_flow.PyVLX",
+            "menuai.components.velux.config_flow.PyVLX",
             autospec=True,
         ) as mock_client,
     ):

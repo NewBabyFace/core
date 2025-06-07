@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import asyncio
 
-from homeassistant import config_entries, core as ha, setup
-from homeassistant.components import persistent_notification
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai import config_entries, core as ha, setup
+from menuai.components import persistent_notification
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     Platform,
     UnitOfSoundPressure,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "demo"
 
@@ -62,10 +62,10 @@ COMPONENTS_WITH_DEMO_PLATFORM = [
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the demo environment."""
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data={}
         )
     )
@@ -75,24 +75,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     # Set up demo platforms
     for platform in COMPONENTS_WITH_DEMO_PLATFORM:
-        hass.async_create_task(async_load_platform(hass, platform, DOMAIN, {}, config))
+        menuai.async_create_task(async_load_platform(menuai, platform, DOMAIN, {}, config))
 
     config.setdefault(ha.DOMAIN, {})
     config.setdefault(DOMAIN, {})
 
     # Set up sun
-    if not hass.config.latitude:
-        hass.config.latitude = 32.87336
+    if not menuai.config.latitude:
+        menuai.config.latitude = 32.87336
 
-    if not hass.config.longitude:
-        hass.config.longitude = 117.22743
+    if not menuai.config.longitude:
+        menuai.config.longitude = 117.22743
 
-    tasks = [setup.async_setup_component(hass, "sun", config)]
+    tasks = [setup.async_setup_component(menuai, "sun", config)]
 
     # Set up input select
     tasks.append(
         setup.async_setup_component(
-            hass,
+            menuai,
             "input_select",
             {
                 "input_select": {
@@ -113,7 +113,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # Set up input boolean
     tasks.append(
         setup.async_setup_component(
-            hass,
+            menuai,
             "input_boolean",
             {
                 "input_boolean": {
@@ -130,7 +130,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # Set up input button
     tasks.append(
         setup.async_setup_component(
-            hass,
+            menuai,
             "input_button",
             {
                 "input_button": {
@@ -146,7 +146,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # Set up input number
     tasks.append(
         setup.async_setup_component(
-            hass,
+            menuai,
             "input_number",
             {
                 "input_number": {
@@ -169,38 +169,38 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     # Set up example persistent notification
     persistent_notification.async_create(
-        hass,
+        menuai,
         "This is an example of a persistent notification.",
         title="Example Notification",
     )
 
     async def demo_start_listener(_event: Event) -> None:
         """Finish set up."""
-        await finish_setup(hass, config)
+        await finish_setup(menuai, config)
 
-    hass.bus.async_listen(EVENT_HOMEASSISTANT_START, demo_start_listener)
+    menuai.bus.async_listen(EVENT_menuai_START, demo_start_listener)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set the config entry up."""
     # Set up demo platforms with config entry
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         config_entry, COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM
     )
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    await hass.config_entries.async_unload_platforms(
+    await menuai.config_entries.async_unload_platforms(
         config_entry, COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM
     )
     return True
 
 
-async def finish_setup(hass: HomeAssistant, config: ConfigType) -> None:
+async def finish_setup(menuai: menuai, config: ConfigType) -> None:
     """Finish set up once demo platforms are set up."""
     switches: list[str] | None = None
     lights: list[str] | None = None
@@ -209,14 +209,14 @@ async def finish_setup(hass: HomeAssistant, config: ConfigType) -> None:
         # Not all platforms might be loaded.
         if switches is not None:
             await asyncio.sleep(0)
-        switches = sorted(hass.states.async_entity_ids("switch"))
-        lights = sorted(hass.states.async_entity_ids("light"))
+        switches = sorted(menuai.states.async_entity_ids("switch"))
+        lights = sorted(menuai.states.async_entity_ids("light"))
 
     assert switches is not None
     assert lights is not None
     # Set up scripts
     await setup.async_setup_component(
-        hass,
+        menuai,
         "script",
         {
             "script": {
@@ -245,7 +245,7 @@ async def finish_setup(hass: HomeAssistant, config: ConfigType) -> None:
 
     # Set up scenes
     await setup.async_setup_component(
-        hass,
+        menuai,
         "scene",
         {
             "scene": [

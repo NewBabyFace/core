@@ -6,12 +6,12 @@ import logging
 import defusedxml.ElementTree as ET
 import voluptuous as vol
 
-from homeassistant.const import CONF_DOMAIN, CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DOMAIN, CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,13 +35,13 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the namecheap DNS component."""
     host = config[DOMAIN][CONF_HOST]
     domain = config[DOMAIN][CONF_DOMAIN]
     password = config[DOMAIN][CONF_PASSWORD]
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     result = await _update_namecheapdns(session, host, domain, password)
 
@@ -52,7 +52,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Update the namecheap DNS entry."""
         await _update_namecheapdns(session, host, domain, password)
 
-    async_track_time_interval(hass, update_domain_interval, INTERVAL)
+    async_track_time_interval(menuai, update_domain_interval, INTERVAL)
 
     return result
 

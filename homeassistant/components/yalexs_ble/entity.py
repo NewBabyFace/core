@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from yalexs_ble import ConnectionInfo, LockInfo, LockState
 
-from homeassistant.components import bluetooth
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.components import bluetooth
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .models import YaleXSBLEData
@@ -66,15 +66,15 @@ class YALEXSBLEEntity(Entity):
         self._attr_available = False
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             bluetooth.async_track_unavailable(
-                self.hass, self._async_device_unavailable, self._device.address
+                self.menuai, self._async_device_unavailable, self._device.address
             )
         )
         self.async_on_remove(self._device.register_callback(self._async_state_changed))
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()
 
     async def async_update(self) -> None:
         """Request a manual update."""

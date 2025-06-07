@@ -12,12 +12,12 @@ from zwave_js_server.model.controller import CONTROLLER_EVENT_MODEL_MAP
 from zwave_js_server.model.driver import DRIVER_EVENT_MODEL_MAP, Driver
 from zwave_js_server.model.node import NODE_EVENT_MODEL_MAP
 
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from ..const import (
     ATTR_CONFIG_ENTRY_ID,
@@ -108,21 +108,21 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     config = TRIGGER_SCHEMA(config)
 
     if ATTR_CONFIG_ENTRY_ID in config:
         entry_id = config[ATTR_CONFIG_ENTRY_ID]
-        if hass.config_entries.async_get_entry(entry_id) is None:
+        if menuai.config_entries.async_get_entry(entry_id) is None:
             raise vol.Invalid(f"Config entry '{entry_id}' not found")
 
-    if async_bypass_dynamic_config_validation(hass, config):
+    if async_bypass_dynamic_config_validation(menuai, config):
         return config
 
     if config[ATTR_EVENT_SOURCE] == "node" and not async_get_nodes_from_targets(
-        hass, config
+        menuai, config
     ):
         raise vol.Invalid(
             f"No nodes found for given {ATTR_DEVICE_ID}s or {ATTR_ENTITY_ID}s."
@@ -132,7 +132,7 @@ async def async_validate_trigger_config(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -140,9 +140,9 @@ async def async_attach_trigger(
     platform_type: str = PLATFORM_TYPE,
 ) -> CALLBACK_TYPE:
     """Listen for state changes based on configuration."""
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     if config[ATTR_EVENT_SOURCE] == "node" and not async_get_nodes_from_targets(
-        hass, config, dev_reg=dev_reg
+        menuai, config, dev_reg=dev_reg
     ):
         raise ValueError(
             f"No nodes found for given {ATTR_DEVICE_ID}s or {ATTR_ENTITY_ID}s."
@@ -153,7 +153,7 @@ async def async_attach_trigger(
     event_data_filter = config.get(ATTR_EVENT_DATA, {})
 
     unsubs: list[Callable] = []
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     trigger_data = trigger_info["trigger_data"]
 
@@ -199,7 +199,7 @@ async def async_attach_trigger(
             f"{payload['description']} with event data: {event_data}"
         )
 
-        hass.async_run_hass_job(job, {"trigger": payload})
+        menuai.async_run_menuai_job(job, {"trigger": payload})
 
     @callback
     def async_remove() -> None:
@@ -215,9 +215,9 @@ async def async_attach_trigger(
         # Nodes list can come from different drivers and we will need to listen to
         # server connections for all of them.
         drivers: set[Driver] = set()
-        if not (nodes := async_get_nodes_from_targets(hass, config, dev_reg=dev_reg)):
+        if not (nodes := async_get_nodes_from_targets(menuai, config, dev_reg=dev_reg)):
             entry_id = config[ATTR_CONFIG_ENTRY_ID]
-            entry = hass.config_entries.async_get_entry(entry_id)
+            entry = menuai.config_entries.async_get_entry(entry_id)
             assert entry
             client: Client = entry.runtime_data[DATA_CLIENT]
             driver = client.driver
@@ -241,7 +241,7 @@ async def async_attach_trigger(
             )
         unsubs.extend(
             async_dispatcher_connect(
-                hass,
+                menuai,
                 f"{DOMAIN}_{driver.controller.home_id}_connected_to_server",
                 _create_zwave_listeners,
             )

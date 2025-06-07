@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.konnected import config_flow, panel
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.setup import async_setup_component
-from homeassistant.util import utcnow
+from menuai.components.konnected import config_flow, panel
+from menuai.core import menuai
+from menuai.helpers.entity_component import async_update_entity
+from menuai.setup import async_setup_component
+from menuai.util import utcnow
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -45,7 +45,7 @@ async def mock_panel_fixture():
         yield konn_client
 
 
-async def test_create_and_setup(hass: HomeAssistant, mock_panel) -> None:
+async def test_create_and_setup(menuai: menuai, mock_panel) -> None:
     """Test that we create a Konnected Panel and save the data."""
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -98,7 +98,7 @@ async def test_create_and_setup(hass: HomeAssistant, mock_panel) -> None:
         data=device_config,
         options=device_options,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # override get_status to reflect non-pro board
     mock_panel.get_status.return_value = {
@@ -119,7 +119,7 @@ async def test_create_and_setup(hass: HomeAssistant, mock_panel) -> None:
     # setup the integration and inspect panel behavior
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             panel.DOMAIN,
             {
                 panel.DOMAIN: {
@@ -132,8 +132,8 @@ async def test_create_and_setup(hass: HomeAssistant, mock_panel) -> None:
     )
 
     # confirm panel instance was created and configured
-    # hass.data is the only mechanism to get a reference to the created panel instance
-    device = hass.data[panel.DOMAIN][panel.CONF_DEVICES]["112233445566"]["panel"]
+    # menuai.data is the only mechanism to get a reference to the created panel instance
+    device = menuai.data[panel.DOMAIN][panel.CONF_DEVICES]["112233445566"]["panel"]
     await device.update_switch("1", 0)
 
     # confirm the correct api is used
@@ -152,8 +152,8 @@ async def test_create_and_setup(hass: HomeAssistant, mock_panel) -> None:
         "endpoint": "http://192.168.1.1:8123/api/konnected",
     }
 
-    # confirm the device settings are saved in hass.data
-    # This test should not access hass.data since its integration internals
+    # confirm the device settings are saved in menuai.data
+    # This test should not access menuai.data since its integration internals
     assert device.stored_configuration == {
         "binary_sensors": {
             "1": {
@@ -219,7 +219,7 @@ async def test_create_and_setup(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_create_and_setup_pro(hass: HomeAssistant, mock_panel) -> None:
+async def test_create_and_setup_pro(menuai: menuai, mock_panel) -> None:
     """Test that we create a Konnected Pro Panel and save the data."""
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -278,12 +278,12 @@ async def test_create_and_setup_pro(hass: HomeAssistant, mock_panel) -> None:
         data=device_config,
         options=device_options,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # setup the integration and inspect panel behavior
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             panel.DOMAIN,
             {
                 panel.DOMAIN: {
@@ -296,8 +296,8 @@ async def test_create_and_setup_pro(hass: HomeAssistant, mock_panel) -> None:
     )
 
     # confirm panel instance was created and configured
-    # hass.data is the only mechanism to get a reference to the created panel instance
-    device = hass.data[panel.DOMAIN][panel.CONF_DEVICES]["112233445566"]["panel"]
+    # menuai.data is the only mechanism to get a reference to the created panel instance
+    device = menuai.data[panel.DOMAIN][panel.CONF_DEVICES]["112233445566"]["panel"]
     await device.update_switch("2", 1)
 
     # confirm the correct api is used
@@ -321,8 +321,8 @@ async def test_create_and_setup_pro(hass: HomeAssistant, mock_panel) -> None:
         "endpoint": "http://192.168.1.1:8123/api/konnected",
     }
 
-    # confirm the device settings are saved in hass.data
-    # hass.data should not be accessed in tests as its considered integration internals
+    # confirm the device settings are saved in menuai.data
+    # menuai.data should not be accessed in tests as its considered integration internals
     assert device.stored_configuration == {
         "binary_sensors": {
             "10": {
@@ -415,7 +415,7 @@ async def test_create_and_setup_pro(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_default_options(hass: HomeAssistant, mock_panel) -> None:
+async def test_default_options(menuai: menuai, mock_panel) -> None:
     """Test that we create a Konnected Panel and save the data."""
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -471,7 +471,7 @@ async def test_default_options(hass: HomeAssistant, mock_panel) -> None:
         data=device_config,
         options={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # override get_status to reflect non-pro board
     mock_panel.get_status.return_value = {
@@ -492,7 +492,7 @@ async def test_default_options(hass: HomeAssistant, mock_panel) -> None:
     # setup the integration and inspect panel behavior
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             panel.DOMAIN,
             {
                 panel.DOMAIN: {
@@ -505,8 +505,8 @@ async def test_default_options(hass: HomeAssistant, mock_panel) -> None:
     )
 
     # confirm panel instance was created and configured.
-    # hass.data is the only mechanism to get a reference to the created panel instance
-    device = hass.data[panel.DOMAIN][panel.CONF_DEVICES]["112233445566"]["panel"]
+    # menuai.data is the only mechanism to get a reference to the created panel instance
+    device = menuai.data[panel.DOMAIN][panel.CONF_DEVICES]["112233445566"]["panel"]
     await device.update_switch("1", 0)
 
     # confirm the correct api is used
@@ -525,8 +525,8 @@ async def test_default_options(hass: HomeAssistant, mock_panel) -> None:
         "endpoint": "http://192.168.1.1:8123/api/konnected",
     }
 
-    # confirm the device settings are saved in hass.data
-    # This test should not access hass.data since its integration internals
+    # confirm the device settings are saved in menuai.data
+    # This test should not access menuai.data since its integration internals
     assert device.stored_configuration == {
         "binary_sensors": {
             "1": {
@@ -592,7 +592,7 @@ async def test_default_options(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_connect_retry(hass: HomeAssistant, mock_panel) -> None:
+async def test_connect_retry(menuai: menuai, mock_panel) -> None:
     """Test that we create a Konnected Panel and save the data."""
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -648,7 +648,7 @@ async def test_connect_retry(hass: HomeAssistant, mock_panel) -> None:
         data=device_config,
         options={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # fail first 2 attempts, and succeed the third
     mock_panel.get_status.side_effect = [
@@ -674,7 +674,7 @@ async def test_connect_retry(hass: HomeAssistant, mock_panel) -> None:
     # setup the integration and inspect panel behavior
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             panel.DOMAIN,
             {
                 panel.DOMAIN: {
@@ -687,17 +687,17 @@ async def test_connect_retry(hass: HomeAssistant, mock_panel) -> None:
     )
 
     # confirm switch is unavailable after initial attempt
-    await hass.async_block_till_done()
-    assert hass.states.get("switch.konnected_445566_actuator_6").state == "unavailable"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("switch.konnected_445566_actuator_6").state == "unavailable"
 
     # confirm switch is unavailable after second attempt
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=11))
-    await hass.async_block_till_done()
-    await async_update_entity(hass, "switch.konnected_445566_actuator_6")
-    assert hass.states.get("switch.konnected_445566_actuator_6").state == "unavailable"
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=11))
+    await menuai.async_block_till_done()
+    await async_update_entity(menuai, "switch.konnected_445566_actuator_6")
+    assert menuai.states.get("switch.konnected_445566_actuator_6").state == "unavailable"
 
     # confirm switch is available after third attempt
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=21))
-    await hass.async_block_till_done()
-    await async_update_entity(hass, "switch.konnected_445566_actuator_6")
-    assert hass.states.get("switch.konnected_445566_actuator_6").state == "unknown"
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=21))
+    await menuai.async_block_till_done()
+    await async_update_entity(menuai, "switch.konnected_445566_actuator_6")
+    assert menuai.states.get("switch.konnected_445566_actuator_6").state == "unknown"

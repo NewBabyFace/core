@@ -10,10 +10,10 @@ from aioshelly.rpc_device import RpcDevice
 from awesomeversion import AwesomeVersion
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
+from menuai import data_entry_flow
+from menuai.components.repairs import RepairsFlow
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
 
 from .const import (
     BLE_SCANNER_FIRMWARE_UNSUPPORTED_ISSUE_ID,
@@ -27,7 +27,7 @@ from .coordinator import ShellyConfigEntry
 
 @callback
 def async_manage_ble_scanner_firmware_unsupported_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ShellyConfigEntry,
 ) -> None:
     """Manage the BLE scanner firmware unsupported issue."""
@@ -46,7 +46,7 @@ def async_manage_ble_scanner_firmware_unsupported_issue(
             and entry.options.get(CONF_BLE_SCANNER_MODE) == BLEScannerMode.ACTIVE
         ):
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 issue_id,
                 is_fixable=True,
@@ -62,7 +62,7 @@ def async_manage_ble_scanner_firmware_unsupported_issue(
             )
             return
 
-    ir.async_delete_issue(hass, DOMAIN, issue_id)
+    ir.async_delete_issue(menuai, DOMAIN, issue_id)
 
 
 class BleScannerFirmwareUpdateFlow(RepairsFlow):
@@ -85,7 +85,7 @@ class BleScannerFirmwareUpdateFlow(RepairsFlow):
         if user_input is not None:
             return await self.async_step_update_firmware()
 
-        issue_registry = ir.async_get(self.hass)
+        issue_registry = ir.async_get(self.menuai)
         description_placeholders = None
         if issue := issue_registry.async_get_issue(self.handler, self.issue_id):
             description_placeholders = issue.translation_placeholders
@@ -111,14 +111,14 @@ class BleScannerFirmwareUpdateFlow(RepairsFlow):
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant, issue_id: str, data: dict[str, str] | None
+    menuai: menuai, issue_id: str, data: dict[str, str] | None
 ) -> RepairsFlow:
     """Create flow."""
     if TYPE_CHECKING:
         assert isinstance(data, dict)
 
     entry_id = data["entry_id"]
-    entry = hass.config_entries.async_get_entry(entry_id)
+    entry = menuai.config_entries.async_get_entry(entry_id)
 
     if TYPE_CHECKING:
         assert entry is not None

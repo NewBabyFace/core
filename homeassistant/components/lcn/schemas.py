@@ -2,15 +2,15 @@
 
 import voluptuous as vol
 
-from homeassistant.components.climate import DEFAULT_MAX_TEMP, DEFAULT_MIN_TEMP
-from homeassistant.const import (
+from menuai.components.climate import DEFAULT_MAX_TEMP, DEFAULT_MIN_TEMP
+from menuai.const import (
     CONF_SCENE,
     CONF_SOURCE,
     CONF_UNIT_OF_MEASUREMENT,
     UnitOfTemperature,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     BINSENSOR_PORTS,

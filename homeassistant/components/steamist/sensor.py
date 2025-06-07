@@ -7,16 +7,16 @@ from dataclasses import dataclass
 
 from aiosteamist import SteamistStatus
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfTemperature, UnitOfTime
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SteamistDataUpdateCoordinator
@@ -56,12 +56,12 @@ SENSORS: tuple[SteamistSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up sensors."""
-    coordinator: SteamistDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: SteamistDataUpdateCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ]
     async_add_entities(

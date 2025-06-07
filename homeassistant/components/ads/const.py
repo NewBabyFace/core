@@ -5,14 +5,14 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from .hub import AdsHub
 
 DOMAIN = "ads"
 
-DATA_ADS: HassKey[AdsHub] = HassKey(DOMAIN)
+DATA_ADS: menuaiKey[AdsHub] = menuaiKey(DOMAIN)
 
 CONF_ADS_VAR = "adsvar"
 

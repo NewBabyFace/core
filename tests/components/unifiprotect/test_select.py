@@ -19,17 +19,17 @@ from uiprotect.data import (
 )
 from uiprotect.data.nvr import DoorbellMessage
 
-from homeassistant.components.select import ATTR_OPTIONS
-from homeassistant.components.unifiprotect.const import DEFAULT_ATTRIBUTION
-from homeassistant.components.unifiprotect.select import (
+from menuai.components.select import ATTR_OPTIONS
+from menuai.components.unifiprotect.const import DEFAULT_ATTRIBUTION
+from menuai.components.unifiprotect.select import (
     CAMERA_SELECTS,
     LIGHT_MODE_OFF,
     LIGHT_SELECTS,
     VIEWER_SELECTS,
 )
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, ATTR_OPTION, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, ATTR_OPTION, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .utils import (
     MockUFPFixture,
@@ -42,49 +42,49 @@ from .utils import (
 
 
 async def test_select_camera_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
 ) -> None:
     """Test removing and re-adding a camera device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
-    await remove_entities(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SELECT, 0, 0)
-    await adopt_devices(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
+    await remove_entities(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SELECT, 0, 0)
+    await adopt_devices(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
 
 async def test_select_light_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light
 ) -> None:
     """Test removing and re-adding a light device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SELECT, 2, 2)
-    await remove_entities(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SELECT, 0, 0)
-    await adopt_devices(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SELECT, 2, 2)
+    await init_entry(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SELECT, 2, 2)
+    await remove_entities(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SELECT, 0, 0)
+    await adopt_devices(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SELECT, 2, 2)
 
 
 async def test_select_viewer_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, viewer: Viewer
+    menuai: menuai, ufp: MockUFPFixture, viewer: Viewer
 ) -> None:
     """Test removing and re-adding a light device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [viewer])
-    assert_entity_counts(hass, Platform.SELECT, 1, 1)
-    await remove_entities(hass, ufp, [viewer])
-    assert_entity_counts(hass, Platform.SELECT, 0, 0)
-    await adopt_devices(hass, ufp, [viewer])
-    assert_entity_counts(hass, Platform.SELECT, 1, 1)
+    await init_entry(menuai, ufp, [viewer])
+    assert_entity_counts(menuai, Platform.SELECT, 1, 1)
+    await remove_entities(menuai, ufp, [viewer])
+    assert_entity_counts(menuai, Platform.SELECT, 0, 0)
+    await adopt_devices(menuai, ufp, [viewer])
+    assert_entity_counts(menuai, Platform.SELECT, 1, 1)
 
 
 async def test_select_setup_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     light: Light,
@@ -92,8 +92,8 @@ async def test_select_setup_light(
     """Test select entity setup for light devices."""
 
     light.light_mode_settings.enable_at = LightModeEnableType.DARK
-    await init_entry(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SELECT, 2, 2)
+    await init_entry(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SELECT, 2, 2)
 
     expected_values = ("On Motion - When Dark", "Not Paired")
 
@@ -106,14 +106,14 @@ async def test_select_setup_light(
         assert entity
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_select_setup_viewer(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     viewer: Viewer,
@@ -122,8 +122,8 @@ async def test_select_setup_viewer(
     """Test select entity setup for light devices."""
 
     ufp.api.bootstrap.liveviews = {liveview.id: liveview}
-    await init_entry(hass, ufp, [viewer])
-    assert_entity_counts(hass, Platform.SELECT, 1, 1)
+    await init_entry(menuai, ufp, [viewer])
+    assert_entity_counts(menuai, Platform.SELECT, 1, 1)
 
     description = VIEWER_SELECTS[0]
 
@@ -135,22 +135,22 @@ async def test_select_setup_viewer(
     assert entity
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == viewer.liveview.name
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_select_setup_camera_all(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorbell: Camera,
 ) -> None:
     """Test select entity setup for camera devices (all features)."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     expected_values = (
         "Always",
@@ -169,22 +169,22 @@ async def test_select_setup_camera_all(
         assert entity
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_select_setup_camera_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     camera: Camera,
 ) -> None:
     """Test select entity setup for camera devices (no features)."""
 
-    await init_entry(hass, ufp, [camera])
-    assert_entity_counts(hass, Platform.SELECT, 2, 2)
+    await init_entry(menuai, ufp, [camera])
+    assert_entity_counts(menuai, Platform.SELECT, 2, 2)
 
     expected_values = ("Always", "Auto", "Default Message (Welcome)")
 
@@ -200,26 +200,26 @@ async def test_select_setup_camera_none(
         assert entity
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_select_update_liveview(
-    hass: HomeAssistant, ufp: MockUFPFixture, viewer: Viewer, liveview: Liveview
+    menuai: menuai, ufp: MockUFPFixture, viewer: Viewer, liveview: Liveview
 ) -> None:
     """Test select entity update (new Liveview)."""
 
     ufp.api.bootstrap.liveviews = {liveview.id: liveview}
-    await init_entry(hass, ufp, [viewer])
-    assert_entity_counts(hass, Platform.SELECT, 1, 1)
+    await init_entry(menuai, ufp, [viewer])
+    assert_entity_counts(menuai, Platform.SELECT, 1, 1)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, viewer, VIEWER_SELECTS[0]
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     expected_options = state.attributes[ATTR_OPTIONS]
 
@@ -235,20 +235,20 @@ async def test_select_update_liveview(
         new_liveview.id: new_liveview,
     }
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes[ATTR_OPTIONS] == expected_options
 
 
 async def test_select_update_doorbell_settings(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test select entity update (new Doorbell Message)."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     expected_length = len(ufp.api.bootstrap.nvr.doorbell_settings.all_messages) + 1
 
@@ -256,7 +256,7 @@ async def test_select_update_doorbell_settings(
         Platform.SELECT, doorbell, CAMERA_SELECTS[2]
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert len(state.attributes[ATTR_OPTIONS]) == expected_length
 
@@ -279,28 +279,28 @@ async def test_select_update_doorbell_settings(
 
     ufp.api.bootstrap.nvr = new_nvr
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     new_nvr.update_all_messages.assert_called_once()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert len(state.attributes[ATTR_OPTIONS]) == expected_length
 
 
 async def test_select_update_doorbell_message(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test select entity update (change doorbell message)."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, doorbell, CAMERA_SELECTS[2]
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "Default Message (Welcome)"
 
@@ -315,27 +315,27 @@ async def test_select_update_doorbell_message(
 
     ufp.api.bootstrap.cameras = {new_camera.id: new_camera}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "Test"
 
 
 async def test_select_set_option_light_motion(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light
 ) -> None:
     """Test Light Mode select."""
 
-    await init_entry(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SELECT, 2, 2)
+    await init_entry(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SELECT, 2, 2)
 
     _, entity_id = ids_from_device_description(Platform.SELECT, light, LIGHT_SELECTS[0])
 
     light.__pydantic_fields__["set_light_settings"] = Mock(final=False, frozen=False)
     light.set_light_settings = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: LIGHT_MODE_OFF},
@@ -348,12 +348,12 @@ async def test_select_set_option_light_motion(
 
 
 async def test_select_set_option_light_camera(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light, camera: Camera
+    menuai: menuai, ufp: MockUFPFixture, light: Light, camera: Camera
 ) -> None:
     """Test Paired Camera select."""
 
-    await init_entry(hass, ufp, [light, camera])
-    assert_entity_counts(hass, Platform.SELECT, 4, 4)
+    await init_entry(menuai, ufp, [light, camera])
+    assert_entity_counts(menuai, Platform.SELECT, 4, 4)
 
     _, entity_id = ids_from_device_description(Platform.SELECT, light, LIGHT_SELECTS[1])
 
@@ -362,7 +362,7 @@ async def test_select_set_option_light_camera(
 
     camera = list(light.api.bootstrap.cameras.values())[0]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: camera.name},
@@ -371,7 +371,7 @@ async def test_select_set_option_light_camera(
 
     light.set_paired_camera.assert_called_once_with(camera)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: "Not Paired"},
@@ -382,12 +382,12 @@ async def test_select_set_option_light_camera(
 
 
 async def test_select_set_option_camera_recording(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test Recording Mode select."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, doorbell, CAMERA_SELECTS[0]
@@ -396,7 +396,7 @@ async def test_select_set_option_camera_recording(
     doorbell.__pydantic_fields__["set_recording_mode"] = Mock(final=False, frozen=False)
     doorbell.set_recording_mode = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: "Never"},
@@ -407,12 +407,12 @@ async def test_select_set_option_camera_recording(
 
 
 async def test_select_set_option_camera_ir(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test Infrared Mode select."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, doorbell, CAMERA_SELECTS[1]
@@ -421,7 +421,7 @@ async def test_select_set_option_camera_ir(
     doorbell.__pydantic_fields__["set_ir_led_model"] = Mock(final=False, frozen=False)
     doorbell.set_ir_led_model = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: "Always Enable"},
@@ -432,12 +432,12 @@ async def test_select_set_option_camera_ir(
 
 
 async def test_select_set_option_camera_doorbell_custom(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test Doorbell Text select (user defined message)."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, doorbell, CAMERA_SELECTS[2]
@@ -446,7 +446,7 @@ async def test_select_set_option_camera_doorbell_custom(
     doorbell.__pydantic_fields__["set_lcd_text"] = Mock(final=False, frozen=False)
     doorbell.set_lcd_text = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: "Test"},
@@ -459,12 +459,12 @@ async def test_select_set_option_camera_doorbell_custom(
 
 
 async def test_select_set_option_camera_doorbell_unifi(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test Doorbell Text select (unifi message)."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, doorbell, CAMERA_SELECTS[2]
@@ -473,7 +473,7 @@ async def test_select_set_option_camera_doorbell_unifi(
     doorbell.__pydantic_fields__["set_lcd_text"] = Mock(final=False, frozen=False)
     doorbell.set_lcd_text = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -487,7 +487,7 @@ async def test_select_set_option_camera_doorbell_unifi(
         DoorbellMessageType.LEAVE_PACKAGE_AT_DOOR
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -501,12 +501,12 @@ async def test_select_set_option_camera_doorbell_unifi(
 
 
 async def test_select_set_option_camera_doorbell_default(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test Doorbell Text select (default message)."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SELECT, 5, 5)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SELECT, 5, 5)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, doorbell, CAMERA_SELECTS[2]
@@ -515,7 +515,7 @@ async def test_select_set_option_camera_doorbell_default(
     doorbell.__pydantic_fields__["set_lcd_text"] = Mock(final=False, frozen=False)
     doorbell.set_lcd_text = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -529,13 +529,13 @@ async def test_select_set_option_camera_doorbell_default(
 
 
 async def test_select_set_option_viewer(
-    hass: HomeAssistant, ufp: MockUFPFixture, viewer: Viewer, liveview: Liveview
+    menuai: menuai, ufp: MockUFPFixture, viewer: Viewer, liveview: Liveview
 ) -> None:
     """Test Liveview select."""
 
     ufp.api.bootstrap.liveviews = {liveview.id: liveview}
-    await init_entry(hass, ufp, [viewer])
-    assert_entity_counts(hass, Platform.SELECT, 1, 1)
+    await init_entry(menuai, ufp, [viewer])
+    assert_entity_counts(menuai, Platform.SELECT, 1, 1)
 
     _, entity_id = ids_from_device_description(
         Platform.SELECT, viewer, VIEWER_SELECTS[0]
@@ -546,7 +546,7 @@ async def test_select_set_option_viewer(
 
     liveview = list(viewer.api.bootstrap.liveviews.values())[0]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: liveview.name},

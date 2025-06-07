@@ -7,7 +7,7 @@ from collections.abc import Awaitable
 import httpx
 from iaqualink.exception import AqualinkServiceException
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
 async def await_or_reraise(awaitable: Awaitable) -> None:
@@ -15,4 +15,4 @@ async def await_or_reraise(awaitable: Awaitable) -> None:
     try:
         await awaitable
     except (AqualinkServiceException, httpx.HTTPError) as svc_exception:
-        raise HomeAssistantError(f"Aqualink error: {svc_exception}") from svc_exception
+        raise menuaiError(f"Aqualink error: {svc_exception}") from svc_exception

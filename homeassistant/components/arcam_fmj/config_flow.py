@@ -9,10 +9,10 @@ from arcam.fmj.client import Client, ConnectionFailed
 from arcam.fmj.utils import get_uniqueid_from_host, get_uniqueid_from_udn
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
 
 from .const import DEFAULT_NAME, DEFAULT_PORT, DOMAIN
 
@@ -53,7 +53,7 @@ class ArcamFmjFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             uuid = await get_uniqueid_from_host(
-                async_get_clientsession(self.hass), user_input[CONF_HOST]
+                async_get_clientsession(self.menuai), user_input[CONF_HOST]
             )
             if uuid:
                 await self._async_set_unique_id_and_update(

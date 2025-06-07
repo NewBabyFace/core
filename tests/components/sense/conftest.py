@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import pytest
 from sense_energy import Scale
 
-from homeassistant.components.sense.binary_sensor import SenseDevice
-from homeassistant.components.sense.const import DOMAIN
+from menuai.components.sense.binary_sensor import SenseDevice
+from menuai.components.sense.const import DOMAIN
 
 from .const import (
     DEVICE_1_DAY_ENERGY,
@@ -32,7 +32,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.sense.async_setup_entry", return_value=True
+        "menuai.components.sense.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -50,7 +50,7 @@ def config_entry() -> MockConfigEntry:
 @pytest.fixture
 def mock_sense() -> Generator[MagicMock]:
     """Mock an ASyncSenseable object with a split foundation."""
-    with patch("homeassistant.components.sense.ASyncSenseable", autospec=True) as mock:
+    with patch("menuai.components.sense.ASyncSenseable", autospec=True) as mock:
         gateway = mock.return_value
         gateway.sense_monitor_id = MONITOR_ID
         gateway.get_monitor_data.return_value = None

@@ -1,27 +1,27 @@
 """Tests for the sensors provided by the RDW integration."""
 
-from homeassistant.components.rdw.const import DOMAIN
-from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.rdw.const import DOMAIN
+from menuai.components.sensor import ATTR_STATE_CLASS, SensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
     ATTR_UNIT_OF_MEASUREMENT,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_vehicle_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test the RDW vehicle sensors."""
-    state = hass.states.get("sensor.skoda_11zkz3_apk_expiration")
+    state = menuai.states.get("sensor.skoda_11zkz3_apk_expiration")
     entry = entity_registry.async_get("sensor.skoda_11zkz3_apk_expiration")
     assert entry
     assert state
@@ -33,7 +33,7 @@ async def test_vehicle_sensors(
     assert ATTR_STATE_CLASS not in state.attributes
     assert ATTR_UNIT_OF_MEASUREMENT not in state.attributes
 
-    state = hass.states.get("sensor.skoda_11zkz3_ascription_date")
+    state = menuai.states.get("sensor.skoda_11zkz3_ascription_date")
     entry = entity_registry.async_get("sensor.skoda_11zkz3_ascription_date")
     assert entry
     assert state

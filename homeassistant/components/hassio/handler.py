@@ -1,4 +1,4 @@
-"""Handler for Hass.io."""
+"""Handler for menuai.io."""
 
 from __future__ import annotations
 
@@ -13,25 +13,25 @@ from aiohasupervisor import SupervisorClient
 import aiohttp
 from yarl import URL
 
-from homeassistant.auth.models import RefreshToken
-from homeassistant.components.http import (
+from menuai.auth.models import RefreshToken
+from menuai.components.http import (
     CONF_SERVER_HOST,
     CONF_SERVER_PORT,
     CONF_SSL_CERTIFICATE,
 )
-from homeassistant.const import SERVER_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.singleton import singleton
-from homeassistant.loader import bind_hass
+from menuai.const import SERVER_PORT
+from menuai.core import menuai
+from menuai.helpers.singleton import singleton
+from menuai.loader import bind_menuai
 
-from .const import ATTR_MESSAGE, ATTR_RESULT, DATA_COMPONENT, X_HASS_SOURCE
+from .const import ATTR_MESSAGE, ATTR_RESULT, DATA_COMPONENT, X_menuai_SOURCE
 
 _LOGGER = logging.getLogger(__name__)
 
 KEY_SUPERVISOR_CLIENT = "supervisor_client"
 
 
-class HassioAPIError(RuntimeError):
+class menuaiioAPIError(RuntimeError):
     """Return if a API trow a error."""
 
 
@@ -45,7 +45,7 @@ def _api_bool[**_P](
         try:
             data = await funct(*argv, **kwargs)
             return data["result"] == "ok"
-        except HassioAPIError:
+        except menuaiioAPIError:
             return False
 
     return _wrapper
@@ -61,80 +61,80 @@ def api_data[**_P](
         data = await funct(*argv, **kwargs)
         if data["result"] == "ok":
             return data["data"]
-        raise HassioAPIError(data["message"])
+        raise menuaiioAPIError(data["message"])
 
     return _wrapper
 
 
-@bind_hass
-async def async_update_diagnostics(hass: HomeAssistant, diagnostics: bool) -> bool:
+@bind_menuai
+async def async_update_diagnostics(menuai: menuai, diagnostics: bool) -> bool:
     """Update Supervisor diagnostics toggle.
 
-    The caller of the function should handle HassioAPIError.
+    The caller of the function should handle menuaiioAPIError.
     """
-    hassio = hass.data[DATA_COMPONENT]
-    return await hassio.update_diagnostics(diagnostics)
+    menuaiio = menuai.data[DATA_COMPONENT]
+    return await menuaiio.update_diagnostics(diagnostics)
 
 
-@bind_hass
+@bind_menuai
 @api_data
 async def async_create_backup(
-    hass: HomeAssistant, payload: dict, partial: bool = False
+    menuai: menuai, payload: dict, partial: bool = False
 ) -> dict:
     """Create a full or partial backup.
 
-    The caller of the function should handle HassioAPIError.
+    The caller of the function should handle menuaiioAPIError.
     """
-    hassio = hass.data[DATA_COMPONENT]
+    menuaiio = menuai.data[DATA_COMPONENT]
     backup_type = "partial" if partial else "full"
     command = f"/backups/new/{backup_type}"
-    return await hassio.send_command(command, payload=payload, timeout=None)
+    return await menuaiio.send_command(command, payload=payload, timeout=None)
 
 
 @api_data
-async def async_get_green_settings(hass: HomeAssistant) -> dict[str, bool]:
-    """Return settings specific to Home Assistant Green."""
-    hassio = hass.data[DATA_COMPONENT]
-    return await hassio.send_command("/os/boards/green", method="get")
+async def async_get_green_settings(menuai: menuai) -> dict[str, bool]:
+    """Return settings specific to MenuAI Green."""
+    menuaiio = menuai.data[DATA_COMPONENT]
+    return await menuaiio.send_command("/os/boards/green", method="get")
 
 
 @api_data
 async def async_set_green_settings(
-    hass: HomeAssistant, settings: dict[str, bool]
+    menuai: menuai, settings: dict[str, bool]
 ) -> dict:
-    """Set settings specific to Home Assistant Green.
+    """Set settings specific to MenuAI Green.
 
     Returns an empty dict.
     """
-    hassio = hass.data[DATA_COMPONENT]
-    return await hassio.send_command(
+    menuaiio = menuai.data[DATA_COMPONENT]
+    return await menuaiio.send_command(
         "/os/boards/green", method="post", payload=settings
     )
 
 
 @api_data
-async def async_get_yellow_settings(hass: HomeAssistant) -> dict[str, bool]:
-    """Return settings specific to Home Assistant Yellow."""
-    hassio = hass.data[DATA_COMPONENT]
-    return await hassio.send_command("/os/boards/yellow", method="get")
+async def async_get_yellow_settings(menuai: menuai) -> dict[str, bool]:
+    """Return settings specific to MenuAI Yellow."""
+    menuaiio = menuai.data[DATA_COMPONENT]
+    return await menuaiio.send_command("/os/boards/yellow", method="get")
 
 
 @api_data
 async def async_set_yellow_settings(
-    hass: HomeAssistant, settings: dict[str, bool]
+    menuai: menuai, settings: dict[str, bool]
 ) -> dict:
-    """Set settings specific to Home Assistant Yellow.
+    """Set settings specific to MenuAI Yellow.
 
     Returns an empty dict.
     """
-    hassio = hass.data[DATA_COMPONENT]
-    return await hassio.send_command(
+    menuaiio = menuai.data[DATA_COMPONENT]
+    return await menuaiio.send_command(
         "/os/boards/yellow", method="post", payload=settings
     )
 
 
-class HassIO:
-    """Small API wrapper for Hass.io."""
+class menuaiIO:
+    """Small API wrapper for menuai.io."""
 
     def __init__(
         self,
@@ -142,7 +142,7 @@ class HassIO:
         websession: aiohttp.ClientSession,
         ip: str,
     ) -> None:
-        """Initialize Hass.io API."""
+        """Initialize menuai.io API."""
         self.loop = loop
         self.websession = websession
         self._ip = ip
@@ -227,10 +227,10 @@ class HassIO:
         return self.send_command("/ingress/panels", method="get")
 
     @_api_bool
-    async def update_hass_api(
+    async def update_menuai_api(
         self, http_config: dict[str, Any], refresh_token: RefreshToken
     ):
-        """Update Home Assistant API data on Hass.io."""
+        """Update MenuAI API data on menuai.io."""
         port = http_config.get(CONF_SERVER_PORT) or SERVER_PORT
         options = {
             "ssl": CONF_SSL_CERTIFICATE in http_config,
@@ -245,11 +245,11 @@ class HassIO:
                 " disabled"
             )
 
-        return await self.send_command("/homeassistant/options", payload=options)
+        return await self.send_command("/menuai/options", payload=options)
 
     @_api_bool
-    def update_hass_config(self, timezone: str, country: str | None) -> Coroutine:
-        """Update Home-Assistant timezone data on Hass.io.
+    def update_menuai_config(self, timezone: str, country: str | None) -> Coroutine:
+        """Update Home-Assistant timezone data on menuai.io.
 
         This method returns a coroutine.
         """
@@ -277,7 +277,7 @@ class HassIO:
         *,
         source: str = "core.handler",
     ) -> Any:
-        """Send API command to Hass.io.
+        """Send API command to menuai.io.
 
         This method is a coroutine.
         """
@@ -289,7 +289,7 @@ class HassIO:
         # such as ../../../../etc/passwd
         if joined_url.raw_path != command:
             _LOGGER.error("Invalid request %s", command)
-            raise HassioAPIError
+            raise menuaiioAPIError
 
         try:
             response = await self.websession.request(
@@ -300,7 +300,7 @@ class HassIO:
                     aiohttp.hdrs.AUTHORIZATION: (
                         f"Bearer {os.environ.get('SUPERVISOR_TOKEN', '')}"
                     ),
-                    X_HASS_SOURCE: source,
+                    X_menuai_SOURCE: source,
                 },
                 timeout=aiohttp.ClientTimeout(total=timeout),
             )
@@ -308,7 +308,7 @@ class HassIO:
             if response.status != HTTPStatus.OK:
                 error = await response.json(encoding="utf-8")
                 if error.get(ATTR_RESULT) == "error":
-                    raise HassioAPIError(error.get(ATTR_MESSAGE))
+                    raise menuaiioAPIError(error.get(ATTR_MESSAGE))
 
                 _LOGGER.error(
                     "Request to %s method %s returned with code %d",
@@ -316,7 +316,7 @@ class HassIO:
                     method,
                     response.status,
                 )
-                raise HassioAPIError
+                raise menuaiioAPIError
 
             if return_text:
                 return await response.text(encoding="utf-8")
@@ -329,15 +329,15 @@ class HassIO:
         except aiohttp.ClientError as err:
             _LOGGER.error("Client error on %s request %s", command, err)
 
-        raise HassioAPIError
+        raise menuaiioAPIError
 
 
 @singleton(KEY_SUPERVISOR_CLIENT)
-def get_supervisor_client(hass: HomeAssistant) -> SupervisorClient:
+def get_supervisor_client(menuai: menuai) -> SupervisorClient:
     """Return supervisor client."""
-    hassio = hass.data[DATA_COMPONENT]
+    menuaiio = menuai.data[DATA_COMPONENT]
     return SupervisorClient(
-        str(hassio.base_url),
+        str(menuaiio.base_url),
         os.environ.get("SUPERVISOR_TOKEN", ""),
-        session=hassio.websession,
+        session=menuaiio.websession,
     )

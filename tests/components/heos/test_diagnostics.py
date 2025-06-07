@@ -5,9 +5,9 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.heos.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.heos.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import MockHeos
 
@@ -20,20 +20,20 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     controller: MockHeos,
     system: HeosSystem,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test generating diagnostics for a config entry."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     controller.get_system_info.return_value = system
     diagnostics = await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry
+        menuai, menuai_client, config_entry
     )
 
     assert diagnostics == snapshot(
@@ -43,20 +43,20 @@ async def test_config_entry_diagnostics(
 
 @pytest.mark.usefixtures("controller")
 async def test_config_entry_diagnostics_error_getting_system(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     controller: MockHeos,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test generating diagnostics with error during getting system info."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     controller.get_system_info.side_effect = HeosError("Not connected to device")
 
     diagnostics = await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry
+        menuai, menuai_client, config_entry
     )
 
     assert diagnostics == snapshot(
@@ -66,19 +66,19 @@ async def test_config_entry_diagnostics_error_getting_system(
 
 @pytest.mark.usefixtures("controller")
 async def test_device_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test generating diagnostics for a config entry."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    device_registry = dr.async_get(hass)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    device_registry = dr.async_get(menuai)
     device = device_registry.async_get_device({(DOMAIN, "1")})
     assert device is not None
     diagnostics = await get_diagnostics_for_device(
-        hass, hass_client, config_entry, device
+        menuai, menuai_client, config_entry, device
     )
     assert diagnostics == snapshot(
         exclude=props(

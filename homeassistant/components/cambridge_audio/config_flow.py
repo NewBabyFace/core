@@ -6,14 +6,14 @@ from typing import Any
 from aiostreammagic import StreamMagicClient
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONNECT_TIMEOUT, DOMAIN, STREAM_MAGIC_EXCEPTIONS
 
@@ -37,7 +37,7 @@ class CambridgeAudioConfigFlow(ConfigFlow, domain=DOMAIN):
 
         await self.async_set_unique_id(discovery_info.properties["serial"])
         self._abort_if_unique_id_configured(updates={CONF_HOST: host})
-        client = StreamMagicClient(host, async_get_clientsession(self.hass))
+        client = StreamMagicClient(host, async_get_clientsession(self.menuai))
         try:
             async with asyncio.timeout(CONNECT_TIMEOUT):
                 await client.connect()
@@ -88,7 +88,7 @@ class CambridgeAudioConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input:
             client = StreamMagicClient(
-                user_input[CONF_HOST], async_get_clientsession(self.hass)
+                user_input[CONF_HOST], async_get_clientsession(self.menuai)
             )
             try:
                 async with asyncio.timeout(CONNECT_TIMEOUT):

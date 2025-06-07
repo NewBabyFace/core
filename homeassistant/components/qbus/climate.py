@@ -7,18 +7,18 @@ from qbusmqttapi.const import KEY_PROPERTIES_REGIME, KEY_PROPERTIES_SET_TEMPERAT
 from qbusmqttapi.discovery import QbusMqttOutput
 from qbusmqttapi.state import QbusMqttThermoState, StateType
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.mqtt import ReceiveMessage, client as mqtt
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.mqtt import ReceiveMessage, client as mqtt
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import QbusConfigEntry
@@ -32,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: QbusConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -89,16 +89,16 @@ class QbusClimate(QbusEntity, ClimateEntity):
 
         self._request_state_debouncer: Debouncer | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self._request_state_debouncer = Debouncer(
-            self.hass,
+            self.menuai,
             _LOGGER,
             cooldown=STATE_REQUEST_DELAY,
             immediate=False,
             function=self._async_request_state,
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new target preset mode."""
@@ -170,4 +170,4 @@ class QbusClimate(QbusEntity, ClimateEntity):
 
     async def _async_request_state(self) -> None:
         request = self._message_factory.create_state_request([self._mqtt_output.id])
-        await mqtt.async_publish(self.hass, request.topic, request.payload)
+        await mqtt.async_publish(self.menuai, request.topic, request.payload)

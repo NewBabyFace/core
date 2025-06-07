@@ -9,15 +9,15 @@ from unittest.mock import ANY, patch
 from freezegun import freeze_time
 import pytest
 
-from homeassistant import core
-from homeassistant.components import logbook, recorder
-from homeassistant.components.automation import ATTR_SOURCE, EVENT_AUTOMATION_TRIGGERED
-from homeassistant.components.logbook import websocket_api
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.util import get_instance
-from homeassistant.components.script import EVENT_SCRIPT_STARTED
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.const import (
+from menuai import core
+from menuai.components import logbook, recorder
+from menuai.components.automation import ATTR_SOURCE, EVENT_AUTOMATION_TRIGGERED
+from menuai.components.logbook import websocket_api
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.util import get_instance
+from menuai.components.script import EVENT_SCRIPT_STARTED
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.const import (
     ATTR_DOMAIN,
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
@@ -27,17 +27,17 @@ from homeassistant.const import (
     CONF_ENTITIES,
     CONF_EXCLUDE,
     CONF_INCLUDE,
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_FINAL_WRITE,
+    EVENT_menuai_START,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import Event, HomeAssistant, State, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entityfilter import CONF_ENTITY_GLOBS
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import Event, menuai, State, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entityfilter import CONF_ENTITY_GLOBS
+from menuai.helpers.event import async_track_state_change_event
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.components.recorder.common import (
@@ -53,19 +53,19 @@ def listeners_without_writes(listeners: dict[str, int]) -> dict[str, int]:
     return {
         key: value
         for key, value in listeners.items()
-        if key != EVENT_HOMEASSISTANT_FINAL_WRITE
+        if key != EVENT_menuai_FINAL_WRITE
     }
 
 
 async def _async_mock_logbook_platform_with_broken_describe(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     class MockLogbookPlatform:
         """Mock a logbook platform with broken describe."""
 
         @core.callback
         def async_describe_events(
-            hass: HomeAssistant,  # noqa: N805
+            menuai: menuai,  # noqa: N805
             async_describe_event: Callable[
                 [str, str, Callable[[Event], dict[str, str]]], None
             ],
@@ -79,16 +79,16 @@ async def _async_mock_logbook_platform_with_broken_describe(
 
             async_describe_event("test", "mock_event", async_describe_test_event)
 
-    logbook._process_logbook_platform(hass, "test", MockLogbookPlatform)
+    logbook._process_logbook_platform(menuai, "test", MockLogbookPlatform)
 
 
-async def _async_mock_logbook_platform(hass: HomeAssistant) -> None:
+async def _async_mock_logbook_platform(menuai: menuai) -> None:
     class MockLogbookPlatform:
         """Mock a logbook platform."""
 
         @core.callback
         def async_describe_events(
-            hass: HomeAssistant,  # noqa: N805
+            menuai: menuai,  # noqa: N805
             async_describe_event: Callable[
                 [str, str, Callable[[Event], dict[str, str]]], None
             ],
@@ -105,15 +105,15 @@ async def _async_mock_logbook_platform(hass: HomeAssistant) -> None:
 
             async_describe_event("test", "mock_event", async_describe_test_event)
 
-    logbook._process_logbook_platform(hass, "test", MockLogbookPlatform)
+    logbook._process_logbook_platform(menuai, "test", MockLogbookPlatform)
 
 
 async def _async_mock_entity_with_broken_logbook_platform(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> er.RegistryEntry:
     """Mock an integration that provides an entity that are described by the logbook that raises."""
     entry = MockConfigEntry(domain="test", data={"first": True}, options=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entry = entity_registry.async_get_or_create(
         platform="test",
         domain="sensor",
@@ -121,16 +121,16 @@ async def _async_mock_entity_with_broken_logbook_platform(
         unique_id="1234",
         suggested_object_id="test",
     )
-    await _async_mock_logbook_platform_with_broken_describe(hass)
+    await _async_mock_logbook_platform_with_broken_describe(menuai)
     return entry
 
 
 async def _async_mock_entity_with_logbook_platform(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> er.RegistryEntry:
     """Mock an integration that provides an entity that are described by the logbook."""
     entry = MockConfigEntry(domain="test", data={"first": True}, options=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entry = entity_registry.async_get_or_create(
         platform="test",
         domain="sensor",
@@ -138,16 +138,16 @@ async def _async_mock_entity_with_logbook_platform(
         unique_id="1234",
         suggested_object_id="test",
     )
-    await _async_mock_logbook_platform(hass)
+    await _async_mock_logbook_platform(menuai)
     return entry
 
 
 async def _async_mock_devices_with_logbook_platform(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> list[dr.DeviceEntry]:
     """Mock an integration that provides a device that are described by the logbook."""
     entry = MockConfigEntry(domain="test", data={"first": True}, options=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -168,46 +168,46 @@ async def _async_mock_devices_with_logbook_platform(
         model="model",
         suggested_area="Living Room",
     )
-    await _async_mock_logbook_platform(hass)
+    await _async_mock_logbook_platform(menuai)
     return [device, device2]
 
 
 async def test_get_events(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test logbook get_events."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    hass.states.async_set("light.kitchen", STATE_OFF)
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
+    await menuai.async_block_till_done()
     context = core.Context(
         id="01GTDGKBCH00GW0X276W5TEDDD",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
 
-    hass.states.async_set("light.kitchen", STATE_OFF, context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF, context=context)
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -293,36 +293,36 @@ async def test_get_events(
 
 
 async def test_get_events_entities_filtered_away(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test logbook get_events all entities filtered away."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    hass.states.async_set("light.kitchen", STATE_ON)
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    menuai.states.async_set("light.kitchen", STATE_ON)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "light.filtered", STATE_ON, {"brightness": 100, ATTR_UNIT_OF_MEASUREMENT: "any"}
     )
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_OFF, {"brightness": 200})
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF, {"brightness": 200})
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "light.filtered",
         STATE_OFF,
         {"brightness": 300, ATTR_UNIT_OF_MEASUREMENT: "any"},
     )
 
-    await async_wait_recording_done(hass)
-    client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_ws_client()
 
     await client.send_json(
         {
@@ -357,14 +357,14 @@ async def test_get_events_entities_filtered_away(
 
 
 async def test_get_events_future_start_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events with a future start time."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
     future = dt_util.utcnow() + timedelta(hours=10)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -382,13 +382,13 @@ async def test_get_events_future_start_time(
 
 
 async def test_get_events_bad_start_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events bad start time."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -402,14 +402,14 @@ async def test_get_events_bad_start_time(
 
 
 async def test_get_events_bad_end_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events bad end time."""
     now = dt_util.utcnow()
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -424,13 +424,13 @@ async def test_get_events_bad_end_time(
 
 
 async def test_get_events_invalid_filters(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events invalid filters."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -455,47 +455,47 @@ async def test_get_events_invalid_filters(
 
 async def test_get_events_with_device_ids(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test logbook get_events for device ids."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
 
-    devices = await _async_mock_devices_with_logbook_platform(hass, device_registry)
+    devices = await _async_mock_devices_with_logbook_platform(menuai, device_registry)
     device = devices[0]
     device2 = devices[1]
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire("mock_event", {"device_id": device.id})
-    hass.bus.async_fire("mock_event", {"device_id": device2.id})
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire("mock_event", {"device_id": device.id})
+    menuai.bus.async_fire("mock_event", {"device_id": device2.id})
 
-    hass.states.async_set("light.kitchen", STATE_OFF)
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
+    await menuai.async_block_till_done()
     context = core.Context(
         id="01GTDGKBCH00GW0X276W5TEDDD",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
 
-    hass.states.async_set("light.kitchen", STATE_OFF, context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF, context=context)
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_ws_client()
 
     await client.send_json(
         {
@@ -568,20 +568,20 @@ async def test_get_events_with_device_ids(
     assert isinstance(results[4]["when"], float)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream_excluded_entities(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with excluded entities."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "automation", "script")
         ]
     )
     await async_setup_component(
-        hass,
+        menuai,
         logbook.DOMAIN,
         {
             logbook.DOMAIN: {
@@ -593,23 +593,23 @@ async def test_subscribe_unsubscribe_logbook_stream_excluded_entities(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("light.exc", STATE_ON)
-    hass.states.async_set("light.exc", STATE_OFF)
-    hass.states.async_set("switch.any", STATE_ON)
-    hass.states.async_set("switch.any", STATE_OFF)
-    hass.states.async_set("cover.excluded", STATE_ON)
-    hass.states.async_set("cover.excluded", STATE_OFF)
+    menuai.states.async_set("light.exc", STATE_ON)
+    menuai.states.async_set("light.exc", STATE_OFF)
+    menuai.states.async_set("switch.any", STATE_ON)
+    menuai.states.async_set("switch.any", STATE_OFF)
+    menuai.states.async_set("cover.excluded", STATE_ON)
+    menuai.states.async_set("cover.excluded", STATE_OFF)
 
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {"id": 7, "type": "logbook/event_stream", "start_time": now.isoformat()}
     )
@@ -633,8 +633,8 @@ async def test_subscribe_unsubscribe_logbook_stream_excluded_entities(
     assert msg["event"]["end_time"] > msg["event"]["start_time"]
     assert msg["event"]["partial"] is True
 
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -642,30 +642,30 @@ async def test_subscribe_unsubscribe_logbook_stream_excluded_entities(
     assert "partial" not in msg["event"]["events"]
     assert msg["event"]["events"] == []
 
-    hass.states.async_set("light.exc", STATE_ON)
-    hass.states.async_set("light.exc", STATE_OFF)
-    hass.states.async_set("switch.any", STATE_ON)
-    hass.states.async_set("switch.any", STATE_OFF)
-    hass.states.async_set("cover.excluded", STATE_ON)
-    hass.states.async_set("cover.excluded", STATE_OFF)
-    hass.states.async_set("light.alpha", "on")
-    hass.states.async_set("light.alpha", "off")
-    alpha_off_state: State = hass.states.get("light.alpha")
-    hass.states.async_set("light.zulu", "on", {"color": "blue"})
-    hass.states.async_set("light.zulu", "off", {"effect": "help"})
-    zulu_off_state: State = hass.states.get("light.zulu")
-    hass.states.async_set(
+    menuai.states.async_set("light.exc", STATE_ON)
+    menuai.states.async_set("light.exc", STATE_OFF)
+    menuai.states.async_set("switch.any", STATE_ON)
+    menuai.states.async_set("switch.any", STATE_OFF)
+    menuai.states.async_set("cover.excluded", STATE_ON)
+    menuai.states.async_set("cover.excluded", STATE_OFF)
+    menuai.states.async_set("light.alpha", "on")
+    menuai.states.async_set("light.alpha", "off")
+    alpha_off_state: State = menuai.states.get("light.alpha")
+    menuai.states.async_set("light.zulu", "on", {"color": "blue"})
+    menuai.states.async_set("light.zulu", "off", {"effect": "help"})
+    zulu_off_state: State = menuai.states.get("light.zulu")
+    menuai.states.async_set(
         "light.zulu", "on", {"effect": "help", "color": ["blue", "green"]}
     )
-    zulu_on_state: State = hass.states.get("light.zulu")
-    await hass.async_block_till_done()
+    zulu_on_state: State = menuai.states.get("light.zulu")
+    await menuai.async_block_till_done()
 
-    hass.states.async_remove("light.zulu")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.zulu")
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -689,33 +689,33 @@ async def test_subscribe_unsubscribe_logbook_stream_excluded_entities(
         },
     ]
 
-    await async_wait_recording_done(hass)
-    hass.bus.async_fire(
+    await async_wait_recording_done(menuai)
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: "cover.excluded"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {
             ATTR_NAME: "Mock automation switch matching entity",
             ATTR_ENTITY_ID: "switch.match_domain",
         },
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation switch matching domain", ATTR_DOMAIN: "switch"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation matches nothing"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: "light.keep"},
     )
-    hass.states.async_set("cover.excluded", STATE_ON)
-    hass.states.async_set("cover.excluded", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("cover.excluded", STATE_ON)
+    menuai.states.async_set("cover.excluded", STATE_OFF)
+    await menuai.async_block_till_done()
     msg = await websocket_client.receive_json()
     assert msg["id"] == 7
     assert msg["type"] == "event"
@@ -751,13 +751,13 @@ async def test_subscribe_unsubscribe_logbook_stream_excluded_entities(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream_included_entities(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with included entities."""
     test_entities = (
@@ -772,12 +772,12 @@ async def test_subscribe_unsubscribe_logbook_stream_included_entities(
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "automation", "script")
         ]
     )
     await async_setup_component(
-        hass,
+        menuai,
         logbook.DOMAIN,
         {
             logbook.DOMAIN: {
@@ -789,17 +789,17 @@ async def test_subscribe_unsubscribe_logbook_stream_included_entities(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for entity_id in test_entities:
-        hass.states.async_set(entity_id, STATE_ON)
-        hass.states.async_set(entity_id, STATE_OFF)
+        menuai.states.async_set(entity_id, STATE_ON)
+        menuai.states.async_set(entity_id, STATE_OFF)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {"id": 7, "type": "logbook/event_stream", "start_time": now.isoformat()}
     )
@@ -821,7 +821,7 @@ async def test_subscribe_unsubscribe_logbook_stream_included_entities(
     assert msg["event"]["end_time"] > msg["event"]["start_time"]
     assert msg["event"]["partial"] is True
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
     assert msg["type"] == "event"
@@ -829,15 +829,15 @@ async def test_subscribe_unsubscribe_logbook_stream_included_entities(
     assert msg["event"]["events"] == []
 
     for entity_id in test_entities:
-        hass.states.async_set(entity_id, STATE_ON)
-        hass.states.async_set(entity_id, STATE_OFF)
-    await hass.async_block_till_done()
+        menuai.states.async_set(entity_id, STATE_ON)
+        menuai.states.async_set(entity_id, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    hass.states.async_remove("light.zulu")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.zulu")
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -854,9 +854,9 @@ async def test_subscribe_unsubscribe_logbook_stream_included_entities(
 
     for _ in range(3):
         for entity_id in test_entities:
-            hass.states.async_set(entity_id, STATE_ON)
-            hass.states.async_set(entity_id, STATE_OFF)
-        await async_wait_recording_done(hass)
+            menuai.states.async_set(entity_id, STATE_ON)
+            menuai.states.async_set(entity_id, STATE_OFF)
+        await async_wait_recording_done(menuai)
 
         msg = await websocket_client.receive_json()
         assert msg["id"] == 7
@@ -870,35 +870,35 @@ async def test_subscribe_unsubscribe_logbook_stream_included_entities(
             {"entity_id": "cover.included", "state": "off", "when": ANY},
         ]
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: "cover.included"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: "cover.excluded"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {
             ATTR_NAME: "Mock automation switch matching entity",
             ATTR_ENTITY_ID: "switch.match_domain",
         },
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation switch matching domain", ATTR_DOMAIN: "switch"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation matches nothing"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: "light.inc"},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == 7
@@ -961,24 +961,24 @@ async def test_subscribe_unsubscribe_logbook_stream_included_entities(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_logbook_stream_excluded_entities_inherits_filters_from_recorder(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream inherits filters from recorder."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "automation", "script")
         ]
     )
     await async_setup_component(
-        hass,
+        menuai,
         logbook.DOMAIN,
         {
             logbook.DOMAIN: {
@@ -995,24 +995,24 @@ async def test_logbook_stream_excluded_entities_inherits_filters_from_recorder(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("light.exc", STATE_ON)
-    hass.states.async_set("light.exc", STATE_OFF)
-    hass.states.async_set("switch.any", STATE_ON)
-    hass.states.async_set("switch.any", STATE_OFF)
-    hass.states.async_set("cover.excluded", STATE_ON)
-    hass.states.async_set("cover.excluded", STATE_OFF)
-    hass.states.async_set("light.additional_excluded", STATE_ON)
-    hass.states.async_set("light.additional_excluded", STATE_OFF)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.exc", STATE_ON)
+    menuai.states.async_set("light.exc", STATE_OFF)
+    menuai.states.async_set("switch.any", STATE_ON)
+    menuai.states.async_set("switch.any", STATE_OFF)
+    menuai.states.async_set("cover.excluded", STATE_ON)
+    menuai.states.async_set("cover.excluded", STATE_OFF)
+    menuai.states.async_set("light.additional_excluded", STATE_ON)
+    menuai.states.async_set("light.additional_excluded", STATE_OFF)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {"id": 7, "type": "logbook/event_stream", "start_time": now.isoformat()}
     )
@@ -1036,7 +1036,7 @@ async def test_logbook_stream_excluded_entities_inherits_filters_from_recorder(
     assert msg["event"]["end_time"] > msg["event"]["start_time"]
     assert msg["event"]["partial"] is True
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1044,31 +1044,31 @@ async def test_logbook_stream_excluded_entities_inherits_filters_from_recorder(
     assert "partial" not in msg["event"]["events"]
     assert msg["event"]["events"] == []
 
-    hass.states.async_set("light.exc", STATE_ON)
-    hass.states.async_set("light.exc", STATE_OFF)
-    hass.states.async_set("switch.any", STATE_ON)
-    hass.states.async_set("switch.any", STATE_OFF)
-    hass.states.async_set("cover.excluded", STATE_ON)
-    hass.states.async_set("cover.excluded", STATE_OFF)
-    hass.states.async_set("light.additional_excluded", STATE_ON)
-    hass.states.async_set("light.additional_excluded", STATE_OFF)
-    hass.states.async_set("light.alpha", "on")
-    hass.states.async_set("light.alpha", "off")
-    alpha_off_state: State = hass.states.get("light.alpha")
-    hass.states.async_set("light.zulu", "on", {"color": "blue"})
-    hass.states.async_set("light.zulu", "off", {"effect": "help"})
-    zulu_off_state: State = hass.states.get("light.zulu")
-    hass.states.async_set(
+    menuai.states.async_set("light.exc", STATE_ON)
+    menuai.states.async_set("light.exc", STATE_OFF)
+    menuai.states.async_set("switch.any", STATE_ON)
+    menuai.states.async_set("switch.any", STATE_OFF)
+    menuai.states.async_set("cover.excluded", STATE_ON)
+    menuai.states.async_set("cover.excluded", STATE_OFF)
+    menuai.states.async_set("light.additional_excluded", STATE_ON)
+    menuai.states.async_set("light.additional_excluded", STATE_OFF)
+    menuai.states.async_set("light.alpha", "on")
+    menuai.states.async_set("light.alpha", "off")
+    alpha_off_state: State = menuai.states.get("light.alpha")
+    menuai.states.async_set("light.zulu", "on", {"color": "blue"})
+    menuai.states.async_set("light.zulu", "off", {"effect": "help"})
+    zulu_off_state: State = menuai.states.get("light.zulu")
+    menuai.states.async_set(
         "light.zulu", "on", {"effect": "help", "color": ["blue", "green"]}
     )
-    zulu_on_state: State = hass.states.get("light.zulu")
-    await hass.async_block_till_done()
+    zulu_on_state: State = menuai.states.get("light.zulu")
+    await menuai.async_block_till_done()
 
-    hass.states.async_remove("light.zulu")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.zulu")
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1092,33 +1092,33 @@ async def test_logbook_stream_excluded_entities_inherits_filters_from_recorder(
         },
     ]
 
-    await async_wait_recording_done(hass)
-    hass.bus.async_fire(
+    await async_wait_recording_done(menuai)
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: "cover.excluded"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {
             ATTR_NAME: "Mock automation switch matching entity",
             ATTR_ENTITY_ID: "switch.match_domain",
         },
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation switch matching domain", ATTR_DOMAIN: "switch"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation matches nothing"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: "light.keep"},
     )
-    hass.states.async_set("cover.excluded", STATE_ON)
-    hass.states.async_set("cover.excluded", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("cover.excluded", STATE_ON)
+    menuai.states.async_set("cover.excluded", STATE_OFF)
+    await menuai.async_block_till_done()
     msg = await websocket_client.receive_json()
     assert msg["id"] == 7
     assert msg["type"] == "event"
@@ -1154,36 +1154,36 @@ async def test_logbook_stream_excluded_entities_inherits_filters_from_recorder(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     init_listeners = {
         **init_listeners,
-        EVENT_HOMEASSISTANT_START: init_listeners[EVENT_HOMEASSISTANT_START] - 1,
+        EVENT_menuai_START: init_listeners[EVENT_menuai_START] - 1,
     }
     await websocket_client.send_json(
         {"id": 7, "type": "logbook/event_stream", "start_time": now.isoformat()}
@@ -1208,7 +1208,7 @@ async def test_subscribe_unsubscribe_logbook_stream(
     assert msg["event"]["end_time"] > msg["event"]["start_time"]
     assert msg["event"]["partial"] is True
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1216,22 +1216,22 @@ async def test_subscribe_unsubscribe_logbook_stream(
     assert "partial" not in msg["event"]["events"]
     assert msg["event"]["events"] == []
 
-    hass.states.async_set("light.alpha", "on")
-    hass.states.async_set("light.alpha", "off")
-    alpha_off_state: State = hass.states.get("light.alpha")
-    hass.states.async_set("light.zulu", "on", {"color": "blue"})
-    hass.states.async_set("light.zulu", "off", {"effect": "help"})
-    zulu_off_state: State = hass.states.get("light.zulu")
-    hass.states.async_set(
+    menuai.states.async_set("light.alpha", "on")
+    menuai.states.async_set("light.alpha", "off")
+    alpha_off_state: State = menuai.states.get("light.alpha")
+    menuai.states.async_set("light.zulu", "on", {"color": "blue"})
+    menuai.states.async_set("light.zulu", "off", {"effect": "help"})
+    zulu_off_state: State = menuai.states.get("light.zulu")
+    menuai.states.async_set(
         "light.zulu", "on", {"effect": "help", "color": ["blue", "green"]}
     )
-    zulu_on_state: State = hass.states.get("light.zulu")
-    await hass.async_block_till_done()
+    zulu_on_state: State = menuai.states.get("light.zulu")
+    await menuai.async_block_till_done()
 
-    hass.states.async_remove("light.zulu")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.zulu")
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
+    menuai.states.async_set("light.zulu", "on", {"effect": "help", "color": "blue"})
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1255,7 +1255,7 @@ async def test_subscribe_unsubscribe_logbook_stream(
         },
     ]
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {
             ATTR_NAME: "Mock automation",
@@ -1263,7 +1263,7 @@ async def test_subscribe_unsubscribe_logbook_stream(
             ATTR_SOURCE: "numeric state of sensor.hungry_dogs",
         },
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {
             ATTR_NAME: "Mock script",
@@ -1271,8 +1271,8 @@ async def test_subscribe_unsubscribe_logbook_stream(
             ATTR_SOURCE: "numeric state of sensor.hungry_dogs",
         },
     )
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1296,10 +1296,10 @@ async def test_subscribe_unsubscribe_logbook_stream(
             "when": ANY,
         },
         {
-            "domain": "homeassistant",
+            "domain": "menuai",
             "icon": "mdi:home-assistant",
             "message": "started",
-            "name": "Home Assistant",
+            "name": "MenuAI",
             "when": ANY,
         },
     ]
@@ -1309,7 +1309,7 @@ async def test_subscribe_unsubscribe_logbook_stream(
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
     automation_entity_id_test = "automation.alarm"
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {
             ATTR_NAME: "Mock automation",
@@ -1318,25 +1318,25 @@ async def test_subscribe_unsubscribe_logbook_stream(
         },
         context=context,
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {ATTR_NAME: "Mock script", ATTR_ENTITY_ID: "script.mock_script"},
         context=context,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         automation_entity_id_test,
         STATE_ON,
         {ATTR_FRIENDLY_NAME: "Alarm Automation"},
         context=context,
     )
     entity_id_test = "alarm_control_panel.area_001"
-    hass.states.async_set(entity_id_test, STATE_OFF, context=context)
-    hass.states.async_set(entity_id_test, STATE_ON, context=context)
+    menuai.states.async_set(entity_id_test, STATE_OFF, context=context)
+    menuai.states.async_set(entity_id_test, STATE_ON, context=context)
     entity_id_second = "alarm_control_panel.area_002"
-    hass.states.async_set(entity_id_second, STATE_OFF, context=context)
-    hass.states.async_set(entity_id_second, STATE_ON, context=context)
+    menuai.states.async_set(entity_id_second, STATE_OFF, context=context)
+    menuai.states.async_set(entity_id_second, STATE_ON, context=context)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1392,13 +1392,13 @@ async def test_subscribe_unsubscribe_logbook_stream(
             "when": ANY,
         },
     ]
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 2", ATTR_ENTITY_ID: automation_entity_id_test},
         context=context,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == 7
@@ -1422,14 +1422,14 @@ async def test_subscribe_unsubscribe_logbook_stream(
         }
     ]
 
-    await async_wait_recording_done(hass)
-    hass.bus.async_fire(
+    await async_wait_recording_done(menuai)
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation 3", ATTR_ENTITY_ID: automation_entity_id_test},
         context=context,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await websocket_client.receive_json()
     assert msg["id"] == 7
     assert msg["type"] == "event"
@@ -1463,33 +1463,33 @@ async def test_subscribe_unsubscribe_logbook_stream(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream_entities(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with specific entities."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await hass.async_block_till_done()
-    hass.states.async_set("light.small", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.small", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -1518,8 +1518,8 @@ async def test_subscribe_unsubscribe_logbook_stream_entities(
         }
     ]
 
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
     assert msg["type"] == "event"
@@ -1528,12 +1528,12 @@ async def test_subscribe_unsubscribe_logbook_stream_entities(
     assert "partial" not in msg["event"]
     assert msg["event"]["events"] == []
 
-    hass.states.async_set("light.alpha", STATE_ON)
-    hass.states.async_set("light.alpha", STATE_OFF)
-    hass.states.async_set("light.small", STATE_OFF, {"effect": "help", "color": "blue"})
+    menuai.states.async_set("light.alpha", STATE_ON)
+    menuai.states.async_set("light.alpha", STATE_OFF)
+    menuai.states.async_set("light.small", STATE_OFF, {"effect": "help", "color": "blue"})
 
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1547,10 +1547,10 @@ async def test_subscribe_unsubscribe_logbook_stream_entities(
         },
     ]
 
-    hass.states.async_remove("light.alpha")
-    hass.states.async_remove("light.small")
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.alpha")
+    menuai.states.async_remove("light.small")
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     await websocket_client.send_json(
         {"id": 8, "type": "unsubscribe_events", "subscription": 7}
@@ -1563,33 +1563,33 @@ async def test_subscribe_unsubscribe_logbook_stream_entities(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream_entities_with_end_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with specific entities and an end_time."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await hass.async_block_till_done()
-    hass.states.async_set("light.small", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.small", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -1617,8 +1617,8 @@ async def test_subscribe_unsubscribe_logbook_stream_entities_with_end_time(
         }
     ]
 
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1626,11 +1626,11 @@ async def test_subscribe_unsubscribe_logbook_stream_entities_with_end_time(
     assert "partial" not in msg["event"]
     assert msg["event"]["events"] == []
 
-    hass.states.async_set("light.alpha", STATE_ON)
-    hass.states.async_set("light.alpha", STATE_OFF)
-    hass.states.async_set("light.small", STATE_OFF, {"effect": "help", "color": "blue"})
+    menuai.states.async_set("light.alpha", STATE_ON)
+    menuai.states.async_set("light.alpha", STATE_OFF)
+    menuai.states.async_set("light.small", STATE_OFF, {"effect": "help", "color": "blue"})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1644,17 +1644,17 @@ async def test_subscribe_unsubscribe_logbook_stream_entities_with_end_time(
         },
     ]
 
-    hass.states.async_remove("light.alpha")
-    hass.states.async_remove("light.small")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.alpha")
+    menuai.states.async_remove("light.small")
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, now + timedelta(minutes=11))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now + timedelta(minutes=11))
+    await menuai.async_block_till_done()
 
     # These states should not be sent since we should be unsubscribed
-    hass.states.async_set("light.small", STATE_ON)
-    hass.states.async_set("light.small", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.small", STATE_ON)
+    menuai.states.async_set("light.small", STATE_OFF)
+    await menuai.async_block_till_done()
 
     await websocket_client.send_json(
         {"id": 8, "type": "unsubscribe_events", "subscription": 7}
@@ -1667,33 +1667,33 @@ async def test_subscribe_unsubscribe_logbook_stream_entities_with_end_time(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream_entities_past_only(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with specific entities in the past."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await hass.async_block_till_done()
-    hass.states.async_set("light.small", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.small", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -1722,9 +1722,9 @@ async def test_subscribe_unsubscribe_logbook_stream_entities_past_only(
 
     # These states should not be sent since we should be unsubscribed
     # since we only asked for the past
-    hass.states.async_set("light.small", STATE_ON)
-    hass.states.async_set("light.small", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.small", STATE_ON)
+    menuai.states.async_set("light.small", STATE_OFF)
+    await menuai.async_block_till_done()
 
     await websocket_client.send_json(
         {"id": 8, "type": "unsubscribe_events", "subscription": 7}
@@ -1737,13 +1737,13 @@ async def test_subscribe_unsubscribe_logbook_stream_entities_past_only(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream_big_query(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream and ask for a large time frame.
 
@@ -1753,36 +1753,36 @@ async def test_subscribe_unsubscribe_logbook_stream_big_query(
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     four_days_ago = now - timedelta(days=4)
     five_days_ago = now - timedelta(days=5)
 
     with freeze_time(four_days_ago):
-        hass.states.async_set("binary_sensor.four_days_ago", STATE_ON)
-        hass.states.async_set("binary_sensor.four_days_ago", STATE_OFF)
-        four_day_old_state: State = hass.states.get("binary_sensor.four_days_ago")
-        await hass.async_block_till_done()
+        menuai.states.async_set("binary_sensor.four_days_ago", STATE_ON)
+        menuai.states.async_set("binary_sensor.four_days_ago", STATE_OFF)
+        four_day_old_state: State = menuai.states.get("binary_sensor.four_days_ago")
+        await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     # Verify our state was recorded in the past
     assert (now - four_day_old_state.last_updated).total_seconds() > 86400 * 3
 
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    current_state: State = hass.states.get("binary_sensor.is_light")
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    current_state: State = menuai.states.get("binary_sensor.is_light")
 
     # Verify our new state was recorded in the recent timeframe
     assert (now - current_state.last_updated).total_seconds() < 2
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -1839,34 +1839,34 @@ async def test_subscribe_unsubscribe_logbook_stream_big_query(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_unsubscribe_logbook_stream_device(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with a device."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    devices = await _async_mock_devices_with_logbook_platform(hass, device_registry)
+    devices = await _async_mock_devices_with_logbook_platform(menuai, device_registry)
     device = devices[0]
     device2 = devices[1]
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -1880,7 +1880,7 @@ async def test_subscribe_unsubscribe_logbook_stream_device(
     assert msg["id"] == 7
     assert msg["type"] == TYPE_RESULT
     assert msg["success"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     # There are no answers to our initial query
     # so we get an empty reply. This is to ensure
@@ -1893,19 +1893,19 @@ async def test_subscribe_unsubscribe_logbook_stream_device(
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
     assert "partial" in msg["event"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
     assert "partial" not in msg["event"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.states.async_set("binary_sensor.should_not_appear", STATE_ON)
-    hass.states.async_set("binary_sensor.should_not_appear", STATE_OFF)
-    hass.bus.async_fire("mock_event", {"device_id": device.id})
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.should_not_appear", STATE_ON)
+    menuai.states.async_set("binary_sensor.should_not_appear", STATE_OFF)
+    menuai.bus.async_fire("mock_event", {"device_id": device.id})
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -1915,9 +1915,9 @@ async def test_subscribe_unsubscribe_logbook_stream_device(
     ]
 
     for _ in range(3):
-        hass.bus.async_fire("mock_event", {"device_id": device.id})
-        hass.bus.async_fire("mock_event", {"device_id": device2.id})
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("mock_event", {"device_id": device.id})
+        menuai.bus.async_fire("mock_event", {"device_id": device2.id})
+        await menuai.async_block_till_done()
 
         msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
         assert msg["id"] == 7
@@ -1948,18 +1948,18 @@ async def test_subscribe_unsubscribe_logbook_stream_device(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
 async def test_event_stream_bad_start_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test event_stream bad start time."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -1972,30 +1972,30 @@ async def test_event_stream_bad_start_time(
     assert response["error"]["code"] == "invalid_start_time"
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_logbook_stream_match_multiple_entities(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test logbook stream with a described integration that uses multiple entities."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    entry = await _async_mock_entity_with_logbook_platform(hass, entity_registry)
+    entry = await _async_mock_entity_with_logbook_platform(menuai, entity_registry)
     entity_id = entry.entity_id
-    hass.states.async_set(entity_id, STATE_ON)
+    menuai.states.async_set(entity_id, STATE_ON)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2021,28 +2021,28 @@ async def test_logbook_stream_match_multiple_entities(
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
     assert "partial" in msg["event"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
     assert "partial" not in msg["event"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.states.async_set("binary_sensor.should_not_appear", STATE_ON)
-    hass.states.async_set("binary_sensor.should_not_appear", STATE_OFF)
+    menuai.states.async_set("binary_sensor.should_not_appear", STATE_ON)
+    menuai.states.async_set("binary_sensor.should_not_appear", STATE_OFF)
     context = core.Context(
         id="01GTDGKBCH00GW0X276W5TEDDD",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         "mock_event", {"entity_id": ["sensor.any", entity_id]}, context=context
     )
-    hass.bus.async_fire("mock_event", {"entity_id": [f"sensor.any,{entity_id}"]})
-    hass.bus.async_fire("mock_event", {"entity_id": ["sensor.no_match", "light.off"]})
-    hass.states.async_set(entity_id, STATE_OFF, context=context)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("mock_event", {"entity_id": [f"sensor.any,{entity_id}"]})
+    menuai.bus.async_fire("mock_event", {"entity_id": ["sensor.no_match", "light.off"]})
+    menuai.states.async_set(entity_id, STATE_OFF, context=context)
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2078,15 +2078,15 @@ async def test_logbook_stream_match_multiple_entities(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_logbook_stream_match_multiple_entities_one_with_broken_logbook_platform(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -2097,19 +2097,19 @@ async def test_logbook_stream_match_multiple_entities_one_with_broken_logbook_pl
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    entry = await _async_mock_entity_with_broken_logbook_platform(hass, entity_registry)
+    entry = await _async_mock_entity_with_broken_logbook_platform(menuai, entity_registry)
     entity_id = entry.entity_id
-    hass.states.async_set(entity_id, STATE_ON)
+    menuai.states.async_set(entity_id, STATE_ON)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2135,28 +2135,28 @@ async def test_logbook_stream_match_multiple_entities_one_with_broken_logbook_pl
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
     assert "partial" in msg["event"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
     assert "partial" not in msg["event"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.states.async_set("binary_sensor.should_not_appear", STATE_ON)
-    hass.states.async_set("binary_sensor.should_not_appear", STATE_OFF)
+    menuai.states.async_set("binary_sensor.should_not_appear", STATE_ON)
+    menuai.states.async_set("binary_sensor.should_not_appear", STATE_OFF)
     context = core.Context(
         id="01GTDGKBCH00GW0X276W5TEDDD",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         "mock_event", {"entity_id": ["sensor.any", entity_id]}, context=context
     )
-    hass.bus.async_fire("mock_event", {"entity_id": [f"sensor.any,{entity_id}"]})
-    hass.bus.async_fire("mock_event", {"entity_id": ["sensor.no_match", "light.off"]})
-    hass.states.async_set(entity_id, STATE_OFF, context=context)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("mock_event", {"entity_id": [f"sensor.any,{entity_id}"]})
+    menuai.bus.async_fire("mock_event", {"entity_id": ["sensor.no_match", "light.off"]})
+    menuai.states.async_set(entity_id, STATE_OFF, context=context)
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2183,21 +2183,21 @@ async def test_logbook_stream_match_multiple_entities_one_with_broken_logbook_pl
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
     assert "Error with test describe event" in caplog.text
 
 
 async def test_event_stream_bad_end_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test event_stream bad end time."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
     utc_now = dt_util.utcnow()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2225,37 +2225,37 @@ async def test_event_stream_bad_end_time(
 
 async def test_live_stream_with_one_second_commit_interval(
     async_setup_recorder_instance: RecorderInstanceGenerator,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test the recorder with a 1s commit interval."""
     config = {recorder.CONF_COMMIT_INTERVAL: 0.5}
-    await async_setup_recorder_instance(hass, config)
+    await async_setup_recorder_instance(menuai, config)
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    devices = await _async_mock_devices_with_logbook_platform(hass, device_registry)
+    devices = await _async_mock_devices_with_logbook_platform(menuai, device_registry)
     device = devices[0]
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "1"})
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "1"})
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "2"})
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "2"})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "3"})
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "3"})
 
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2264,14 +2264,14 @@ async def test_live_stream_with_one_second_commit_interval(
             "device_ids": [device.id],
         }
     )
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "4"})
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "4"})
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
     assert msg["type"] == TYPE_RESULT
     assert msg["success"]
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "5"})
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "5"})
 
     recieved_rows = []
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
@@ -2279,11 +2279,11 @@ async def test_live_stream_with_one_second_commit_interval(
     assert msg["type"] == "event"
     recieved_rows.extend(msg["event"]["events"])
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "6"})
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "6"})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "7"})
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "7"})
 
     while len(recieved_rows) < 7:
         msg = await asyncio.wait_for(websocket_client.receive_json(), 2.5)
@@ -2313,35 +2313,35 @@ async def test_live_stream_with_one_second_commit_interval(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_disconnected(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream gets disconnected."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.states.async_set("light.small", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.small", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     # We will compare event subscriptions after closing the websocket connection,
     # count the listeners before setting it up
-    init_listeners = hass.bus.async_listeners()
-    websocket_client = await hass_ws_client()
+    init_listeners = menuai.bus.async_listeners()
+    websocket_client = await menuai_ws_client()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2368,37 +2368,37 @@ async def test_subscribe_disconnected(
     ]
 
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_stream_consumer_stop_processing(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we unsubscribe if the stream consumer fails or is canceled."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    await async_wait_recording_done(hass)
-    init_listeners = hass.bus.async_listeners()
-    hass.states.async_set("light.small", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    await hass.async_block_till_done()
+    await async_wait_recording_done(menuai)
+    init_listeners = menuai.bus.async_listeners()
+    menuai.states.async_set("light.small", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
 
-    after_ws_created_listeners = hass.bus.async_listeners()
+    after_ws_created_listeners = menuai.bus.async_listeners()
 
     with (
         patch.object(websocket_api, "MAX_PENDING_LOGBOOK_EVENTS", 5),
@@ -2412,7 +2412,7 @@ async def test_stream_consumer_stop_processing(
                 "entity_ids": ["light.small", "binary_sensor.is_light"],
             }
         )
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2420,29 +2420,29 @@ async def test_stream_consumer_stop_processing(
     assert msg["success"]
 
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) != listeners_without_writes(init_listeners)
     for _ in range(5):
-        hass.states.async_set("binary_sensor.is_light", STATE_ON)
-        hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    await async_wait_recording_done(hass)
+        menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+        menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    await async_wait_recording_done(menuai)
 
     # Check our listener got unsubscribed because
     # the queue got full and the overload safety tripped
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(after_ws_created_listeners)
     await websocket_client.close()
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_recorder_is_far_behind(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     device_registry: dr.DeviceRegistry,
 ) -> None:
@@ -2450,20 +2450,20 @@ async def test_recorder_is_far_behind(
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    await async_wait_recording_done(hass)
-    devices = await _async_mock_devices_with_logbook_platform(hass, device_registry)
+    await async_wait_recording_done(menuai)
+    devices = await _async_mock_devices_with_logbook_platform(menuai, device_registry)
     device = devices[0]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     # Block the recorder queue
-    await async_block_recorder(hass, 0.3)
-    await hass.async_block_till_done()
+    await async_block_recorder(menuai, 0.3)
+    await menuai.async_block_till_done()
 
-    websocket_client = await hass_ws_client()
+    websocket_client = await menuai_ws_client()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2488,15 +2488,15 @@ async def test_recorder_is_far_behind(
     assert msg["id"] == 7
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
     assert msg["type"] == "event"
     assert msg["event"]["events"] == []
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "1"})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "1"})
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2505,8 +2505,8 @@ async def test_recorder_is_far_behind(
         {"domain": "test", "message": "1", "name": "device name", "when": ANY}
     ]
 
-    hass.bus.async_fire("mock_event", {"device_id": device.id, "message": "2"})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("mock_event", {"device_id": device.id, "message": "2"})
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2525,37 +2525,37 @@ async def test_recorder_is_far_behind(
     assert msg["success"]
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_all_entities_are_continuous(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with entities that are always filtered."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     entity_ids = ("sensor.uom", "sensor.uom_two")
 
     def _cycle_entities():
         for entity_id in entity_ids:
             for state in ("1", "2", "3"):
-                hass.states.async_set(
+                menuai.states.async_set(
                     entity_id, state, {ATTR_UNIT_OF_MEASUREMENT: "any"}
                 )
-                hass.states.async_set("counter.any", state)
-                hass.states.async_set("proximity.any", state)
+                menuai.states.async_set("counter.any", state)
+                menuai.states.async_set("proximity.any", state)
 
     # We will compare event subscriptions after closing the websocket connection,
     # count the listeners before setting it up
-    init_listeners = hass.bus.async_listeners()
+    init_listeners = menuai.bus.async_listeners()
     _cycle_entities()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2577,43 +2577,43 @@ async def test_subscribe_all_entities_are_continuous(
     assert msg["event"]["events"] == []
 
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_all_entities_have_uom_multiple(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test logbook stream with specific request for multiple entities that are always filtered."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     entity_ids = ("sensor.uom", "sensor.uom_two")
 
     def _cycle_entities():
         for entity_id in entity_ids:
             for state in ("1", "2", "3"):
-                hass.states.async_set(
+                menuai.states.async_set(
                     entity_id, state, {ATTR_UNIT_OF_MEASUREMENT: "any"}
                 )
 
     # We will compare event subscriptions after closing the websocket connection,
     # count the listeners before setting it up
-    init_listeners = hass.bus.async_listeners()
+    init_listeners = menuai.bus.async_listeners()
     _cycle_entities()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2636,47 +2636,47 @@ async def test_subscribe_all_entities_have_uom_multiple(
     assert msg["event"]["events"] == []
 
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_entities_some_have_uom_multiple(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test logbook stream with uom filtered entities and non-filtered entities."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     filtered_entity_ids = ("sensor.uom", "sensor.uom_two")
     non_filtered_entity_ids = ("sensor.keep", "sensor.keep_two")
 
     def _cycle_entities():
         for entity_id in filtered_entity_ids:
             for state in ("1", "2", "3"):
-                hass.states.async_set(
+                menuai.states.async_set(
                     entity_id, state, {ATTR_UNIT_OF_MEASUREMENT: "any"}
                 )
         for entity_id in non_filtered_entity_ids:
             for state in (STATE_ON, STATE_OFF):
-                hass.states.async_set(entity_id, state)
+                menuai.states.async_set(entity_id, state)
 
     # We will compare event subscriptions after closing the websocket connection,
     # count the listeners before setting it up
-    init_listeners = hass.bus.async_listeners()
+    init_listeners = menuai.bus.async_listeners()
     _cycle_entities()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2691,8 +2691,8 @@ async def test_subscribe_entities_some_have_uom_multiple(
     assert msg["type"] == TYPE_RESULT
     assert msg["success"]
 
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2703,8 +2703,8 @@ async def test_subscribe_entities_some_have_uom_multiple(
     ]
     assert msg["event"]["partial"] is True
 
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2713,11 +2713,11 @@ async def test_subscribe_entities_some_have_uom_multiple(
     assert msg["event"]["events"] == []
 
     _cycle_entities()
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
     _cycle_entities()
-    await get_instance(hass).async_block_till_done()
-    await hass.async_block_till_done()
+    await get_instance(menuai).async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2743,37 +2743,37 @@ async def test_subscribe_entities_some_have_uom_multiple(
     assert "partial" not in msg["event"]
 
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_logbook_stream_ignores_forced_updates(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test logbook live stream ignores forced updates."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
-    state: State = hass.states.get("binary_sensor.is_light")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
+    state: State = menuai.states.get("binary_sensor.is_light")
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {"id": 7, "type": "logbook/event_stream", "start_time": now.isoformat()}
     )
@@ -2797,7 +2797,7 @@ async def test_logbook_stream_ignores_forced_updates(
     assert msg["event"]["end_time"] > msg["event"]["start_time"]
     assert msg["event"]["partial"] is True
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2805,8 +2805,8 @@ async def test_logbook_stream_ignores_forced_updates(
     assert "partial" not in msg["event"]["events"]
     assert msg["event"]["events"] == []
 
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2828,9 +2828,9 @@ async def test_logbook_stream_ignores_forced_updates(
     # Now we force an update to make sure we ignore
     # forced updates when the state has not actually changed
 
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
     for _ in range(3):
-        hass.states.async_set("binary_sensor.is_light", STATE_OFF, force_update=True)
+        menuai.states.async_set("binary_sensor.is_light", STATE_OFF, force_update=True)
 
     msg = await asyncio.wait_for(websocket_client.receive_json(), 2)
     assert msg["id"] == 7
@@ -2863,27 +2863,27 @@ async def test_logbook_stream_ignores_forced_updates(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
-@patch("homeassistant.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
+@patch("menuai.components.logbook.websocket_api.EVENT_COALESCE_TIME", 0)
 async def test_subscribe_all_entities_are_continuous_with_device(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test subscribe/unsubscribe logbook stream with entities that are always filtered and a device."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
-    await async_wait_recording_done(hass)
-    devices = await _async_mock_devices_with_logbook_platform(hass, device_registry)
+    await async_wait_recording_done(menuai)
+    devices = await _async_mock_devices_with_logbook_platform(menuai, device_registry)
     device = devices[0]
     device2 = devices[1]
 
@@ -2892,21 +2892,21 @@ async def test_subscribe_all_entities_are_continuous_with_device(
     def _create_events():
         for entity_id in entity_ids:
             for state in ("1", "2", "3"):
-                hass.states.async_set(
+                menuai.states.async_set(
                     entity_id, state, {ATTR_UNIT_OF_MEASUREMENT: "any"}
                 )
-                hass.states.async_set("counter.any", state)
-                hass.states.async_set("proximity.any", state)
-        hass.bus.async_fire("mock_event", {"device_id": device.id})
-        hass.bus.async_fire("mock_event", {"device_id": device2.id})
+                menuai.states.async_set("counter.any", state)
+                menuai.states.async_set("proximity.any", state)
+        menuai.bus.async_fire("mock_event", {"device_id": device.id})
+        menuai.bus.async_fire("mock_event", {"device_id": device2.id})
 
     # We will compare event subscriptions after closing the websocket connection,
     # count the listeners before setting it up
-    init_listeners = hass.bus.async_listeners()
+    init_listeners = menuai.bus.async_listeners()
     _create_events()
 
-    await async_wait_recording_done(hass)
-    websocket_client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    websocket_client = await menuai_ws_client()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -2959,44 +2959,44 @@ async def test_subscribe_all_entities_are_continuous_with_device(
         assert "partial" not in msg["event"]
 
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
 @pytest.mark.parametrize("params", [{"entity_ids": ["binary_sensor.is_light"]}, {}])
 async def test_live_stream_with_changed_state_change(
     async_setup_recorder_instance: RecorderInstanceGenerator,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     params: dict[str, Any],
 ) -> None:
     """Test the live logbook stream with chained events."""
     config = {recorder.CONF_COMMIT_INTERVAL: 0.5}
-    await async_setup_recorder_instance(hass, config)
+    await async_setup_recorder_instance(menuai, config)
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
 
-    hass.states.async_set("binary_sensor.is_light", "unavailable")
-    hass.states.async_set("binary_sensor.is_light", "unknown")
-    await async_wait_recording_done(hass)
+    menuai.states.async_set("binary_sensor.is_light", "unavailable")
+    menuai.states.async_set("binary_sensor.is_light", "unknown")
+    await async_wait_recording_done(menuai)
 
     @callback
     def auto_off_listener(event):
-        hass.states.async_set("binary_sensor.is_light", STATE_OFF)
+        menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
 
-    async_track_state_change_event(hass, ["binary_sensor.is_light"], auto_off_listener)
+    async_track_state_change_event(menuai, ["binary_sensor.is_light"], auto_off_listener)
 
-    websocket_client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    websocket_client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await websocket_client.send_json(
         {
             "id": 7,
@@ -3011,8 +3011,8 @@ async def test_live_stream_with_changed_state_change(
     assert msg["type"] == TYPE_RESULT
     assert msg["success"]
 
-    await hass.async_block_till_done()
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
 
     recieved_rows = []
     while len(recieved_rows) < 3:
@@ -3039,5 +3039,5 @@ async def test_live_stream_with_changed_state_change(
 
     # Check our listener got unsubscribed
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)

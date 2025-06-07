@@ -23,15 +23,15 @@ from aiohttp.web import (
 from aiohttp.web_exceptions import HTTPForbidden, HTTPUnauthorized
 import voluptuous as vol
 
-from homeassistant.config import load_yaml_config_file
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.hassio import get_supervisor_ip, is_hassio
-from homeassistant.util import dt as dt_util, yaml as yaml_util
+from menuai.config import load_yaml_config_file
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.menuaiio import get_supervisor_ip, is_menuaiio
+from menuai.util import dt as dt_util, yaml as yaml_util
 
-from .const import KEY_HASS
-from .view import HomeAssistantView
+from .const import KEY_menuai
+from .view import menuaiView
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -53,12 +53,12 @@ SCHEMA_IP_BAN_ENTRY: Final = vol.Schema(
 
 
 @callback
-def setup_bans(hass: HomeAssistant, app: Application, login_threshold: int) -> None:
+def setup_bans(menuai: menuai, app: Application, login_threshold: int) -> None:
     """Create IP Ban middleware for the app."""
     app.middlewares.append(ban_middleware)
     app[KEY_FAILED_LOGIN_ATTEMPTS] = defaultdict[IPv4Address | IPv6Address, int](int)
     app[KEY_LOGIN_THRESHOLD] = login_threshold
-    app[KEY_BAN_MANAGER] = IpBanManager(hass)
+    app[KEY_BAN_MANAGER] = IpBanManager(menuai)
 
     async def ban_startup(app: Application) -> None:
         """Initialize bans when app starts up."""
@@ -89,13 +89,13 @@ async def ban_middleware(
         raise
 
 
-def log_invalid_auth[_HassViewT: HomeAssistantView, **_P](
-    func: Callable[Concatenate[_HassViewT, Request, _P], Awaitable[Response]],
-) -> Callable[Concatenate[_HassViewT, Request, _P], Coroutine[Any, Any, Response]]:
+def log_invalid_auth[_menuaiViewT: menuaiView, **_P](
+    func: Callable[Concatenate[_menuaiViewT, Request, _P], Awaitable[Response]],
+) -> Callable[Concatenate[_menuaiViewT, Request, _P], Coroutine[Any, Any, Response]]:
     """Decorate function to handle invalid auth or failed login attempts."""
 
     async def handle_req(
-        view: _HassViewT, request: Request, *args: _P.args, **kwargs: _P.kwargs
+        view: _menuaiViewT, request: Request, *args: _P.args, **kwargs: _P.kwargs
     ) -> Response:
         """Try to log failed login attempts if response status >= BAD_REQUEST."""
         resp = await func(view, request, *args, **kwargs)
@@ -112,13 +112,13 @@ async def process_wrong_login(request: Request) -> None:
     Increase failed login attempts counter for remote IP address.
     Add ip ban entry if failed login attempts exceeds threshold.
     """
-    hass = request.app[KEY_HASS]
+    menuai = request.app[KEY_menuai]
 
     assert request.remote
     remote_addr = ip_address(request.remote)
     remote_host = request.remote
     with suppress(herror):
-        remote_host, _, _ = await hass.async_add_executor_job(
+        remote_host, _, _ = await menuai.async_add_executor_job(
             gethostbyaddr, request.remote
         )
 
@@ -137,10 +137,10 @@ async def process_wrong_login(request: Request) -> None:
 
     # Circular import with websocket_api
     # pylint: disable=import-outside-toplevel
-    from homeassistant.components import persistent_notification
+    from menuai.components import persistent_notification
 
     persistent_notification.async_create(
-        hass, notification_msg, "Login attempt failed", NOTIFICATION_ID_LOGIN
+        menuai, notification_msg, "Login attempt failed", NOTIFICATION_ID_LOGIN
     )
 
     # Check if ban middleware is loaded
@@ -150,7 +150,7 @@ async def process_wrong_login(request: Request) -> None:
     request.app[KEY_FAILED_LOGIN_ATTEMPTS][remote_addr] += 1
 
     # Supervisor IP should never be banned
-    if is_hassio(hass) and str(remote_addr) == get_supervisor_ip():
+    if is_menuaiio(menuai) and str(remote_addr) == get_supervisor_ip():
         return
 
     if (
@@ -162,7 +162,7 @@ async def process_wrong_login(request: Request) -> None:
         await ban_manager.async_add_ban(remote_addr)
 
         persistent_notification.async_create(
-            hass,
+            menuai,
             f"Too many login attempts from {remote_addr}",
             "Banning IP address",
             NOTIFICATION_ID_BAN,
@@ -207,21 +207,21 @@ class IpBan:
 class IpBanManager:
     """Manage IP bans."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Init the ban manager."""
-        self.hass = hass
-        self.path = hass.config.path(IP_BANS_FILE)
+        self.menuai = menuai
+        self.path = menuai.config.path(IP_BANS_FILE)
         self.ip_bans_lookup: dict[IPv4Address | IPv6Address, IpBan] = {}
 
     async def async_load(self) -> None:
         """Load the existing IP bans."""
         try:
-            list_ = await self.hass.async_add_executor_job(
+            list_ = await self.menuai.async_add_executor_job(
                 load_yaml_config_file, self.path
             )
         except FileNotFoundError:
             return
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Unable to load %s: %s", self.path, str(err))
             return
 
@@ -250,4 +250,4 @@ class IpBanManager:
         """Add a new IP address to the banned list."""
         if remote_addr not in self.ip_bans_lookup:
             new_ban = self.ip_bans_lookup[remote_addr] = IpBan(remote_addr)
-            await self.hass.async_add_executor_job(self._add_ban, new_ban)
+            await self.menuai.async_add_executor_job(self._add_ban, new_ban)

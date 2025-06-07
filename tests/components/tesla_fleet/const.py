@@ -1,6 +1,6 @@
 """Constants for the Tesla Fleet tests."""
 
-from homeassistant.components.tesla_fleet.const import DOMAIN, TeslaFleetState
+from menuai.components.tesla_fleet.const import DOMAIN, TeslaFleetState
 
 from tests.common import load_json_object_fixture
 

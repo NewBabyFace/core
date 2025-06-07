@@ -1,8 +1,8 @@
-"""API for microBees bound to Home Assistant OAuth."""
+"""API for microBees bound to MenuAI OAuth."""
 
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class ConfigEntryAuth:
@@ -10,12 +10,12 @@ class ConfigEntryAuth:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         oauth2_session: config_entry_oauth2_flow.OAuth2Session,
     ) -> None:
         """Initialize microBees Auth."""
         self.oauth_session = oauth2_session
-        self.hass = hass
+        self.menuai = menuai
 
     @property
     def access_token(self) -> str:

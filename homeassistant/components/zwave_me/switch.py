@@ -3,15 +3,15 @@
 import logging
 from typing import Any
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, ZWaveMePlatform
 from .entity import ZWaveMeEntity
@@ -28,7 +28,7 @@ SWITCH_MAP: dict[str, SwitchEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -36,7 +36,7 @@ async def async_setup_entry(
 
     @callback
     def add_new_device(new_device):
-        controller = hass.data[DOMAIN][config_entry.entry_id]
+        controller = menuai.data[DOMAIN][config_entry.entry_id]
         switch = ZWaveMeSwitch(controller, new_device, SWITCH_MAP["generic"])
 
         async_add_entities(
@@ -47,7 +47,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass, f"ZWAVE_ME_NEW_{DEVICE_NAME.upper()}", add_new_device
+            menuai, f"ZWAVE_ME_NEW_{DEVICE_NAME.upper()}", add_new_device
         )
     )
 

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from radiotherm.thermostat import CommonThermostat
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 
-async def async_set_time(hass: HomeAssistant, device: CommonThermostat) -> None:
+async def async_set_time(menuai: menuai, device: CommonThermostat) -> None:
     """Sync time to the thermostat."""
-    await hass.async_add_executor_job(_set_time, device)
+    await menuai.async_add_executor_job(_set_time, device)
 
 
 def _set_time(device: CommonThermostat) -> None:

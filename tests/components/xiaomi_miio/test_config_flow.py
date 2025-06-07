@@ -8,12 +8,12 @@ from micloud.micloudexception import MiCloudAccessDenied
 from miio import DeviceException
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.xiaomi_miio import const
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MAC, CONF_MODEL, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.xiaomi_miio import const
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_MAC, CONF_MODEL, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import TEST_MAC
 
@@ -76,22 +76,22 @@ def xiaomi_miio_connect_fixture():
 
     with (
         patch(
-            "homeassistant.components.xiaomi_miio.device.Device.info",
+            "menuai.components.xiaomi_miio.device.Device.info",
             return_value=mock_info,
         ),
         patch(
-            "homeassistant.components.xiaomi_miio.config_flow.MiCloud.login",
+            "menuai.components.xiaomi_miio.config_flow.MiCloud.login",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.xiaomi_miio.config_flow.MiCloud.get_devices",
+            "menuai.components.xiaomi_miio.config_flow.MiCloud.get_devices",
             return_value=TEST_CLOUD_DEVICES_1,
         ),
         patch(
-            "homeassistant.components.xiaomi_miio.async_setup_entry", return_value=True
+            "menuai.components.xiaomi_miio.async_setup_entry", return_value=True
         ),
         patch(
-            "homeassistant.components.xiaomi_miio.async_unload_entry", return_value=True
+            "menuai.components.xiaomi_miio.async_unload_entry", return_value=True
         ),
     ):
         yield
@@ -113,9 +113,9 @@ def get_mock_info(
     return gateway_info
 
 
-async def test_config_flow_step_gateway_connect_error(hass: HomeAssistant) -> None:
+async def test_config_flow_step_gateway_connect_error(menuai: menuai) -> None:
     """Test config flow, gateway connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -123,7 +123,7 @@ async def test_config_flow_step_gateway_connect_error(hass: HomeAssistant) -> No
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -133,10 +133,10 @@ async def test_config_flow_step_gateway_connect_error(hass: HomeAssistant) -> No
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         side_effect=DeviceException({}),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
         )
@@ -146,9 +146,9 @@ async def test_config_flow_step_gateway_connect_error(hass: HomeAssistant) -> No
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_config_flow_gateway_success(hass: HomeAssistant) -> None:
+async def test_config_flow_gateway_success(menuai: menuai) -> None:
     """Test a successful config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -156,7 +156,7 @@ async def test_config_flow_gateway_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -165,7 +165,7 @@ async def test_config_flow_gateway_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "manual"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
     )
@@ -184,9 +184,9 @@ async def test_config_flow_gateway_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_config_flow_gateway_cloud_success(hass: HomeAssistant) -> None:
+async def test_config_flow_gateway_cloud_success(menuai: menuai) -> None:
     """Test a successful config flow using cloud."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -194,7 +194,7 @@ async def test_config_flow_gateway_cloud_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -217,9 +217,9 @@ async def test_config_flow_gateway_cloud_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_config_flow_gateway_cloud_multiple_success(hass: HomeAssistant) -> None:
+async def test_config_flow_gateway_cloud_multiple_success(menuai: menuai) -> None:
     """Test a successful config flow using cloud with multiple devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -228,10 +228,10 @@ async def test_config_flow_gateway_cloud_multiple_success(hass: HomeAssistant) -
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.config_flow.MiCloud.get_devices",
+        "menuai.components.xiaomi_miio.config_flow.MiCloud.get_devices",
         return_value=TEST_CLOUD_DEVICES_2,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -244,7 +244,7 @@ async def test_config_flow_gateway_cloud_multiple_success(hass: HomeAssistant) -
     assert result["step_id"] == "select"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"select_device": f"{TEST_NAME2} - {TEST_MODEL}"},
     )
@@ -263,9 +263,9 @@ async def test_config_flow_gateway_cloud_multiple_success(hass: HomeAssistant) -
     }
 
 
-async def test_config_flow_gateway_cloud_incomplete(hass: HomeAssistant) -> None:
+async def test_config_flow_gateway_cloud_incomplete(menuai: menuai) -> None:
     """Test a failed config flow using incomplete cloud credentials."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -273,7 +273,7 @@ async def test_config_flow_gateway_cloud_incomplete(hass: HomeAssistant) -> None
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -286,9 +286,9 @@ async def test_config_flow_gateway_cloud_incomplete(hass: HomeAssistant) -> None
     assert result["errors"] == {"base": "cloud_credentials_incomplete"}
 
 
-async def test_config_flow_gateway_cloud_login_error(hass: HomeAssistant) -> None:
+async def test_config_flow_gateway_cloud_login_error(menuai: menuai) -> None:
     """Test a failed config flow using cloud login error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -297,10 +297,10 @@ async def test_config_flow_gateway_cloud_login_error(hass: HomeAssistant) -> Non
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.config_flow.MiCloud.login",
+        "menuai.components.xiaomi_miio.config_flow.MiCloud.login",
         return_value=False,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -314,10 +314,10 @@ async def test_config_flow_gateway_cloud_login_error(hass: HomeAssistant) -> Non
     assert result["errors"] == {"base": "cloud_login_error"}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.config_flow.MiCloud.login",
+        "menuai.components.xiaomi_miio.config_flow.MiCloud.login",
         side_effect=MiCloudAccessDenied({}),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -331,10 +331,10 @@ async def test_config_flow_gateway_cloud_login_error(hass: HomeAssistant) -> Non
     assert result["errors"] == {"base": "cloud_login_error"}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.config_flow.MiCloud.login",
+        "menuai.components.xiaomi_miio.config_flow.MiCloud.login",
         side_effect=Exception({}),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -347,9 +347,9 @@ async def test_config_flow_gateway_cloud_login_error(hass: HomeAssistant) -> Non
     assert result["reason"] == "unknown"
 
 
-async def test_config_flow_gateway_cloud_no_devices(hass: HomeAssistant) -> None:
+async def test_config_flow_gateway_cloud_no_devices(menuai: menuai) -> None:
     """Test a failed config flow using cloud with no devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -358,10 +358,10 @@ async def test_config_flow_gateway_cloud_no_devices(hass: HomeAssistant) -> None
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.config_flow.MiCloud.get_devices",
+        "menuai.components.xiaomi_miio.config_flow.MiCloud.get_devices",
         return_value=[],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -375,10 +375,10 @@ async def test_config_flow_gateway_cloud_no_devices(hass: HomeAssistant) -> None
     assert result["errors"] == {"base": "cloud_no_devices"}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.config_flow.MiCloud.get_devices",
+        "menuai.components.xiaomi_miio.config_flow.MiCloud.get_devices",
         side_effect=Exception({}),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -391,9 +391,9 @@ async def test_config_flow_gateway_cloud_no_devices(hass: HomeAssistant) -> None
     assert result["reason"] == "unknown"
 
 
-async def test_config_flow_gateway_cloud_missing_token(hass: HomeAssistant) -> None:
+async def test_config_flow_gateway_cloud_missing_token(menuai: menuai) -> None:
     """Test a failed config flow using cloud with a missing token."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -413,10 +413,10 @@ async def test_config_flow_gateway_cloud_missing_token(hass: HomeAssistant) -> N
     ]
 
     with patch(
-        "homeassistant.components.xiaomi_miio.config_flow.MiCloud.get_devices",
+        "menuai.components.xiaomi_miio.config_flow.MiCloud.get_devices",
         return_value=cloud_device,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -429,9 +429,9 @@ async def test_config_flow_gateway_cloud_missing_token(hass: HomeAssistant) -> N
     assert result["reason"] == "incomplete_info"
 
 
-async def test_zeroconf_gateway_success(hass: HomeAssistant) -> None:
+async def test_zeroconf_gateway_success(menuai: menuai) -> None:
     """Test a successful zeroconf discovery of a gateway."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -449,7 +449,7 @@ async def test_zeroconf_gateway_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,
@@ -472,9 +472,9 @@ async def test_zeroconf_gateway_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_zeroconf_unknown_device(hass: HomeAssistant) -> None:
+async def test_zeroconf_unknown_device(menuai: menuai) -> None:
     """Test a failed zeroconf discovery because of a unknown device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -492,9 +492,9 @@ async def test_zeroconf_unknown_device(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_xiaomi_miio"
 
 
-async def test_zeroconf_no_data(hass: HomeAssistant) -> None:
+async def test_zeroconf_no_data(menuai: menuai) -> None:
     """Test a failed zeroconf discovery because of no data."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -512,9 +512,9 @@ async def test_zeroconf_no_data(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_xiaomi_miio"
 
 
-async def test_zeroconf_missing_data(hass: HomeAssistant) -> None:
+async def test_zeroconf_missing_data(menuai: menuai) -> None:
     """Test a failed zeroconf discovery because of missing data."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -532,9 +532,9 @@ async def test_zeroconf_missing_data(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_xiaomi_miio"
 
 
-async def test_config_flow_step_device_connect_error(hass: HomeAssistant) -> None:
+async def test_config_flow_step_device_connect_error(menuai: menuai) -> None:
     """Test config flow, device connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -542,7 +542,7 @@ async def test_config_flow_step_device_connect_error(hass: HomeAssistant) -> Non
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -552,10 +552,10 @@ async def test_config_flow_step_device_connect_error(hass: HomeAssistant) -> Non
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         side_effect=DeviceException({}),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
         )
@@ -565,9 +565,9 @@ async def test_config_flow_step_device_connect_error(hass: HomeAssistant) -> Non
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_config_flow_step_unknown_device(hass: HomeAssistant) -> None:
+async def test_config_flow_step_unknown_device(menuai: menuai) -> None:
     """Test config flow, unknown device error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -575,7 +575,7 @@ async def test_config_flow_step_unknown_device(hass: HomeAssistant) -> None:
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -587,10 +587,10 @@ async def test_config_flow_step_unknown_device(hass: HomeAssistant) -> None:
     mock_info = get_mock_info(model="UNKNOWN")
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         return_value=mock_info,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
         )
@@ -600,9 +600,9 @@ async def test_config_flow_step_unknown_device(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "unknown_device"}
 
 
-async def test_config_flow_step_device_manual_model_error(hass: HomeAssistant) -> None:
+async def test_config_flow_step_device_manual_model_error(menuai: menuai) -> None:
     """Test config flow, device connection error, model None."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -610,7 +610,7 @@ async def test_config_flow_step_device_manual_model_error(hass: HomeAssistant) -
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -620,10 +620,10 @@ async def test_config_flow_step_device_manual_model_error(hass: HomeAssistant) -
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         return_value=get_mock_info(model=None),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
         )
@@ -633,10 +633,10 @@ async def test_config_flow_step_device_manual_model_error(hass: HomeAssistant) -
     assert result["errors"] == {"base": "cannot_connect"}
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         side_effect=Exception({}),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_MODEL: TEST_MODEL},
         )
@@ -645,9 +645,9 @@ async def test_config_flow_step_device_manual_model_error(hass: HomeAssistant) -
     assert result["reason"] == "unknown"
 
 
-async def test_config_flow_step_device_manual_model_succes(hass: HomeAssistant) -> None:
+async def test_config_flow_step_device_manual_model_succes(menuai: menuai) -> None:
     """Test config flow, device connection error, manual model."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -655,7 +655,7 @@ async def test_config_flow_step_device_manual_model_succes(hass: HomeAssistant) 
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -667,10 +667,10 @@ async def test_config_flow_step_device_manual_model_succes(hass: HomeAssistant) 
     error = DeviceException({})
     error.__cause__ = ChecksumError({})
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         side_effect=error,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
         )
@@ -682,10 +682,10 @@ async def test_config_flow_step_device_manual_model_succes(hass: HomeAssistant) 
     overwrite_model = const.MODELS_VACUUM[0]
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         side_effect=DeviceException({}),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_MODEL: overwrite_model},
         )
@@ -704,9 +704,9 @@ async def test_config_flow_step_device_manual_model_succes(hass: HomeAssistant) 
     }
 
 
-async def config_flow_device_success(hass: HomeAssistant, model_to_test: str) -> None:
+async def config_flow_device_success(menuai: menuai, model_to_test: str) -> None:
     """Test a successful config flow for a device (base class)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -714,7 +714,7 @@ async def config_flow_device_success(hass: HomeAssistant, model_to_test: str) ->
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -726,10 +726,10 @@ async def config_flow_device_success(hass: HomeAssistant, model_to_test: str) ->
     mock_info = get_mock_info(model=model_to_test)
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         return_value=mock_info,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
         )
@@ -748,11 +748,11 @@ async def config_flow_device_success(hass: HomeAssistant, model_to_test: str) ->
     }
 
 
-async def config_flow_generic_roborock(hass: HomeAssistant) -> None:
+async def config_flow_generic_roborock(menuai: menuai) -> None:
     """Test a successful config flow for a generic roborock vacuum."""
     dummy_model = "roborock.vacuum.dummy"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -760,7 +760,7 @@ async def config_flow_generic_roborock(hass: HomeAssistant) -> None:
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -772,10 +772,10 @@ async def config_flow_generic_roborock(hass: HomeAssistant) -> None:
     mock_info = get_mock_info(model=dummy_model)
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         return_value=mock_info,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_TOKEN},
         )
@@ -795,10 +795,10 @@ async def config_flow_generic_roborock(hass: HomeAssistant) -> None:
 
 
 async def zeroconf_device_success(
-    hass: HomeAssistant, zeroconf_name_to_test: str, model_to_test: str
+    menuai: menuai, zeroconf_name_to_test: str, model_to_test: str
 ) -> None:
     """Test a successful zeroconf discovery of a device  (base class)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -816,7 +816,7 @@ async def zeroconf_device_success(
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MANUAL: True},
     )
@@ -828,10 +828,10 @@ async def zeroconf_device_success(
     mock_info = get_mock_info(model=model_to_test)
 
     with patch(
-        "homeassistant.components.xiaomi_miio.device.Device.info",
+        "menuai.components.xiaomi_miio.device.Device.info",
         return_value=mock_info,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: TEST_TOKEN},
         )
@@ -850,33 +850,33 @@ async def zeroconf_device_success(
     }
 
 
-async def test_config_flow_plug_success(hass: HomeAssistant) -> None:
+async def test_config_flow_plug_success(menuai: menuai) -> None:
     """Test a successful config flow for a plug."""
     test_plug_model = const.MODELS_SWITCH[0]
-    await config_flow_device_success(hass, test_plug_model)
+    await config_flow_device_success(menuai, test_plug_model)
 
 
-async def test_zeroconf_plug_success(hass: HomeAssistant) -> None:
+async def test_zeroconf_plug_success(menuai: menuai) -> None:
     """Test a successful zeroconf discovery of a plug."""
     test_plug_model = const.MODELS_SWITCH[0]
     test_zeroconf_name = const.MODELS_SWITCH[0].replace(".", "-")
-    await zeroconf_device_success(hass, test_zeroconf_name, test_plug_model)
+    await zeroconf_device_success(menuai, test_zeroconf_name, test_plug_model)
 
 
-async def test_config_flow_vacuum_success(hass: HomeAssistant) -> None:
+async def test_config_flow_vacuum_success(menuai: menuai) -> None:
     """Test a successful config flow for a vacuum."""
     test_vacuum_model = const.MODELS_VACUUM[0]
-    await config_flow_device_success(hass, test_vacuum_model)
+    await config_flow_device_success(menuai, test_vacuum_model)
 
 
-async def test_zeroconf_vacuum_success(hass: HomeAssistant) -> None:
+async def test_zeroconf_vacuum_success(menuai: menuai) -> None:
     """Test a successful zeroconf discovery of a vacuum."""
     test_vacuum_model = const.MODELS_VACUUM[0]
     test_zeroconf_name = const.MODELS_VACUUM[0].replace(".", "-")
-    await zeroconf_device_success(hass, test_zeroconf_name, test_vacuum_model)
+    await zeroconf_device_success(menuai, test_zeroconf_name, test_vacuum_model)
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test specifying non default settings using options flow."""
     config_entry = MockConfigEntry(
         domain=const.DOMAIN,
@@ -893,17 +893,17 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         },
         title=TEST_NAME,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             const.CONF_CLOUD_SUBDEVICES: True,
@@ -916,7 +916,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     }
 
 
-async def test_options_flow_incomplete(hass: HomeAssistant) -> None:
+async def test_options_flow_incomplete(menuai: menuai) -> None:
     """Test specifying incomplete settings using options flow."""
     config_entry = MockConfigEntry(
         domain=const.DOMAIN,
@@ -933,16 +933,16 @@ async def test_options_flow_incomplete(hass: HomeAssistant) -> None:
         },
         title=TEST_NAME,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             const.CONF_CLOUD_SUBDEVICES: True,
@@ -954,7 +954,7 @@ async def test_options_flow_incomplete(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "cloud_credentials_incomplete"}
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test a reauth flow."""
     config_entry = MockConfigEntry(
         domain=const.DOMAIN,
@@ -971,17 +971,17 @@ async def test_reauth(hass: HomeAssistant) -> None:
         },
         title=TEST_NAME,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -990,7 +990,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
     assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             const.CONF_CLOUD_USERNAME: TEST_CLOUD_USER,

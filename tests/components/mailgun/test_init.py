@@ -6,13 +6,13 @@ import hmac
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import mailgun, webhook
-from homeassistant.const import CONF_API_KEY, CONF_DOMAIN
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai import config_entries
+from menuai.components import mailgun, webhook
+from menuai.const import CONF_API_KEY, CONF_DOMAIN
+from menuai.core import Event, menuai, callback
+from menuai.core_config import async_process_ha_core_config
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -21,59 +21,59 @@ API_KEY = "abc123"
 
 @pytest.fixture
 async def http_client(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> TestClient:
-    """Initialize a Home Assistant Server for testing this module."""
-    await async_setup_component(hass, webhook.DOMAIN, {})
-    return await hass_client_no_auth()
+    """Initialize a MenuAI Server for testing this module."""
+    await async_setup_component(menuai, webhook.DOMAIN, {})
+    return await menuai_client_no_auth()
 
 
 @pytest.fixture
-async def webhook_id_with_api_key(hass: HomeAssistant) -> str:
+async def webhook_id_with_api_key(menuai: menuai) -> str:
     """Initialize the Mailgun component and get the webhook_id."""
     await async_setup_component(
-        hass,
+        menuai,
         mailgun.DOMAIN,
         {mailgun.DOMAIN: {CONF_API_KEY: API_KEY, CONF_DOMAIN: "example.com"}},
     )
 
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mailgun", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM, result
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     return result["result"].data["webhook_id"]
 
 
 @pytest.fixture
-async def webhook_id_without_api_key(hass: HomeAssistant) -> str:
+async def webhook_id_without_api_key(menuai: menuai) -> str:
     """Initialize the Mailgun component and get the webhook_id w/o API key."""
-    await async_setup_component(hass, mailgun.DOMAIN, {})
+    await async_setup_component(menuai, mailgun.DOMAIN, {})
 
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mailgun", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM, result
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     return result["result"].data["webhook_id"]
 
 
 @pytest.fixture
-async def mailgun_events(hass: HomeAssistant) -> list[Event]:
+async def mailgun_events(menuai: menuai) -> list[Event]:
     """Return a list of mailgun_events triggered."""
     events = []
 
@@ -82,7 +82,7 @@ async def mailgun_events(hass: HomeAssistant) -> list[Event]:
         """Handle Mailgun event."""
         events.append(event)
 
-    hass.bus.async_listen(mailgun.MESSAGE_RECEIVED, handle_event)
+    menuai.bus.async_listen(mailgun.MESSAGE_RECEIVED, handle_event)
 
     return events
 

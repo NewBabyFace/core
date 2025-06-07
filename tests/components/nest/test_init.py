@@ -23,10 +23,10 @@ from google_nest_sdm.exceptions import (
 )
 import pytest
 
-from homeassistant.components.nest import DOMAIN
-from homeassistant.components.nest.const import OAUTH2_TOKEN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.nest import DOMAIN
+from menuai.components.nest.const import OAUTH2_TOKEN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .common import (
     PROJECT_ID,
@@ -53,7 +53,7 @@ def error_caplog(
     caplog: pytest.LogCaptureFixture,
 ) -> Generator[pytest.LogCaptureFixture]:
     """Fixture to capture nest init error messages."""
-    with caplog.at_level(logging.ERROR, logger="homeassistant.components.nest"):
+    with caplog.at_level(logging.ERROR, logger="menuai.components.nest"):
         yield caplog
 
 
@@ -62,38 +62,38 @@ def warning_caplog(
     caplog: pytest.LogCaptureFixture,
 ) -> Generator[pytest.LogCaptureFixture]:
     """Fixture to capture nest init warning messages."""
-    with caplog.at_level(logging.WARNING, logger="homeassistant.components.nest"):
+    with caplog.at_level(logging.WARNING, logger="menuai.components.nest"):
         yield caplog
 
 
 async def test_setup_success(
-    hass: HomeAssistant, error_caplog: pytest.LogCaptureFixture, setup_platform
+    menuai: menuai, error_caplog: pytest.LogCaptureFixture, setup_platform
 ) -> None:
     """Test successful setup."""
     await setup_platform()
     assert not error_caplog.records
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
 
 @pytest.mark.parametrize("nest_test_config", [(TEST_CONFIG_NEW_SUBSCRIPTION)])
 async def test_setup_success_new_subscription_format(
-    hass: HomeAssistant, error_caplog: pytest.LogCaptureFixture, setup_platform
+    menuai: menuai, error_caplog: pytest.LogCaptureFixture, setup_platform
 ) -> None:
     """Test successful setup."""
     await setup_platform()
     assert not error_caplog.records
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
 
 @pytest.mark.parametrize("subscriber_id", [("invalid-subscriber-format")])
 async def test_setup_configuration_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     subscriber_id,
     setup_base_platform,
@@ -101,7 +101,7 @@ async def test_setup_configuration_failure(
     """Test configuration error."""
     await setup_base_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_ERROR
 
@@ -112,7 +112,7 @@ async def test_setup_configuration_failure(
 
 @pytest.mark.parametrize("subscriber_side_effect", [SubscriberException()])
 async def test_setup_subscriber_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_base_platform,
 ) -> None:
@@ -120,18 +120,18 @@ async def test_setup_subscriber_failure(
     await setup_base_platform()
     assert "Subscriber error:" in caplog.text
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_device_manager_failure(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, setup_base_platform
+    menuai: menuai, caplog: pytest.LogCaptureFixture, setup_base_platform
 ) -> None:
     """Test device manager api failure."""
     with (
         patch(
-            "homeassistant.components.nest.api.GoogleNestSubscriber.async_get_device_manager",
+            "menuai.components.nest.api.GoogleNestSubscriber.async_get_device_manager",
             side_effect=ApiException(),
         ),
     ):
@@ -139,7 +139,7 @@ async def test_setup_device_manager_failure(
 
     assert "Device manager error:" in caplog.text
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_RETRY
 
@@ -169,7 +169,7 @@ async def test_setup_device_manager_failure(
     ],
 )
 async def test_expired_token_refresh_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_base_platform: PlatformSetup,
     aioclient_mock: AiohttpClientMocker,
     token_response_args: dict,
@@ -185,35 +185,35 @@ async def test_expired_token_refresh_error(
 
     await setup_base_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is expected_state
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert expected_steps == [flow["step_id"] for flow in flows]
 
 
 @pytest.mark.parametrize("subscriber_side_effect", [AuthException()])
 async def test_subscriber_auth_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_base_platform,
 ) -> None:
     """Test subscriber throws an authentication error."""
     await setup_base_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
 
 @pytest.mark.parametrize("subscriber_side_effect", [(ConfigurationException())])
 async def test_subscriber_configuration_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     error_caplog: pytest.LogCaptureFixture,
     setup_base_platform,
 ) -> None:
@@ -221,26 +221,26 @@ async def test_subscriber_configuration_failure(
     await setup_base_platform()
     assert "Configuration error: " in error_caplog.text
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_ERROR
 
 
-async def test_unload_entry(hass: HomeAssistant, setup_platform) -> None:
+async def test_unload_entry(menuai: menuai, setup_platform) -> None:
     """Test successful unload of a ConfigEntry."""
     await setup_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert await menuai.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_remove_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_base_platform: PlatformSetup,
     aioclient_mock: AiohttpClientMocker,
     subscriber: AsyncMock,
@@ -248,7 +248,7 @@ async def test_remove_entry(
     """Test successful unload of a ConfigEntry."""
     await setup_base_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
@@ -264,35 +264,35 @@ async def test_remove_entry(
 
     assert not subscriber.stop.called
 
-    assert await hass.config_entries.async_remove(entry.entry_id)
+    assert await menuai.config_entries.async_remove(entry.entry_id)
 
     assert aioclient_mock.call_count == 1
     assert subscriber.stop.called
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert not entries
 
 
 async def test_home_assistant_stop(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_platform: PlatformSetup,
     subscriber: AsyncMock,
 ) -> None:
-    """Test successful subscriber shutdown when HomeAssistant stops."""
+    """Test successful subscriber shutdown when menuai stops."""
     await setup_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
 
     assert not subscriber.stop.called
-    await hass.async_stop()
+    await menuai.async_stop()
     assert subscriber.stop.called
 
 
 async def test_remove_entry_delete_subscriber_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_base_platform: PlatformSetup,
     aioclient_mock: AiohttpClientMocker,
     subscriber: AsyncMock,
@@ -300,7 +300,7 @@ async def test_remove_entry_delete_subscriber_failure(
     """Test a failure when deleting the subscription."""
     await setup_base_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
@@ -313,18 +313,18 @@ async def test_remove_entry_delete_subscriber_failure(
 
     assert not subscriber.stop.called
 
-    assert await hass.config_entries.async_remove(entry.entry_id)
+    assert await menuai.config_entries.async_remove(entry.entry_id)
 
     assert aioclient_mock.call_count == 1
     assert subscriber.stop.called
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert not entries
 
 
 @pytest.mark.parametrize("config_entry_unique_id", [DOMAIN, None])
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     error_caplog,
     setup_platform,
     config_entry,

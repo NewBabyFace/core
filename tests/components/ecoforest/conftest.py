@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, Mock, patch
 from pyecoforest.models.device import Alarm, Device, OperationMode, State
 import pytest
 
-from homeassistant.components.ecoforest.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.ecoforest.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.ecoforest.async_setup_entry", return_value=True
+        "menuai.components.ecoforest.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -61,7 +61,7 @@ def mock_device_fixture(serial_number):
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(hass: HomeAssistant, config, serial_number):
+def config_entry_fixture(menuai: menuai, config, serial_number):
     """Define a config entry fixture."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -70,5 +70,5 @@ def config_entry_fixture(hass: HomeAssistant, config, serial_number):
         unique_id=serial_number,
         data=config,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry

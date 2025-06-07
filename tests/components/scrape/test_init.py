@@ -6,12 +6,12 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.scrape.const import DEFAULT_SCAN_INTERVAL, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.scrape.const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import MockRestData, return_integration_config
 
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.typing import WebSocketGenerator
 
 
-async def test_setup_config(hass: HomeAssistant) -> None:
+async def test_setup_config(menuai: menuai) -> None:
     """Test setup from yaml."""
     config = {
         DOMAIN: [
@@ -31,20 +31,20 @@ async def test_setup_config(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ) as mock_setup:
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_version")
+    state = menuai.states.get("sensor.ha_version")
     assert state.state == "Current Version: 2021.12.10"
 
     assert len(mock_setup.mock_calls) == 1
 
 
 async def test_setup_no_data_fails_with_recovery(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup entry no data fails and recovers."""
     config = {
@@ -57,39 +57,39 @@ async def test_setup_no_data_fails_with_recovery(
 
     mocker = MockRestData("test_scrape_sensor_no_data")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.ha_version")
+        state = menuai.states.get("sensor.ha_version")
         assert state is None
 
         assert "Platform scrape not ready yet" in caplog.text
 
         mocker.payload = "test_scrape_sensor"
-        async_fire_time_changed(hass, dt_util.utcnow() + DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_version")
+    state = menuai.states.get("sensor.ha_version")
     assert state.state == "Current Version: 2021.12.10"
 
 
 async def test_setup_config_no_configuration(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test setup from yaml missing configuration options."""
     config = {DOMAIN: None}
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     assert entity_registry.entities == {}
 
 
 async def test_setup_config_no_sensors(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup from yaml with no configured sensors finalize properly."""
     config = {
@@ -108,41 +108,41 @@ async def test_setup_config_no_sensors(
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
 
-async def test_setup_entry(hass: HomeAssistant, loaded_entry: MockConfigEntry) -> None:
+async def test_setup_entry(menuai: menuai, loaded_entry: MockConfigEntry) -> None:
     """Test setup entry."""
 
     assert loaded_entry.state is ConfigEntryState.LOADED
 
 
-async def test_unload_entry(hass: HomeAssistant, loaded_entry: MockConfigEntry) -> None:
+async def test_unload_entry(menuai: menuai, loaded_entry: MockConfigEntry) -> None:
     """Test unload an entry."""
 
     assert loaded_entry.state is ConfigEntryState.LOADED
-    assert await hass.config_entries.async_unload(loaded_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(loaded_entry.entry_id)
+    await menuai.async_block_till_done()
     assert loaded_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_device_remove_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     loaded_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test we can only remove a device that no longer exists."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     entity = entity_registry.entities["sensor.current_version"]
 
     device_entry = device_registry.async_get(entity.device_id)
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device_entry.id, loaded_entry.entry_id)
     assert not response["success"]
 

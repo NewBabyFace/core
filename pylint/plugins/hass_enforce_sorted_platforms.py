@@ -7,15 +7,15 @@ from pylint.checkers import BaseChecker
 from pylint.lint import PyLinter
 
 
-class HassEnforceSortedPlatformsChecker(BaseChecker):
+class menuaiEnforceSortedPlatformsChecker(BaseChecker):
     """Checker for sorted platforms list."""
 
-    name = "hass_enforce_sorted_platforms"
+    name = "menuai_enforce_sorted_platforms"
     priority = -1
     msgs = {
         "W7451": (
             "Platforms must be sorted alphabetically",
-            "hass-enforce-sorted-platforms",
+            "menuai-enforce-sorted-platforms",
             "Used when PLATFORMS should be sorted alphabetically.",
         ),
     }
@@ -42,9 +42,9 @@ class HassEnforceSortedPlatformsChecker(BaseChecker):
             platforms = [v.as_string() for v in node.value.elts]
             sorted_platforms = sorted(platforms)
             if platforms != sorted_platforms:
-                self.add_message("hass-enforce-sorted-platforms", node=node)
+                self.add_message("menuai-enforce-sorted-platforms", node=node)
 
 
 def register(linter: PyLinter) -> None:
     """Register the checker."""
-    linter.register_checker(HassEnforceSortedPlatformsChecker(linter))
+    linter.register_checker(menuaiEnforceSortedPlatformsChecker(linter))

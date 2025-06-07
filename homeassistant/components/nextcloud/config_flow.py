@@ -13,8 +13,8 @@ from nextcloudmonitor import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
 
 from .const import DEFAULT_VERIFY_SSL, DOMAIN
 
@@ -57,7 +57,7 @@ class NextcloudConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match({CONF_URL: user_input.get(CONF_URL)})
             try:
-                await self.hass.async_add_executor_job(self._try_connect_nc, user_input)
+                await self.menuai.async_add_executor_job(self._try_connect_nc, user_input)
             except NextcloudMonitorAuthorizationError:
                 errors["base"] = "invalid_auth"
             except (NextcloudMonitorConnectionError, NextcloudMonitorRequestError):
@@ -88,7 +88,7 @@ class NextcloudConfigFlow(ConfigFlow, domain=DOMAIN):
         reauth_entry = self._get_reauth_entry()
         if user_input is not None:
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self._try_connect_nc, {**reauth_entry.data, **user_input}
                 )
             except NextcloudMonitorAuthorizationError:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from . import PS4Data
@@ -16,7 +16,7 @@ DEFAULT_REGION = "United States"
 DEFAULT_ALIAS = "Home-Assistant"
 DOMAIN = "ps4"
 GAMES_FILE = ".ps4-games.{}.json"
-PS4_DATA: HassKey[PS4Data] = HassKey(DOMAIN)
+PS4_DATA: menuaiKey[PS4Data] = menuaiKey(DOMAIN)
 
 COMMANDS = ("up", "down", "right", "left", "enter", "back", "option", "ps", "ps_hold")
 

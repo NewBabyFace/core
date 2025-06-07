@@ -8,20 +8,20 @@ from xknx import XKNX
 from xknx.devices import DateTimeDevice as XknxDateTimeDevice
 from xknx.dpt.dpt_19 import KNXDateTime as XKNXDateTime
 
-from homeassistant import config_entries
-from homeassistant.components.datetime import DateTimeEntity
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.datetime import DateTimeEntity
+from menuai.const import (
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from . import KNXModule
 from .const import (
@@ -35,12 +35,12 @@ from .entity import KnxYamlEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up entities for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     config: list[ConfigType] = knx_module.config_yaml[Platform.DATETIME]
 
     async_add_entities(
@@ -75,9 +75,9 @@ class KNXDateTimeEntity(KnxYamlEntity, DateTimeEntity, RestoreEntity):
         self._attr_entity_category = config.get(CONF_ENTITY_CATEGORY)
         self._attr_unique_id = str(self._device.remote_value.group_address)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (
             not self._device.remote_value.readable
             and (last_state := await self.async_get_last_state()) is not None

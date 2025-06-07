@@ -7,7 +7,7 @@ import pytest
 from requests.exceptions import ConnectionError, RequestException
 import requests_mock
 
-from homeassistant.components.plex.const import (
+from menuai.components.plex.const import (
     CONF_IGNORE_NEW_SHARED_USERS,
     CONF_IGNORE_PLEX_WEB_CLIENTS,
     CONF_MONITORED_USERS,
@@ -15,28 +15,28 @@ from homeassistant.components.plex.const import (
     DOMAIN,
     SERVERS,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .const import DEFAULT_DATA, DEFAULT_OPTIONS
 from .helpers import trigger_plex_update, wait_for_debouncer
 
 
 async def test_new_users_available(
-    hass: HomeAssistant, entry, setup_plex_server
+    menuai: menuai, entry, setup_plex_server
 ) -> None:
     """Test setting up when new users available on Plex server."""
     MONITORED_USERS = {"User 1": {"enabled": True}}
     OPTIONS_WITH_USERS = copy.deepcopy(DEFAULT_OPTIONS)
     OPTIONS_WITH_USERS[Platform.MEDIA_PLAYER][CONF_MONITORED_USERS] = MONITORED_USERS
-    entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(entry, options=OPTIONS_WITH_USERS)
+    entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(entry, options=OPTIONS_WITH_USERS)
 
     mock_plex_server = await setup_plex_server(config_entry=entry)
 
     server_id = mock_plex_server.machine_identifier
 
-    monitored_users = hass.data[DOMAIN][SERVERS][server_id].option_monitored_users
+    monitored_users = menuai.data[DOMAIN][SERVERS][server_id].option_monitored_users
 
     ignored_users = [x for x in monitored_users if not monitored_users[x]["enabled"]]
     assert len(monitored_users) == 1
@@ -44,7 +44,7 @@ async def test_new_users_available(
 
 
 async def test_new_ignored_users_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     entry,
     mock_websocket,
@@ -57,8 +57,8 @@ async def test_new_ignored_users_available(
     OPTIONS_WITH_USERS = copy.deepcopy(DEFAULT_OPTIONS)
     OPTIONS_WITH_USERS[Platform.MEDIA_PLAYER][CONF_MONITORED_USERS] = MONITORED_USERS
     OPTIONS_WITH_USERS[Platform.MEDIA_PLAYER][CONF_IGNORE_NEW_SHARED_USERS] = True
-    entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(entry, options=OPTIONS_WITH_USERS)
+    entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(entry, options=OPTIONS_WITH_USERS)
 
     mock_plex_server = await setup_plex_server(config_entry=entry)
 
@@ -67,13 +67,13 @@ async def test_new_ignored_users_available(
         text=session_new_user,
     )
     trigger_plex_update(mock_websocket)
-    await wait_for_debouncer(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await wait_for_debouncer(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     server_id = mock_plex_server.machine_identifier
 
     active_sessions = mock_plex_server._plex_server.sessions()
-    monitored_users = hass.data[DOMAIN][SERVERS][server_id].option_monitored_users
+    monitored_users = menuai.data[DOMAIN][SERVERS][server_id].option_monitored_users
     ignored_users = [x for x in mock_plex_server.accounts if x not in monitored_users]
 
     assert len(monitored_users) == 1
@@ -89,29 +89,29 @@ async def test_new_ignored_users_available(
                 in caplog.text
             )
 
-    await wait_for_debouncer(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await wait_for_debouncer(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    sensor = hass.states.get("sensor.plex_server_1")
+    sensor = menuai.states.get("sensor.plex_server_1")
     assert sensor.state == str(len(active_sessions))
 
 
 async def test_network_error_during_refresh(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_plex_server
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mock_plex_server
 ) -> None:
     """Test network failures during refreshes."""
     server_id = mock_plex_server.machine_identifier
-    loaded_server = hass.data[DOMAIN][SERVERS][server_id]
+    loaded_server = menuai.data[DOMAIN][SERVERS][server_id]
     active_sessions = mock_plex_server._plex_server.sessions()
 
-    await wait_for_debouncer(hass)
+    await wait_for_debouncer(menuai)
 
-    sensor = hass.states.get("sensor.plex_server_1")
+    sensor = menuai.states.get("sensor.plex_server_1")
     assert sensor.state == str(len(active_sessions))
 
     with patch("plexapi.server.PlexServer.clients", side_effect=RequestException):
         await loaded_server._async_update_platforms()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert (
         f"Could not connect to Plex server: {DEFAULT_DATA[CONF_SERVER]}" in caplog.text
@@ -119,39 +119,39 @@ async def test_network_error_during_refresh(
 
 
 async def test_gdm_client_failure(
-    hass: HomeAssistant, mock_websocket, setup_plex_server
+    menuai: menuai, mock_websocket, setup_plex_server
 ) -> None:
     """Test connection failure to a GDM discovered client."""
     with patch(
-        "homeassistant.components.plex.server.PlexClient", side_effect=ConnectionError
+        "menuai.components.plex.server.PlexClient", side_effect=ConnectionError
     ):
         mock_plex_server = await setup_plex_server(disable_gdm=False)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     active_sessions = mock_plex_server._plex_server.sessions()
-    await wait_for_debouncer(hass)
+    await wait_for_debouncer(menuai)
 
-    sensor = hass.states.get("sensor.plex_server_1")
+    sensor = menuai.states.get("sensor.plex_server_1")
     assert sensor.state == str(len(active_sessions))
 
     with patch("plexapi.server.PlexServer.clients", side_effect=RequestException):
         trigger_plex_update(mock_websocket)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 async def test_mark_sessions_idle(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_plex_server,
     mock_websocket,
     requests_mock: requests_mock.Mocker,
     empty_payload,
 ) -> None:
     """Test marking media_players as idle when sessions end."""
-    await wait_for_debouncer(hass)
+    await wait_for_debouncer(menuai)
 
     active_sessions = mock_plex_server._plex_server.sessions()
 
-    sensor = hass.states.get("sensor.plex_server_1")
+    sensor = menuai.states.get("sensor.plex_server_1")
     assert sensor.state == str(len(active_sessions))
 
     url = mock_plex_server.url_in_use
@@ -159,31 +159,31 @@ async def test_mark_sessions_idle(
     requests_mock.get(f"{url}/status/sessions", text=empty_payload)
 
     trigger_plex_update(mock_websocket)
-    await hass.async_block_till_done()
-    await wait_for_debouncer(hass)
+    await menuai.async_block_till_done()
+    await wait_for_debouncer(menuai)
 
-    sensor = hass.states.get("sensor.plex_server_1")
+    sensor = menuai.states.get("sensor.plex_server_1")
     assert sensor.state == "0"
 
 
 async def test_ignore_plex_web_client(
-    hass: HomeAssistant, entry, setup_plex_server
+    menuai: menuai, entry, setup_plex_server
 ) -> None:
     """Test option to ignore Plex Web clients."""
     OPTIONS = copy.deepcopy(DEFAULT_OPTIONS)
     OPTIONS[Platform.MEDIA_PLAYER][CONF_IGNORE_PLEX_WEB_CLIENTS] = True
-    entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(entry, options=OPTIONS)
+    entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(entry, options=OPTIONS)
 
     mock_plex_server = await setup_plex_server(
         config_entry=entry, client_type="plexweb", disable_clients=True
     )
-    await wait_for_debouncer(hass)
+    await wait_for_debouncer(menuai)
 
     active_sessions = mock_plex_server._plex_server.sessions()
-    sensor = hass.states.get("sensor.plex_server_1")
+    sensor = menuai.states.get("sensor.plex_server_1")
     assert sensor.state == str(len(active_sessions))
 
-    media_players = hass.states.async_entity_ids("media_player")
+    media_players = menuai.states.async_entity_ids("media_player")
 
     assert len(media_players) == int(sensor.state) - 1

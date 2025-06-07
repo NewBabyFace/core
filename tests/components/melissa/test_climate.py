@@ -4,43 +4,43 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_TEMPERATURE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
 
 async def test_setup_platform(
-    hass: HomeAssistant, mock_melissa, snapshot: SnapshotAssertion
+    menuai: menuai, mock_melissa, snapshot: SnapshotAssertion
 ) -> None:
     """Test setup_platform."""
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    assert hass.states.get("climate.melissa_12345678") == snapshot
+    assert menuai.states.get("climate.melissa_12345678") == snapshot
 
 
 async def test_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_melissa: AsyncMock,
 ) -> None:
     """Test that the switch can be turned on and off."""
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
     entity_id = "climate.melissa_12345678"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: entity_id, ATTR_TEMPERATURE: 25},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_melissa.return_value.async_send.mock_calls) == 2

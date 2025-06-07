@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PIN
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_PIN
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
 
 from .const import ATTR_CONFIG_ENTRY_ID, DOMAIN, SERVICE_SEND_PIN
 from .coordinator import BlinkConfigEntry
@@ -21,21 +21,21 @@ SERVICE_SEND_PIN_SCHEMA = vol.Schema(
 )
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the Blink integration."""
 
     async def send_pin(call: ServiceCall):
         """Call blink to send new pin."""
         config_entry: BlinkConfigEntry | None
         for entry_id in call.data[ATTR_CONFIG_ENTRY_ID]:
-            if not (config_entry := hass.config_entries.async_get_entry(entry_id)):
+            if not (config_entry := menuai.config_entries.async_get_entry(entry_id)):
                 raise ServiceValidationError(
                     translation_domain=DOMAIN,
                     translation_key="integration_not_found",
                     translation_placeholders={"target": DOMAIN},
                 )
             if config_entry.state != ConfigEntryState.LOADED:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="not_loaded",
                     translation_placeholders={"target": config_entry.title},
@@ -46,7 +46,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 call.data[CONF_PIN],
             )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SEND_PIN,
         send_pin,

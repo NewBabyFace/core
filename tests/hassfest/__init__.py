@@ -1,1 +1,1 @@
-"""Tests for hassfest."""
+"""Tests for menuaifest."""

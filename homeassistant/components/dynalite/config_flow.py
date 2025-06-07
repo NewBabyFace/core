@@ -6,9 +6,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers import config_validation as cv
 
 from .bridge import DynaliteBridge
 from .const import DEFAULT_PORT, DOMAIN, LOGGER
@@ -47,7 +47,7 @@ class DynaliteFlowHandler(ConfigFlow, domain=DOMAIN):
         ]
         if host in configured_hosts:
             return self.async_abort(reason="already_configured")
-        bridge = DynaliteBridge(self.hass, convert_config(info))
+        bridge = DynaliteBridge(self.menuai, convert_config(info))
         if not await bridge.async_setup():
             LOGGER.error("Unable to setup bridge - import info=%s", info)
             return self.async_abort(reason="cannot_connect")

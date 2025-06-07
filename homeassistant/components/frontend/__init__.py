@@ -1,4 +1,4 @@
-"""Handle the frontend for Home Assistant."""
+"""Handle the frontend for MenuAI."""
 
 from __future__ import annotations
 
@@ -15,25 +15,25 @@ from propcache.api import cached_property
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.components import onboarding, websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView, StaticPathConfig
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.config import async_hass_config_yaml
-from homeassistant.const import (
+from menuai.components import onboarding, websocket_api
+from menuai.components.http import KEY_menuai, menuaiView, StaticPathConfig
+from menuai.components.websocket_api import ActiveConnection
+from menuai.config import async_menuai_config_yaml
+from menuai.const import (
     CONF_MODE,
     CONF_NAME,
     EVENT_PANELS_UPDATED,
     EVENT_THEMES_UPDATED,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, service
-from homeassistant.helpers.icon import async_get_icons
-from homeassistant.helpers.json import json_dumps_sorted
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.translation import async_get_translations
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration, bind_hass
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv, service
+from menuai.helpers.icon import async_get_icons
+from menuai.helpers.json import json_dumps_sorted
+from menuai.helpers.storage import Store
+from menuai.helpers.translation import async_get_translations
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_get_integration, bind_menuai
+from menuai.util.menuai_dict import menuaiKey
 
 from .storage import async_setup_frontend_storage
 
@@ -52,19 +52,19 @@ CONF_JS_VERSION = "javascript_version"
 DEFAULT_THEME_COLOR = "#03A9F4"
 
 
-DATA_PANELS: HassKey[dict[str, Panel]] = HassKey("frontend_panels")
-DATA_EXTRA_MODULE_URL: HassKey[UrlManager] = HassKey("frontend_extra_module_url")
-DATA_EXTRA_JS_URL_ES5: HassKey[UrlManager] = HassKey("frontend_extra_js_url_es5")
+DATA_PANELS: menuaiKey[dict[str, Panel]] = menuaiKey("frontend_panels")
+DATA_EXTRA_MODULE_URL: menuaiKey[UrlManager] = menuaiKey("frontend_extra_module_url")
+DATA_EXTRA_JS_URL_ES5: menuaiKey[UrlManager] = menuaiKey("frontend_extra_js_url_es5")
 
-DATA_WS_SUBSCRIBERS: HassKey[set[tuple[websocket_api.ActiveConnection, int]]] = HassKey(
+DATA_WS_SUBSCRIBERS: menuaiKey[set[tuple[websocket_api.ActiveConnection, int]]] = menuaiKey(
     "frontend_ws_subscribers"
 )
 
 THEMES_STORAGE_KEY = f"{DOMAIN}_theme"
 THEMES_STORAGE_VERSION = 1
 THEMES_SAVE_DELAY = 60
-DATA_THEMES_STORE: HassKey[Store] = HassKey("frontend_themes_store")
-DATA_THEMES: HassKey[dict[str, Any]] = HassKey("frontend_themes")
+DATA_THEMES_STORE: menuaiKey[Store] = menuaiKey("frontend_themes_store")
+DATA_THEMES: menuaiKey[dict[str, Any]] = menuaiKey("frontend_themes")
 DATA_DEFAULT_THEME = "frontend_default_theme"
 DATA_DEFAULT_DARK_THEME = "frontend_default_dark_theme"
 DEFAULT_THEME = "default"
@@ -187,14 +187,14 @@ MANIFEST_JSON = Manifest(
             }
         ],
         "lang": "en-US",
-        "name": "Home Assistant",
-        "short_name": "Home Assistant",
+        "name": "MenuAI",
+        "short_name": "MenuAI",
         "start_url": "/?homescreen=1",
         "id": "/?homescreen=1",
         "theme_color": DEFAULT_THEME_COLOR,
         "prefer_related_applications": True,
         "related_applications": [
-            {"platform": "play", "id": "io.homeassistant.companion.android"}
+            {"platform": "play", "id": "io.menuai.companion.android"}
         ],
     }
 )
@@ -205,7 +205,7 @@ class UrlManager:
 
     This is abstracted into a class because
     some integrations add a remove these directly
-    on hass.data
+    on menuai.data
     """
 
     def __init__(
@@ -285,10 +285,10 @@ class Panel:
         }
 
 
-@bind_hass
+@bind_menuai
 @callback
 def async_register_built_in_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_name: str,
     sidebar_title: str | None = None,
     sidebar_icon: str | None = None,
@@ -310,48 +310,48 @@ def async_register_built_in_panel(
         config_panel_domain,
     )
 
-    panels = hass.data.setdefault(DATA_PANELS, {})
+    panels = menuai.data.setdefault(DATA_PANELS, {})
 
     if not update and panel.frontend_url_path in panels:
         raise ValueError(f"Overwriting panel {panel.frontend_url_path}")
 
     panels[panel.frontend_url_path] = panel
 
-    hass.bus.async_fire(EVENT_PANELS_UPDATED)
+    menuai.bus.async_fire(EVENT_PANELS_UPDATED)
 
 
-@bind_hass
+@bind_menuai
 @callback
 def async_remove_panel(
-    hass: HomeAssistant, frontend_url_path: str, *, warn_if_unknown: bool = True
+    menuai: menuai, frontend_url_path: str, *, warn_if_unknown: bool = True
 ) -> None:
     """Remove a built-in panel."""
-    panel = hass.data.get(DATA_PANELS, {}).pop(frontend_url_path, None)
+    panel = menuai.data.get(DATA_PANELS, {}).pop(frontend_url_path, None)
 
     if panel is None:
         if warn_if_unknown:
             _LOGGER.warning("Removing unknown panel %s", frontend_url_path)
         return
 
-    hass.bus.async_fire(EVENT_PANELS_UPDATED)
+    menuai.bus.async_fire(EVENT_PANELS_UPDATED)
 
 
-def add_extra_js_url(hass: HomeAssistant, url: str, es5: bool = False) -> None:
+def add_extra_js_url(menuai: menuai, url: str, es5: bool = False) -> None:
     """Register extra js or module url to load.
 
     This function allows custom integrations to register extra js or module.
     """
     key = DATA_EXTRA_JS_URL_ES5 if es5 else DATA_EXTRA_MODULE_URL
-    hass.data[key].add(url)
+    menuai.data[key].add(url)
 
 
-def remove_extra_js_url(hass: HomeAssistant, url: str, es5: bool = False) -> None:
+def remove_extra_js_url(menuai: menuai, url: str, es5: bool = False) -> None:
     """Remove extra js or module url to load.
 
     This function allows custom integrations to remove extra js or module.
     """
     key = DATA_EXTRA_JS_URL_ES5 if es5 else DATA_EXTRA_MODULE_URL
-    hass.data[key].remove(url)
+    menuai.data[key].remove(url)
 
 
 def add_manifest_json_key(key: str, val: Any) -> None:
@@ -362,24 +362,24 @@ def add_manifest_json_key(key: str, val: Any) -> None:
 def _frontend_root(dev_repo_path: str | None) -> pathlib.Path:
     """Return root path to the frontend files."""
     if dev_repo_path is not None:
-        return pathlib.Path(dev_repo_path) / "hass_frontend"
+        return pathlib.Path(dev_repo_path) / "menuai_frontend"
     # Keep import here so that we can import frontend without installing reqs
     # pylint: disable-next=import-outside-toplevel
-    import hass_frontend
+    import menuai_frontend
 
-    return hass_frontend.where()
+    return menuai_frontend.where()
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the serving of the frontend."""
-    await async_setup_frontend_storage(hass)
-    websocket_api.async_register_command(hass, websocket_get_icons)
-    websocket_api.async_register_command(hass, websocket_get_panels)
-    websocket_api.async_register_command(hass, websocket_get_themes)
-    websocket_api.async_register_command(hass, websocket_get_translations)
-    websocket_api.async_register_command(hass, websocket_get_version)
-    websocket_api.async_register_command(hass, websocket_subscribe_extra_js)
-    hass.http.register_view(ManifestJSONView())
+    await async_setup_frontend_storage(menuai)
+    websocket_api.async_register_command(menuai, websocket_get_icons)
+    websocket_api.async_register_command(menuai, websocket_get_panels)
+    websocket_api.async_register_command(menuai, websocket_get_themes)
+    websocket_api.async_register_command(menuai, websocket_get_translations)
+    websocket_api.async_register_command(menuai, websocket_get_version)
+    websocket_api.async_register_command(menuai, websocket_subscribe_extra_js)
+    menuai.http.register_view(ManifestJSONView())
 
     conf = config.get(DOMAIN, {})
 
@@ -416,28 +416,28 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         StaticPathConfig("/auth/authorize", str(root_path / "authorize.html"), False)
     )
     # https://wicg.github.io/change-password-url/
-    hass.http.register_redirect(
+    menuai.http.register_redirect(
         "/.well-known/change-password", "/profile", redirect_exc=web.HTTPFound
     )
 
-    local = hass.config.path("www")
-    if await hass.async_add_executor_job(os.path.isdir, local):
+    local = menuai.config.path("www")
+    if await menuai.async_add_executor_job(os.path.isdir, local):
         static_paths_configs.append(StaticPathConfig("/local", local, not is_dev))
 
-    await hass.http.async_register_static_paths(static_paths_configs)
+    await menuai.http.async_register_static_paths(static_paths_configs)
     # Shopping list panel was replaced by todo panel in 2023.11
-    hass.http.register_redirect("/shopping-list", "/todo")
+    menuai.http.register_redirect("/shopping-list", "/todo")
 
-    hass.http.app.router.register_resource(IndexView(repo_path, hass))
+    menuai.http.app.router.register_resource(IndexView(repo_path, menuai))
 
-    async_register_built_in_panel(hass, "profile")
+    async_register_built_in_panel(menuai, "profile")
 
     async_register_built_in_panel(
-        hass,
+        menuai,
         "developer-tools",
         require_admin=True,
         sidebar_title="developer_tools",
-        sidebar_icon="hass:hammer",
+        sidebar_icon="menuai:hammer",
     )
 
     @callback
@@ -446,7 +446,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         change_type: str,
         url: str,
     ) -> None:
-        subscribers = hass.data[DATA_WS_SUBSCRIBERS]
+        subscribers = menuai.data[DATA_WS_SUBSCRIBERS]
         json_msg = {
             "change_type": change_type,
             "item": {"type": resource_type, "url": url},
@@ -454,27 +454,27 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         for connection, msg_id in subscribers:
             connection.send_message(websocket_api.event_message(msg_id, json_msg))
 
-    hass.data[DATA_EXTRA_MODULE_URL] = UrlManager(
+    menuai.data[DATA_EXTRA_MODULE_URL] = UrlManager(
         partial(async_change_listener, "module"), conf.get(CONF_EXTRA_MODULE_URL, [])
     )
-    hass.data[DATA_EXTRA_JS_URL_ES5] = UrlManager(
+    menuai.data[DATA_EXTRA_JS_URL_ES5] = UrlManager(
         partial(async_change_listener, "es5"), conf.get(CONF_EXTRA_JS_URL_ES5, [])
     )
-    hass.data[DATA_WS_SUBSCRIBERS] = set()
+    menuai.data[DATA_WS_SUBSCRIBERS] = set()
 
-    await _async_setup_themes(hass, conf.get(CONF_THEMES))
+    await _async_setup_themes(menuai, conf.get(CONF_THEMES))
 
     return True
 
 
 async def _async_setup_themes(
-    hass: HomeAssistant, themes: dict[str, Any] | None
+    menuai: menuai, themes: dict[str, Any] | None
 ) -> None:
     """Set up themes data and services."""
-    hass.data[DATA_THEMES] = themes or {}
+    menuai.data[DATA_THEMES] = themes or {}
 
-    store = hass.data[DATA_THEMES_STORE] = Store(
-        hass, THEMES_STORAGE_VERSION, THEMES_STORAGE_KEY
+    store = menuai.data[DATA_THEMES_STORE] = Store(
+        menuai, THEMES_STORAGE_VERSION, THEMES_STORAGE_KEY
     )
 
     if not (theme_data := await store.async_load()) or not isinstance(theme_data, dict):
@@ -482,19 +482,19 @@ async def _async_setup_themes(
     theme_name = theme_data.get(DATA_DEFAULT_THEME, DEFAULT_THEME)
     dark_theme_name = theme_data.get(DATA_DEFAULT_DARK_THEME)
 
-    if theme_name == DEFAULT_THEME or theme_name in hass.data[DATA_THEMES]:
-        hass.data[DATA_DEFAULT_THEME] = theme_name
+    if theme_name == DEFAULT_THEME or theme_name in menuai.data[DATA_THEMES]:
+        menuai.data[DATA_DEFAULT_THEME] = theme_name
     else:
-        hass.data[DATA_DEFAULT_THEME] = DEFAULT_THEME
+        menuai.data[DATA_DEFAULT_THEME] = DEFAULT_THEME
 
-    if dark_theme_name == DEFAULT_THEME or dark_theme_name in hass.data[DATA_THEMES]:
-        hass.data[DATA_DEFAULT_DARK_THEME] = dark_theme_name
+    if dark_theme_name == DEFAULT_THEME or dark_theme_name in menuai.data[DATA_THEMES]:
+        menuai.data[DATA_DEFAULT_DARK_THEME] = dark_theme_name
 
     @callback
     def update_theme_and_fire_event() -> None:
         """Update theme_color in manifest."""
-        name = hass.data[DATA_DEFAULT_THEME]
-        themes = hass.data[DATA_THEMES]
+        name = menuai.data[DATA_DEFAULT_THEME]
+        themes = menuai.data[DATA_THEMES]
         if name != DEFAULT_THEME:
             MANIFEST_JSON.update_key(
                 "theme_color",
@@ -505,7 +505,7 @@ async def _async_setup_themes(
             )
         else:
             MANIFEST_JSON.update_key("theme_color", DEFAULT_THEME_COLOR)
-        hass.bus.async_fire(EVENT_THEMES_UPDATED)
+        menuai.bus.async_fire(EVENT_THEMES_UPDATED)
 
     @callback
     def set_theme(call: ServiceCall) -> None:
@@ -515,7 +515,7 @@ async def _async_setup_themes(
 
         if (
             name not in (DEFAULT_THEME, VALUE_NO_THEME)
-            and name not in hass.data[DATA_THEMES]
+            and name not in menuai.data[DATA_THEMES]
         ):
             _LOGGER.warning("Theme %s not found", name)
             return
@@ -530,11 +530,11 @@ async def _async_setup_themes(
             _LOGGER.info("Theme %s set as default %s theme", name, mode)
             to_set = name
 
-        hass.data[theme_key] = to_set
+        menuai.data[theme_key] = to_set
         store.async_delay_save(
             lambda: {
-                DATA_DEFAULT_THEME: hass.data[DATA_DEFAULT_THEME],
-                DATA_DEFAULT_DARK_THEME: hass.data.get(DATA_DEFAULT_DARK_THEME),
+                DATA_DEFAULT_THEME: menuai.data[DATA_DEFAULT_THEME],
+                DATA_DEFAULT_DARK_THEME: menuai.data.get(DATA_DEFAULT_DARK_THEME),
             },
             THEMES_SAVE_DELAY,
         )
@@ -542,20 +542,20 @@ async def _async_setup_themes(
 
     async def reload_themes(_: ServiceCall) -> None:
         """Reload themes."""
-        config = await async_hass_config_yaml(hass)
+        config = await async_menuai_config_yaml(menuai)
         new_themes = config.get(DOMAIN, {}).get(CONF_THEMES, {})
-        hass.data[DATA_THEMES] = new_themes
-        if hass.data[DATA_DEFAULT_THEME] not in new_themes:
-            hass.data[DATA_DEFAULT_THEME] = DEFAULT_THEME
+        menuai.data[DATA_THEMES] = new_themes
+        if menuai.data[DATA_DEFAULT_THEME] not in new_themes:
+            menuai.data[DATA_DEFAULT_THEME] = DEFAULT_THEME
         if (
-            hass.data.get(DATA_DEFAULT_DARK_THEME)
-            and hass.data.get(DATA_DEFAULT_DARK_THEME) not in new_themes
+            menuai.data.get(DATA_DEFAULT_DARK_THEME)
+            and menuai.data.get(DATA_DEFAULT_DARK_THEME) not in new_themes
         ):
-            hass.data[DATA_DEFAULT_DARK_THEME] = None
+            menuai.data[DATA_DEFAULT_DARK_THEME] = None
         update_theme_and_fire_event()
 
     service.async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_SET_THEME,
         set_theme,
@@ -568,7 +568,7 @@ async def _async_setup_themes(
     )
 
     service.async_register_admin_service(
-        hass, DOMAIN, SERVICE_RELOAD_THEMES, reload_themes
+        menuai, DOMAIN, SERVICE_RELOAD_THEMES, reload_themes
     )
 
 
@@ -581,11 +581,11 @@ def _async_render_index_cached(template: jinja2.Template, **kwargs: Any) -> str:
 class IndexView(web_urldispatcher.AbstractResource):
     """Serve the frontend."""
 
-    def __init__(self, repo_path: str | None, hass: HomeAssistant) -> None:
+    def __init__(self, repo_path: str | None, menuai: menuai) -> None:
         """Initialize the frontend view."""
         super().__init__(name="frontend:index")
         self.repo_path = repo_path
-        self.hass = hass
+        self.menuai = menuai
         self._template_cache: jinja2.Template | None = None
 
     @cached_property
@@ -613,7 +613,7 @@ class IndexView(web_urldispatcher.AbstractResource):
             request.path != "/"
             and (parts := request.rel_url.parts)
             and len(parts) > 1
-            and parts[1] not in self.hass.data[DATA_PANELS]
+            and parts[1] not in self.menuai.data[DATA_PANELS]
         ):
             return None, set()
 
@@ -630,7 +630,7 @@ class IndexView(web_urldispatcher.AbstractResource):
 
     def get_info(self) -> dict[str, list[str]]:  # type: ignore[override]
         """Return a dict with additional info useful for introspection."""
-        panels = self.hass.data[DATA_PANELS]
+        panels = self.menuai.data[DATA_PANELS]
         return {"panels": list(panels)}
 
     def raw_match(self, path: str) -> bool:
@@ -653,23 +653,23 @@ class IndexView(web_urldispatcher.AbstractResource):
 
     async def get(self, request: web.Request) -> web.Response:
         """Serve the index page for panel pages."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
-        if not onboarding.async_is_onboarded(hass):
+        if not onboarding.async_is_onboarded(menuai):
             return web.Response(status=302, headers={"location": "/onboarding.html"})
 
-        template = self._template_cache or await hass.async_add_executor_job(
+        template = self._template_cache or await menuai.async_add_executor_job(
             self.get_template
         )
 
         extra_modules: frozenset[str]
         extra_js_es5: frozenset[str]
-        if hass.config.safe_mode:
+        if menuai.config.safe_mode:
             extra_modules = frozenset()
             extra_js_es5 = frozenset()
         else:
-            extra_modules = hass.data[DATA_EXTRA_MODULE_URL].urls
-            extra_js_es5 = hass.data[DATA_EXTRA_JS_URL_ES5].urls
+            extra_modules = menuai.data[DATA_EXTRA_MODULE_URL].urls
+            extra_js_es5 = menuai.data[DATA_EXTRA_JS_URL_ES5].urls
 
         response = web.Response(
             text=_async_render_index_cached(
@@ -692,7 +692,7 @@ class IndexView(web_urldispatcher.AbstractResource):
         return iter([self._route])
 
 
-class ManifestJSONView(HomeAssistantView):
+class ManifestJSONView(menuaiView):
     """View to return a manifest.json."""
 
     requires_auth = False
@@ -718,11 +718,11 @@ class ManifestJSONView(HomeAssistantView):
 )
 @websocket_api.async_response
 async def websocket_get_icons(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get icons command."""
     resources = await async_get_icons(
-        hass,
+        menuai,
         msg["category"],
         msg.get("integration"),
     )
@@ -734,13 +734,13 @@ async def websocket_get_icons(
 @callback
 @websocket_api.websocket_command({"type": "get_panels"})
 def websocket_get_panels(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get panels command."""
     user_is_admin = connection.user.is_admin
     panels = {
         panel_key: panel.to_response()
-        for panel_key, panel in connection.hass.data[DATA_PANELS].items()
+        for panel_key, panel in connection.menuai.data[DATA_PANELS].items()
         if user_is_admin or not panel.require_admin
     }
 
@@ -750,10 +750,10 @@ def websocket_get_panels(
 @callback
 @websocket_api.websocket_command({"type": "frontend/get_themes"})
 def websocket_get_themes(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get themes command."""
-    if hass.config.recovery_mode or hass.config.safe_mode:
+    if menuai.config.recovery_mode or menuai.config.safe_mode:
         connection.send_message(
             websocket_api.result_message(
                 msg["id"],
@@ -769,9 +769,9 @@ def websocket_get_themes(
         websocket_api.result_message(
             msg["id"],
             {
-                "themes": hass.data[DATA_THEMES],
-                "default_theme": hass.data[DATA_DEFAULT_THEME],
-                "default_dark_theme": hass.data.get(DATA_DEFAULT_DARK_THEME),
+                "themes": menuai.data[DATA_THEMES],
+                "default_theme": menuai.data[DATA_DEFAULT_THEME],
+                "default_dark_theme": menuai.data.get(DATA_DEFAULT_DARK_THEME),
             },
         )
     )
@@ -788,11 +788,11 @@ def websocket_get_themes(
 )
 @websocket_api.async_response
 async def websocket_get_translations(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get translations command."""
     resources = await async_get_translations(
-        hass,
+        menuai,
         msg["language"],
         msg["category"],
         msg.get("integration"),
@@ -806,10 +806,10 @@ async def websocket_get_translations(
 @websocket_api.websocket_command({"type": "frontend/get_version"})
 @websocket_api.async_response
 async def websocket_get_version(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get version command."""
-    integration = await async_get_integration(hass, "frontend")
+    integration = await async_get_integration(menuai, "frontend")
 
     frontend = None
 
@@ -826,11 +826,11 @@ async def websocket_get_version(
 @callback
 @websocket_api.websocket_command({"type": "frontend/subscribe_extra_js"})
 def websocket_subscribe_extra_js(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Subscribe to URL manager updates."""
 
-    subscribers = hass.data[DATA_WS_SUBSCRIBERS]
+    subscribers = menuai.data[DATA_WS_SUBSCRIBERS]
     subscribers.add((connection, msg["id"]))
 
     @callback

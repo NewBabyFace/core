@@ -25,9 +25,9 @@ from pyenphase.models.meters import EnvoyMeterData
 from pyenphase.models.tariff import EnvoyStorageSettings, EnvoyTariff
 import pytest
 
-from homeassistant.components.enphase_envoy import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.enphase_envoy import DOMAIN
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -36,7 +36,7 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.enphase_envoy.async_setup_entry",
+        "menuai.components.enphase_envoy.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -44,7 +44,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, str]
+    menuai: menuai, config: dict[str, str]
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     return MockConfigEntry(
@@ -79,11 +79,11 @@ async def mock_envoy(
     )
     with (
         patch(
-            "homeassistant.components.enphase_envoy.config_flow.Envoy",
+            "menuai.components.enphase_envoy.config_flow.Envoy",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.enphase_envoy.Envoy",
+            "menuai.components.enphase_envoy.Envoy",
             new=mock_client,
         ),
         patch(

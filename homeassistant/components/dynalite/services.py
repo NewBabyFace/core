@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
 
 from .bridge import DynaliteBridge
 from .const import (
@@ -24,7 +24,7 @@ def _get_bridges(service_call: ServiceCall) -> list[DynaliteBridge]:
     host = service_call.data.get(ATTR_HOST, "")
     bridges = [
         entry.runtime_data
-        for entry in service_call.hass.config_entries.async_loaded_entries(DOMAIN)
+        for entry in service_call.menuai.config_entries.async_loaded_entries(DOMAIN)
         if not host or entry.runtime_data.host == host
     ]
     LOGGER.debug("Selected bridges for service call: %s", bridges)
@@ -50,9 +50,9 @@ async def _request_channel_level(service_call: ServiceCall) -> None:
 
 
 @callback
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the Dynalite platform."""
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_REQUEST_AREA_PRESET,
         _request_area_preset,
@@ -65,7 +65,7 @@ def setup_services(hass: HomeAssistant) -> None:
         ),
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_REQUEST_CHANNEL_LEVEL,
         _request_channel_level,

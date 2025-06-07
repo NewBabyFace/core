@@ -14,7 +14,7 @@ from uiprotect.exceptions import ClientError, NotAuthorized
 from unifi_discovery import async_console_is_alive
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IGNORE,
     ConfigEntry,
     ConfigEntryState,
@@ -22,7 +22,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_ID,
     CONF_PASSWORD,
@@ -30,17 +30,17 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import (
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import (
     async_create_clientsession,
     async_get_clientsession,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-from homeassistant.helpers.storage import STORAGE_DIR
-from homeassistant.helpers.typing import DiscoveryInfoType
-from homeassistant.loader import async_get_integration
-from homeassistant.util.network import is_ip_address
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.storage import STORAGE_DIR
+from menuai.helpers.typing import DiscoveryInfoType
+from menuai.loader import async_get_integration
+from menuai.util.network import is_ip_address
 
 from .const import (
     CONF_ALL_UPDATES,
@@ -57,7 +57,7 @@ from .const import (
 )
 from .data import async_last_update_was_successful
 from .discovery import async_start_discovery
-from .utils import _async_resolve, _async_short_mac, _async_unifi_mac_from_hass
+from .utils import _async_resolve, _async_short_mac, _async_unifi_mac_from_menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,9 +67,9 @@ ENTRY_FAILURE_STATES = (
 )
 
 
-async def async_local_user_documentation_url(hass: HomeAssistant) -> str:
+async def async_local_user_documentation_url(menuai: menuai) -> str:
     """Get the documentation url for creating a local user."""
-    integration = await async_get_integration(hass, DOMAIN)
+    integration = await async_get_integration(menuai, DOMAIN)
     return f"{integration.documentation}#local-user"
 
 
@@ -79,7 +79,7 @@ def _host_is_direct_connect(host: str) -> bool:
 
 
 async def _async_console_is_offline(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
 ) -> bool:
     """Check if a console is offline.
@@ -91,9 +91,9 @@ async def _async_console_is_offline(
     """
     return bool(
         entry.state in ENTRY_FAILURE_STATES
-        or not async_last_update_was_successful(hass, entry)
+        or not async_last_update_was_successful(menuai, entry)
     ) and not await async_console_is_alive(
-        async_get_clientsession(hass, verify_ssl=False), entry.data[CONF_HOST]
+        async_get_clientsession(menuai, verify_ssl=False), entry.data[CONF_HOST]
     )
 
 
@@ -126,7 +126,7 @@ class ProtectFlowHandler(ConfigFlow, domain=DOMAIN):
         # Discovery requires an additional check so we use
         # SSDP and DHCP to tell us to start it so it only
         # runs on networks where unifi devices are present.
-        async_start_discovery(self.hass)
+        async_start_discovery(self.menuai)
         return self.async_abort(reason="discovery_started")
 
     async def async_step_integration_discovery(
@@ -134,7 +134,7 @@ class ProtectFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle integration discovery."""
         self._discovered_device = discovery_info
-        mac = _async_unifi_mac_from_hass(discovery_info["hw_addr"])
+        mac = _async_unifi_mac_from_menuai(discovery_info["hw_addr"])
         await self.async_set_unique_id(mac)
         source_ip = discovery_info["source_ip"]
         direct_connect_domain = discovery_info["direct_connect_domain"]
@@ -157,17 +157,17 @@ class ProtectFlowHandler(ConfigFlow, domain=DOMAIN):
                     not entry_has_direct_connect
                     and is_ip_address(entry_host)
                     and entry_host != source_ip
-                    and await _async_console_is_offline(self.hass, entry)
+                    and await _async_console_is_offline(self.menuai, entry)
                 ):
                     new_host = source_ip
                 if new_host:
-                    self.hass.config_entries.async_update_entry(
+                    self.menuai.config_entries.async_update_entry(
                         entry, data={**entry.data, CONF_HOST: new_host}
                     )
                 return self.async_abort(reason="already_configured")
             if entry_host in (direct_connect_domain, source_ip) or (
                 entry_has_direct_connect
-                and (ip := await _async_resolve(self.hass, entry_host))
+                and (ip := await _async_resolve(self.menuai, entry_host))
                 and ip == source_ip
             ):
                 return self.async_abort(reason="already_configured")
@@ -206,7 +206,7 @@ class ProtectFlowHandler(ConfigFlow, domain=DOMAIN):
             description_placeholders={
                 **placeholders,
                 "local_user_documentation_url": await async_local_user_documentation_url(
-                    self.hass
+                    self.menuai
                 ),
             },
             data_schema=vol.Schema(
@@ -247,7 +247,7 @@ class ProtectFlowHandler(ConfigFlow, domain=DOMAIN):
         user_input: dict[str, Any],
     ) -> tuple[NVR | None, dict[str, str]]:
         session = async_create_clientsession(
-            self.hass, cookie_jar=CookieJar(unsafe=True)
+            self.menuai, cookie_jar=CookieJar(unsafe=True)
         )
 
         host = user_input[CONF_HOST]
@@ -261,8 +261,8 @@ class ProtectFlowHandler(ConfigFlow, domain=DOMAIN):
             username=user_input[CONF_USERNAME],
             password=user_input[CONF_PASSWORD],
             verify_ssl=verify_ssl,
-            cache_dir=Path(self.hass.config.path(STORAGE_DIR, "unifiprotect")),
-            config_dir=Path(self.hass.config.path(STORAGE_DIR, "unifiprotect")),
+            cache_dir=Path(self.menuai.config.path(STORAGE_DIR, "unifiprotect")),
+            config_dir=Path(self.menuai.config.path(STORAGE_DIR, "unifiprotect")),
         )
 
         errors = {}
@@ -351,7 +351,7 @@ class ProtectFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="user",
             description_placeholders={
                 "local_user_documentation_url": await async_local_user_documentation_url(
-                    self.hass
+                    self.menuai
                 )
             },
             data_schema=vol.Schema(

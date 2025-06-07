@@ -7,16 +7,16 @@ from zigpy.profiles import zha
 from zigpy.zcl.clusters import general
 import zigpy.zcl.foundation as zcl_f
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.zha.helpers import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.zha.helpers import (
     ZHADeviceProxy,
     ZHAGatewayProxy,
     get_zha_gateway,
     get_zha_gateway_proxy,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import find_entity_id, send_attributes_report
 from .conftest import SIG_EP_INPUT, SIG_EP_OUTPUT, SIG_EP_PROFILE, SIG_EP_TYPE
@@ -29,7 +29,7 @@ OFF = 0
 def switch_platform_only():
     """Only set up the switch and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.DEVICE_TRACKER,
             Platform.SENSOR,
@@ -40,12 +40,12 @@ def switch_platform_only():
         yield
 
 
-async def test_switch(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
+async def test_switch(menuai: menuai, setup_zha, zigpy_device_mock) -> None:
     """Test ZHA switch platform."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -66,26 +66,26 @@ async def test_switch(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
-    entity_id = find_entity_id(Platform.SWITCH, zha_device_proxy, hass)
+    entity_id = find_entity_id(Platform.SWITCH, zha_device_proxy, menuai)
     cluster = zigpy_device.endpoints[1].on_off
     assert entity_id is not None
 
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     # turn on at switch
     await send_attributes_report(
-        hass, cluster, {general.OnOff.AttributeDefs.on_off.id: ON}
+        menuai, cluster, {general.OnOff.AttributeDefs.on_off.id: ON}
     )
-    assert hass.states.get(entity_id).state == STATE_ON
+    assert menuai.states.get(entity_id).state == STATE_ON
 
     # turn off at switch
     await send_attributes_report(
-        hass, cluster, {general.OnOff.AttributeDefs.on_off.id: OFF}
+        menuai, cluster, {general.OnOff.AttributeDefs.on_off.id: OFF}
     )
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     # turn on from HA
     with patch(
@@ -93,7 +93,7 @@ async def test_switch(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None
         return_value=[0x00, zcl_f.Status.SUCCESS],
     ):
         # turn on via UI
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, "turn_on", {"entity_id": entity_id}, blocking=True
         )
         assert len(cluster.request.mock_calls) == 1
@@ -105,7 +105,7 @@ async def test_switch(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None
             manufacturer=None,
             tsn=None,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == STATE_ON
 
@@ -115,7 +115,7 @@ async def test_switch(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None
         return_value=[0x01, zcl_f.Status.SUCCESS],
     ):
         # turn off via UI
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, "turn_off", {"entity_id": entity_id}, blocking=True
         )
         assert len(cluster.request.mock_calls) == 1
@@ -127,15 +127,15 @@ async def test_switch(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None
             manufacturer=None,
             tsn=None,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == STATE_OFF
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     cluster.read_attributes.reset_mock()
-    await hass.services.async_call(
-        "homeassistant", "update_entity", {"entity_id": entity_id}, blocking=True
+    await menuai.services.async_call(
+        "menuai", "update_entity", {"entity_id": entity_id}, blocking=True
     )
     assert len(cluster.read_attributes.mock_calls) == 1
     assert cluster.read_attributes.call_args == call(

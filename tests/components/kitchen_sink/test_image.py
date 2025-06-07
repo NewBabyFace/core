@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.kitchen_sink import DOMAIN, image
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.kitchen_sink import DOMAIN, image
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -18,22 +18,22 @@ from tests.typing import ClientSessionGenerator
 async def image_only() -> None:
     """Enable only the image platform."""
     with patch(
-        "homeassistant.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
+        "menuai.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
         [Platform.IMAGE],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_comp(hass: HomeAssistant, image_only):
+async def setup_comp(menuai: menuai, image_only):
     """Set up demo component."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
 
-async def test_states(hass: HomeAssistant) -> None:
+async def test_states(menuai: menuai) -> None:
     """Test the expected image entities are added."""
-    states = hass.states.async_all()
+    states = menuai.states.async_all()
     assert len(states) == 1
     state = states[0]
 
@@ -47,13 +47,13 @@ async def test_states(hass: HomeAssistant) -> None:
 
 
 async def test_fetch_image(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test fetching an image with an authenticated client."""
-    client = await hass_client()
+    client = await menuai_client()
 
     image_path = Path(image.__file__).parent / "qr_code.png"
-    expected_data = await hass.async_add_executor_job(image_path.read_bytes)
+    expected_data = await menuai.async_add_executor_job(image_path.read_bytes)
 
     resp = await client.get("/api/image_proxy/image.qr_code")
     assert resp.status == HTTPStatus.OK

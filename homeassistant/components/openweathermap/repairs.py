@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.const import CONF_API_KEY, CONF_MODE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
+from menuai import data_entry_flow
+from menuai.components.repairs import RepairsFlow
+from menuai.const import CONF_API_KEY, CONF_MODE
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
 
 if TYPE_CHECKING:
     from . import OpenweathermapConfigEntry
@@ -42,8 +42,8 @@ class DeprecatedV25RepairFlow(RepairsFlow):
             self.entry.data[CONF_API_KEY], OWM_MODE_V30
         )
         if not errors:
-            self.hass.config_entries.async_update_entry(self.entry, options=new_options)
-            await self.hass.config_entries.async_reload(self.entry.entry_id)
+            self.menuai.config_entries.async_update_entry(self.entry, options=new_options)
+            await self.menuai.config_entries.async_reload(self.entry.entry_id)
             return self.async_create_entry(data={})
 
         return self.async_show_form(
@@ -54,13 +54,13 @@ class DeprecatedV25RepairFlow(RepairsFlow):
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None],
 ) -> RepairsFlow:
     """Create single repair flow."""
     entry_id = cast(str, data.get("entry_id"))
-    entry = hass.config_entries.async_get_entry(entry_id)
+    entry = menuai.config_entries.async_get_entry(entry_id)
     assert entry
     return DeprecatedV25RepairFlow(entry)
 
@@ -70,10 +70,10 @@ def _get_issue_id(entry_id: str) -> str:
 
 
 @callback
-def async_create_issue(hass: HomeAssistant, entry_id: str) -> None:
+def async_create_issue(menuai: menuai, entry_id: str) -> None:
     """Create issue for V2.5 deprecation."""
     ir.async_create_issue(
-        hass=hass,
+        menuai=menuai,
         domain=DOMAIN,
         issue_id=_get_issue_id(entry_id),
         is_fixable=True,
@@ -86,6 +86,6 @@ def async_create_issue(hass: HomeAssistant, entry_id: str) -> None:
 
 
 @callback
-def async_delete_issue(hass: HomeAssistant, entry_id: str) -> None:
+def async_delete_issue(menuai: menuai, entry_id: str) -> None:
     """Remove issue for V2.5 deprecation."""
-    ir.async_delete_issue(hass=hass, domain=DOMAIN, issue_id=_get_issue_id(entry_id))
+    ir.async_delete_issue(menuai=menuai, domain=DOMAIN, issue_id=_get_issue_id(entry_id))

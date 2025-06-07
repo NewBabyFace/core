@@ -1,4 +1,4 @@
-"""The tests for the hassio component."""
+"""The tests for the menuaiio component."""
 
 from collections.abc import Generator
 from http import HTTPStatus
@@ -16,18 +16,18 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 def mock_not_onboarded() -> Generator[None]:
     """Mock that we're not onboarded."""
     with patch(
-        "homeassistant.components.hassio.http.async_is_onboarded", return_value=False
+        "menuai.components.menuaiio.http.async_is_onboarded", return_value=False
     ):
         yield
 
 
 @pytest.fixture
-def hassio_user_client(
-    hassio_client: TestClient, hass_admin_user: MockUser
+def menuaiio_user_client(
+    menuaiio_client: TestClient, menuai_admin_user: MockUser
 ) -> TestClient:
-    """Return a Hass.io HTTP client tied to a non-admin user."""
-    hass_admin_user.groups = []
-    return hassio_client
+    """Return a menuai.io HTTP client tied to a non-admin user."""
+    menuai_admin_user.groups = []
+    return menuaiio_client
 
 
 @pytest.mark.parametrize(
@@ -39,12 +39,12 @@ def hassio_user_client(
     ],
 )
 async def test_forward_request_onboarded_user_get(
-    hassio_user_client: TestClient, aioclient_mock: AiohttpClientMocker, path: str
+    menuaiio_user_client: TestClient, aioclient_mock: AiohttpClientMocker, path: str
 ) -> None:
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
 
-    resp = await hassio_user_client.get(f"/api/hassio/{path}")
+    resp = await menuaiio_user_client.get(f"/api/menuaiio/{path}")
 
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -54,15 +54,15 @@ async def test_forward_request_onboarded_user_get(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     # We only expect a single header.
-    assert aioclient_mock.mock_calls[0][3] == {"X-Hass-Source": "core.http"}
+    assert aioclient_mock.mock_calls[0][3] == {"X-menuai-Source": "core.http"}
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_onboarded_user_unallowed_methods(
-    hassio_user_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    menuaiio_user_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_user_client.post("/api/hassio/app/entrypoint.js")
+    resp = await menuaiio_user_client.post("/api/menuaiio/app/entrypoint.js")
 
     # Check we got right response
     assert resp.status == HTTPStatus.METHOD_NOT_ALLOWED
@@ -88,13 +88,13 @@ async def test_forward_request_onboarded_user_unallowed_methods(
     ],
 )
 async def test_forward_request_onboarded_user_unallowed_paths(
-    hassio_user_client: TestClient,
+    menuaiio_user_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_user_client.get(f"/api/hassio/{bad_path}")
+    resp = await menuaiio_user_client.get(f"/api/menuaiio/{bad_path}")
 
     # Check we got right response
     assert resp.status == expected_status
@@ -111,12 +111,12 @@ async def test_forward_request_onboarded_user_unallowed_paths(
     ],
 )
 async def test_forward_request_onboarded_noauth_get(
-    hassio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, path: str
+    menuaiio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, path: str
 ) -> None:
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
 
-    resp = await hassio_noauth_client.get(f"/api/hassio/{path}")
+    resp = await menuaiio_noauth_client.get(f"/api/menuaiio/{path}")
 
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -126,15 +126,15 @@ async def test_forward_request_onboarded_noauth_get(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     # We only expect a single header.
-    assert aioclient_mock.mock_calls[0][3] == {"X-Hass-Source": "core.http"}
+    assert aioclient_mock.mock_calls[0][3] == {"X-menuai-Source": "core.http"}
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_onboarded_noauth_unallowed_methods(
-    hassio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    menuaiio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_noauth_client.post("/api/hassio/app/entrypoint.js")
+    resp = await menuaiio_noauth_client.post("/api/menuaiio/app/entrypoint.js")
 
     # Check we got right response
     assert resp.status == HTTPStatus.METHOD_NOT_ALLOWED
@@ -160,13 +160,13 @@ async def test_forward_request_onboarded_noauth_unallowed_methods(
     ],
 )
 async def test_forward_request_onboarded_noauth_unallowed_paths(
-    hassio_noauth_client: TestClient,
+    menuaiio_noauth_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_noauth_client.get(f"/api/hassio/{bad_path}")
+    resp = await menuaiio_noauth_client.get(f"/api/menuaiio/{bad_path}")
 
     # Check we got right response
     assert resp.status == expected_status
@@ -184,7 +184,7 @@ async def test_forward_request_onboarded_noauth_unallowed_paths(
     ],
 )
 async def test_forward_request_not_onboarded_get(
-    hassio_noauth_client: TestClient,
+    menuaiio_noauth_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     path: str,
     authenticated: bool,
@@ -193,7 +193,7 @@ async def test_forward_request_not_onboarded_get(
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
 
-    resp = await hassio_noauth_client.get(f"/api/hassio/{path}")
+    resp = await menuaiio_noauth_client.get(f"/api/menuaiio/{path}")
 
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -203,7 +203,7 @@ async def test_forward_request_not_onboarded_get(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     expected_headers = {
-        "X-Hass-Source": "core.http",
+        "X-menuai-Source": "core.http",
     }
     if authenticated:
         expected_headers["Authorization"] = "Bearer 123456"
@@ -220,7 +220,7 @@ async def test_forward_request_not_onboarded_get(
     ],
 )
 async def test_forward_request_not_onboarded_post(
-    hassio_noauth_client: TestClient,
+    menuaiio_noauth_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     path: str,
     mock_not_onboarded,
@@ -228,7 +228,7 @@ async def test_forward_request_not_onboarded_post(
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
 
-    resp = await hassio_noauth_client.get(f"/api/hassio/{path}")
+    resp = await menuaiio_noauth_client.get(f"/api/menuaiio/{path}")
 
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -239,17 +239,17 @@ async def test_forward_request_not_onboarded_post(
     assert len(aioclient_mock.mock_calls) == 1
     # We only expect a single header.
     assert aioclient_mock.mock_calls[0][3] == {
-        "X-Hass-Source": "core.http",
+        "X-menuai-Source": "core.http",
         "Authorization": "Bearer 123456",
     }
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_not_onboarded_unallowed_methods(
-    hassio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    menuaiio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_noauth_client.post("/api/hassio/app/entrypoint.js")
+    resp = await menuaiio_noauth_client.post("/api/menuaiio/app/entrypoint.js")
 
     # Check we got right response
     assert resp.status == HTTPStatus.METHOD_NOT_ALLOWED
@@ -275,14 +275,14 @@ async def test_forward_request_not_onboarded_unallowed_methods(
     ],
 )
 async def test_forward_request_not_onboarded_unallowed_paths(
-    hassio_noauth_client: TestClient,
+    menuaiio_noauth_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
     mock_not_onboarded,
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_noauth_client.get(f"/api/hassio/{bad_path}")
+    resp = await menuaiio_noauth_client.get(f"/api/menuaiio/{bad_path}")
 
     # Check we got right response
     assert resp.status == expected_status
@@ -306,7 +306,7 @@ async def test_forward_request_not_onboarded_unallowed_paths(
     ],
 )
 async def test_forward_request_admin_get(
-    hassio_client: TestClient,
+    menuaiio_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     path: str,
     authenticated: bool,
@@ -314,7 +314,7 @@ async def test_forward_request_admin_get(
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
 
-    resp = await hassio_client.get(f"/api/hassio/{path}")
+    resp = await menuaiio_client.get(f"/api/menuaiio/{path}")
 
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -324,7 +324,7 @@ async def test_forward_request_admin_get(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     expected_headers = {
-        "X-Hass-Source": "core.http",
+        "X-menuai-Source": "core.http",
     }
     if authenticated:
         expected_headers["Authorization"] = "Bearer 123456"
@@ -341,14 +341,14 @@ async def test_forward_request_admin_get(
     ],
 )
 async def test_forward_request_admin_post(
-    hassio_client: TestClient,
+    menuaiio_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     path: str,
 ) -> None:
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
 
-    resp = await hassio_client.get(f"/api/hassio/{path}")
+    resp = await menuaiio_client.get(f"/api/menuaiio/{path}")
 
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -359,17 +359,17 @@ async def test_forward_request_admin_post(
     assert len(aioclient_mock.mock_calls) == 1
     # We only expect a single header.
     assert aioclient_mock.mock_calls[0][3] == {
-        "X-Hass-Source": "core.http",
+        "X-menuai-Source": "core.http",
         "Authorization": "Bearer 123456",
     }
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_admin_unallowed_methods(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_client.post("/api/hassio/app/entrypoint.js")
+    resp = await menuaiio_client.post("/api/menuaiio/app/entrypoint.js")
 
     # Check we got right response
     assert resp.status == HTTPStatus.METHOD_NOT_ALLOWED
@@ -391,13 +391,13 @@ async def test_forward_request_admin_unallowed_methods(
     ],
 )
 async def test_forward_request_admin_unallowed_paths(
-    hassio_client: TestClient,
+    menuaiio_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
 ) -> None:
     """Test fetching normal path."""
-    resp = await hassio_client.get(f"/api/hassio/{bad_path}")
+    resp = await menuaiio_client.get(f"/api/menuaiio/{bad_path}")
 
     # Check we got right response
     assert resp.status == expected_status
@@ -406,17 +406,17 @@ async def test_forward_request_admin_unallowed_paths(
 
 
 async def test_bad_gateway_when_cannot_find_supervisor(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test we get a bad gateway error if we can't find supervisor."""
     aioclient_mock.get("http://127.0.0.1/app/entrypoint.js", exc=TimeoutError)
 
-    resp = await hassio_client.get("/api/hassio/app/entrypoint.js")
+    resp = await menuaiio_client.get("/api/menuaiio/app/entrypoint.js")
     assert resp.status == HTTPStatus.BAD_GATEWAY
 
 
 async def test_backup_upload_headers(
-    hassio_client: TestClient,
+    menuaiio_client: TestClient,
     aioclient_mock: AiohttpClientMocker,
     mock_not_onboarded,
 ) -> None:
@@ -424,8 +424,8 @@ async def test_backup_upload_headers(
     content_type = "multipart/form-data; boundary='--webkit'"
     aioclient_mock.post("http://127.0.0.1/backups/new/upload")
 
-    resp = await hassio_client.post(
-        "/api/hassio/backups/new/upload", headers={"Content-Type": content_type}
+    resp = await menuaiio_client.post(
+        "/api/menuaiio/backups/new/upload", headers={"Content-Type": content_type}
     )
 
     # Check we got right response
@@ -438,7 +438,7 @@ async def test_backup_upload_headers(
 
 
 async def test_backup_download_headers(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker, mock_not_onboarded
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker, mock_not_onboarded
 ) -> None:
     """Test that we forward the full header for backup download."""
     content_disposition = "attachment; filename=test.tar"
@@ -450,7 +450,7 @@ async def test_backup_download_headers(
         },
     )
 
-    resp = await hassio_client.get("/api/hassio/backups/1234abcd/download")
+    resp = await menuaiio_client.get("/api/menuaiio/backups/1234abcd/download")
 
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -461,13 +461,13 @@ async def test_backup_download_headers(
 
 
 async def test_stream(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Verify that the request is a stream."""
     content_type = "multipart/form-data; boundary='--webkit'"
     aioclient_mock.post("http://127.0.0.1/backups/new/upload")
-    resp = await hassio_client.post(
-        "/api/hassio/backups/new/upload", headers={"Content-Type": content_type}
+    resp = await menuaiio_client.post(
+        "/api/menuaiio/backups/new/upload", headers={"Content-Type": content_type}
     )
     # Check we got right response
     assert resp.status == HTTPStatus.OK
@@ -475,24 +475,24 @@ async def test_stream(
 
 
 async def test_simple_get_no_stream(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Verify that a simple GET request is not a stream."""
     aioclient_mock.get("http://127.0.0.1/app/entrypoint.js")
-    resp = await hassio_client.get("/api/hassio/app/entrypoint.js")
+    resp = await menuaiio_client.get("/api/menuaiio/app/entrypoint.js")
     assert resp.status == HTTPStatus.OK
     assert aioclient_mock.mock_calls[-1][2] is None
 
 
 async def test_entrypoint_cache_control(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that we return cache control for requests to the entrypoint only."""
     aioclient_mock.get("http://127.0.0.1/app/entrypoint.js")
     aioclient_mock.get("http://127.0.0.1/app/entrypoint.fdhkusd8y43r.js")
 
-    resp1 = await hassio_client.get("/api/hassio/app/entrypoint.js")
-    resp2 = await hassio_client.get("/api/hassio/app/entrypoint.fdhkusd8y43r.js")
+    resp1 = await menuaiio_client.get("/api/menuaiio/app/entrypoint.js")
+    resp2 = await menuaiio_client.get("/api/menuaiio/app/entrypoint.fdhkusd8y43r.js")
 
     # Check we got right response
     assert resp1.status == HTTPStatus.OK
@@ -505,14 +505,14 @@ async def test_entrypoint_cache_control(
 
 
 async def test_no_follow_logs_compress(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that we do not compress follow logs."""
     aioclient_mock.get("http://127.0.0.1/supervisor/logs/follow")
     aioclient_mock.get("http://127.0.0.1/supervisor/logs")
 
-    resp1 = await hassio_client.get("/api/hassio/supervisor/logs/follow")
-    resp2 = await hassio_client.get("/api/hassio/supervisor/logs")
+    resp1 = await menuaiio_client.get("/api/menuaiio/supervisor/logs/follow")
+    resp2 = await menuaiio_client.get("/api/menuaiio/supervisor/logs")
 
     # Check we got right response
     assert resp1.status == HTTPStatus.OK
@@ -523,7 +523,7 @@ async def test_no_follow_logs_compress(
 
 
 async def test_forward_range_header_for_logs(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    menuaiio_client: TestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that we forward the Range header for logs."""
     aioclient_mock.get("http://127.0.0.1/host/logs")
@@ -535,23 +535,23 @@ async def test_forward_range_header_for_logs(
 
     test_range = ":-100:50"
 
-    host_resp = await hassio_client.get(
-        "/api/hassio/host/logs", headers={"Range": test_range}
+    host_resp = await menuaiio_client.get(
+        "/api/menuaiio/host/logs", headers={"Range": test_range}
     )
-    host_resp2 = await hassio_client.get(
-        "/api/hassio/host/logs/boots/-1", headers={"Range": test_range}
+    host_resp2 = await menuaiio_client.get(
+        "/api/menuaiio/host/logs/boots/-1", headers={"Range": test_range}
     )
-    host_resp3 = await hassio_client.get(
-        "/api/hassio/host/logs/boots/-2/follow?lines=100", headers={"Range": test_range}
+    host_resp3 = await menuaiio_client.get(
+        "/api/menuaiio/host/logs/boots/-2/follow?lines=100", headers={"Range": test_range}
     )
-    addon_resp = await hassio_client.get(
-        "/api/hassio/addons/123abc_esphome/logs", headers={"Range": test_range}
+    addon_resp = await menuaiio_client.get(
+        "/api/menuaiio/addons/123abc_esphome/logs", headers={"Range": test_range}
     )
-    addon_resp2 = await hassio_client.get(
-        "/api/hassio/addons/123abc_esphome/logs/follow", headers={"Range": test_range}
+    addon_resp2 = await menuaiio_client.get(
+        "/api/menuaiio/addons/123abc_esphome/logs/follow", headers={"Range": test_range}
     )
-    backup_resp = await hassio_client.get(
-        "/api/hassio/backups/1234abcd/download", headers={"Range": test_range}
+    backup_resp = await menuaiio_client.get(
+        "/api/menuaiio/backups/1234abcd/download", headers={"Range": test_range}
     )
 
     assert host_resp.status == HTTPStatus.OK

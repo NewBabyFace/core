@@ -9,12 +9,12 @@ import pytest
 import python_otbr_api
 from zeroconf.asyncio import AsyncServiceInfo
 
-from homeassistant.components import otbr, thread
-from homeassistant.components.thread import discovery
-from homeassistant.config_entries import SOURCE_HASSIO, SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components import otbr, thread
+from menuai.components.thread import discovery
+from menuai.config_entries import SOURCE_menuaiIO, SOURCE_USER
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from . import (
     BASE_URL,
@@ -23,7 +23,7 @@ from . import (
     DATASET_CH16,
     DATASET_INSECURE_NW_KEY,
     DATASET_INSECURE_PASSPHRASE,
-    ROUTER_DISCOVERY_HASS,
+    ROUTER_DISCOVERY_menuai,
     TEST_BORDER_AGENT_EXTENDED_ADDRESS,
     TEST_BORDER_AGENT_ID,
     TEST_COPROCESSOR_VERSION,
@@ -51,7 +51,7 @@ def enable_mocks_fixture(
 
 @pytest.mark.usefixtures("supervisor_client")
 async def test_import_dataset(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_async_zeroconf: MagicMock,
     issue_registry: ir.IssueRegistry,
 ) -> None:
@@ -67,7 +67,7 @@ async def test_import_dataset(
     mock_async_zeroconf.async_remove_service_listener = AsyncMock()
     mock_async_zeroconf.async_get_service_info = AsyncMock()
 
-    assert await thread.async_get_preferred_dataset(hass) is None
+    assert await thread.async_get_preferred_dataset(menuai) is None
 
     config_entry = MockConfigEntry(
         data=CONFIG_ENTRY_DATA_MULTIPAN,
@@ -76,15 +76,15 @@ async def test_import_dataset(
         title="My OTBR",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.thread.dataset_store.BORDER_AGENT_DISCOVERY_TIMEOUT",
+            "menuai.components.thread.dataset_store.BORDER_AGENT_DISCOVERY_TIMEOUT",
             0.1,
         ),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
         # Wait for Thread router discovery to start
         await add_service_listener_called.wait()
@@ -97,16 +97,16 @@ async def test_import_dataset(
             mock_async_zeroconf.async_add_service_listener.mock_calls[0][1][1]
         )
         mock_async_zeroconf.async_get_service_info.return_value = AsyncServiceInfo(
-            **ROUTER_DISCOVERY_HASS
+            **ROUTER_DISCOVERY_menuai
         )
         listener.add_service(
-            None, ROUTER_DISCOVERY_HASS["type_"], ROUTER_DISCOVERY_HASS["name"]
+            None, ROUTER_DISCOVERY_menuai["type_"], ROUTER_DISCOVERY_menuai["name"]
         )
 
         # Wait for discovery of other routers to time out
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    dataset_store = await thread.dataset_store.async_get_store(hass)
+    dataset_store = await thread.dataset_store.async_get_store(menuai)
     assert (
         list(dataset_store.datasets.values())[0].preferred_border_agent_id
         == TEST_BORDER_AGENT_ID.hex()
@@ -115,7 +115,7 @@ async def test_import_dataset(
         list(dataset_store.datasets.values())[0].preferred_extended_address
         == TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex()
     )
-    assert await thread.async_get_preferred_dataset(hass) == DATASET_CH16.hex()
+    assert await thread.async_get_preferred_dataset(menuai) == DATASET_CH16.hex()
     assert not issue_registry.async_get_issue(
         domain=otbr.DOMAIN, issue_id=f"insecure_thread_network_{config_entry.entry_id}"
     )
@@ -126,7 +126,7 @@ async def test_import_dataset(
 
 
 async def test_import_share_radio_channel_collision(
-    hass: HomeAssistant,
+    menuai: menuai,
     multiprotocol_addon_manager_mock,
     issue_registry: ir.IssueRegistry,
 ) -> None:
@@ -144,13 +144,13 @@ async def test_import_share_radio_channel_collision(
         title="My OTBR",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         patch(
-            "homeassistant.components.thread.dataset_store.DatasetStore.async_add"
+            "menuai.components.thread.dataset_store.DatasetStore.async_add"
         ) as mock_add,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     mock_add.assert_called_once_with(
         otbr.DOMAIN,
@@ -166,7 +166,7 @@ async def test_import_share_radio_channel_collision(
 
 @pytest.mark.parametrize("dataset", [DATASET_CH15, DATASET_NO_CHANNEL])
 async def test_import_share_radio_no_channel_collision(
-    hass: HomeAssistant,
+    menuai: menuai,
     multiprotocol_addon_manager_mock,
     dataset: bytes,
     issue_registry: ir.IssueRegistry,
@@ -184,13 +184,13 @@ async def test_import_share_radio_no_channel_collision(
         title="My OTBR",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         patch(
-            "homeassistant.components.thread.dataset_store.DatasetStore.async_add"
+            "menuai.components.thread.dataset_store.DatasetStore.async_add"
         ) as mock_add,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     mock_add.assert_called_once_with(
         otbr.DOMAIN,
@@ -210,7 +210,7 @@ async def test_import_share_radio_no_channel_collision(
     "dataset", [DATASET_INSECURE_NW_KEY, DATASET_INSECURE_PASSPHRASE]
 )
 async def test_import_insecure_dataset(
-    hass: HomeAssistant, dataset: bytes, issue_registry: ir.IssueRegistry
+    menuai: menuai, dataset: bytes, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test the active dataset is imported at setup.
 
@@ -223,13 +223,13 @@ async def test_import_insecure_dataset(
         title="My OTBR",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         patch(
-            "homeassistant.components.thread.dataset_store.DatasetStore.async_add"
+            "menuai.components.thread.dataset_store.DatasetStore.async_add"
         ) as mock_add,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     mock_add.assert_called_once_with(
         otbr.DOMAIN,
@@ -251,7 +251,7 @@ async def test_import_insecure_dataset(
     ],
 )
 async def test_config_entry_not_ready(
-    hass: HomeAssistant, get_active_dataset_tlvs: AsyncMock, error
+    menuai: menuai, get_active_dataset_tlvs: AsyncMock, error
 ) -> None:
     """Test raising ConfigEntryNotReady ."""
 
@@ -262,13 +262,13 @@ async def test_config_entry_not_ready(
         title="My OTBR",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     get_active_dataset_tlvs.side_effect = error
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
 
 
 async def test_border_agent_id_not_supported(
-    hass: HomeAssistant, get_border_agent_id: AsyncMock
+    menuai: menuai, get_border_agent_id: AsyncMock
 ) -> None:
     """Test border router does not support border agent ID."""
 
@@ -279,12 +279,12 @@ async def test_border_agent_id_not_supported(
         title="My OTBR",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     get_border_agent_id.side_effect = python_otbr_api.GetBorderAgentIdNotSupportedError
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
 
 
-async def test_config_entry_update(hass: HomeAssistant) -> None:
+async def test_config_entry_update(menuai: menuai) -> None:
     """Test update config entry settings."""
     config_entry = MockConfigEntry(
         data=CONFIG_ENTRY_DATA_MULTIPAN,
@@ -293,7 +293,7 @@ async def test_config_entry_update(hass: HomeAssistant) -> None:
         title="My OTBR",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     mock_api = MagicMock()
     mock_api.get_active_dataset_tlvs = AsyncMock(return_value=None)
     mock_api.get_border_agent_id = AsyncMock(return_value=TEST_BORDER_AGENT_ID)
@@ -302,42 +302,42 @@ async def test_config_entry_update(hass: HomeAssistant) -> None:
     )
     mock_api.get_coprocessor_version = AsyncMock(return_value=TEST_COPROCESSOR_VERSION)
     with patch("python_otbr_api.OTBR", return_value=mock_api) as mock_otrb_api:
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     mock_otrb_api.assert_called_once_with(CONFIG_ENTRY_DATA_MULTIPAN["url"], ANY, ANY)
 
     new_config_entry_data = {"url": "http://core-silabs-multiprotocol:8082"}
     assert CONFIG_ENTRY_DATA_MULTIPAN["url"] != new_config_entry_data["url"]
     with patch("python_otbr_api.OTBR", return_value=mock_api) as mock_otrb_api:
-        hass.config_entries.async_update_entry(config_entry, data=new_config_entry_data)
-        await hass.async_block_till_done()
+        menuai.config_entries.async_update_entry(config_entry, data=new_config_entry_data)
+        await menuai.async_block_till_done()
 
     mock_otrb_api.assert_called_once_with(new_config_entry_data["url"], ANY, ANY)
 
 
 @pytest.mark.usefixtures("supervisor_client")
 async def test_remove_entry(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, otbr_config_entry_multipan
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, otbr_config_entry_multipan
 ) -> None:
     """Test async_get_active_dataset_tlvs after removing the config entry."""
 
     aioclient_mock.get(f"{BASE_URL}/node/dataset/active", text="0E")
 
-    config_entry = hass.config_entries.async_entries(otbr.DOMAIN)[0]
-    await hass.config_entries.async_remove(config_entry.entry_id)
+    config_entry = menuai.config_entries.async_entries(otbr.DOMAIN)[0]
+    await menuai.config_entries.async_remove(config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
     ("source", "unique_id", "updated_unique_id"),
     [
-        (SOURCE_HASSIO, None, None),
-        (SOURCE_HASSIO, "abcd", "abcd"),
+        (SOURCE_menuaiIO, None, None),
+        (SOURCE_menuaiIO, "abcd", "abcd"),
         (SOURCE_USER, None, TEST_BORDER_AGENT_ID.hex()),
         (SOURCE_USER, "abcd", TEST_BORDER_AGENT_ID.hex()),
     ],
 )
 async def test_update_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     source: str,
     unique_id: str | None,
@@ -353,7 +353,7 @@ async def test_update_unique_id(
         title="Open Thread Border Router",
         unique_id=unique_id,
     )
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, otbr.DOMAIN, {})
-    config_entry = hass.config_entries.async_get_entry(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, otbr.DOMAIN, {})
+    config_entry = menuai.config_entries.async_get_entry(config_entry.entry_id)
     assert config_entry.unique_id == updated_unique_id

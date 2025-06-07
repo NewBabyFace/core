@@ -11,12 +11,12 @@ from yalexs.activity import ActivityType, ActivityTypes
 from yalexs.lock import Lock, LockStatus
 from yalexs.util import get_latest_activity, update_lock_detail_from_activity
 
-from homeassistant.components.lock import ATTR_CHANGED_BY, LockEntity, LockEntityFeature
-from homeassistant.const import ATTR_BATTERY_LEVEL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.util import dt as dt_util
+from menuai.components.lock import ATTR_CHANGED_BY, LockEntity, LockEntityFeature
+from menuai.const import ATTR_BATTERY_LEVEL
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.util import dt as dt_util
 
 from . import YaleConfigEntry, YaleData
 from .entity import YaleEntity
@@ -27,7 +27,7 @@ LOCK_JAMMED_ERR = 531
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: YaleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -136,9 +136,9 @@ class YaleLock(YaleEntity, RestoreEntity, LockEntity):
                 keypad.battery_level
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore ATTR_CHANGED_BY on startup since it is likely no longer in the activity log."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if not (last_state := await self.async_get_last_state()):
             return

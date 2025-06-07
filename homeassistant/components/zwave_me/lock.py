@@ -6,11 +6,11 @@ from typing import Any
 
 from zwave_me_ws import ZWaveMeData
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, ZWaveMePlatform
 from .entity import ZWaveMeEntity
@@ -19,7 +19,7 @@ DEVICE_NAME = ZWaveMePlatform.LOCK
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -28,7 +28,7 @@ async def async_setup_entry(
     @callback
     def add_new_device(new_device: ZWaveMeData) -> None:
         """Add a new device."""
-        controller = hass.data[DOMAIN][config_entry.entry_id]
+        controller = menuai.data[DOMAIN][config_entry.entry_id]
         lock = ZWaveMeLock(controller, new_device)
 
         async_add_entities(
@@ -39,7 +39,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass, f"ZWAVE_ME_NEW_{DEVICE_NAME.upper()}", add_new_device
+            menuai, f"ZWAVE_ME_NEW_{DEVICE_NAME.upper()}", add_new_device
         )
     )
 

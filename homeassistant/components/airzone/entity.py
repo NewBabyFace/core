@@ -25,11 +25,11 @@ from aioairzone.const import (
 )
 from aioairzone.exceptions import AirzoneError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import AirzoneConfigEntry, AirzoneUpdateCoordinator
@@ -121,7 +121,7 @@ class AirzoneHotWaterEntity(AirzoneEntity):
         try:
             await self.coordinator.airzone.set_dhw_parameters(_params)
         except AirzoneError as error:
-            raise HomeAssistantError(f"Failed to set DHW: {error}") from error
+            raise menuaiError(f"Failed to set DHW: {error}") from error
 
         self.coordinator.async_set_updated_data(self.coordinator.airzone.data())
 
@@ -205,7 +205,7 @@ class AirzoneZoneEntity(AirzoneEntity):
         try:
             await self.coordinator.airzone.set_hvac_parameters(_params)
         except AirzoneError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set zone {self.entity_id}: {error}"
             ) from error
 

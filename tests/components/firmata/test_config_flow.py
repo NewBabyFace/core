@@ -4,21 +4,21 @@ from unittest.mock import patch
 
 from pymata_express.pymata_express_serial import serial
 
-from homeassistant import config_entries
-from homeassistant.components.firmata.const import CONF_SERIAL_PORT, DOMAIN
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.firmata.const import CONF_SERIAL_PORT, DOMAIN
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
-async def test_import_cannot_connect_pymata(hass: HomeAssistant) -> None:
+async def test_import_cannot_connect_pymata(menuai: menuai) -> None:
     """Test we fail with an invalid board."""
 
     with patch(
-        "homeassistant.components.firmata.board.PymataExpress.start_aio",
+        "menuai.components.firmata.board.PymataExpress.start_aio",
         side_effect=RuntimeError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={CONF_SERIAL_PORT: "/dev/nonExistent"},
@@ -28,14 +28,14 @@ async def test_import_cannot_connect_pymata(hass: HomeAssistant) -> None:
         assert result["reason"] == "cannot_connect"
 
 
-async def test_import_cannot_connect_serial(hass: HomeAssistant) -> None:
+async def test_import_cannot_connect_serial(menuai: menuai) -> None:
     """Test we fail with an invalid board."""
 
     with patch(
-        "homeassistant.components.firmata.board.PymataExpress.start_aio",
+        "menuai.components.firmata.board.PymataExpress.start_aio",
         side_effect=serial.SerialException,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={CONF_SERIAL_PORT: "/dev/nonExistent"},
@@ -45,14 +45,14 @@ async def test_import_cannot_connect_serial(hass: HomeAssistant) -> None:
         assert result["reason"] == "cannot_connect"
 
 
-async def test_import_cannot_connect_serial_timeout(hass: HomeAssistant) -> None:
+async def test_import_cannot_connect_serial_timeout(menuai: menuai) -> None:
     """Test we fail with an invalid board."""
 
     with patch(
-        "homeassistant.components.firmata.board.PymataExpress.start_aio",
+        "menuai.components.firmata.board.PymataExpress.start_aio",
         side_effect=serial.SerialTimeoutException,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={CONF_SERIAL_PORT: "/dev/nonExistent"},
@@ -62,19 +62,19 @@ async def test_import_cannot_connect_serial_timeout(hass: HomeAssistant) -> None
         assert result["reason"] == "cannot_connect"
 
 
-async def test_import(hass: HomeAssistant) -> None:
+async def test_import(menuai: menuai) -> None:
     """Test we create an entry from config."""
 
     with (
-        patch("homeassistant.components.firmata.board.PymataExpress", autospec=True),
+        patch("menuai.components.firmata.board.PymataExpress", autospec=True),
         patch(
-            "homeassistant.components.firmata.async_setup", return_value=True
+            "menuai.components.firmata.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.firmata.async_setup_entry", return_value=True
+            "menuai.components.firmata.async_setup_entry", return_value=True
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={CONF_SERIAL_PORT: "/dev/nonExistent"},
@@ -86,6 +86,6 @@ async def test_import(hass: HomeAssistant) -> None:
             CONF_NAME: "serial-/dev/nonExistent",
             CONF_SERIAL_PORT: "/dev/nonExistent",
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_setup.mock_calls) == 1
         assert len(mock_setup_entry.mock_calls) == 1

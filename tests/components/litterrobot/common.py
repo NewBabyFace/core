@@ -1,9 +1,9 @@
 """Common utils for Litter-Robot tests."""
 
-from homeassistant.components.litterrobot import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.components.litterrobot import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
-BASE_PATH = "homeassistant.components.litterrobot"
+BASE_PATH = "menuai.components.litterrobot"
 CONFIG = {DOMAIN: {CONF_USERNAME: "user@example.com", CONF_PASSWORD: "password"}}
 
 ROBOT_NAME = "Test"

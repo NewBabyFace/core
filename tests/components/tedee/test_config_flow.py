@@ -10,11 +10,11 @@ from aiotedee import (
 from aiotedee.bridge import TedeeBridge
 import pytest
 
-from homeassistant.components.tedee.const import CONF_LOCAL_ACCESS_TOKEN, DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.tedee.const import CONF_LOCAL_ACCESS_TOKEN, DOMAIN
+from menuai.config_entries import SOURCE_USER, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import WEBHOOK_ID
 
@@ -24,19 +24,19 @@ FLOW_UNIQUE_ID = "112233445566778899"
 LOCAL_ACCESS_TOKEN = "api_token"
 
 
-async def test_flow(hass: HomeAssistant, mock_tedee: MagicMock) -> None:
+async def test_flow(menuai: menuai, mock_tedee: MagicMock) -> None:
     """Test config flow with one bridge."""
     with patch(
-        "homeassistant.components.tedee.config_flow.webhook_generate_id",
+        "menuai.components.tedee.config_flow.webhook_generate_id",
         return_value=WEBHOOK_ID,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert result["type"] == FlowResultType.FORM
 
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "192.168.1.62",
@@ -53,20 +53,20 @@ async def test_flow(hass: HomeAssistant, mock_tedee: MagicMock) -> None:
 
 
 async def test_flow_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test config flow aborts when already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "192.168.1.62",
@@ -89,13 +89,13 @@ async def test_flow_already_configured(
     ],
 )
 async def test_config_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
     side_effect: Exception,
     error: dict[str, str],
 ) -> None:
     """Test the config flow errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -103,7 +103,7 @@ async def test_config_flow_errors(
 
     mock_tedee.get_local_bridge.side_effect = side_effect
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "192.168.1.42",
@@ -117,15 +117,15 @@ async def test_config_flow_errors(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
 ) -> None:
     """Test that the reauth flow works."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    reauth_result = await mock_config_entry.start_reauth_flow(hass)
+    reauth_result = await mock_config_entry.start_reauth_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         reauth_result["flow_id"],
         {
             CONF_LOCAL_ACCESS_TOKEN: LOCAL_ACCESS_TOKEN,
@@ -136,33 +136,33 @@ async def test_reauth_flow(
 
 
 async def __do_reconfigure_flow(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> ConfigFlowResult:
     """Initialize a reconfigure flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    reconfigure_result = await mock_config_entry.start_reconfigure_flow(hass)
+    reconfigure_result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert reconfigure_result["type"] is FlowResultType.FORM
     assert reconfigure_result["step_id"] == "reconfigure"
 
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         reconfigure_result["flow_id"],
         {CONF_LOCAL_ACCESS_TOKEN: LOCAL_ACCESS_TOKEN, CONF_HOST: "192.168.1.43"},
     )
 
 
 async def test_reconfigure_flow(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
 ) -> None:
     """Test that the reconfigure flow works."""
 
-    result = await __do_reconfigure_flow(hass, mock_config_entry)
+    result = await __do_reconfigure_flow(menuai, mock_config_entry)
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
-    entry = hass.config_entries.async_get_entry(mock_config_entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(mock_config_entry.entry_id)
     assert entry
     assert entry.title == "My Tedee"
     assert entry.data == {
@@ -173,7 +173,7 @@ async def test_reconfigure_flow(
 
 
 async def test_reconfigure_unique_id_mismatch(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
 ) -> None:
     """Ensure reconfigure flow aborts when the bride changes."""
 
@@ -181,7 +181,7 @@ async def test_reconfigure_unique_id_mismatch(
         0, "1111-1111", "Bridge-R2D2"
     )
 
-    result = await __do_reconfigure_flow(hass, mock_config_entry)
+    result = await __do_reconfigure_flow(menuai, mock_config_entry)
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "unique_id_mismatch"

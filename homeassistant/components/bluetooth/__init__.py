@@ -37,20 +37,20 @@ from habluetooth import (
 )
 from home_assistant_bluetooth import BluetoothServiceInfo, BluetoothServiceInfoBleak
 
-from homeassistant.components import usb
-from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HassJob, HomeAssistant, callback as hass_callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.components import usb
+from menuai.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import Event, menuaiJob, menuai, callback as menuai_callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     discovery_flow,
 )
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.issue_registry import async_delete_issue
-from homeassistant.loader import async_get_bluetooth
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.event import async_call_later
+from menuai.helpers.issue_registry import async_delete_issue
+from menuai.loader import async_get_bluetooth
 
 from . import passive_update_processor, websocket_api
 from .api import (
@@ -88,14 +88,14 @@ from .const import (
     LINUX_FIRMWARE_LOAD_FALLBACK_SECONDS,
     SOURCE_LOCAL,
 )
-from .manager import HomeAssistantBluetoothManager
+from .manager import menuaiBluetoothManager
 from .match import BluetoothCallbackMatcher, IntegrationMatcher
 from .models import BluetoothCallback, BluetoothChange
 from .storage import BluetoothStorage
 from .util import adapter_title
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.typing import ConfigType
+    from menuai.helpers.typing import ConfigType
 
 __all__ = [
     "FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS",
@@ -111,7 +111,7 @@ __all__ = [
     "BluetoothServiceInfo",
     "BluetoothServiceInfoBleak",
     "HaBluetoothConnector",
-    "HomeAssistantRemoteScanner",
+    "menuaiRemoteScanner",
     "async_address_present",
     "async_ble_device_from_address",
     "async_discovered_service_info",
@@ -138,23 +138,23 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 async def _async_start_adapter_discovery(
-    hass: HomeAssistant,
-    manager: HomeAssistantBluetoothManager,
+    menuai: menuai,
+    manager: menuaiBluetoothManager,
     bluetooth_adapters: BluetoothAdapters,
 ) -> None:
     """Start adapter discovery."""
     adapters = await manager.async_get_bluetooth_adapters()
-    async_migrate_entries(hass, adapters, bluetooth_adapters.default_adapter)
-    await async_discover_adapters(hass, adapters)
+    async_migrate_entries(menuai, adapters, bluetooth_adapters.default_adapter)
+    await async_discover_adapters(menuai, adapters)
 
     async def _async_rediscover_adapters() -> None:
         """Rediscover adapters when a new one may be available."""
         discovered_adapters = await manager.async_get_bluetooth_adapters(cached=False)
         _LOGGER.debug("Rediscovered adapters: %s", discovered_adapters)
-        await async_discover_adapters(hass, discovered_adapters)
+        await async_discover_adapters(menuai, discovered_adapters)
 
     discovery_debouncer = Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=BLUETOOTH_DISCOVERY_COOLDOWN_SECONDS,
         immediate=False,
@@ -162,18 +162,18 @@ async def _async_start_adapter_discovery(
         background=True,
     )
 
-    @hass_callback
+    @menuai_callback
     def _async_shutdown_debouncer(_: Event) -> None:
         """Shutdown debouncer."""
         discovery_debouncer.async_shutdown()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_shutdown_debouncer)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_shutdown_debouncer)
 
     async def _async_call_debouncer(now: datetime.datetime) -> None:
         """Call the debouncer at a later time."""
         await discovery_debouncer.async_call()
 
-    call_debouncer_job = HassJob(_async_call_debouncer, cancel_on_shutdown=True)
+    call_debouncer_job = menuaiJob(_async_call_debouncer, cancel_on_shutdown=True)
 
     def _async_trigger_discovery() -> None:
         # There are so many bluetooth adapter models that
@@ -183,27 +183,27 @@ async def _async_start_adapter_discovery(
         # actually supported unless we ask DBus if its now
         # present.
         _LOGGER.debug("Triggering bluetooth usb discovery")
-        hass.async_create_task(discovery_debouncer.async_call())
+        menuai.async_create_task(discovery_debouncer.async_call())
         # Because it can take 120s for the firmware loader
         # fallback to timeout we need to wait that plus
         # the debounce time to ensure we do not miss the
         # adapter becoming available to DBus since otherwise
         # we will never see the new adapter until
-        # Home Assistant is restarted
+        # MenuAI is restarted
         async_call_later(
-            hass,
+            menuai,
             BLUETOOTH_DISCOVERY_COOLDOWN_SECONDS + LINUX_FIRMWARE_LOAD_FALLBACK_SECONDS,
             call_debouncer_job,
         )
 
-    cancel = usb.async_register_scan_request_callback(hass, _async_trigger_discovery)
-    hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP,
-        hass_callback(lambda event: cancel()),
+    cancel = usb.async_register_scan_request_callback(menuai, _async_trigger_discovery)
+    menuai.bus.async_listen_once(
+        EVENT_menuai_STOP,
+        menuai_callback(lambda event: cancel()),
     )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the bluetooth integration."""
     if platform.system() == "Linux":
         # Remove any config entries that are using the default address
@@ -212,51 +212,51 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # DEFAULT_ADDRESS is perfectly valid on MacOS but on
         # Linux it means the adapter is not yet configured
         # or crashed
-        for entry in list(hass.config_entries.async_entries(DOMAIN)):
+        for entry in list(menuai.config_entries.async_entries(DOMAIN)):
             if entry.unique_id == DEFAULT_ADDRESS:
-                await hass.config_entries.async_remove(entry.entry_id)
+                await menuai.config_entries.async_remove(entry.entry_id)
 
     bluetooth_adapters = get_adapters()
-    bluetooth_storage = BluetoothStorage(hass)
+    bluetooth_storage = BluetoothStorage(menuai)
     slot_manager = BleakSlotManager()
-    integration_matcher = IntegrationMatcher(await async_get_bluetooth(hass))
+    integration_matcher = IntegrationMatcher(await async_get_bluetooth(menuai))
 
-    slot_manager_setup_task = hass.async_create_task(
+    slot_manager_setup_task = menuai.async_create_task(
         slot_manager.async_setup(), "slot_manager setup", eager_start=True
     )
-    processor_setup_task = hass.async_create_task(
-        passive_update_processor.async_setup(hass),
+    processor_setup_task = menuai.async_create_task(
+        passive_update_processor.async_setup(menuai),
         "passive_update_processor setup",
         eager_start=True,
     )
-    storage_setup_task = hass.async_create_task(
+    storage_setup_task = menuai.async_create_task(
         bluetooth_storage.async_setup(), "bluetooth storage setup", eager_start=True
     )
     integration_matcher.async_setup()
-    manager = HomeAssistantBluetoothManager(
-        hass, integration_matcher, bluetooth_adapters, bluetooth_storage, slot_manager
+    manager = menuaiBluetoothManager(
+        menuai, integration_matcher, bluetooth_adapters, bluetooth_storage, slot_manager
     )
     set_manager(manager)
     await storage_setup_task
     await manager.async_setup()
-    websocket_api.async_setup(hass)
+    websocket_api.async_setup(menuai)
 
-    hass.async_create_background_task(
-        _async_start_adapter_discovery(hass, manager, bluetooth_adapters),
+    menuai.async_create_background_task(
+        _async_start_adapter_discovery(menuai, manager, bluetooth_adapters),
         "start_adapter_discovery",
     )
     await slot_manager_setup_task
-    async_delete_issue(hass, DOMAIN, "haos_outdated")
+    async_delete_issue(menuai, DOMAIN, "haos_outdated")
     await processor_setup_task
     return True
 
 
-@hass_callback
+@menuai_callback
 def async_migrate_entries(
-    hass: HomeAssistant, adapters: dict[str, AdapterDetails], default_adapter: str
+    menuai: menuai, adapters: dict[str, AdapterDetails], default_adapter: str
 ) -> None:
     """Migrate config entries to support multiple."""
-    current_entries = hass.config_entries.async_entries(DOMAIN)
+    current_entries = menuai.config_entries.async_entries(DOMAIN)
 
     for entry in current_entries:
         if entry.unique_id:
@@ -266,13 +266,13 @@ def async_migrate_entries(
         adapter = entry.options.get(CONF_ADAPTER, default_adapter)
         if adapter in adapters:
             address = adapters[adapter][ADAPTER_ADDRESS]
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, title=adapter_unique_name(adapter, address), unique_id=address
         )
 
 
 async def async_discover_adapters(
-    hass: HomeAssistant,
+    menuai: menuai,
     adapters: dict[str, AdapterDetails],
 ) -> None:
     """Discover adapters and start flows."""
@@ -290,7 +290,7 @@ async def async_discover_adapters(
             # or crashed so we should not try to start a flow for it.
             continue
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={"source": SOURCE_INTEGRATION_DISCOVERY},
             data={CONF_ADAPTER: adapter, CONF_DETAILS: details},
@@ -298,7 +298,7 @@ async def async_discover_adapters(
 
 
 async def async_update_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     adapter: str,
     details: AdapterDetails,
@@ -313,7 +313,7 @@ async def async_update_device(
     """
     address = details[ADAPTER_ADDRESS]
     connections = {(dr.CONNECTION_BLUETOOTH, address)}
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     # We only have one device for the config entry
     # so if the address has been corrected, make
     # sure the device entry reflects the correct
@@ -341,16 +341,16 @@ async def async_update_device(
         device_registry.async_update_device(device_entry.id, **kwargs)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry for a bluetooth scanner."""
     if source_entry_id := entry.data.get(CONF_SOURCE_CONFIG_ENTRY_ID):
-        if not (source_entry := hass.config_entries.async_get_entry(source_entry_id)):
+        if not (source_entry := menuai.config_entries.async_get_entry(source_entry_id)):
             # Cleanup the orphaned entry using a call_soon to ensure
             # we can return before the entry is removed
-            hass.loop.call_soon(
-                hass_callback(
-                    lambda: hass.async_create_task(
-                        hass.config_entries.async_remove(entry.entry_id),
+            menuai.loop.call_soon(
+                menuai_callback(
+                    lambda: menuai.async_create_task(
+                        menuai.config_entries.async_remove(entry.entry_id),
                         "remove orphaned bluetooth entry {entry.entry_id}",
                     )
                 )
@@ -369,14 +369,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             manufacturer=manufacturer,
         )
         await async_update_device(
-            hass,
+            menuai,
             entry,
             source_entry.title,
             details,
             entry.data.get(CONF_SOURCE_DEVICE_ID),
         )
         return True
-    manager = _get_manager(hass)
+    manager = _get_manager(menuai)
     address = entry.unique_id
     assert address is not None
     adapter = await manager.async_get_adapter_from_address_or_recover(address)
@@ -397,22 +397,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     adapters = await manager.async_get_bluetooth_adapters()
     details = adapters[adapter]
     if entry.title == address:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, title=adapter_title(adapter, details)
         )
     slots: int = details.get(ADAPTER_CONNECTION_SLOTS) or DEFAULT_CONNECTION_SLOTS
-    entry.async_on_unload(async_register_scanner(hass, scanner, connection_slots=slots))
-    await async_update_device(hass, entry, adapter, details)
+    entry.async_on_unload(async_register_scanner(menuai, scanner, connection_slots=slots))
+    await async_update_device(menuai, entry, adapter, details)
     entry.async_on_unload(entry.add_update_listener(async_update_listener))
     entry.async_on_unload(scanner.async_stop)
     return True
 
 
-async def async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     return True

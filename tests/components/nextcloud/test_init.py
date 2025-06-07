@@ -10,11 +10,11 @@ from nextcloudmonitor import (
 )
 import pytest
 
-from homeassistant.components.nextcloud.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_URL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.nextcloud.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_URL, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration, mock_config_entry
 from .const import MOCKED_ENTRY_ID, NC_DATA, VALID_CONFIG
@@ -22,14 +22,14 @@ from .const import MOCKED_ENTRY_ID, NC_DATA, VALID_CONFIG
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a successful setup entry."""
-    assert await init_integration(hass, VALID_CONFIG, NC_DATA)
+    assert await init_integration(menuai, VALID_CONFIG, NC_DATA)
 
 
 async def test_unique_id_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test migration of unique ids to stable ones."""
@@ -38,7 +38,7 @@ async def test_unique_id_migration(
     entity_id = f"{Platform.SENSOR}.{object_id}"
 
     entry = mock_config_entry(VALID_CONFIG)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     entity = entity_registry.async_get_or_create(
         Platform.SENSOR,
@@ -54,13 +54,13 @@ async def test_unique_id_migration(
 
     with (
         patch(
-            "homeassistant.components.nextcloud.NextcloudMonitor"
+            "menuai.components.nextcloud.NextcloudMonitor"
         ) as mock_nextcloud_monitor,
     ):
         mock_nextcloud_monitor.update = Mock(return_value=True)
         mock_nextcloud_monitor.return_value.data = NC_DATA
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     # test migrated unique id
     reg_entry = entity_registry.async_get(entity_id)
@@ -76,20 +76,20 @@ async def test_unique_id_migration(
     ],
 )
 async def test_setup_entry_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: NextcloudMonitorError,
     expcted_entry_state: ConfigEntryState,
 ) -> None:
     """Test a successful setup entry."""
 
     entry = mock_config_entry(VALID_CONFIG)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.nextcloud.NextcloudMonitor", side_effect=exception
+            "menuai.components.nextcloud.NextcloudMonitor", side_effect=exception
         ),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
         assert entry.state == expcted_entry_state

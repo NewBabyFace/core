@@ -18,13 +18,13 @@ from aiotedee import (
 )
 from aiotedee.bridge import TedeeBridge
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_LOCAL_ACCESS_TOKEN, DOMAIN
 
@@ -42,10 +42,10 @@ class TedeeApiCoordinator(DataUpdateCoordinator[dict[int, TedeeLock]]):
     config_entry: TedeeConfigEntry
     bridge: TedeeBridge
 
-    def __init__(self, hass: HomeAssistant, entry: TedeeConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: TedeeConfigEntry) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -55,7 +55,7 @@ class TedeeApiCoordinator(DataUpdateCoordinator[dict[int, TedeeLock]]):
         self.tedee_client = TedeeClient(
             local_token=self.config_entry.data[CONF_LOCAL_ACCESS_TOKEN],
             local_ip=self.config_entry.data[CONF_HOST],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
 
         self._next_get_locks = time.time()
@@ -145,7 +145,7 @@ class TedeeApiCoordinator(DataUpdateCoordinator[dict[int, TedeeLock]]):
         # remove old locks
         if removed_locks := self._locks_last_update - current_locks:
             _LOGGER.debug("Removed locks: %s", ", ".join(map(str, removed_locks)))
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             for lock_id in removed_locks:
                 if device := device_registry.async_get_device(
                     identifiers={(DOMAIN, str(lock_id))}

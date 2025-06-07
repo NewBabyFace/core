@@ -1,18 +1,18 @@
-"""Tests for hassfest requirements."""
+"""Tests for menuaifest requirements."""
 
 from pathlib import Path
 
 import pytest
 
-from script.hassfest.model import Config, Integration
-from script.hassfest.requirements import validate_requirements_format
+from script.menuaifest.model import Config, Integration
+from script.menuaifest.requirements import validate_requirements_format
 
 
 @pytest.fixture
 def integration():
-    """Fixture for hassfest integration model."""
+    """Fixture for menuaifest integration model."""
     return Integration(
-        path=Path("homeassistant/components/test").absolute(),
+        path=Path("menuai/components/test").absolute(),
         _config=Config(
             root=Path(".").absolute(),
             specific_integrations=None,

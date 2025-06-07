@@ -7,8 +7,8 @@ from typing import Any, NamedTuple
 
 import voluptuous as vol
 
-from homeassistant.components import sensor
-from homeassistant.const import (
+from menuai.components import sensor
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     CONF_AT,
     CONF_ENTITY_ID,
@@ -17,25 +17,25 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     State,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.event import (
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.event import (
     async_track_point_in_time,
     async_track_state_change_event,
     async_track_time_change,
 )
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 _TIME_TRIGGER_ENTITY = vol.All(str, cv.entity_domain(["input_datetime", "sensor"]))
 _TIME_AT_SCHEMA = vol.Any(cv.time, _TIME_TRIGGER_ENTITY)
@@ -86,7 +86,7 @@ class TrackEntity(NamedTuple):
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -96,14 +96,14 @@ async def async_attach_trigger(
     variables = trigger_info["variables"] or {}
     entities: dict[tuple[str, timedelta], CALLBACK_TYPE] = {}
     removes: list[CALLBACK_TYPE] = []
-    job = HassJob(action, f"time trigger {trigger_info}")
+    job = menuaiJob(action, f"time trigger {trigger_info}")
 
     @callback
     def time_automation_listener(
         description: str, now: datetime, *, entity_id: str | None = None
     ) -> None:
         """Listen for time changes and calls action."""
-        hass.async_run_hass_job(
+        menuai.async_run_menuai_job(
             job,
             {
                 "trigger": {
@@ -171,7 +171,7 @@ async def async_attach_trigger(
                 # Only set up listener if time is now or in the future.
                 if trigger_dt >= dt_util.now():
                     remove = async_track_point_in_time(
-                        hass,
+                        menuai,
                         partial(
                             time_automation_listener,
                             f"time set in {entity_id}",
@@ -193,7 +193,7 @@ async def async_attach_trigger(
                     minute = temp_dt.minute
                     second = temp_dt.second
                 remove = async_track_time_change(
-                    hass,
+                    menuai,
                     partial(
                         time_automation_listener,
                         f"time set in {entity_id}",
@@ -216,7 +216,7 @@ async def async_attach_trigger(
 
             if trigger_dt is not None and trigger_dt > dt_util.utcnow():
                 remove = async_track_point_in_time(
-                    hass,
+                    menuai,
                     partial(
                         time_automation_listener,
                         f"time set in {entity_id}",
@@ -237,21 +237,21 @@ async def async_attach_trigger(
             try:
                 at_time = _TIME_AT_SCHEMA(render)
             except vol.Invalid as exc:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Limited Template for 'at' rendered a unexpected value '{render}', expected HH:MM, "
                     f"HH:MM:SS or Entity ID with domain 'input_datetime' or 'sensor'"
                 ) from exc
 
         if isinstance(at_time, str):
             # entity
-            update_entity_trigger(at_time, new_state=hass.states.get(at_time))
+            update_entity_trigger(at_time, new_state=menuai.states.get(at_time))
             to_track.append(TrackEntity(at_time, update_entity_trigger_event))
         elif isinstance(at_time, dict) and CONF_OFFSET in at_time:
             # entity with offset
             entity_id: str = at_time.get(CONF_ENTITY_ID, "")
             offset: timedelta = at_time.get(CONF_OFFSET, timedelta(0))
             update_entity_trigger(
-                entity_id, new_state=hass.states.get(entity_id), offset=offset
+                entity_id, new_state=menuai.states.get(entity_id), offset=offset
             )
             to_track.append(
                 TrackEntity(
@@ -262,7 +262,7 @@ async def async_attach_trigger(
             # datetime.time
             removes.append(
                 async_track_time_change(
-                    hass,
+                    menuai,
                     partial(time_automation_listener, "time"),
                     hour=at_time.hour,
                     minute=at_time.minute,
@@ -272,7 +272,7 @@ async def async_attach_trigger(
 
     # Besides time, we also track state changes of requested entities.
     removes.extend(
-        (async_track_state_change_event(hass, entry.entity_id, entry.callback))
+        (async_track_state_change_event(menuai, entry.entity_id, entry.callback))
         for entry in to_track
     )
 

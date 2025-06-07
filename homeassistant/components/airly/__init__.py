@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from homeassistant.components.air_quality import DOMAIN as AIR_QUALITY_PLATFORM
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.components.air_quality import DOMAIN as AIR_QUALITY_PLATFORM
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_USE_NEAREST, DOMAIN, MIN_UPDATE_INTERVAL
 from .coordinator import AirlyConfigEntry, AirlyDataUpdateCoordinator
@@ -19,7 +19,7 @@ PLATFORMS = [Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AirlyConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AirlyConfigEntry) -> bool:
     """Set up Airly as config entry."""
     api_key = entry.data[CONF_API_KEY]
     latitude = entry.data[CONF_LATITUDE]
@@ -28,14 +28,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirlyConfigEntry) -> boo
 
     # For backwards compat, set unique ID
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=f"{latitude}-{longitude}"
         )
 
     # identifiers in device_info should use tuple[str, str] type, but latitude and
     # longitude are float, so we convert old device entries to use correct types
     # We used to use a str 3-tuple here sometime, convert that to a 2-tuple too.
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     old_ids = (DOMAIN, latitude, longitude)
     for old_ids in (
         (DOMAIN, latitude, longitude),
@@ -52,12 +52,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirlyConfigEntry) -> boo
                 device_entry.id, new_identifiers={new_ids}
             )
 
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
 
     update_interval = timedelta(minutes=MIN_UPDATE_INTERVAL)
 
     coordinator = AirlyDataUpdateCoordinator(
-        hass,
+        menuai,
         entry,
         websession,
         api_key,
@@ -70,10 +70,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirlyConfigEntry) -> boo
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Remove air_quality entities from registry if they exist
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     unique_id = f"{coordinator.latitude}-{coordinator.longitude}"
     if entity_id := ent_reg.async_get_entity_id(
         AIR_QUALITY_PLATFORM, DOMAIN, unique_id
@@ -84,6 +84,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirlyConfigEntry) -> boo
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AirlyConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AirlyConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -2,27 +2,27 @@
 
 import pytest
 
-from homeassistant.components.button import SERVICE_PRESS
-from homeassistant.components.cover import SERVICE_CLOSE_COVER, SERVICE_OPEN_COVER
-from homeassistant.components.lock import SERVICE_LOCK, SERVICE_UNLOCK
-from homeassistant.components.valve import SERVICE_CLOSE_VALVE, SERVICE_OPEN_VALVE
-from homeassistant.const import (
+from menuai.components.button import SERVICE_PRESS
+from menuai.components.cover import SERVICE_CLOSE_COVER, SERVICE_OPEN_COVER
+from menuai.components.lock import SERVICE_LOCK, SERVICE_UNLOCK
+from menuai.components.valve import SERVICE_CLOSE_VALVE, SERVICE_OPEN_VALVE
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar, entity_registry as er, intent
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import area_registry as ar, entity_registry as er, intent
+from menuai.setup import async_setup_component
 
 from tests.common import MockUser, async_mock_service
 from tests.typing import ClientSessionGenerator
 
 
 async def test_http_handle_intent(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, hass_admin_user: MockUser
+    menuai: menuai, menuai_client: ClientSessionGenerator, menuai_admin_user: MockUser
 ) -> None:
     """Test handle intent via HTTP API."""
 
@@ -33,7 +33,7 @@ async def test_http_handle_intent(
 
         async def async_handle(self, intent_obj):
             """Handle the intent."""
-            assert intent_obj.context.user_id == hass_admin_user.id
+            assert intent_obj.context.user_id == menuai_admin_user.id
             response = intent_obj.create_response()
             response.async_set_speech(
                 f"I've ordered a {intent_obj.slots['type']['value']}!"
@@ -44,12 +44,12 @@ async def test_http_handle_intent(
             )
             return response
 
-    intent.async_register(hass, TestIntentHandler())
+    intent.async_register(menuai, TestIntentHandler())
 
-    result = await async_setup_component(hass, "intent", {})
+    result = await async_setup_component(menuai, "intent", {})
     assert result
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.post(
         "/api/intent/handle", json={"name": "OrderBeer", "data": {"type": "Belgian"}}
     )
@@ -67,31 +67,31 @@ async def test_http_handle_intent(
                 "speech": "I've ordered a Belgian!",
             }
         },
-        "language": hass.config.language,
+        "language": menuai.config.language,
         "response_type": "action_done",
         "data": {"targets": [], "success": [], "failed": []},
     }
 
 
-async def test_cover_intents_loading(hass: HomeAssistant) -> None:
+async def test_cover_intents_loading(menuai: menuai) -> None:
     """Test Cover Intents Loading."""
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "intent", {})
 
     with pytest.raises(intent.UnknownIntent):
         await intent.async_handle(
-            hass, "test", "HassOpenCover", {"name": {"value": "garage door"}}
+            menuai, "test", "menuaiOpenCover", {"name": {"value": "garage door"}}
         )
 
-    assert await async_setup_component(hass, "cover", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "cover", {})
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("cover.garage_door", "closed")
-    calls = async_mock_service(hass, "cover", SERVICE_OPEN_COVER)
+    menuai.states.async_set("cover.garage_door", "closed")
+    calls = async_mock_service(menuai, "cover", SERVICE_OPEN_COVER)
 
     response = await intent.async_handle(
-        hass, "test", "HassOpenCover", {"name": {"value": "garage door"}}
+        menuai, "test", "menuaiOpenCover", {"name": {"value": "garage door"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert response.speech["plain"]["speech"] == "Opening garage door"
     assert len(calls) == 1
@@ -101,20 +101,20 @@ async def test_cover_intents_loading(hass: HomeAssistant) -> None:
     assert call.data == {"entity_id": "cover.garage_door"}
 
 
-async def test_turn_on_intent(hass: HomeAssistant) -> None:
-    """Test HassTurnOn intent."""
-    result = await async_setup_component(hass, "homeassistant", {})
-    result = await async_setup_component(hass, "intent", {})
-    await hass.async_block_till_done()
+async def test_turn_on_intent(menuai: menuai) -> None:
+    """Test menuaiTurnOn intent."""
+    result = await async_setup_component(menuai, "menuai", {})
+    result = await async_setup_component(menuai, "intent", {})
+    await menuai.async_block_till_done()
     assert result
 
-    hass.states.async_set("light.test_light", "off")
-    calls = async_mock_service(hass, "light", SERVICE_TURN_ON)
+    menuai.states.async_set("light.test_light", "off")
+    calls = async_mock_service(menuai, "light", SERVICE_TURN_ON)
 
     await intent.async_handle(
-        hass, "test", "HassTurnOn", {"name": {"value": "test light"}}
+        menuai, "test", "menuaiTurnOn", {"name": {"value": "test light"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]
@@ -125,23 +125,23 @@ async def test_turn_on_intent(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("domain", ["button", "input_button"])
 async def test_turn_on_intent_button(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, domain
+    menuai: menuai, entity_registry: er.EntityRegistry, domain
 ) -> None:
-    """Test HassTurnOn intent on button domains."""
-    assert await async_setup_component(hass, "intent", {})
+    """Test menuaiTurnOn intent on button domains."""
+    assert await async_setup_component(menuai, "intent", {})
 
     button = entity_registry.async_get_or_create(domain, "test", "button_uid")
 
-    hass.states.async_set(button.entity_id, "unknown")
-    button_service_calls = async_mock_service(hass, domain, SERVICE_PRESS)
+    menuai.states.async_set(button.entity_id, "unknown")
+    button_service_calls = async_mock_service(menuai, domain, SERVICE_PRESS)
 
     with pytest.raises(intent.IntentHandleError):
         await intent.async_handle(
-            hass, "test", "HassTurnOff", {"name": {"value": button.entity_id}}
+            menuai, "test", "menuaiTurnOff", {"name": {"value": button.entity_id}}
         )
 
     await intent.async_handle(
-        hass, "test", "HassTurnOn", {"name": {"value": button.entity_id}}
+        menuai, "test", "menuaiTurnOn", {"name": {"value": button.entity_id}}
     )
 
     assert len(button_service_calls) == 1
@@ -152,19 +152,19 @@ async def test_turn_on_intent_button(
 
 
 async def test_turn_on_off_intent_valve(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
-    """Test HassTurnOn/Off intent on valve domains."""
-    assert await async_setup_component(hass, "intent", {})
+    """Test menuaiTurnOn/Off intent on valve domains."""
+    assert await async_setup_component(menuai, "intent", {})
 
     valve = entity_registry.async_get_or_create("valve", "test", "valve_uid")
 
-    hass.states.async_set(valve.entity_id, "closed")
-    open_calls = async_mock_service(hass, "valve", SERVICE_OPEN_VALVE)
-    close_calls = async_mock_service(hass, "valve", SERVICE_CLOSE_VALVE)
+    menuai.states.async_set(valve.entity_id, "closed")
+    open_calls = async_mock_service(menuai, "valve", SERVICE_OPEN_VALVE)
+    close_calls = async_mock_service(menuai, "valve", SERVICE_CLOSE_VALVE)
 
     await intent.async_handle(
-        hass, "test", "HassTurnOn", {"name": {"value": valve.entity_id}}
+        menuai, "test", "menuaiTurnOn", {"name": {"value": valve.entity_id}}
     )
 
     assert len(open_calls) == 1
@@ -174,7 +174,7 @@ async def test_turn_on_off_intent_valve(
     assert call.data == {"entity_id": valve.entity_id}
 
     await intent.async_handle(
-        hass, "test", "HassTurnOff", {"name": {"value": valve.entity_id}}
+        menuai, "test", "menuaiTurnOff", {"name": {"value": valve.entity_id}}
     )
 
     assert len(close_calls) == 1
@@ -185,19 +185,19 @@ async def test_turn_on_off_intent_valve(
 
 
 async def test_turn_on_off_intent_cover(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
-    """Test HassTurnOn/Off intent on cover domains."""
-    assert await async_setup_component(hass, "intent", {})
+    """Test menuaiTurnOn/Off intent on cover domains."""
+    assert await async_setup_component(menuai, "intent", {})
 
     cover = entity_registry.async_get_or_create("cover", "test", "cover_uid")
 
-    hass.states.async_set(cover.entity_id, "closed")
-    open_calls = async_mock_service(hass, "cover", SERVICE_OPEN_COVER)
-    close_calls = async_mock_service(hass, "cover", SERVICE_CLOSE_COVER)
+    menuai.states.async_set(cover.entity_id, "closed")
+    open_calls = async_mock_service(menuai, "cover", SERVICE_OPEN_COVER)
+    close_calls = async_mock_service(menuai, "cover", SERVICE_CLOSE_COVER)
 
     await intent.async_handle(
-        hass, "test", "HassTurnOn", {"name": {"value": cover.entity_id}}
+        menuai, "test", "menuaiTurnOn", {"name": {"value": cover.entity_id}}
     )
 
     assert len(open_calls) == 1
@@ -207,7 +207,7 @@ async def test_turn_on_off_intent_cover(
     assert call.data == {"entity_id": cover.entity_id}
 
     await intent.async_handle(
-        hass, "test", "HassTurnOff", {"name": {"value": cover.entity_id}}
+        menuai, "test", "menuaiTurnOff", {"name": {"value": cover.entity_id}}
     )
 
     assert len(close_calls) == 1
@@ -218,19 +218,19 @@ async def test_turn_on_off_intent_cover(
 
 
 async def test_turn_on_off_intent_lock(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
-    """Test HassTurnOn/Off intent on lock domains."""
-    assert await async_setup_component(hass, "intent", {})
+    """Test menuaiTurnOn/Off intent on lock domains."""
+    assert await async_setup_component(menuai, "intent", {})
 
     lock = entity_registry.async_get_or_create("lock", "test", "lock_uid")
 
-    hass.states.async_set(lock.entity_id, "locked")
-    unlock_calls = async_mock_service(hass, "lock", SERVICE_UNLOCK)
-    lock_calls = async_mock_service(hass, "lock", SERVICE_LOCK)
+    menuai.states.async_set(lock.entity_id, "locked")
+    unlock_calls = async_mock_service(menuai, "lock", SERVICE_UNLOCK)
+    lock_calls = async_mock_service(menuai, "lock", SERVICE_LOCK)
 
     await intent.async_handle(
-        hass, "test", "HassTurnOn", {"name": {"value": lock.entity_id}}
+        menuai, "test", "menuaiTurnOn", {"name": {"value": lock.entity_id}}
     )
 
     assert len(lock_calls) == 1
@@ -240,7 +240,7 @@ async def test_turn_on_off_intent_lock(
     assert call.data == {"entity_id": lock.entity_id}
 
     await intent.async_handle(
-        hass, "test", "HassTurnOff", {"name": {"value": lock.entity_id}}
+        menuai, "test", "menuaiTurnOff", {"name": {"value": lock.entity_id}}
     )
 
     assert len(unlock_calls) == 1
@@ -250,19 +250,19 @@ async def test_turn_on_off_intent_lock(
     assert call.data == {"entity_id": lock.entity_id}
 
 
-async def test_turn_off_intent(hass: HomeAssistant) -> None:
-    """Test HassTurnOff intent."""
-    result = await async_setup_component(hass, "homeassistant", {})
-    result = await async_setup_component(hass, "intent", {})
+async def test_turn_off_intent(menuai: menuai) -> None:
+    """Test menuaiTurnOff intent."""
+    result = await async_setup_component(menuai, "menuai", {})
+    result = await async_setup_component(menuai, "intent", {})
     assert result
 
-    hass.states.async_set("light.test_light", "on")
-    calls = async_mock_service(hass, "light", SERVICE_TURN_OFF)
+    menuai.states.async_set("light.test_light", "on")
+    calls = async_mock_service(menuai, "light", SERVICE_TURN_OFF)
 
     await intent.async_handle(
-        hass, "test", "HassTurnOff", {"name": {"value": "test light"}}
+        menuai, "test", "menuaiTurnOff", {"name": {"value": "test light"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]
@@ -271,19 +271,19 @@ async def test_turn_off_intent(hass: HomeAssistant) -> None:
     assert call.data == {"entity_id": ["light.test_light"]}
 
 
-async def test_toggle_intent(hass: HomeAssistant) -> None:
-    """Test HassToggle intent."""
-    result = await async_setup_component(hass, "homeassistant", {})
-    result = await async_setup_component(hass, "intent", {})
+async def test_toggle_intent(menuai: menuai) -> None:
+    """Test menuaiToggle intent."""
+    result = await async_setup_component(menuai, "menuai", {})
+    result = await async_setup_component(menuai, "intent", {})
     assert result
 
-    hass.states.async_set("light.test_light", "off")
-    calls = async_mock_service(hass, "light", SERVICE_TOGGLE)
+    menuai.states.async_set("light.test_light", "off")
+    calls = async_mock_service(menuai, "light", SERVICE_TOGGLE)
 
     await intent.async_handle(
-        hass, "test", "HassToggle", {"name": {"value": "test light"}}
+        menuai, "test", "menuaiToggle", {"name": {"value": "test light"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]
@@ -292,24 +292,24 @@ async def test_toggle_intent(hass: HomeAssistant) -> None:
     assert call.data == {"entity_id": ["light.test_light"]}
 
 
-async def test_turn_on_multiple_intent(hass: HomeAssistant) -> None:
-    """Test HassTurnOn intent with multiple similar entities.
+async def test_turn_on_multiple_intent(menuai: menuai) -> None:
+    """Test menuaiTurnOn intent with multiple similar entities.
 
     This tests that matching finds the proper entity among similar names.
     """
-    result = await async_setup_component(hass, "homeassistant", {})
-    result = await async_setup_component(hass, "intent", {})
+    result = await async_setup_component(menuai, "menuai", {})
+    result = await async_setup_component(menuai, "intent", {})
     assert result
 
-    hass.states.async_set("light.test_light", "off")
-    hass.states.async_set("light.test_lights_2", "off")
-    hass.states.async_set("light.test_lighter", "off")
-    calls = async_mock_service(hass, "light", SERVICE_TURN_ON)
+    menuai.states.async_set("light.test_light", "off")
+    menuai.states.async_set("light.test_lights_2", "off")
+    menuai.states.async_set("light.test_lighter", "off")
+    calls = async_mock_service(menuai, "light", SERVICE_TURN_ON)
 
     await intent.async_handle(
-        hass, "test", "HassTurnOn", {"name": {"value": "test lights 2"}}
+        menuai, "test", "menuaiTurnOn", {"name": {"value": "test lights 2"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]
@@ -318,23 +318,23 @@ async def test_turn_on_multiple_intent(hass: HomeAssistant) -> None:
     assert call.data == {"entity_id": ["light.test_lights_2"]}
 
 
-async def test_turn_on_all(hass: HomeAssistant) -> None:
-    """Test HassTurnOn intent with "all" name."""
-    result = await async_setup_component(hass, "homeassistant", {})
-    result = await async_setup_component(hass, "intent", {})
+async def test_turn_on_all(menuai: menuai) -> None:
+    """Test menuaiTurnOn intent with "all" name."""
+    result = await async_setup_component(menuai, "menuai", {})
+    result = await async_setup_component(menuai, "intent", {})
     assert result
 
-    hass.states.async_set("light.test_light", "off")
-    hass.states.async_set("light.test_light_2", "off")
-    calls = async_mock_service(hass, "light", SERVICE_TURN_ON)
+    menuai.states.async_set("light.test_light", "off")
+    menuai.states.async_set("light.test_light_2", "off")
+    calls = async_mock_service(menuai, "light", SERVICE_TURN_ON)
 
     await intent.async_handle(
-        hass,
+        menuai,
         "test",
-        "HassTurnOn",
+        "menuaiTurnOn",
         {"name": {"value": "all"}, "domain": {"value": "light"}},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # All lights should be on now
     assert len(calls) == 2
@@ -348,16 +348,16 @@ async def test_turn_on_all(hass: HomeAssistant) -> None:
 
 
 async def test_get_state_intent(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
-    """Test HassGetState intent.
+    """Test menuaiGetState intent.
 
     This tests name, area, domain, device class, and state constraints.
     """
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
 
     bedroom = area_registry.async_get_or_create("bedroom")
     kitchen = area_registry.async_get_or_create("kitchen")
@@ -385,23 +385,23 @@ async def test_get_state_intent(
     moisture_sensor = entity_registry.async_get_or_create("binary_sensor", "demo", "6")
     entity_registry.async_update_entity(moisture_sensor.entity_id, area_id=office.id)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         bedroom_light.entity_id, "off", attributes={ATTR_FRIENDLY_NAME: "bedroom light"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         kitchen_light.entity_id, "on", attributes={ATTR_FRIENDLY_NAME: "kitchen light"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         kitchen_sensor.entity_id,
         "50.0",
         attributes={ATTR_FRIENDLY_NAME: "kitchen sensor"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         problem_sensor.entity_id,
         "on",
         attributes={ATTR_FRIENDLY_NAME: "problem sensor", ATTR_DEVICE_CLASS: "problem"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         moisture_sensor.entity_id,
         "on",
         attributes={
@@ -413,9 +413,9 @@ async def test_get_state_intent(
     # ---
     # is bedroom light off?
     result = await intent.async_handle(
-        hass,
+        menuai,
         "test",
-        "HassGetState",
+        "menuaiGetState",
         {"name": {"value": "bedroom light"}, "state": {"value": "off"}},
     )
 
@@ -429,9 +429,9 @@ async def test_get_state_intent(
     # ---
     # is light in kitchen off?
     result = await intent.async_handle(
-        hass,
+        menuai,
         "test",
-        "HassGetState",
+        "menuaiGetState",
         {
             "area": {"value": "kitchen"},
             "domain": {"value": "light"},
@@ -449,9 +449,9 @@ async def test_get_state_intent(
     # ---
     # what is the value of the kitchen sensor?
     result = await intent.async_handle(
-        hass,
+        menuai,
         "test",
-        "HassGetState",
+        "menuaiGetState",
         {
             "name": {"value": "kitchen sensor"},
         },
@@ -466,9 +466,9 @@ async def test_get_state_intent(
     # ---
     # is there a problem in the office?
     result = await intent.async_handle(
-        hass,
+        menuai,
         "test",
-        "HassGetState",
+        "menuaiGetState",
         {
             "area": {"value": "office"},
             "device_class": {"value": "problem"},
@@ -486,9 +486,9 @@ async def test_get_state_intent(
     # ---
     # is there a problem or a moisture sensor in the office?
     result = await intent.async_handle(
-        hass,
+        menuai,
         "test",
-        "HassGetState",
+        "menuaiGetState",
         {
             "area": {"value": "office"},
             "device_class": {"value": ["problem", "moisture"]},
@@ -505,9 +505,9 @@ async def test_get_state_intent(
     # ---
     # are there any binary sensors in the kitchen?
     result = await intent.async_handle(
-        hass,
+        menuai,
         "test",
-        "HassGetState",
+        "menuaiGetState",
         {
             "area": {"value": "kitchen"},
             "domain": {"value": "binary_sensor"},
@@ -521,9 +521,9 @@ async def test_get_state_intent(
     # Test unknown area failure
     with pytest.raises(intent.MatchFailedError):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
-            "HassGetState",
+            "menuaiGetState",
             {
                 "area": {"value": "does-not-exist"},
                 "domain": {"value": "light"},
@@ -531,40 +531,40 @@ async def test_get_state_intent(
         )
 
 
-async def test_set_position_intent_unsupported_domain(hass: HomeAssistant) -> None:
-    """Test that HassSetPosition intent fails with unsupported domain."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
+async def test_set_position_intent_unsupported_domain(menuai: menuai) -> None:
+    """Test that menuaiSetPosition intent fails with unsupported domain."""
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
 
     # Can't set position of lights
-    hass.states.async_set("light.test_light", "off")
+    menuai.states.async_set("light.test_light", "off")
 
     with pytest.raises(intent.IntentHandleError):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
-            "HassSetPosition",
+            "menuaiSetPosition",
             {"name": {"value": "test light"}, "position": {"value": 100}},
         )
 
 
-async def test_intents_with_no_responses(hass: HomeAssistant) -> None:
+async def test_intents_with_no_responses(menuai: menuai) -> None:
     """Test intents that should not return a response during handling."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
 
     # The "respond" intent gets its response text from home-assistant-intents
     for intent_name in (intent.INTENT_NEVERMIND, intent.INTENT_RESPOND):
-        response = await intent.async_handle(hass, "test", intent_name, {})
+        response = await intent.async_handle(menuai, "test", intent_name, {})
         assert not response.speech
 
 
-async def test_intents_respond_intent(hass: HomeAssistant) -> None:
-    """Test HassRespond intent with a response slot value."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
+async def test_intents_respond_intent(menuai: menuai) -> None:
+    """Test menuaiRespond intent with a response slot value."""
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
 
     response = await intent.async_handle(
-        hass, "test", intent.INTENT_RESPOND, {"response": {"value": "Hello World"}}
+        menuai, "test", intent.INTENT_RESPOND, {"response": {"value": "Hello World"}}
     )
     assert response.speech["plain"]["speech"] == "Hello World"

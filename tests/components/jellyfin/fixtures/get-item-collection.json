@@ -14,7 +14,7 @@
   "AirsBeforeEpisodeNumber": 0,
   "CanDelete": true,
   "CanDownload": true,
-  "HasSubtitles": true,
+  "menuaiubtitles": true,
   "PreferredMetadataLanguage": "string",
   "PreferredMetadataCountryCode": "string",
   "SupportsSync": true,

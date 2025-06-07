@@ -8,7 +8,7 @@ from typing import Any
 
 from googleapiclient.http import HttpRequest
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TARGET,
@@ -16,15 +16,15 @@ from homeassistant.components.notify import (
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .api import AsyncConfigEntryAuth
 from .const import ATTR_BCC, ATTR_CC, ATTR_FROM, ATTR_ME, ATTR_SEND, DATA_AUTH
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> GMailNotificationService | None:
@@ -62,4 +62,4 @@ class GMailNotificationService(BaseNotificationService):
             if not to_addrs:
                 raise ValueError("recipient address required")
             msg = users.messages().send(userId=email["From"], body=body)
-        await self.hass.async_add_executor_job(msg.execute)
+        await self.menuai.async_add_executor_job(msg.execute)

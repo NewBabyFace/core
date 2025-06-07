@@ -6,13 +6,13 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config as hass_config
-from homeassistant.components.bayesian import DOMAIN, binary_sensor as bayesian
-from homeassistant.components.homeassistant import (
+from menuai import config as menuai_config
+from menuai.components.bayesian import DOMAIN, binary_sensor as bayesian
+from menuai.components.menuai import (
     DOMAIN as HA_DOMAIN,
     SERVICE_UPDATE_ENTITY,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_RELOAD,
     STATE_OFF,
@@ -20,15 +20,15 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.setup import async_setup_component
+from menuai.core import Context, menuai, callback
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.event import async_track_state_change_event
+from menuai.setup import async_setup_component
 
 from tests.common import get_fixture_path
 
 
-async def test_load_values_when_added_to_hass(hass: HomeAssistant) -> None:
+async def test_load_values_when_added_to_menuai(menuai: menuai) -> None:
     """Test that sensor initializes with observations of relevant entities."""
 
     config = {
@@ -51,20 +51,20 @@ async def test_load_values_when_added_to_hass(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set("sensor.test_monitored", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "off")
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("device_class") == "connectivity"
     assert state.attributes.get("observations")[0]["prob_given_true"] == 0.8
     assert state.attributes.get("observations")[0]["prob_given_false"] == 0.4
 
 
 async def test_unknown_state_does_not_influence_probability(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that an unknown state does not change the output probability."""
     prior = 0.2
@@ -85,21 +85,21 @@ async def test_unknown_state_does_not_influence_probability(
             "probability_threshold": 0.32,
         }
     }
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.test_monitored", STATE_UNKNOWN)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("occurred_observation_entities") == []
     assert state.attributes.get("probability") == prior
 
 
 async def test_sensor_numeric_state(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test sensor on numeric state platform observations."""
     config = {
@@ -128,13 +128,13 @@ async def test_sensor_numeric_state(
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", 6)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", 6)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
@@ -146,10 +146,10 @@ async def test_sensor_numeric_state(
     # Where P(B|A) is prob_given_true and P(B|~A) is prob_given_false
     # Calculated using P(A) = 0.2, P(B|A) = 0.7, P(B|~A) = 0.4 -> 0.30
 
-    hass.states.async_set("sensor.test_monitored", 4)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", 4)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
@@ -161,12 +161,12 @@ async def test_sensor_numeric_state(
 
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_monitored", 6)
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.test_monitored1", 6)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", 6)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored1", 6)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("observations")[0]["prob_given_true"] == 0.7
     assert state.attributes.get("observations")[1]["prob_given_true"] == 0.9
     assert state.attributes.get("observations")[1]["prob_given_false"] == 0.2
@@ -177,29 +177,29 @@ async def test_sensor_numeric_state(
 
     assert state.state == "on"
 
-    hass.states.async_set("sensor.test_monitored1", 0)
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.test_monitored", 4)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored1", 0)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", 4)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert abs(state.attributes.get("probability") - 0.0153) < 0.01
     # Calculated using bayes theorum where P(A) = 0.2, P(~B|A) = 0.3, P(~B|notA) = 0.6 -> 0.11
     # 2nd update: P(A) = 0.111, P(~B|A) = 0.1, P(~B|notA) = 0.8
 
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_monitored", 15)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", 15)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.state == "off"
 
     assert len(issue_registry.issues) == 0
 
 
-async def test_sensor_state(hass: HomeAssistant) -> None:
+async def test_sensor_state(menuai: menuai) -> None:
     """Test sensor on state platform observations."""
     prior = 0.2
     config = {
@@ -220,12 +220,12 @@ async def test_sensor_state(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.test_binary")
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
@@ -236,9 +236,9 @@ async def test_sensor_state(hass: HomeAssistant) -> None:
     # Calculated using bayes theorum where P(A) = 0.2, P(~B|A) = 0.2 (as negative observation), P(~B|notA) = 0.6
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_monitored", "off")
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.test_binary")
+    menuai.states.async_set("sensor.test_monitored", "off")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
@@ -247,32 +247,32 @@ async def test_sensor_state(hass: HomeAssistant) -> None:
     # Calculated using bayes theorum where P(A) = 0.2, P(~B|A) = 0.8 (as negative observation), P(~B|notA) = 0.4
     assert state.state == "on"
 
-    hass.states.async_remove("sensor.test_monitored")
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.test_binary")
+    menuai.states.async_remove("sensor.test_monitored")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == []
     assert abs(prior - state.attributes.get("probability")) < 0.01
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_monitored", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.test_binary")
+    menuai.states.async_set("sensor.test_monitored", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == []
     assert abs(prior - state.attributes.get("probability")) < 0.01
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_monitored", STATE_UNKNOWN)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.test_binary")
+    menuai.states.async_set("sensor.test_monitored", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == []
     assert abs(prior - state.attributes.get("probability")) < 0.01
     assert state.state == "off"
 
 
-async def test_sensor_value_template(hass: HomeAssistant) -> None:
+async def test_sensor_value_template(menuai: menuai) -> None:
     """Test sensor on template platform observations."""
     config = {
         "binary_sensor": {
@@ -291,12 +291,12 @@ async def test_sensor_value_template(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "on")
+    menuai.states.async_set("sensor.test_monitored", "on")
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == []
     assert abs(0.0769 - state.attributes.get("probability")) < 0.01
@@ -304,10 +304,10 @@ async def test_sensor_value_template(hass: HomeAssistant) -> None:
 
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_monitored", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "off")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("observations")[0]["prob_given_true"] == 0.8
     assert state.attributes.get("observations")[0]["prob_given_false"] == 0.4
     assert abs(0.33333 - state.attributes.get("probability")) < 0.01
@@ -315,17 +315,17 @@ async def test_sensor_value_template(hass: HomeAssistant) -> None:
 
     assert state.state == "on"
 
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert abs(0.076923 - state.attributes.get("probability")) < 0.01
     # Calculated using bayes theorum where P(A) = 0.2, P(~B|A) = 0.2 (as negative observation), P(~B|notA) = 0.6
 
     assert state.state == "off"
 
 
-async def test_mixed_states(hass: HomeAssistant) -> None:
+async def test_mixed_states(menuai: menuai) -> None:
     """Test sensor on probability threshold limits."""
     config = {
         "binary_sensor": {
@@ -358,16 +358,16 @@ async def test_mixed_states(hass: HomeAssistant) -> None:
             "probability_threshold": 0.5,
         }
     }
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.guest_sensor", "UNKNOWN")
-    hass.states.async_set("sensor.anyone_home", "on")
-    hass.states.async_set("sensor.temperature", 15)
+    menuai.states.async_set("sensor.guest_sensor", "UNKNOWN")
+    menuai.states.async_set("sensor.anyone_home", "on")
+    menuai.states.async_set("sensor.temperature", 15)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.should_HVAC")
+    state = menuai.states.get("binary_sensor.should_HVAC")
 
     assert set(state.attributes.get("occurred_observation_entities")) == {
         "sensor.anyone_home",
@@ -394,7 +394,7 @@ async def test_mixed_states(hass: HomeAssistant) -> None:
     # P(A) = 0.91139240, P(B|A) = (1-0.1) , P(B|notA) = (1-0.6), result = 0.95857988
 
 
-async def test_threshold(hass: HomeAssistant, issue_registry: ir.IssueRegistry) -> None:
+async def test_threshold(menuai: menuai, issue_registry: ir.IssueRegistry) -> None:
     """Test sensor on probability threshold limits."""
     config = {
         "binary_sensor": {
@@ -414,20 +414,20 @@ async def test_threshold(hass: HomeAssistant, issue_registry: ir.IssueRegistry) 
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert round(abs(1.0 - state.attributes.get("probability")), 7) == 0
 
     assert state.state == "on"
     assert len(issue_registry.issues) == 0
 
 
-async def test_multiple_observations(hass: HomeAssistant) -> None:
+async def test_multiple_observations(menuai: menuai) -> None:
     """Test sensor with multiple observations of same entity.
 
     these entries should be labelled as 'state' and negative observations ignored - as the outcome is not known to be binary.
@@ -460,13 +460,13 @@ async def test_multiple_observations(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "off")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
 
     for attrs in state.attributes.values():
         json.dumps(attrs)
@@ -476,10 +476,10 @@ async def test_multiple_observations(hass: HomeAssistant) -> None:
 
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_monitored", "blue")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "blue")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
 
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
@@ -491,10 +491,10 @@ async def test_multiple_observations(hass: HomeAssistant) -> None:
 
     assert state.state == "on"
 
-    hass.states.async_set("sensor.test_monitored", "red")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "red")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert abs(0.076923 - state.attributes.get("probability")) < 0.01
     # Calculated using bayes theorum where P(A) = 0.2, P(B|A) = 0.2, P(B|notA) = 0.6
 
@@ -504,7 +504,7 @@ async def test_multiple_observations(hass: HomeAssistant) -> None:
 
 
 async def test_multiple_numeric_observations(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test sensor on numeric state platform observations with more than one range.
 
@@ -562,13 +562,13 @@ async def test_multiple_numeric_observations(
             "prior": 0.3,
         }
     }
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_temp", -5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", -5)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
 
     for attrs in state.attributes.values():
         json.dumps(attrs)
@@ -587,10 +587,10 @@ async def test_multiple_numeric_observations(
     # ranges not observed
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_temp", 5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", 5)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
 
     assert state.attributes.get("occurred_observation_entities") == ["sensor.test_temp"]
     assert abs(state.attributes.get("probability") - 0.14634146) < 0.01
@@ -604,10 +604,10 @@ async def test_multiple_numeric_observations(
 
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_temp", 12)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", 12)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
     assert abs(state.attributes.get("probability") - 0.19672131) < 0.01
     # A = binary_sensor.nice_day being TRUE
     # B = sensor.test_temp in the range (10, 15]
@@ -619,10 +619,10 @@ async def test_multiple_numeric_observations(
 
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_temp", 22)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", 22)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
     assert abs(state.attributes.get("probability") - 0.58823529) < 0.01
     # A = binary_sensor.nice_day being TRUE
     # B = sensor.test_temp in the range (15, 25]
@@ -634,10 +634,10 @@ async def test_multiple_numeric_observations(
 
     assert state.state == "on"
 
-    hass.states.async_set("sensor.test_temp", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", 30)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
     assert abs(state.attributes.get("probability") - 0.562500) < 0.01
     # A = binary_sensor.nice_day being TRUE
     # B = sensor.test_temp in the range (25, ]
@@ -651,10 +651,10 @@ async def test_multiple_numeric_observations(
 
     # Edge cases
     # if on a threshold only one observation should be included and not both
-    hass.states.async_set("sensor.test_temp", 15)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", 15)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
 
     assert state.attributes.get("occurred_observation_entities") == ["sensor.test_temp"]
 
@@ -673,33 +673,33 @@ async def test_multiple_numeric_observations(
     assert len(issue_registry.issues) == 0
     assert state.attributes.get("observations")[0]["platform"] == "numeric_state"
 
-    hass.states.async_set("sensor.test_temp", "badstate")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", "badstate")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
-
-    assert state.attributes.get("occurred_observation_entities") == []
-    assert state.state == "off"
-
-    hass.states.async_set("sensor.test_temp", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
 
     assert state.attributes.get("occurred_observation_entities") == []
     assert state.state == "off"
 
-    hass.states.async_set("sensor.test_temp", STATE_UNKNOWN)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_temp", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.nice_day")
+    state = menuai.states.get("binary_sensor.nice_day")
+
+    assert state.attributes.get("occurred_observation_entities") == []
+    assert state.state == "off"
+
+    menuai.states.async_set("sensor.test_temp", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+
+    state = menuai.states.get("binary_sensor.nice_day")
 
     assert state.attributes.get("occurred_observation_entities") == []
     assert state.state == "off"
 
 
 async def test_mirrored_observations(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test whether mirrored entries are detected and appropriate issues are created."""
 
@@ -774,10 +774,10 @@ async def test_mirrored_observations(
         }
     }
     assert len(issue_registry.issues) == 0
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.test_monitored2", "on")
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored2", "on")
+    await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 3
     assert (
@@ -789,7 +789,7 @@ async def test_mirrored_observations(
 
 
 async def test_missing_prob_given_false(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test whether missing prob_given_false are detected and appropriate issues are created."""
 
@@ -820,10 +820,10 @@ async def test_missing_prob_given_false(
         }
     }
     assert len(issue_registry.issues) == 0
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.test_monitored2", "on")
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored2", "on")
+    await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 3
     assert (
@@ -835,7 +835,7 @@ async def test_missing_prob_given_false(
 
 
 async def test_bad_multi_numeric(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -891,13 +891,13 @@ async def test_bad_multi_numeric(
     caplog.clear()
     caplog.set_level(WARNING)
 
-    assert await async_setup_component(hass, "binary_sensor", config)
+    assert await async_setup_component(menuai, "binary_sensor", config)
 
     assert "entities must not overlap" in caplog.text
 
 
 async def test_inverted_numeric(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -921,7 +921,7 @@ async def test_inverted_numeric(
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
+    assert await async_setup_component(menuai, "binary_sensor", config)
     assert (
         "bayesian numeric state 'above' (23.0) must be less than 'below' (20.0)"
         in caplog.text
@@ -929,7 +929,7 @@ async def test_inverted_numeric(
 
 
 async def test_no_value_numeric(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -951,11 +951,11 @@ async def test_no_value_numeric(
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
+    assert await async_setup_component(menuai, "binary_sensor", config)
     assert "at least one of 'above' or 'below' must be specified" in caplog.text
 
 
-async def test_probability_updates(hass: HomeAssistant) -> None:
+async def test_probability_updates(menuai: menuai) -> None:
     """Test probability update function."""
     prob_given_true = [0.3, 0.6, 0.8]
     prob_given_false = [0.7, 0.4, 0.2]
@@ -976,7 +976,7 @@ async def test_probability_updates(hass: HomeAssistant) -> None:
     assert round(abs(0.9130434782608695 - prior), 7) == 0
 
 
-async def test_observed_entities(hass: HomeAssistant) -> None:
+async def test_observed_entities(menuai: menuai) -> None:
     """Test sensor on observed entities."""
     config = {
         "binary_sensor": {
@@ -1005,38 +1005,38 @@ async def test_observed_entities(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.test_monitored1", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored1", "off")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
     ]
 
-    hass.states.async_set("sensor.test_monitored", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "off")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
     ]
 
-    hass.states.async_set("sensor.test_monitored1", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored1", "on")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert sorted(state.attributes.get("occurred_observation_entities")) == [
         "sensor.test_monitored",
         "sensor.test_monitored1",
     ]
 
 
-async def test_state_attributes_are_serializable(hass: HomeAssistant) -> None:
+async def test_state_attributes_are_serializable(menuai: menuai) -> None:
     """Test sensor on observed entities."""
     config = {
         "binary_sensor": {
@@ -1065,31 +1065,31 @@ async def test_state_attributes_are_serializable(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.test_monitored1", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored1", "off")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
     ]
 
-    hass.states.async_set("sensor.test_monitored", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "off")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert state.attributes.get("occurred_observation_entities") == [
         "sensor.test_monitored"
     ]
 
-    hass.states.async_set("sensor.test_monitored1", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored1", "on")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.test_binary")
+    state = menuai.states.get("binary_sensor.test_binary")
     assert sorted(state.attributes.get("occurred_observation_entities")) == [
         "sensor.test_monitored",
         "sensor.test_monitored1",
@@ -1100,7 +1100,7 @@ async def test_state_attributes_are_serializable(hass: HomeAssistant) -> None:
 
 
 async def test_template_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test sensor with template error."""
     config = {
@@ -1120,16 +1120,16 @@ async def test_template_error(
         }
     }
 
-    await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_binary").state == "off"
+    assert menuai.states.get("binary_sensor.test_binary").state == "off"
 
     assert "TemplateError" in caplog.text
     assert "xyz" in caplog.text
 
 
-async def test_update_request_with_template(hass: HomeAssistant) -> None:
+async def test_update_request_with_template(menuai: menuai) -> None:
     """Test sensor on template platform observations that gets an update request."""
     config = {
         "binary_sensor": {
@@ -1148,24 +1148,24 @@ async def test_update_request_with_template(hass: HomeAssistant) -> None:
         }
     }
 
-    await async_setup_component(hass, "binary_sensor", config)
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, "binary_sensor", config)
+    await async_setup_component(menuai, HA_DOMAIN, {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_binary").state == "off"
+    assert menuai.states.get("binary_sensor.test_binary").state == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: "binary_sensor.test_binary"},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("binary_sensor.test_binary").state == "off"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("binary_sensor.test_binary").state == "off"
 
 
-async def test_update_request_without_template(hass: HomeAssistant) -> None:
+async def test_update_request_without_template(menuai: menuai) -> None:
     """Test sensor on template platform observations that gets an update request."""
     config = {
         "binary_sensor": {
@@ -1185,27 +1185,27 @@ async def test_update_request_without_template(hass: HomeAssistant) -> None:
         }
     }
 
-    await async_setup_component(hass, "binary_sensor", config)
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, "binary_sensor", config)
+    await async_setup_component(menuai, HA_DOMAIN, {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_binary").state == "off"
+    assert menuai.states.get("binary_sensor.test_binary").state == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: "binary_sensor.test_binary"},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("binary_sensor.test_binary").state == "off"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("binary_sensor.test_binary").state == "off"
 
 
-async def test_monitored_sensor_goes_away(hass: HomeAssistant) -> None:
+async def test_monitored_sensor_goes_away(menuai: menuai) -> None:
     """Test sensor on template platform observations that goes away."""
     config = {
         "binary_sensor": {
@@ -1225,28 +1225,28 @@ async def test_monitored_sensor_goes_away(hass: HomeAssistant) -> None:
         }
     }
 
-    await async_setup_component(hass, "binary_sensor", config)
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, "binary_sensor", config)
+    await async_setup_component(menuai, HA_DOMAIN, {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", "on")
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_binary").state == "on"
+    assert menuai.states.get("binary_sensor.test_binary").state == "on"
     # Calculated using bayes theorum where P(A) = 0.2, P(B|A) = 0.9, P(B|notA) = 0.4 -> 0.36 (>0.32)
 
-    hass.states.async_remove("sensor.test_monitored")
+    menuai.states.async_remove("sensor.test_monitored")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get("binary_sensor.test_binary").attributes.get("probability")
+        menuai.states.get("binary_sensor.test_binary").attributes.get("probability")
         == 0.2
     )
-    assert hass.states.get("binary_sensor.test_binary").state == "off"
+    assert menuai.states.get("binary_sensor.test_binary").state == "off"
 
 
-async def test_reload(hass: HomeAssistant) -> None:
+async def test_reload(menuai: menuai) -> None:
     """Verify we can reload bayesian sensors."""
 
     config = {
@@ -1267,33 +1267,33 @@ async def test_reload(hass: HomeAssistant) -> None:
         }
     }
 
-    await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    assert hass.states.get("binary_sensor.test")
+    assert menuai.states.get("binary_sensor.test")
 
     yaml_path = get_fixture_path("configuration.yaml", "bayesian")
 
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    assert hass.states.get("binary_sensor.test") is None
-    assert hass.states.get("binary_sensor.test2")
+    assert menuai.states.get("binary_sensor.test") is None
+    assert menuai.states.get("binary_sensor.test2")
 
 
-async def test_template_triggers(hass: HomeAssistant) -> None:
+async def test_template_triggers(menuai: menuai) -> None:
     """Test sensor with template triggers."""
-    hass.states.async_set("input_boolean.test", STATE_OFF)
+    menuai.states.async_set("input_boolean.test", STATE_OFF)
     config = {
         "binary_sensor": {
             "name": "Test_Binary",
@@ -1311,30 +1311,30 @@ async def test_template_triggers(hass: HomeAssistant) -> None:
         }
     }
 
-    await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_binary").state == STATE_OFF
+    assert menuai.states.get("binary_sensor.test_binary").state == STATE_OFF
 
     events = []
     async_track_state_change_event(
-        hass,
+        menuai,
         "binary_sensor.test_binary",
         # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
     )
 
     context = Context()
-    hass.states.async_set("input_boolean.test", STATE_ON, context=context)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_set("input_boolean.test", STATE_ON, context=context)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert events[0].context == context
 
 
-async def test_state_triggers(hass: HomeAssistant) -> None:
+async def test_state_triggers(menuai: menuai) -> None:
     """Test sensor with state triggers."""
-    hass.states.async_set("sensor.test_monitored", STATE_OFF)
+    menuai.states.async_set("sensor.test_monitored", STATE_OFF)
 
     config = {
         "binary_sensor": {
@@ -1353,22 +1353,22 @@ async def test_state_triggers(hass: HomeAssistant) -> None:
             "probability_threshold": 0.32,
         }
     }
-    await async_setup_component(hass, "binary_sensor", config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "binary_sensor", config)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_binary").state == STATE_OFF
+    assert menuai.states.get("binary_sensor.test_binary").state == STATE_OFF
 
     events = []
     async_track_state_change_event(
-        hass,
+        menuai,
         "binary_sensor.test_binary",
         # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
     )
 
     context = Context()
-    hass.states.async_set("sensor.test_monitored", STATE_ON, context=context)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_monitored", STATE_ON, context=context)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert events[0].context == context

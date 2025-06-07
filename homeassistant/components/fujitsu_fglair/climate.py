@@ -10,7 +10,7 @@ from ayla_iot_unofficial.fujitsu_hvac import (
     SwingMode,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
     FAN_LOW,
@@ -23,9 +23,9 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import FGLairConfigEntry, FGLairCoordinator
 from .entity import FGLairEntity
@@ -58,7 +58,7 @@ FUJI_TO_HA_SWING = {value: key for key, value in HA_TO_FUJI_SWING.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FGLairConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

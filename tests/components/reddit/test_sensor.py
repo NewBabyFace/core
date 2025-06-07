@@ -3,7 +3,7 @@
 import copy
 from unittest.mock import patch
 
-from homeassistant.components.reddit.sensor import (
+from menuai.components.reddit.sensor import (
     ATTR_BODY,
     ATTR_COMMENTS_NUMBER,
     ATTR_CREATED,
@@ -16,15 +16,15 @@ from homeassistant.components.reddit.sensor import (
     CONF_SORT_BY,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_MAXIMUM,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 VALID_CONFIG = {
     "sensor": {
@@ -151,15 +151,15 @@ class MockSubreddit:
 
 
 @patch("praw.Reddit", new=MockPraw)
-async def test_setup_with_valid_config(hass: HomeAssistant) -> None:
+async def test_setup_with_valid_config(menuai: menuai) -> None:
     """Test the platform setup with Reddit configuration."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.reddit_worldnews")
+    state = menuai.states.get("sensor.reddit_worldnews")
     assert int(state.state) == MOCK_RESULTS_LENGTH
 
-    state = hass.states.get("sensor.reddit_news")
+    state = menuai.states.get("sensor.reddit_news")
     assert int(state.state) == MOCK_RESULTS_LENGTH
 
     assert state.attributes[ATTR_SUBREDDIT] == "news"
@@ -178,8 +178,8 @@ async def test_setup_with_valid_config(hass: HomeAssistant) -> None:
 
 
 @patch("praw.Reddit", new=MockPraw)
-async def test_setup_with_invalid_config(hass: HomeAssistant) -> None:
+async def test_setup_with_invalid_config(menuai: menuai) -> None:
     """Test the platform setup with invalid Reddit configuration."""
-    assert await async_setup_component(hass, "sensor", INVALID_SORT_BY_CONFIG)
-    await hass.async_block_till_done()
-    assert not hass.states.get("sensor.reddit_worldnews")
+    assert await async_setup_component(menuai, "sensor", INVALID_SORT_BY_CONFIG)
+    await menuai.async_block_till_done()
+    assert not menuai.states.get("sensor.reddit_worldnews")

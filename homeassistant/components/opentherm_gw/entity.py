@@ -4,10 +4,10 @@ import logging
 
 import pyotgw.vars as gw_vars
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity, EntityDescription
 
 from . import OpenThermGatewayHub
 from .const import DOMAIN, OpenThermDataSource, OpenThermDeviceDescription
@@ -61,11 +61,11 @@ class OpenThermEntity(Entity):
 class OpenThermStatusEntity(OpenThermEntity):
     """Represent an OpenTherm entity that receives status updates."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates from the component."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, self._gateway.update_signal, self.receive_report
+                self.menuai, self._gateway.update_signal, self.receive_report
             )
         )
 

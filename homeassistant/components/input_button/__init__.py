@@ -7,21 +7,21 @@ from typing import Self, cast
 
 import voluptuous as vol
 
-from homeassistant.components.button import SERVICE_PRESS, ButtonEntity
-from homeassistant.const import (
+from menuai.components.button import SERVICE_PRESS, ButtonEntity
+from menuai.const import (
     ATTR_EDITABLE,
     CONF_ICON,
     CONF_ID,
     CONF_NAME,
     SERVICE_RELOAD,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-import homeassistant.helpers.service
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+import menuai.helpers.service
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
 
 DOMAIN = "input_button"
 
@@ -72,9 +72,9 @@ class InputButtonStorageCollection(collection.DictStorageCollection):
         return {CONF_ID: item[CONF_ID]} | update_data
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up an input button."""
-    component = EntityComponent[InputButton](_LOGGER, DOMAIN, hass)
+    component = EntityComponent[InputButton](_LOGGER, DOMAIN, menuai)
 
     id_manager = collection.IDManager()
 
@@ -82,15 +82,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         logging.getLogger(f"{__name__}.yaml_collection"), id_manager
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, yaml_collection, InputButton
+        menuai, DOMAIN, DOMAIN, component, yaml_collection, InputButton
     )
 
     storage_collection = InputButtonStorageCollection(
-        Store(hass, STORAGE_VERSION, STORAGE_KEY),
+        Store(menuai, STORAGE_VERSION, STORAGE_KEY),
         id_manager,
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, storage_collection, InputButton
+        menuai, DOMAIN, DOMAIN, component, storage_collection, InputButton
     )
 
     await yaml_collection.async_load(
@@ -100,7 +100,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     collection.DictStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, STORAGE_FIELDS, STORAGE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     async def reload_service_handler(service_call: ServiceCall) -> None:
         """Remove all input buttons and load new ones from config."""
@@ -114,8 +114,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ]
         )
 
-    homeassistant.helpers.service.async_register_admin_service(
-        hass,
+    menuai.helpers.service.async_register_admin_service(
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         reload_service_handler,
@@ -127,7 +127,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class InputButton(collection.CollectionEntity, ButtonEntity, RestoreEntity):
     """Representation of a button."""
 

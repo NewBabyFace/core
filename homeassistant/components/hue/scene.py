@@ -11,10 +11,10 @@ from aiohue.v2.models.scene import Scene as HueScene, ScenePut as HueScenePut
 from aiohue.v2.models.smart_scene import SmartScene as HueSmartScene, SmartSceneState
 import voluptuous as vol
 
-from homeassistant.components.scene import ATTR_TRANSITION, Scene as SceneEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.components.scene import ATTR_TRANSITION, Scene as SceneEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
@@ -31,7 +31,7 @@ ATTR_BRIGHTNESS = "brightness"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HueConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -105,9 +105,9 @@ class HueSceneEntityBase(HueBaseEntity, SceneEntity):
             identifiers={(DOMAIN, self.group.id)},
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         # Add value_changed callback for group to catch name changes.
         self.async_on_remove(
             self.bridge.api.groups.subscribe(

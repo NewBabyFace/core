@@ -8,9 +8,9 @@ import logging
 
 from aiohttp.hdrs import X_FORWARDED_FOR, X_FORWARDED_HOST, X_FORWARDED_PROTO
 from aiohttp.web import Application, HTTPBadRequest, Request, StreamResponse, middleware
-from hass_nabucasa import remote
+from menuai_nabucasa import remote
 
-from homeassistant.core import callback
+from menuai.core import callback
 
 _LOGGER = logging.getLogger(__name__)
 

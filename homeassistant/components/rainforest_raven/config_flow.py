@@ -12,15 +12,15 @@ import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 import voluptuous as vol
 
-from homeassistant.components import usb
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE, CONF_MAC, CONF_NAME
-from homeassistant.helpers.selector import (
+from menuai.components import usb
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE, CONF_MAC, CONF_NAME
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -102,7 +102,7 @@ class RainforestRavenConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_usb(self, discovery_info: UsbServiceInfo) -> ConfigFlowResult:
         """Handle USB Discovery."""
         device = discovery_info.device
-        dev_path = await self.hass.async_add_executor_job(usb.get_serial_by_id, device)
+        dev_path = await self.menuai.async_add_executor_job(usb.get_serial_by_id, device)
         unique_id = _generate_unique_id(discovery_info)
         await self.async_set_unique_id(unique_id)
         try:
@@ -119,7 +119,7 @@ class RainforestRavenConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle a flow initiated by the user."""
         if self._async_in_progress():
             return self.async_abort(reason="already_in_progress")
-        ports = await self.hass.async_add_executor_job(serial.tools.list_ports.comports)
+        ports = await self.menuai.async_add_executor_job(serial.tools.list_ports.comports)
         existing_devices = [
             entry.data[CONF_DEVICE] for entry in self._async_current_entries()
         ]
@@ -141,7 +141,7 @@ class RainforestRavenConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None and user_input.get(CONF_DEVICE, "").strip():
             port = ports[unused_ports.index(str(user_input[CONF_DEVICE]))]
-            dev_path = await self.hass.async_add_executor_job(
+            dev_path = await self.menuai.async_add_executor_job(
                 usb.get_serial_by_id, port.device
             )
             unique_id = _generate_unique_id(port)

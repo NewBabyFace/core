@@ -8,23 +8,23 @@ from pyblackbird import get_blackbird
 from serial import SerialException
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN, SERVICE_SETALLZONES
 
@@ -68,14 +68,14 @@ PLATFORM_SCHEMA = vol.All(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Monoprice Blackbird 4k 8x8 HDBaseT Matrix platform."""
-    if DATA_BLACKBIRD not in hass.data:
-        hass.data[DATA_BLACKBIRD] = {}
+    if DATA_BLACKBIRD not in menuai.data:
+        menuai.data[DATA_BLACKBIRD] = {}
 
     port = config.get(CONF_PORT)
     host = config.get(CONF_HOST)
@@ -106,7 +106,7 @@ def setup_platform(
         _LOGGER.debug("Adding zone %d - %s", zone_id, extra[CONF_NAME])
         unique_id = f"{connection}-{zone_id}"
         device = BlackbirdZone(blackbird, sources, zone_id, extra[CONF_NAME])
-        hass.data[DATA_BLACKBIRD][unique_id] = device
+        menuai.data[DATA_BLACKBIRD][unique_id] = device
         devices.append(device)
 
     add_entities(devices, True)
@@ -118,18 +118,18 @@ def setup_platform(
         if entity_ids:
             devices = [
                 device
-                for device in hass.data[DATA_BLACKBIRD].values()
+                for device in menuai.data[DATA_BLACKBIRD].values()
                 if device.entity_id in entity_ids
             ]
 
         else:
-            devices = hass.data[DATA_BLACKBIRD].values()
+            devices = menuai.data[DATA_BLACKBIRD].values()
 
         for device in devices:
             if service.service == SERVICE_SETALLZONES:
                 device.set_all_zones(source)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN, SERVICE_SETALLZONES, service_handle, schema=BLACKBIRD_SETALLZONES_SCHEMA
     )
 

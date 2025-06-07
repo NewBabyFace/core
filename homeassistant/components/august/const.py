@@ -1,6 +1,6 @@
 """Constants for August devices."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DEFAULT_TIMEOUT = 25
 

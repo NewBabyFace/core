@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import BASE_CONFIG, async_setup_auth
 
@@ -42,11 +42,11 @@ _TRUSTED_NETWORKS_CONFIG = {
             [{"name": "Example", "type": "insecure_example", "id": None}],
         ),
         (
-            [{"type": "homeassistant"}],
+            [{"type": "menuai"}],
             [
                 {
-                    "name": "Home Assistant Local",
-                    "type": "homeassistant",
+                    "name": "MenuAI Local",
+                    "type": "menuai",
                     "id": None,
                 }
             ],
@@ -54,7 +54,7 @@ _TRUSTED_NETWORKS_CONFIG = {
     ],
 )
 async def test_fetch_auth_providers(
-    hass: HomeAssistant,
+    menuai: menuai,
     aiohttp_client: ClientSessionGenerator,
     provider_configs: list[dict[str, Any]],
     expected: list[dict[str, Any]],
@@ -63,7 +63,7 @@ async def test_fetch_auth_providers(
 ) -> None:
     """Test fetching auth providers."""
     client = await async_setup_auth(
-        hass, aiohttp_client, provider_configs, custom_ip=ip
+        menuai, aiohttp_client, provider_configs, custom_ip=ip
     )
     resp = await client.get("/auth/providers")
     assert resp.status == HTTPStatus.OK
@@ -86,14 +86,14 @@ async def test_fetch_auth_providers(
     ],
 )
 async def test_fetch_auth_providers_trusted_network(
-    hass: HomeAssistant,
+    menuai: menuai,
     aiohttp_client: ClientSessionGenerator,
     expected: list[dict[str, Any]],
     ip: str,
 ) -> None:
     """Test fetching auth providers."""
     client = await async_setup_auth(
-        hass, aiohttp_client, [_TRUSTED_NETWORKS_CONFIG], custom_ip=ip
+        menuai, aiohttp_client, [_TRUSTED_NETWORKS_CONFIG], custom_ip=ip
     )
     resp = await client.get("/auth/providers")
     assert resp.status == HTTPStatus.OK
@@ -101,12 +101,12 @@ async def test_fetch_auth_providers_trusted_network(
 
 
 async def test_fetch_auth_providers_onboarding(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test fetching auth providers."""
-    client = await async_setup_auth(hass, aiohttp_client)
+    client = await async_setup_auth(menuai, aiohttp_client)
     with patch(
-        "homeassistant.components.onboarding.async_is_user_onboarded",
+        "menuai.components.onboarding.async_is_user_onboarded",
         return_value=False,
     ):
         resp = await client.get("/auth/providers")
@@ -118,19 +118,19 @@ async def test_fetch_auth_providers_onboarding(
 
 
 async def test_cannot_get_flows_in_progress(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test we cannot get flows in progress."""
-    client = await async_setup_auth(hass, aiohttp_client, [])
+    client = await async_setup_auth(menuai, aiohttp_client, [])
     resp = await client.get("/auth/login_flow")
     assert resp.status == HTTPStatus.METHOD_NOT_ALLOWED
 
 
 async def test_invalid_username_password(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test we cannot get flows in progress."""
-    client = await async_setup_auth(hass, aiohttp_client)
+    client = await async_setup_auth(menuai, aiohttp_client)
     resp = await client.post(
         "/auth/login_flow",
         json={
@@ -144,7 +144,7 @@ async def test_invalid_username_password(
 
     # Incorrect username
     with patch(
-        "homeassistant.components.auth.login_flow.process_wrong_login"
+        "menuai.components.auth.login_flow.process_wrong_login"
     ) as mock_process_wrong_login:
         resp = await client.post(
             f"/auth/login_flow/{step['flow_id']}",
@@ -164,7 +164,7 @@ async def test_invalid_username_password(
 
     # Incorrect password
     with patch(
-        "homeassistant.components.auth.login_flow.process_wrong_login"
+        "menuai.components.auth.login_flow.process_wrong_login"
     ) as mock_process_wrong_login:
         resp = await client.post(
             f"/auth/login_flow/{step['flow_id']}",
@@ -184,7 +184,7 @@ async def test_invalid_username_password(
 
     # Incorrect username and invalid redirect URI fails on wrong login
     with patch(
-        "homeassistant.components.auth.login_flow.process_wrong_login"
+        "menuai.components.auth.login_flow.process_wrong_login"
     ) as mock_process_wrong_login:
         resp = await client.post(
             f"/auth/login_flow/{step['flow_id']}",
@@ -204,10 +204,10 @@ async def test_invalid_username_password(
 
 
 async def test_invalid_redirect_uri(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test invalid redirect URI."""
-    client = await async_setup_auth(hass, aiohttp_client)
+    client = await async_setup_auth(menuai, aiohttp_client)
     resp = await client.post(
         "/auth/login_flow",
         json={
@@ -221,11 +221,11 @@ async def test_invalid_redirect_uri(
 
     with (
         patch(
-            "homeassistant.components.auth.indieauth.fetch_redirect_uris",
+            "menuai.components.auth.indieauth.fetch_redirect_uris",
             return_value=[],
         ),
         patch(
-            "homeassistant.components.http.ban.process_wrong_login"
+            "menuai.components.http.ban.process_wrong_login"
         ) as mock_process_wrong_login,
     ):
         resp = await client.post(
@@ -245,14 +245,14 @@ async def test_invalid_redirect_uri(
 
 
 async def test_login_exist_user(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test logging in with exist user."""
-    client = await async_setup_auth(hass, aiohttp_client, setup_api=True)
-    cred = await hass.auth.auth_providers[0].async_get_or_create_credentials(
+    client = await async_setup_auth(menuai, aiohttp_client, setup_api=True)
+    cred = await menuai.auth.auth_providers[0].async_get_or_create_credentials(
         {"username": "test-user"}
     )
-    await hass.auth.async_get_or_create_user(cred)
+    await menuai.auth.async_get_or_create_user(cred)
 
     resp = await client.post(
         "/auth/login_flow",
@@ -266,7 +266,7 @@ async def test_login_exist_user(
     step = await resp.json()
 
     with patch(
-        "homeassistant.components.auth.login_flow.process_success_login"
+        "menuai.components.auth.login_flow.process_success_login"
     ) as mock_process_success_login:
         resp = await client.post(
             f"/auth/login_flow/{step['flow_id']}",
@@ -285,15 +285,15 @@ async def test_login_exist_user(
 
 
 async def test_login_local_only_user(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test logging in with local only user."""
-    client = await async_setup_auth(hass, aiohttp_client, setup_api=True)
-    cred = await hass.auth.auth_providers[0].async_get_or_create_credentials(
+    client = await async_setup_auth(menuai, aiohttp_client, setup_api=True)
+    cred = await menuai.auth.auth_providers[0].async_get_or_create_credentials(
         {"username": "test-user"}
     )
-    user = await hass.auth.async_get_or_create_user(cred)
-    await hass.auth.async_update_user(user, local_only=True)
+    user = await menuai.auth.async_get_or_create_user(cred)
+    await menuai.auth.async_update_user(user, local_only=True)
 
     resp = await client.post(
         "/auth/login_flow",
@@ -307,7 +307,7 @@ async def test_login_local_only_user(
     step = await resp.json()
 
     with patch(
-        "homeassistant.components.auth.login_flow.async_user_not_allowed_do_auth",
+        "menuai.components.auth.login_flow.async_user_not_allowed_do_auth",
         return_value="User is local only",
     ) as mock_not_allowed_do_auth:
         resp = await client.post(
@@ -325,14 +325,14 @@ async def test_login_local_only_user(
 
 
 async def test_login_exist_user_ip_changes(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test logging in and the ip address changes results in an rejection."""
-    client = await async_setup_auth(hass, aiohttp_client, setup_api=True)
-    cred = await hass.auth.auth_providers[0].async_get_or_create_credentials(
+    client = await async_setup_auth(menuai, aiohttp_client, setup_api=True)
+    cred = await menuai.auth.auth_providers[0].async_get_or_create_credentials(
         {"username": "test-user"}
     )
-    await hass.auth.async_get_or_create_user(cred)
+    await menuai.auth.async_get_or_create_user(cred)
 
     resp = await client.post(
         "/auth/login_flow",
@@ -352,7 +352,7 @@ async def test_login_exist_user_ip_changes(
     # This method was chosen because it seemed less likely to break
     # vs patching aiohttp internals to fake the ip address
     #
-    for flow_id, flow in hass.auth.login_flow._progress.items():
+    for flow_id, flow in menuai.auth.login_flow._progress.items():
         assert flow_id == step["flow_id"]
         flow.context["ip_address"] = "10.2.3.1"
 
@@ -372,10 +372,10 @@ async def test_login_exist_user_ip_changes(
 
 
 async def test_well_known_auth_info(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test logging in and the ip address changes results in an rejection."""
-    client = await async_setup_auth(hass, aiohttp_client, setup_api=True)
+    client = await async_setup_auth(menuai, aiohttp_client, setup_api=True)
     resp = await client.get(
         "/.well-known/oauth-authorization-server",
     )

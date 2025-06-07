@@ -6,12 +6,12 @@ from hatasmota import relay as tasmota_relay
 from hatasmota.entity import TasmotaEntity as HATasmotaEntity
 from hatasmota.models import DiscoveryHashType
 
-from homeassistant.components import switch
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import switch
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DATA_REMOVE_DISCOVER_COMPONENT
 from .discovery import TASMOTA_DISCOVERY_ENTITY_NEW
@@ -19,7 +19,7 @@ from .entity import TasmotaAvailability, TasmotaDiscoveryUpdate, TasmotaOnOffEnt
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -38,9 +38,9 @@ async def async_setup_entry(
             ]
         )
 
-    hass.data[DATA_REMOVE_DISCOVER_COMPONENT.format(switch.DOMAIN)] = (
+    menuai.data[DATA_REMOVE_DISCOVER_COMPONENT.format(switch.DOMAIN)] = (
         async_dispatcher_connect(
-            hass,
+            menuai,
             TASMOTA_DISCOVERY_ENTITY_NEW.format(switch.DOMAIN),
             async_discover,
         )

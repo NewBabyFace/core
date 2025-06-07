@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.apple_tv.remote import AppleTVRemote
-from homeassistant.components.remote import (
+from menuai.components.apple_tv.remote import AppleTVRemote
+from menuai.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_HOLD_SECS,
     ATTR_NUM_REPEATS,

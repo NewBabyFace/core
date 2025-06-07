@@ -2,17 +2,17 @@
 
 from unittest.mock import Mock
 
-from homeassistant.components.shelly.const import (
+from menuai.components.shelly.const import (
     ATTR_CHANNEL,
     ATTR_CLICK_TYPE,
     ATTR_DEVICE,
     DOMAIN,
     EVENT_SHELLY_CLICK,
 )
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import init_integration
 
@@ -20,18 +20,18 @@ from tests.components.logbook.common import MockRow, mock_humanify
 
 
 async def test_humanify_shelly_click_event_block_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, mock_block_device: Mock
+    menuai: menuai, device_registry: dr.DeviceRegistry, mock_block_device: Mock
 ) -> None:
     """Test humanifying Shelly click event for block device."""
-    entry = await init_integration(hass, 1)
+    entry = await init_integration(menuai, 1)
     device = dr.async_entries_for_config_entry(device_registry, entry.entry_id)[0]
 
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
 
     event1, event2 = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 EVENT_SHELLY_CLICK,
@@ -70,18 +70,18 @@ async def test_humanify_shelly_click_event_block_device(
 
 
 async def test_humanify_shelly_click_event_rpc_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, mock_rpc_device: Mock
+    menuai: menuai, device_registry: dr.DeviceRegistry, mock_rpc_device: Mock
 ) -> None:
     """Test humanifying Shelly click event for rpc device."""
-    entry = await init_integration(hass, 2)
+    entry = await init_integration(menuai, 2)
     device = dr.async_entries_for_config_entry(device_registry, entry.entry_id)[0]
 
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
 
     event1, event2 = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 EVENT_SHELLY_CLICK,

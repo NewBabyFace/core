@@ -13,17 +13,17 @@ from pytrafikverket import (
     UnknownError,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.trafikverket_train.const import (
+from menuai import config_entries
+from menuai.components.trafikverket_train.const import (
     CONF_FILTER_PRODUCT,
     CONF_FROM,
     CONF_TIME,
     CONF_TO,
     DOMAIN,
 )
-from homeassistant.const import CONF_API_KEY, CONF_NAME, CONF_WEEKDAY, WEEKDAYS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_API_KEY, CONF_NAME, CONF_WEEKDAY, WEEKDAYS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import ENTRY_CONFIG, OPTIONS_CONFIG
 
@@ -31,11 +31,11 @@ from tests.common import MockConfigEntry
 
 
 async def test_form(
-    hass: HomeAssistant, get_train_stations: list[StationInfoModel]
+    menuai: menuai, get_train_stations: list[StationInfoModel]
 ) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -44,15 +44,15 @@ async def test_form(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -62,7 +62,7 @@ async def test_form(
                 CONF_WEEKDAY: ["mon", "fri"],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Stockholm C to Uppsala C at 10:00"
@@ -79,11 +79,11 @@ async def test_form(
 
 
 async def test_form_multiple_stations(
-    hass: HomeAssistant, get_multiple_train_stations: list[StationInfoModel]
+    menuai: menuai, get_multiple_train_stations: list[StationInfoModel]
 ) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -91,11 +91,11 @@ async def test_form_multiple_stations(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_multiple_train_stations,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -105,26 +105,26 @@ async def test_form_multiple_stations(
                 CONF_WEEKDAY: ["mon", "fri"],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_multiple_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_FROM: "Csu",
                 CONF_TO: "Ups",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Stockholm C to Uppsala C at 10:00"
@@ -140,7 +140,7 @@ async def test_form_multiple_stations(
 
 
 async def test_form_entry_already_exist(
-    hass: HomeAssistant, get_train_stations: list[StationInfoModel]
+    menuai: menuai, get_train_stations: list[StationInfoModel]
 ) -> None:
     """Test flow aborts when entry already exist."""
 
@@ -158,9 +158,9 @@ async def test_form_entry_already_exist(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -168,18 +168,18 @@ async def test_form_entry_already_exist(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_get_train_stop",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_get_train_stop",
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -189,7 +189,7 @@ async def test_form_entry_already_exist(
                 CONF_WEEKDAY: WEEKDAYS,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -213,10 +213,10 @@ async def test_form_entry_already_exist(
     ],
 )
 async def test_flow_fails(
-    hass: HomeAssistant, side_effect: Exception, p_error: dict[str, str]
+    menuai: menuai, side_effect: Exception, p_error: dict[str, str]
 ) -> None:
     """Test config flow errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -225,11 +225,11 @@ async def test_flow_fails(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=side_effect(),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_API_KEY: "1234567890",
@@ -255,10 +255,10 @@ async def test_flow_fails(
     ],
 )
 async def test_flow_fails_departures(
-    hass: HomeAssistant, side_effect: Exception, p_error: dict[str, str]
+    menuai: menuai, side_effect: Exception, p_error: dict[str, str]
 ) -> None:
     """Test config flow errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -267,11 +267,11 @@ async def test_flow_fails_departures(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=side_effect(),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_API_KEY: "1234567890",
@@ -284,7 +284,7 @@ async def test_flow_fails_departures(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant, get_train_stations: list[StationInfoModel]
+    menuai: menuai, get_train_stations: list[StationInfoModel]
 ) -> None:
     """Test a reauthentication flow."""
     entry = MockConfigEntry(
@@ -300,28 +300,28 @@ async def test_reauth_flow(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -357,7 +357,7 @@ async def test_reauth_flow(
     ],
 )
 async def test_reauth_flow_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     side_effect: Exception,
     p_error: dict[str, str],
     get_train_stations: list[StationInfoModel],
@@ -376,21 +376,21 @@ async def test_reauth_flow_error(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=side_effect(),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567890"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
@@ -398,19 +398,19 @@ async def test_reauth_flow_error(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -438,7 +438,7 @@ async def test_reauth_flow_error(
     ],
 )
 async def test_reauth_flow_error_departures(
-    hass: HomeAssistant,
+    menuai: menuai,
     side_effect: Exception,
     p_error: dict[str, str],
     get_train_stations: list[StationInfoModel],
@@ -457,21 +457,21 @@ async def test_reauth_flow_error_departures(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=side_effect(),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567890"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
@@ -479,22 +479,22 @@ async def test_reauth_flow_error_departures(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_get_train_stop",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_get_train_stop",
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -509,7 +509,7 @@ async def test_reauth_flow_error_departures(
 
 
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_trains: list[TrainStopModel],
     get_train_stop: TrainStopModel,
     get_train_stations: list[StationInfoModel],
@@ -528,59 +528,59 @@ async def test_options_flow(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
             return_value=get_trains,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
             return_value=get_train_stop,
         ),
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={"filter_product": "SJ Regionaltåg"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"] == {"filter_product": "SJ Regionaltåg"}
 
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={"filter_product": ""},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"] == {"filter_product": None}
 
 
 async def test_reconfigure_flow(
-    hass: HomeAssistant, get_train_stations: list[StationInfoModel]
+    menuai: menuai, get_train_stations: list[StationInfoModel]
 ) -> None:
     """Test reconfigure flow."""
 
@@ -592,8 +592,8 @@ async def test_reconfigure_flow(
         version=2,
         minor_version=1,
     )
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reconfigure_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "initial"
@@ -601,15 +601,15 @@ async def test_reconfigure_flow(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -619,14 +619,14 @@ async def test_reconfigure_flow(
                 CONF_WEEKDAY: ["mon", "fri"],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
 
 async def test_reconfigure_multiple_stations(
-    hass: HomeAssistant, get_multiple_train_stations: list[StationInfoModel]
+    menuai: menuai, get_multiple_train_stations: list[StationInfoModel]
 ) -> None:
     """Test we can reconfigure with multiple stations."""
 
@@ -638,8 +638,8 @@ async def test_reconfigure_multiple_stations(
         version=2,
         minor_version=1,
     )
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reconfigure_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "initial"
@@ -647,11 +647,11 @@ async def test_reconfigure_multiple_stations(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_multiple_train_stations,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -661,33 +661,33 @@ async def test_reconfigure_multiple_stations(
                 CONF_WEEKDAY: ["mon", "fri"],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_multiple_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_FROM: "Csu",
                 CONF_TO: "Ups",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
 
 async def test_reconfigure_entry_already_exist(
-    hass: HomeAssistant, get_train_stations: list[StationInfoModel]
+    menuai: menuai, get_train_stations: list[StationInfoModel]
 ) -> None:
     """Test flow aborts when entry already exist in a reconfigure flow."""
 
@@ -705,7 +705,7 @@ async def test_reconfigure_entry_already_exist(
         version=2,
         minor_version=1,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     config_entry2 = MockConfigEntry(
         domain=DOMAIN,
@@ -715,26 +715,26 @@ async def test_reconfigure_entry_already_exist(
         version=2,
         minor_version=1,
     )
-    config_entry2.add_to_hass(hass)
-    result = await config_entry2.start_reconfigure_flow(hass)
+    config_entry2.add_to_menuai(menuai)
+    result = await config_entry2.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_get_train_stop",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_get_train_stop",
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -744,7 +744,7 @@ async def test_reconfigure_entry_already_exist(
                 CONF_WEEKDAY: WEEKDAYS,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -768,7 +768,7 @@ async def test_reconfigure_entry_already_exist(
     ],
 )
 async def test_reconfigure_flow_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     side_effect: Exception,
     p_error: dict[str, str],
     get_train_stations: list[StationInfoModel],
@@ -782,19 +782,19 @@ async def test_reconfigure_flow_fails(
         version=2,
         minor_version=1,
     )
-    config_entry2.add_to_hass(hass)
-    result = await config_entry2.start_reconfigure_flow(hass)
+    config_entry2.add_to_menuai(menuai)
+    result = await config_entry2.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "initial"
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=side_effect(),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_API_KEY: "1234567890",
@@ -807,15 +807,15 @@ async def test_reconfigure_flow_fails(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -823,7 +823,7 @@ async def test_reconfigure_flow_fails(
                 CONF_TO: "Uppsala C",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -843,7 +843,7 @@ async def test_reconfigure_flow_fails(
     ],
 )
 async def test_reconfigure_flow_fails_departures(
-    hass: HomeAssistant,
+    menuai: menuai,
     side_effect: Exception,
     p_error: dict[str, str],
     get_train_stations: list[StationInfoModel],
@@ -857,19 +857,19 @@ async def test_reconfigure_flow_fails_departures(
         version=2,
         minor_version=1,
     )
-    config_entry2.add_to_hass(hass)
-    result = await config_entry2.start_reconfigure_flow(hass)
+    config_entry2.add_to_menuai(menuai)
+    result = await config_entry2.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "initial"
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=side_effect(),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_API_KEY: "1234567890",
@@ -882,15 +882,15 @@ async def test_reconfigure_flow_fails_departures(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.async_setup_entry",
+            "menuai.components.trafikverket_train.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
@@ -898,7 +898,7 @@ async def test_reconfigure_flow_fails_departures(
                 CONF_TO: "Uppsala C",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"

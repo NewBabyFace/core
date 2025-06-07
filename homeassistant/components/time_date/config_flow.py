@@ -9,22 +9,22 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import EntityPlatform
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.components import websocket_api
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import EntityPlatform
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.setup import async_prepare_setup_platform
+from menuai.setup import async_prepare_setup_platform
 
 from .const import CONF_DISPLAY_OPTIONS, DOMAIN, OPTION_TYPES
 from .sensor import TimeDateSensor
@@ -48,8 +48,8 @@ async def validate_input(
     handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
 ) -> dict[str, Any]:
     """Validate rest setup."""
-    hass = handler.parent_handler.hass
-    if hass.config.time_zone is None:
+    menuai = handler.parent_handler.menuai
+    if menuai.config.time_zone is None:
         raise SchemaFlowError("timezone_not_exist")
     return user_input
 
@@ -77,9 +77,9 @@ class TimeDateConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
         self._async_abort_entries_match(dict(options))
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
 @websocket_api.websocket_command(
@@ -92,7 +92,7 @@ class TimeDateConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
 )
 @websocket_api.async_response
 async def ws_start_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -100,9 +100,9 @@ async def ws_start_preview(
     validated = USER_SCHEMA(msg["user_input"])
 
     # Create an EntityPlatform, needed for name translations
-    platform = await async_prepare_setup_platform(hass, {}, SENSOR_DOMAIN, DOMAIN)
+    platform = await async_prepare_setup_platform(menuai, {}, SENSOR_DOMAIN, DOMAIN)
     entity_platform = EntityPlatform(
-        hass=hass,
+        menuai=menuai,
         logger=_LOGGER,
         domain=SENSOR_DOMAIN,
         platform_name=DOMAIN,
@@ -122,7 +122,7 @@ async def ws_start_preview(
         )
 
     preview_entity = TimeDateSensor(validated[CONF_DISPLAY_OPTIONS])
-    preview_entity.hass = hass
+    preview_entity.menuai = menuai
     preview_entity.platform = entity_platform
 
     connection.send_result(msg["id"])

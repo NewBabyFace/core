@@ -5,9 +5,9 @@ https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/p
 
 import ast
 
-from homeassistant.const import Platform
-from script.hassfest import ast_parse_module
-from script.hassfest.model import Config, Integration
+from menuai.const import Platform
+from script.menuaifest import ast_parse_module
+from script.menuaifest.model import Config, Integration
 
 
 def _has_parallel_updates_defined(module: ast.Module) -> bool:

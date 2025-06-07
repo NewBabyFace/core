@@ -6,13 +6,13 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
-from homeassistant.components.trace import (
+from menuai.components.trace import (
     CONF_STORED_TRACES,
     ActionTrace,
     async_store_trace,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Context, menuai
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -49,7 +49,7 @@ class AutomationTrace(ActionTrace):
 
 @contextmanager
 def trace_automation(
-    hass: HomeAssistant,
+    menuai: menuai,
     automation_id: str | None,
     config: ConfigType | None,
     blueprint_inputs: ConfigType | None,
@@ -58,7 +58,7 @@ def trace_automation(
 ) -> Generator[AutomationTrace]:
     """Trace action execution of automation with automation_id."""
     trace = AutomationTrace(automation_id, config, blueprint_inputs, context)
-    async_store_trace(hass, trace, trace_config[CONF_STORED_TRACES])
+    async_store_trace(menuai, trace, trace_config[CONF_STORED_TRACES])
 
     try:
         yield trace

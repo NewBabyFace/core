@@ -10,9 +10,9 @@ from psutil import NoSuchProcess, Process
 from psutil._common import sdiskpart, sdiskusage, shwtemp, snetio, snicaddr, sswap
 import pytest
 
-from homeassistant.components.systemmonitor.const import DOMAIN
-from homeassistant.components.systemmonitor.coordinator import VirtualMemory
-from homeassistant.core import HomeAssistant
+from menuai.components.systemmonitor.const import DOMAIN
+from menuai.components.systemmonitor.coordinator import VirtualMemory
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -45,7 +45,7 @@ class MockProcess(Process):
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setup entry."""
     with patch(
-        "homeassistant.components.systemmonitor.async_setup_entry",
+        "menuai.components.systemmonitor.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -73,16 +73,16 @@ def mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def mock_added_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> MockConfigEntry:
     """Mock ConfigEntry that's been added to HA."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert DOMAIN in hass.config_entries.async_domains()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert DOMAIN in menuai.config_entries.async_domains()
     return mock_config_entry
 
 
@@ -98,7 +98,7 @@ def mock_process() -> list[MockProcess]:
 def mock_psutil(mock_process: list[MockProcess]) -> Generator:
     """Mock psutil."""
     with patch(
-        "homeassistant.components.systemmonitor.ha_psutil.PsutilWrapper",
+        "menuai.components.systemmonitor.ha_psutil.PsutilWrapper",
     ) as psutil_wrapper:
         _wrapper = psutil_wrapper.return_value
         _wrapper.psutil = NonCallableMock()
@@ -194,8 +194,8 @@ def mock_os() -> Generator:
         return path != "/etc/hosts"
 
     with (
-        patch("homeassistant.components.systemmonitor.coordinator.os") as mock_os,
-        patch("homeassistant.components.systemmonitor.util.os") as mock_os_util,
+        patch("menuai.components.systemmonitor.coordinator.os") as mock_os,
+        patch("menuai.components.systemmonitor.util.os") as mock_os_util,
     ):
         mock_os_util.name = "nt"
         mock_os.getloadavg.return_value = (1, 2, 3)

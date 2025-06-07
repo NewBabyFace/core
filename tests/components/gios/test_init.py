@@ -3,29 +3,29 @@
 import json
 from unittest.mock import patch
 
-from homeassistant.components.air_quality import DOMAIN as AIR_QUALITY_PLATFORM
-from homeassistant.components.gios.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.air_quality import DOMAIN as AIR_QUALITY_PLATFORM
+from menuai.components.gios.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import STATIONS, init_integration
 
 from tests.common import MockConfigEntry, async_load_fixture
 
 
-async def test_async_setup_entry(hass: HomeAssistant) -> None:
+async def test_async_setup_entry(menuai: menuai) -> None:
     """Test a successful setup entry."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get("sensor.home_pm2_5")
+    state = menuai.states.get("sensor.home_pm2_5")
     assert state is not None
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "4"
 
 
-async def test_config_not_ready(hass: HomeAssistant) -> None:
+async def test_config_not_ready(menuai: menuai) -> None:
     """Test for setup failure if connection to GIOS is missing."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -35,30 +35,30 @@ async def test_config_not_ready(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.gios.coordinator.Gios._get_stations",
+        "menuai.components.gios.coordinator.Gios._get_stations",
         side_effect=ConnectionError(),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
         assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test successful unload of entry."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
 
 
 async def test_migrate_device_and_config_entry(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test device_info identifiers and config entry migration."""
     config_entry = MockConfigEntry(
@@ -71,36 +71,36 @@ async def test_migrate_device_and_config_entry(
         },
     )
 
-    indexes = json.loads(await async_load_fixture(hass, "indexes.json", DOMAIN))
-    station = json.loads(await async_load_fixture(hass, "station.json", DOMAIN))
-    sensors = json.loads(await async_load_fixture(hass, "sensors.json", DOMAIN))
+    indexes = json.loads(await async_load_fixture(menuai, "indexes.json", DOMAIN))
+    station = json.loads(await async_load_fixture(menuai, "station.json", DOMAIN))
+    sensors = json.loads(await async_load_fixture(menuai, "sensors.json", DOMAIN))
 
     with (
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_stations",
+            "menuai.components.gios.coordinator.Gios._get_stations",
             return_value=STATIONS,
         ),
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_station",
+            "menuai.components.gios.coordinator.Gios._get_station",
             return_value=station,
         ),
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_all_sensors",
+            "menuai.components.gios.coordinator.Gios._get_all_sensors",
             return_value=sensors,
         ),
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_indexes",
+            "menuai.components.gios.coordinator.Gios._get_indexes",
             return_value=indexes,
         ),
     ):
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
         device_entry = device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id, identifiers={(DOMAIN, 123)}
         )
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         migrated_device_entry = device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id, identifiers={(DOMAIN, "123")}
@@ -109,7 +109,7 @@ async def test_migrate_device_and_config_entry(
 
 
 async def test_remove_air_quality_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test remove air_quality entities from registry."""
     entity_registry.async_get_or_create(
@@ -120,7 +120,7 @@ async def test_remove_air_quality_entities(
         disabled_by=None,
     )
 
-    await init_integration(hass)
+    await init_integration(menuai)
 
     entry = entity_registry.async_get("air_quality.home")
     assert entry is None

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.homeworks.const import (
+from menuai.components.homeworks.const import (
     CONF_ADDR,
     CONF_BUTTONS,
     CONF_CONTROLLER_ID,
@@ -17,7 +17,7 @@ from homeassistant.components.homeworks.const import (
     CONF_RELEASE_DELAY,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -111,10 +111,10 @@ def mock_homeworks() -> Generator[MagicMock]:
     """Return a mocked Homeworks client."""
     with (
         patch(
-            "homeassistant.components.homeworks.Homeworks", autospec=True
+            "menuai.components.homeworks.Homeworks", autospec=True
         ) as homeworks_mock,
         patch(
-            "homeassistant.components.homeworks.config_flow.Homeworks",
+            "menuai.components.homeworks.config_flow.Homeworks",
             new=homeworks_mock,
         ),
     ):
@@ -125,6 +125,6 @@ def mock_homeworks() -> Generator[MagicMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.homeworks.async_setup_entry", return_value=True
+        "menuai.components.homeworks.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

@@ -8,7 +8,7 @@ from typing import Any, cast
 from propcache.api import cached_property
 from pyoverkiz.enums import OverkizCommand, OverkizCommandParam, OverkizState
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     PRESET_NONE,
@@ -16,7 +16,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_HALVES
+from menuai.const import ATTR_TEMPERATURE, PRECISION_HALVES
 
 from ..coordinator import OverkizDataUpdateCoordinator
 from ..executor import OverkizExecutor

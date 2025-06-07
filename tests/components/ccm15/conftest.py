@@ -11,7 +11,7 @@ import pytest
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.ccm15.async_setup_entry", return_value=True
+        "menuai.components.ccm15.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -25,7 +25,7 @@ def ccm15_device() -> Generator[None]:
     }
     device_state = CCM15DeviceState(devices=ccm15_devices)
     with patch(
-        "homeassistant.components.ccm15.coordinator.CCM15Device.get_status_async",
+        "menuai.components.ccm15.coordinator.CCM15Device.get_status_async",
         return_value=device_state,
     ):
         yield
@@ -36,7 +36,7 @@ def network_failure_ccm15_device() -> Generator[None]:
     """Mock empty set of ccm15 device."""
     device_state = CCM15DeviceState(devices={})
     with patch(
-        "homeassistant.components.ccm15.coordinator.CCM15Device.get_status_async",
+        "menuai.components.ccm15.coordinator.CCM15Device.get_status_async",
         return_value=device_state,
     ):
         yield

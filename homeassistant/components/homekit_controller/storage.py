@@ -7,8 +7,8 @@ from typing import Any
 
 from aiohomekit.characteristic_cache import Pairing, StorageLayout
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.storage import Store
+from menuai.core import menuai, callback
+from menuai.helpers.storage import Store
 
 from .const import DOMAIN, ENTITY_MAP
 
@@ -33,11 +33,11 @@ class EntityMapStorage:
     very slow for these devices.
     """
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Create a new entity map store."""
-        self.hass = hass
+        self.menuai = menuai
         self.store = Store[StorageLayout](
-            hass, ENTITY_MAP_STORAGE_VERSION, ENTITY_MAP_STORAGE_KEY
+            menuai, ENTITY_MAP_STORAGE_VERSION, ENTITY_MAP_STORAGE_KEY
         )
         self.storage_data: dict[str, Pairing] = {}
 
@@ -100,11 +100,11 @@ class EntityMapStorage:
         return StorageLayout(pairings=self.storage_data)
 
 
-async def async_get_entity_storage(hass: HomeAssistant) -> EntityMapStorage:
+async def async_get_entity_storage(menuai: menuai) -> EntityMapStorage:
     """Get entity storage."""
-    if ENTITY_MAP in hass.data:
-        map_storage: EntityMapStorage = hass.data[ENTITY_MAP]
+    if ENTITY_MAP in menuai.data:
+        map_storage: EntityMapStorage = menuai.data[ENTITY_MAP]
         return map_storage
-    map_storage = hass.data[ENTITY_MAP] = EntityMapStorage(hass)
+    map_storage = menuai.data[ENTITY_MAP] = EntityMapStorage(menuai)
     await map_storage.async_initialize()
     return map_storage

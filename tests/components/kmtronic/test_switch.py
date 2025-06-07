@@ -3,18 +3,18 @@
 from datetime import timedelta
 from http import HTTPStatus
 
-from homeassistant.components.kmtronic.const import DOMAIN
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.kmtronic.const import DOMAIN
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_relay_on_off(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Tests the relay turns on correctly."""
 
@@ -29,9 +29,9 @@ async def test_relay_on_off(
 
     MockConfigEntry(
         domain=DOMAIN, data={"host": "1.1.1.1", "username": "foo", "password": "bar"}
-    ).add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    ).add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Mocks the response for turning a relay1 on
     aioclient_mock.get(
@@ -39,18 +39,18 @@ async def test_relay_on_off(
         text="",
     )
 
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {"entity_id": "switch.controller_1_1_1_1_relay_1"},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "on"
 
     # Mocks the response for turning a relay1 off
@@ -59,15 +59,15 @@ async def test_relay_on_off(
         text="",
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_off",
         {"entity_id": "switch.controller_1_1_1_1_relay_1"},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "off"
 
     # Mocks the response for turning a relay1 on
@@ -76,19 +76,19 @@ async def test_relay_on_off(
         text="",
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "toggle",
         {"entity_id": "switch.controller_1_1_1_1_relay_1"},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "on"
 
 
-async def test_update(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+async def test_update(menuai: menuai, aioclient_mock: AiohttpClientMocker) -> None:
     """Tests switch refreshes status periodically."""
     now = dt_util.utcnow()
     future = now + timedelta(minutes=10)
@@ -100,11 +100,11 @@ async def test_update(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) 
 
     MockConfigEntry(
         domain=DOMAIN, data={"host": "1.1.1.1", "username": "foo", "password": "bar"}
-    ).add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
+    ).add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "off"
 
     aioclient_mock.clear_requests()
@@ -112,15 +112,15 @@ async def test_update(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) 
         "http://1.1.1.1/status.xml",
         text="<response><relay0>1</relay0><relay1>1</relay1></response>",
     )
-    async_fire_time_changed(hass, future)
+    async_fire_time_changed(menuai, future)
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "on"
 
 
 async def test_failed_update(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Tests coordinator update fails."""
     now = dt_util.utcnow()
@@ -133,11 +133,11 @@ async def test_failed_update(
 
     MockConfigEntry(
         domain=DOMAIN, data={"host": "1.1.1.1", "username": "foo", "password": "bar"}
-    ).add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
+    ).add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "off"
 
     aioclient_mock.clear_requests()
@@ -146,10 +146,10 @@ async def test_failed_update(
         text="401 Unauthorized: Password required",
         status=HTTPStatus.UNAUTHORIZED,
     )
-    async_fire_time_changed(hass, future)
+    async_fire_time_changed(menuai, future)
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == STATE_UNAVAILABLE
 
     future += timedelta(minutes=10)
@@ -158,15 +158,15 @@ async def test_failed_update(
         "http://1.1.1.1/status.xml",
         exc=TimeoutError(),
     )
-    async_fire_time_changed(hass, future)
+    async_fire_time_changed(menuai, future)
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_relay_on_off_reversed(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Tests the relay turns on correctly when configured as reverse."""
 
@@ -179,9 +179,9 @@ async def test_relay_on_off_reversed(
         domain=DOMAIN,
         data={"host": "1.1.1.1", "username": "foo", "password": "bar"},
         options={"reverse": True},
-    ).add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    ).add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Mocks the response for turning a relay1 off
     aioclient_mock.get(
@@ -189,18 +189,18 @@ async def test_relay_on_off_reversed(
         text="",
     )
 
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "on"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_off",
         {"entity_id": "switch.controller_1_1_1_1_relay_1"},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "off"
 
     # Mocks the response for turning a relay1 off
@@ -209,13 +209,13 @@ async def test_relay_on_off_reversed(
         text="",
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {"entity_id": "switch.controller_1_1_1_1_relay_1"},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get("switch.controller_1_1_1_1_relay_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("switch.controller_1_1_1_1_relay_1")
     assert state.state == "on"

@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pykoplenti import ApiClient, ExtendedApiClient, SettingsData
 import pytest
 
-from homeassistant.components.kostal_plenticore.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.components.kostal_plenticore.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
 
 from tests.common import MockConfigEntry
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 def mock_apiclient() -> Generator[ApiClient]:
     """Return a mocked ApiClient class."""
     with patch(
-        "homeassistant.components.kostal_plenticore.coordinator.ExtendedApiClient",
+        "menuai.components.kostal_plenticore.coordinator.ExtendedApiClient",
         autospec=True,
     ) as mock_api_class:
         apiclient = MagicMock(spec=ExtendedApiClient)
@@ -28,7 +28,7 @@ def mock_apiclient() -> Generator[ApiClient]:
 
 
 async def test_plenticore_async_setup_g1(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_apiclient: ApiClient,
 ) -> None:
@@ -62,12 +62,12 @@ async def test_plenticore_async_setup_g1(
         }
     )
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    plenticore = hass.data[DOMAIN][mock_config_entry.entry_id]
+    plenticore = menuai.data[DOMAIN][mock_config_entry.entry_id]
 
     assert plenticore.device_info == DeviceInfo(
         configuration_url="http://192.168.1.2",
@@ -80,7 +80,7 @@ async def test_plenticore_async_setup_g1(
 
 
 async def test_plenticore_async_setup_g2(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_apiclient: ApiClient,
 ) -> None:
@@ -114,12 +114,12 @@ async def test_plenticore_async_setup_g2(
         }
     )
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    plenticore = hass.data[DOMAIN][mock_config_entry.entry_id]
+    plenticore = menuai.data[DOMAIN][mock_config_entry.entry_id]
 
     assert plenticore.device_info == DeviceInfo(
         configuration_url="http://192.168.1.2",

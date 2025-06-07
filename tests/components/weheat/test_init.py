@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from weheat.abstractions.discovery import HeatPumpDiscovery
 
-from homeassistant.components.weheat import UnauthorizedException
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.weheat import UnauthorizedException
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -18,7 +18,7 @@ from tests.test_util.aiohttp import ClientResponseError
 
 @pytest.mark.usefixtures("setup_credentials")
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_weheat_discover: AsyncMock,
     mock_weheat_heat_pump: AsyncMock,
     mock_heat_pump_info: HeatPumpDiscovery.HeatPumpInfo,
@@ -27,12 +27,12 @@ async def test_setup(
     """Test the Weheat setup."""
     mock_weheat_discover.return_value = [mock_heat_pump_info]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -47,7 +47,7 @@ async def test_setup(
     ],
 )
 async def test_setup_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_weheat_discover: AsyncMock,
     mock_weheat_heat_pump: AsyncMock,
     mock_heat_pump_info: HeatPumpDiscovery.HeatPumpInfo,
@@ -58,20 +58,20 @@ async def test_setup_fail(
     """Test the Weheat setup with invalid token setup."""
     with (
         patch(
-            "homeassistant.components.weheat.OAuth2Session.async_ensure_token_valid",
+            "menuai.components.weheat.OAuth2Session.async_ensure_token_valid",
             side_effect=ClientResponseError(
                 Mock(real_url="http://example.com"), None, status=setup_exception
             ),
         ),
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is expected_setup_state
 
 
 @pytest.mark.usefixtures("setup_credentials")
 async def test_setup_fail_discover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_weheat_discover: AsyncMock,
     mock_weheat_heat_pump: AsyncMock,
     mock_heat_pump_info: HeatPumpDiscovery.HeatPumpInfo,
@@ -80,6 +80,6 @@ async def test_setup_fail_discover(
     """Test the Weheat setup with and error from the heat pump discovery."""
     mock_weheat_discover.side_effect = UnauthorizedException()
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR

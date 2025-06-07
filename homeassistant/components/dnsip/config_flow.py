@@ -10,15 +10,15 @@ import aiodns
 from aiodns.error import DNSError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_NAME, CONF_PORT
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_NAME, CONF_PORT
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_HOSTNAME,

@@ -1,4 +1,4 @@
-"""Matter to Home Assistant adapter."""
+"""Matter to MenuAI adapter."""
 
 from __future__ import annotations
 
@@ -8,11 +8,11 @@ from chip.clusters import Objects as clusters
 from matter_server.client.models.device_types import BridgedNode
 from matter_server.common.models import EventType, ServerInfoMessage
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, ID_TYPE_DEVICE_ID, ID_TYPE_SERIAL, LOGGER
 from .discovery import async_discover_entities
@@ -32,17 +32,17 @@ def get_clean_name(name: str | None) -> str | None:
 
 
 class MatterAdapter:
-    """Connect Matter into Home Assistant."""
+    """Connect Matter into MenuAI."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         matter_client: MatterClient,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the adapter."""
         self.matter_client = matter_client
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.platform_handlers: dict[Platform, AddEntitiesCallback] = {}
         self.discovered_entities: set[str] = set()
@@ -82,7 +82,7 @@ class MatterAdapter:
                 node = self.matter_client.get_node(data["node_id"])
             except KeyError:
                 return  # race condition
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             endpoint = node.endpoints.get(data["endpoint_id"])
             if not endpoint:
                 return  # race condition
@@ -215,7 +215,7 @@ class MatterAdapter:
         else:
             model_id = str(product_id) if (product_id := basic_info.productID) else None
 
-        dr.async_get(self.hass).async_get_or_create(
+        dr.async_get(self.menuai).async_get_or_create(
             name=name,
             config_entry_id=self.config_entry.entry_id,
             identifiers=identifiers,

@@ -9,7 +9,7 @@ from datetime import timedelta
 import json
 from typing import Any
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -17,12 +17,12 @@ from homeassistant.components.media_player import (
     MediaType,
     RepeatMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ID, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import Throttle
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ID, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import Throttle
 
 from .browse_media import browse_node, browse_top_level
 from .const import DATA_INFO, DATA_VOLUMIO, DOMAIN
@@ -31,13 +31,13 @@ PLAYLIST_UPDATE_INTERVAL = timedelta(seconds=15)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Volumio media player platform."""
 
-    data = hass.data[DOMAIN][config_entry.entry_id]
+    data = menuai.data[DOMAIN][config_entry.entry_id]
     volumio = data[DATA_VOLUMIO]
     info = data[DATA_INFO]
     uid = config_entry.data[CONF_ID]

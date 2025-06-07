@@ -6,12 +6,12 @@ import asyncio
 import logging
 from typing import Any, NamedTuple
 
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
 
 _LOGGER = logging.getLogger(__name__)
 
-type NoParamCallback = HassJob[[], Any] | None
-type ActivityCallback = HassJob[[tuple], Any] | None
+type NoParamCallback = menuaiJob[[], Any] | None
+type ActivityCallback = menuaiJob[[tuple], Any] | None
 
 
 class HarmonyCallback(NamedTuple):
@@ -27,10 +27,10 @@ class HarmonyCallback(NamedTuple):
 class HarmonySubscriberMixin:
     """Base implementation for a subscriber."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize an subscriber."""
         super().__init__()
-        self._hass = hass
+        self._menuai = menuai
         self._subscriptions: list[HarmonyCallback] = []
         self._activity_lock = asyncio.Lock()
 
@@ -90,6 +90,6 @@ class HarmonySubscriberMixin:
         for subscription in self._subscriptions:
             if current_callback_job := getattr(subscription, callback_func_name):
                 if argument:
-                    self._hass.async_run_hass_job(current_callback_job, argument)
+                    self._menuai.async_run_menuai_job(current_callback_job, argument)
                 else:
-                    self._hass.async_run_hass_job(current_callback_job)
+                    self._menuai.async_run_menuai_job(current_callback_job)

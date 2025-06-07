@@ -14,9 +14,9 @@ from tesla_fleet_api.exceptions import (
 from tesla_fleet_api.teslemetry import Teslemetry
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, LOGGER
 
@@ -37,7 +37,7 @@ class TeslemetryConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_auth(self, user_input: Mapping[str, Any]) -> dict[str, str]:
         """Reusable Auth Helper."""
         teslemetry = Teslemetry(
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
             access_token=user_input[CONF_ACCESS_TOKEN],
         )
         try:

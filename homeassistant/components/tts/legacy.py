@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, final
 
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_ANNOUNCE,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -19,23 +19,23 @@ from homeassistant.components.media_player import (
     SERVICE_PLAY_MEDIA,
     MediaType,
 )
-from homeassistant.config import config_per_platform
-from homeassistant.const import (
+from menuai.config import config_per_platform
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DESCRIPTION,
     CONF_NAME,
     CONF_PLATFORM,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.service import async_set_service_schema
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.setup import (
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.service import async_set_service_schema
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.setup import (
     SetupPhases,
     async_prepare_setup_platform,
     async_start_setup,
 )
-from homeassistant.util.yaml import load_yaml_dict
+from menuai.util.yaml import load_yaml_dict
 
 from .const import (
     ATTR_CACHE,
@@ -98,12 +98,12 @@ SCHEMA_SERVICE_SAY = vol.Schema(
 
 
 async def async_setup_legacy(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> list[Coroutine[Any, Any, None]]:
     """Set up legacy text-to-speech providers."""
     # Load service descriptions from tts/services.yaml
     services_yaml = Path(__file__).parent / "services.yaml"
-    services_dict = await hass.async_add_executor_job(
+    services_dict = await menuai.async_add_executor_job(
         load_yaml_dict, str(services_yaml)
     )
 
@@ -116,32 +116,32 @@ async def async_setup_legacy(
         if p_config is None:
             p_config = {}
 
-        platform = await async_prepare_setup_platform(hass, config, DOMAIN, p_type)
+        platform = await async_prepare_setup_platform(menuai, config, DOMAIN, p_type)
         if platform is None:
             _LOGGER.error("Unknown text-to-speech platform specified")
             return
 
         try:
             with async_start_setup(
-                hass,
+                menuai,
                 integration=p_type,
                 group=str(id(p_config)),
                 phase=SetupPhases.PLATFORM_SETUP,
             ):
                 if hasattr(platform, "async_get_engine"):
                     provider = await platform.async_get_engine(
-                        hass, p_config, discovery_info
+                        menuai, p_config, discovery_info
                     )
                 else:
-                    provider = await hass.async_add_executor_job(
-                        platform.get_engine, hass, p_config, discovery_info
+                    provider = await menuai.async_add_executor_job(
+                        platform.get_engine, menuai, p_config, discovery_info
                     )
 
                 if provider is None:
                     _LOGGER.error("Error setting up platform: %s", p_type)
                     return
 
-                hass.data[DATA_TTS_MANAGER].async_register_legacy_engine(
+                menuai.data[DATA_TTS_MANAGER].async_register_legacy_engine(
                     p_type, provider, p_config
                 )
         except Exception:
@@ -152,13 +152,13 @@ async def async_setup_legacy(
             """Service handle for say."""
             entity_ids = service.data[ATTR_ENTITY_ID]
 
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN_MP,
                 SERVICE_PLAY_MEDIA,
                 {
                     ATTR_ENTITY_ID: entity_ids,
                     ATTR_MEDIA_CONTENT_ID: generate_media_source_id(
-                        hass,
+                        menuai,
                         engine=p_type,
                         message=service.data[ATTR_MESSAGE],
                         language=service.data.get(ATTR_LANGUAGE),
@@ -173,7 +173,7 @@ async def async_setup_legacy(
             )
 
         service_name = p_config.get(CONF_SERVICE_NAME, f"{p_type}_{SERVICE_SAY}")
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN, service_name, async_say_handle, schema=SCHEMA_SERVICE_SAY
         )
 
@@ -185,7 +185,7 @@ async def async_setup_legacy(
             ),
             CONF_FIELDS: services_dict[SERVICE_SAY][CONF_FIELDS],
         }
-        async_set_service_schema(hass, DOMAIN, service_name, service_desc)
+        async_set_service_schema(menuai, DOMAIN, service_name, service_desc)
 
     async def async_platform_discovered(
         platform: str, info: dict[str, Any] | None
@@ -193,7 +193,7 @@ async def async_setup_legacy(
         """Handle for discovered platform."""
         await async_setup_platform(platform, discovery_info=info)
 
-    discovery.async_listen_platform(hass, DOMAIN, async_platform_discovered)
+    discovery.async_listen_platform(menuai, DOMAIN, async_platform_discovered)
 
     return [
         async_setup_platform(p_type, p_config)
@@ -205,7 +205,7 @@ async def async_setup_legacy(
 class Provider:
     """Represent a single TTS provider."""
 
-    hass: HomeAssistant | None = None
+    menuai: menuai | None = None
     name: str | None = None
     has_entity: bool = False
 
@@ -248,8 +248,8 @@ class Provider:
         Return a tuple of file extension and data as bytes.
         """
         if TYPE_CHECKING:
-            assert self.hass
-        return await self.hass.async_add_executor_job(
+            assert self.menuai
+        return await self.menuai.async_add_executor_job(
             partial(self.get_tts_audio, message, language, options=options)
         )
 

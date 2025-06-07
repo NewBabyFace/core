@@ -7,10 +7,10 @@ import logging
 
 import upcloud_api
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class UpCloudDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         config_entry: UpCloudConfigEntry,
         cloud_manager: upcloud_api.CloudManager,
@@ -34,7 +34,7 @@ class UpCloudDataUpdateCoordinator(
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{username}@UpCloud",
@@ -51,7 +51,7 @@ class UpCloudDataUpdateCoordinator(
     async def _async_update_data(self) -> dict[str, upcloud_api.Server]:
         return {
             x.uuid: x
-            for x in await self.hass.async_add_executor_job(
+            for x in await self.menuai.async_add_executor_job(
                 self.cloud_manager.get_servers
             )
         }

@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import (
     MULTI_FACTOR_AUTH_MODULE_SCHEMA,
@@ -31,9 +31,9 @@ class InsecureExampleModule(MultiFactorAuthModule):
 
     DEFAULT_TITLE = "Insecure Personal Identify Number"
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, Any]) -> None:
         """Initialize the user data store."""
-        super().__init__(hass, config)
+        super().__init__(menuai, config)
         self._data = config["data"]
 
     @property

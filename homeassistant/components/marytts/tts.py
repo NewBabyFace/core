@@ -5,13 +5,13 @@ from __future__ import annotations
 from speak2mary import MaryTTS
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
 )
-from homeassistant.const import CONF_EFFECT, CONF_HOST, CONF_PORT
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_EFFECT, CONF_HOST, CONF_PORT
+from menuai.helpers import config_validation as cv
 
 CONF_VOICE = "voice"
 CONF_CODEC = "codec"
@@ -44,17 +44,17 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_engine(hass, config, discovery_info=None):
+def get_engine(menuai, config, discovery_info=None):
     """Set up MaryTTS speech component."""
-    return MaryTTSProvider(hass, config)
+    return MaryTTSProvider(menuai, config)
 
 
 class MaryTTSProvider(Provider):
     """MaryTTS speech api provider."""
 
-    def __init__(self, hass, conf):
+    def __init__(self, menuai, conf):
         """Init MaryTTS TTS service."""
-        self.hass = hass
+        self.menuai = menuai
         self._mary = MaryTTS(
             conf.get(CONF_HOST),
             conf.get(CONF_PORT),

@@ -6,10 +6,10 @@ import logging
 from keba_kecontact.connection import KebaKeContact
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,30 +55,30 @@ _SERVICE_MAP = {
 }
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Check connectivity and version of KEBA charging station."""
     host = config[DOMAIN][CONF_HOST]
     rfid = config[DOMAIN][CONF_RFID]
     refresh_interval = config[DOMAIN][CONF_FS_INTERVAL]
-    keba = KebaHandler(hass, host, rfid, refresh_interval)
-    hass.data[DOMAIN] = keba
+    keba = KebaHandler(menuai, host, rfid, refresh_interval)
+    menuai.data[DOMAIN] = keba
 
     # Wait for KebaHandler setup complete (initial values loaded)
     if not await keba.setup():
         _LOGGER.error("Could not find a charging station at %s", host)
         return False
 
-    # Set failsafe mode at start up of Home Assistant
+    # Set failsafe mode at start up of MenuAI
     failsafe = config[DOMAIN][CONF_FS]
     timeout = config[DOMAIN][CONF_FS_TIMEOUT] if failsafe else 0
     fallback = config[DOMAIN][CONF_FS_FALLBACK] if failsafe else 0
     persist = config[DOMAIN][CONF_FS_PERSIST] if failsafe else 0
     try:
-        hass.loop.create_task(keba.set_failsafe(timeout, fallback, persist))
+        menuai.loop.create_task(keba.set_failsafe(timeout, fallback, persist))
     except ValueError as ex:
         _LOGGER.warning("Could not set failsafe mode %s", ex)
 
-    # Register services to hass
+    # Register services to menuai
     async def execute_service(call: ServiceCall) -> None:
         """Execute a service to KEBA charging station.
 
@@ -90,12 +90,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         await function_call(call.data)
 
     for service in _SERVICE_MAP:
-        hass.services.async_register(DOMAIN, service, execute_service)
+        menuai.services.async_register(DOMAIN, service, execute_service)
 
     # Load components
     for platform in PLATFORMS:
-        hass.async_create_task(
-            discovery.async_load_platform(hass, platform, DOMAIN, {}, config)
+        menuai.async_create_task(
+            discovery.async_load_platform(menuai, platform, DOMAIN, {}, config)
         )
 
     # Start periodic polling of charging station data
@@ -107,12 +107,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class KebaHandler(KebaKeContact):
     """Representation of a KEBA charging station connection."""
 
-    def __init__(self, hass, host, rfid, refresh_interval):
+    def __init__(self, menuai, host, rfid, refresh_interval):
         """Initialize charging station connection."""
-        super().__init__(host, self.hass_callback)
+        super().__init__(host, self.menuai_callback)
 
         self._update_listeners = []
-        self._hass = hass
+        self._menuai = menuai
         self.rfid = rfid
         self.device_name = "keba"  # correct device name will be set in setup()
         self.device_id = "keba_wallbox_"  # correct device id will be set in setup()
@@ -124,7 +124,7 @@ class KebaHandler(KebaKeContact):
 
     def start_periodic_request(self):
         """Start periodic data polling."""
-        self._polling_task = self._hass.loop.create_task(self._periodic_request())
+        self._polling_task = self._menuai.loop.create_task(self._periodic_request())
 
     async def _periodic_request(self):
         """Send  periodic update requests."""
@@ -142,7 +142,7 @@ class KebaHandler(KebaKeContact):
             await asyncio.sleep(self._refresh_interval)
 
         _LOGGER.debug("Periodic data request rescheduled")
-        self._polling_task = self._hass.loop.create_task(self._periodic_request())
+        self._polling_task = self._menuai.loop.create_task(self._periodic_request())
 
     async def setup(self, loop=None):
         """Initialize KebaHandler object."""
@@ -160,7 +160,7 @@ class KebaHandler(KebaKeContact):
 
         return False
 
-    def hass_callback(self, data):
+    def menuai_callback(self, data):
         """Handle component notification via callback."""
 
         # Inform entities about updated values
@@ -173,7 +173,7 @@ class KebaHandler(KebaKeContact):
         _LOGGER.debug("Fast polling enabled")
         self._fast_polling_count = 0
         self._polling_task.cancel()
-        self._polling_task = self._hass.loop.create_task(self._periodic_request())
+        self._polling_task = self._menuai.loop.create_task(self._periodic_request())
 
     def add_update_listener(self, listener):
         """Add a listener for update notifications."""

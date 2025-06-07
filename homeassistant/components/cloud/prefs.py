@@ -6,18 +6,18 @@ from collections.abc import Callable, Coroutine
 from typing import Any
 import uuid
 
-from hass_nabucasa.voice import MAP_VOICE, Gender
+from menuai_nabucasa.voice import MAP_VOICE, Gender
 
-from homeassistant.auth.const import GROUP_ID_ADMIN
-from homeassistant.auth.models import User
-from homeassistant.components import webhook
-from homeassistant.components.google_assistant.http import (
+from menuai.auth.const import GROUP_ID_ADMIN
+from menuai.auth.models import User
+from menuai.components import webhook
+from menuai.components.google_assistant.http import (
     async_get_users as async_get_google_assistant_users,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.util.logging import async_create_catching_coro
+from menuai.core import menuai, callback
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.util.logging import async_create_catching_coro
 
 from .const import (
     DEFAULT_ALEXA_REPORT_STATE,
@@ -72,7 +72,7 @@ class CloudPreferencesStore(Store):
                 return False
 
             # If our user is in the Google store, we're connected
-            return cur_username in await async_get_google_assistant_users(self.hass)
+            return cur_username in await async_get_google_assistant_users(self.menuai)
 
         if old_major_version == 1:
             if old_minor_version < 2:
@@ -112,11 +112,11 @@ class CloudPreferences:
 
     _prefs: dict[str, Any]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize cloud prefs."""
-        self._hass = hass
+        self._menuai = menuai
         self._store = CloudPreferencesStore(
-            hass, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
+            menuai, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
         )
         self._listeners: list[
             Callable[[CloudPreferences], Coroutine[Any, Any, None]]
@@ -215,7 +215,7 @@ class CloudPreferences:
             user = await self._load_cloud_user()
 
             if user is not None:
-                await self._hass.auth.async_remove_user(user)
+                await self._menuai.auth.async_remove_user(user)
                 await self._save_prefs({**self._prefs, PREF_CLOUD_USER: None})
             return False
 
@@ -375,14 +375,14 @@ class CloudPreferences:
         return cloud_ice_servers_enabled
 
     async def get_cloud_user(self) -> str:
-        """Return ID of Home Assistant Cloud system user."""
+        """Return ID of MenuAI Cloud system user."""
         user = await self._load_cloud_user()
 
         if user:
             return user.id
 
-        user = await self._hass.auth.async_create_system_user(
-            "Home Assistant Cloud", group_ids=[GROUP_ID_ADMIN], local_only=True
+        user = await self._menuai.auth.async_create_system_user(
+            "MenuAI Cloud", group_ids=[GROUP_ID_ADMIN], local_only=True
         )
         assert user is not None
         await self.async_update(cloud_user=user.id)
@@ -395,7 +395,7 @@ class CloudPreferences:
 
         # Fetch the user. It can happen that the user no longer exists if
         # an image was restored without restoring the cloud prefs.
-        return await self._hass.auth.async_get_user(user_id)
+        return await self._menuai.auth.async_get_user(user_id)
 
     async def _save_prefs(self, prefs: dict[str, Any]) -> None:
         """Save preferences to disk."""
@@ -406,7 +406,7 @@ class CloudPreferences:
         await self._store.async_save(self._prefs)
 
         for listener in self._listeners:
-            self._hass.async_create_task(async_create_catching_coro(listener(self)))
+            self._menuai.async_create_task(async_create_catching_coro(listener(self)))
 
     @callback
     @staticmethod

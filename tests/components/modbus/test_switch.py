@@ -6,8 +6,8 @@ from unittest import mock
 from pymodbus.exceptions import ModbusException
 import pytest
 
-from homeassistant.components.homeassistant import SERVICE_UPDATE_ENTITY
-from homeassistant.components.modbus.const import (
+from menuai.components.menuai import SERVICE_UPDATE_ENTITY
+from menuai.components.modbus.const import (
     CALL_TYPE_COIL,
     CALL_TYPE_DISCRETE,
     CALL_TYPE_REGISTER_HOLDING,
@@ -21,8 +21,8 @@ from homeassistant.components.modbus.const import (
     CONF_WRITE_TYPE,
     MODBUS_DOMAIN,
 )
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_ADDRESS,
     CONF_COMMAND_OFF,
@@ -40,9 +40,9 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, State
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai, State
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .conftest import TEST_ENTITY_NAME, ReadResult
 
@@ -199,9 +199,9 @@ ENTITY_ID4 = f"{ENTITY_ID}_4"
         },
     ],
 )
-async def test_config_switch(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_switch(menuai: menuai, mock_modbus) -> None:
     """Run configurationtest for switch."""
-    assert SWITCH_DOMAIN in hass.config.components
+    assert SWITCH_DOMAIN in menuai.config.components
 
 
 @pytest.mark.parametrize(
@@ -276,9 +276,9 @@ async def test_config_switch(hass: HomeAssistant, mock_modbus) -> None:
         ),
     ],
 )
-async def test_all_switch(hass: HomeAssistant, mock_do_cycle, expected) -> None:
+async def test_all_switch(menuai: menuai, mock_do_cycle, expected) -> None:
     """Run test for given config."""
-    assert hass.states.get(ENTITY_ID).state == expected
+    assert menuai.states.get(ENTITY_ID).state == expected
 
 
 @pytest.mark.parametrize(
@@ -301,10 +301,10 @@ async def test_all_switch(hass: HomeAssistant, mock_do_cycle, expected) -> None:
     ],
 )
 async def test_restore_state_switch(
-    hass: HomeAssistant, mock_test_state, mock_modbus
+    menuai: menuai, mock_test_state, mock_modbus
 ) -> None:
     """Run test for sensor restore state."""
-    assert hass.states.get(ENTITY_ID).state == mock_test_state[0].state
+    assert menuai.states.get(ENTITY_ID).state == mock_test_state[0].state
 
 
 @pytest.mark.parametrize(
@@ -344,84 +344,84 @@ async def test_restore_state_switch(
     ],
 )
 async def test_switch_service_turn(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_modbus,
 ) -> None:
     """Run test for service turn_on/turn_off."""
-    assert MODBUS_DOMAIN in hass.config.components
+    assert MODBUS_DOMAIN in menuai.config.components
 
-    assert hass.states.get(ENTITY_ID).state == STATE_OFF
-    await hass.services.async_call(
+    assert menuai.states.get(ENTITY_ID).state == STATE_OFF
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_ON
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_ON
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_OFF
 
     mock_modbus.read_holding_registers.return_value = ReadResult([0x01])
-    assert hass.states.get(ENTITY_ID2).state == STATE_OFF
-    await hass.services.async_call(
+    assert menuai.states.get(ENTITY_ID2).state == STATE_OFF
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID2}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID2).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID2).state == STATE_ON
     mock_modbus.read_holding_registers.return_value = ReadResult([0x00])
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID2}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID2).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID2).state == STATE_OFF
     mock_modbus.read_holding_registers.return_value = ReadResult([0x03])
-    assert hass.states.get(ENTITY_ID3).state == STATE_OFF
-    await hass.services.async_call(
+    assert menuai.states.get(ENTITY_ID3).state == STATE_OFF
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID3}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID3).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID3).state == STATE_ON
     mock_modbus.read_holding_registers.return_value = ReadResult([0x00])
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID3}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID3).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID3).state == STATE_OFF
 
     mock_modbus.read_holding_registers.return_value = ReadResult([0x03])
-    assert hass.states.get(ENTITY_ID4).state == STATE_OFF
-    await hass.services.async_call(
+    assert menuai.states.get(ENTITY_ID4).state == STATE_OFF
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID4}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID4).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID4).state == STATE_ON
     mock_modbus.read_holding_registers.return_value = ReadResult([0x00])
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID4}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID4).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID4).state == STATE_OFF
 
     mock_modbus.write_register.side_effect = ModbusException("fail write_")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID2}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID2).state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID2).state == STATE_UNAVAILABLE
     mock_modbus.write_coil.side_effect = ModbusException("fail write_")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_UNAVAILABLE
     mock_modbus.write_register.side_effect = ModbusException("fail write_")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID3}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID3).state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID3).state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -459,23 +459,23 @@ async def test_switch_service_turn(
         },
     ],
 )
-async def test_service_switch_update(hass: HomeAssistant, mock_modbus_ha) -> None:
-    """Run test for service homeassistant.update_entity."""
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+async def test_service_switch_update(menuai: menuai, mock_modbus_ha) -> None:
+    """Run test for service menuai.update_entity."""
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    assert hass.states.get(ENTITY_ID).state == STATE_OFF
+    assert menuai.states.get(ENTITY_ID).state == STATE_OFF
     mock_modbus_ha.read_coils.return_value = ReadResult([0x01])
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    assert hass.states.get(ENTITY_ID).state == STATE_ON
+    assert menuai.states.get(ENTITY_ID).state == STATE_ON
 
 
 @pytest.mark.parametrize(
@@ -496,31 +496,31 @@ async def test_service_switch_update(hass: HomeAssistant, mock_modbus_ha) -> Non
         },
     ],
 )
-async def test_delay_switch(hass: HomeAssistant, mock_modbus) -> None:
+async def test_delay_switch(menuai: menuai, mock_modbus) -> None:
     """Run test for switch verify delay."""
     mock_modbus.read_holding_registers.return_value = ReadResult([0x01])
     now = dt_util.utcnow()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_OFF
     now = now + timedelta(seconds=2)
-    with mock.patch("homeassistant.helpers.event.dt_util.utcnow", return_value=now):
-        async_fire_time_changed(hass, now)
-        await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_ON
+    with mock.patch("menuai.helpers.event.dt_util.utcnow", return_value=now):
+        async_fire_time_changed(menuai, now)
+        await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_ON
 
 
 async def test_no_discovery_info_switch(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup without discovery info."""
-    assert SWITCH_DOMAIN not in hass.config.components
+    assert SWITCH_DOMAIN not in menuai.config.components
     assert await async_setup_component(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         {SWITCH_DOMAIN: {CONF_PLATFORM: MODBUS_DOMAIN}},
     )
-    await hass.async_block_till_done()
-    assert SWITCH_DOMAIN in hass.config.components
+    await menuai.async_block_till_done()
+    assert SWITCH_DOMAIN in menuai.config.components

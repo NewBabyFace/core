@@ -7,24 +7,24 @@ from deebot_client.device import Device
 from deebot_client.events.map import CachedMapInfoEvent, MapChangedEvent
 from deebot_client.map import Map
 
-from homeassistant.components.image import ImageEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.image import ImageEntity
+from menuai.core import menuai
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EcovacsConfigEntry
 from .entity import EcovacsEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcovacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add entities for passed config_entry in HA."""
     controller = config_entry.runtime_data
     entities = [
-        EcovacsMap(device, caps, hass)
+        EcovacsMap(device, caps, menuai)
         for device in controller.devices
         if (caps := device.capabilities.map)
     ]
@@ -45,10 +45,10 @@ class EcovacsMap(
         self,
         device: Device,
         capability: CapabilityMap,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> None:
         """Initialize entity."""
-        super().__init__(device, capability, hass=hass)
+        super().__init__(device, capability, menuai=menuai)
         self._attr_extra_state_attributes = {}
         self._map = cast(Map, self._device.map)
 
@@ -64,9 +64,9 @@ class EcovacsMap(
 
         return None
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_info(event: CachedMapInfoEvent) -> None:
             self._attr_extra_state_attributes["map_name"] = event.name

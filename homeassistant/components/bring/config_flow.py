@@ -14,10 +14,10 @@ from bring_api import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -134,7 +134,7 @@ class BringConfigFlow(ConfigFlow, domain=DOMAIN):
         """Auth Helper."""
 
         errors: dict[str, str] = {}
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         bring = Bring(session, user_input[CONF_EMAIL], user_input[CONF_PASSWORD])
 
         try:

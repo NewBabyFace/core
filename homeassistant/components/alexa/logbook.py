@@ -3,19 +3,19 @@
 from collections.abc import Callable
 from typing import Any
 
-from homeassistant.components.logbook import (
+from menuai.components.logbook import (
     LOGBOOK_ENTRY_ENTITY_ID,
     LOGBOOK_ENTRY_MESSAGE,
     LOGBOOK_ENTRY_NAME,
 )
-from homeassistant.core import Event, HomeAssistant, callback
+from menuai.core import Event, menuai, callback
 
 from .const import DOMAIN, EVENT_ALEXA_SMART_HOME
 
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[[str, str, Callable[[Event], dict[str, str]]], None],
 ) -> None:
     """Describe logbook events."""
@@ -26,7 +26,7 @@ def async_describe_events(
         data = event.data
 
         if entity_id := data["request"].get("entity_id"):
-            state = hass.states.get(entity_id)
+            state = menuai.states.get(entity_id)
             name = state.name if state else entity_id
             message = (
                 "sent command"

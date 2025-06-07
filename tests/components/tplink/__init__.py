@@ -22,15 +22,15 @@ from kasa.smart.modules.clean import AreaUnit, Clean, ErrorCode, Status
 from kasa.smartcam.modules.camera import LOCAL_STREAMING_PORT, Camera
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
-from homeassistant.components.tplink.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.translation import async_get_translations
-from homeassistant.helpers.typing import UNDEFINED
-from homeassistant.setup import async_setup_component
+from menuai.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from menuai.components.tplink.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.translation import async_get_translations
+from menuai.helpers.typing import UNDEFINED
+from menuai.setup import async_setup_component
 
 from .const import (
     ALIAS,
@@ -64,23 +64,23 @@ FIXTURE_ENUM_TYPES = {"CleanErrorCode": ErrorCode, "CleanAreaUnit": AreaUnit}
 
 
 async def setup_platform_for_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, platform: Platform, device: Device
+    menuai: menuai, config_entry: ConfigEntry, platform: Platform, device: Device
 ):
     """Set up a single tplink platform with a device."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
-        patch("homeassistant.components.tplink.PLATFORMS", [platform]),
+        patch("menuai.components.tplink.PLATFORMS", [platform]),
         _patch_discovery(device=device),
         _patch_connect(device=device),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
         # Good practice to wait background tasks in tests see PR #112726
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def snapshot_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
@@ -100,7 +100,7 @@ async def snapshot_platform(
         "Please limit the loaded platforms to 1 platform."
     )
 
-    translations = await async_get_translations(hass, "en", "entity", [DOMAIN])
+    translations = await async_get_translations(menuai, "en", "entity", [DOMAIN])
     unique_device_classes = []
     for entity_entry in entity_entries:
         if entity_entry.translation_key:
@@ -117,17 +117,17 @@ async def snapshot_platform(
             f"entity entry snapshot failed for {entity_entry.entity_id}"
         )
         if entity_entry.disabled_by is None:
-            state = hass.states.get(entity_entry.entity_id)
+            state = menuai.states.get(entity_entry.entity_id)
             assert state, f"State not found for {entity_entry.entity_id}"
             assert state == snapshot(name=f"{entity_entry.entity_id}-state"), (
                 f"state snapshot failed for {entity_entry.entity_id}"
             )
 
 
-async def setup_automation(hass: HomeAssistant, alias: str, entity_id: str) -> None:
+async def setup_automation(menuai: menuai, alias: str, entity_id: str) -> None:
     """Set up an automation for tests."""
     assert await async_setup_component(
-        hass,
+        menuai,
         AUTOMATION_DOMAIN,
         {
             AUTOMATION_DOMAIN: {
@@ -559,7 +559,7 @@ def _patch_discovery(device=None, no_device=False, ip_address=IP_ADDRESS):
             return {}
         return {ip_address: device if device else _mocked_device()}
 
-    return patch("homeassistant.components.tplink.Discover.discover", new=_discovery)
+    return patch("menuai.components.tplink.Discover.discover", new=_discovery)
 
 
 def _patch_single_discovery(device=None, no_device=False):
@@ -569,7 +569,7 @@ def _patch_single_discovery(device=None, no_device=False):
         return device if device else _mocked_device()
 
     return patch(
-        "homeassistant.components.tplink.Discover.discover_single", new=_discover_single
+        "menuai.components.tplink.Discover.discover_single", new=_discover_single
     )
 
 
@@ -579,11 +579,11 @@ def _patch_connect(device=None, no_device=False):
             raise KasaException
         return device if device else _mocked_device()
 
-    return patch("homeassistant.components.tplink.Device.connect", new=_connect)
+    return patch("menuai.components.tplink.Device.connect", new=_connect)
 
 
 async def initialize_config_entry_for_device(
-    hass: HomeAssistant, dev: Device
+    menuai: menuai, dev: Device
 ) -> MockConfigEntry:
     """Create a mocked configuration entry for the given device.
 
@@ -593,14 +593,14 @@ async def initialize_config_entry_for_device(
     config_entry = MockConfigEntry(
         title="TP-Link", domain=DOMAIN, unique_id=dev.mac, data={CONF_HOST: dev.host}
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         _patch_discovery(device=dev),
         _patch_single_discovery(device=dev),
         _patch_connect(device=dev),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry

@@ -8,10 +8,10 @@ from typing import Any
 from sqlalchemy import Column, Text, cast, not_, or_
 from sqlalchemy.sql.elements import ColumnElement
 
-from homeassistant.const import CONF_DOMAINS, CONF_ENTITIES, CONF_EXCLUDE, CONF_INCLUDE
-from homeassistant.helpers.entityfilter import CONF_ENTITY_GLOBS
-from homeassistant.helpers.json import json_dumps
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DOMAINS, CONF_ENTITIES, CONF_EXCLUDE, CONF_INCLUDE
+from menuai.helpers.entityfilter import CONF_ENTITY_GLOBS
+from menuai.helpers.json import json_dumps
+from menuai.helpers.typing import ConfigType
 
 from .db_schema import ENTITY_ID_IN_EVENT, OLD_ENTITY_ID_IN_EVENT, States, StatesMeta
 
@@ -140,7 +140,7 @@ class Filters:
     ) -> ColumnElement:
         """Generate a filter from pre-computed sets and pattern lists.
 
-        This must match exactly how homeassistant.helpers.entityfilter works.
+        This must match exactly how menuai.helpers.entityfilter works.
         """
         i_domains = _domain_matcher(self._included_domains, columns, encoder)
         i_entities = _entity_matcher(self._included_entities, columns, encoder)

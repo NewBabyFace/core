@@ -10,12 +10,12 @@ from pysmlight.const import Devices
 from pysmlight.exceptions import SmlightAuthError, SmlightConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -48,7 +48,7 @@ class SmlightConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._host = user_input[CONF_HOST]
-            self.client = Api2(self._host, session=async_get_clientsession(self.hass))
+            self.client = Api2(self._host, session=async_get_clientsession(self.menuai))
 
             try:
                 if not await self._async_check_auth_required(user_input):
@@ -102,7 +102,7 @@ class SmlightConfigFlow(ConfigFlow, domain=DOMAIN):
         self._host = discovery_info.host
 
         self.context["title_placeholders"] = {CONF_NAME: self._device_name}
-        self.client = Api2(self._host, session=async_get_clientsession(self.hass))
+        self.client = Api2(self._host, session=async_get_clientsession(self.menuai))
 
         # fallback for legacy firmware older than v2.3.x
         if mac is None:
@@ -154,7 +154,7 @@ class SmlightConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle reauth when API Authentication failed."""
 
         self._host = entry_data[CONF_HOST]
-        self.client = Api2(self._host, session=async_get_clientsession(self.hass))
+        self.client = Api2(self._host, session=async_get_clientsession(self.menuai))
 
         return await self.async_step_reauth_confirm()
 

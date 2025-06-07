@@ -23,32 +23,32 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.orm.session import Session
 
-from homeassistant.components import persistent_notification
-from homeassistant.const import (
+from menuai.components import persistent_notification
+from menuai.const import (
     ATTR_ENTITY_ID,
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_FINAL_WRITE,
     EVENT_STATE_CHANGED,
     MATCH_ALL,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     callback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_time_change,
     async_track_time_interval,
     async_track_utc_time_change,
 )
-from homeassistant.helpers.recorder import DATA_RECORDER
-from homeassistant.helpers.start import async_at_started
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.enum import try_parse_enum
-from homeassistant.util.event_type import EventType
+from menuai.helpers.recorder import DATA_RECORDER
+from menuai.helpers.start import async_at_started
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.util import dt as dt_util
+from menuai.util.enum import try_parse_enum
+from menuai.util.event_type import EventType
 
 from . import migration, statistics
 from .const import (
@@ -159,7 +159,7 @@ class Recorder(threading.Thread):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         auto_purge: bool,
         auto_repack: bool,
         keep_days: int,
@@ -173,14 +173,14 @@ class Recorder(threading.Thread):
         """Initialize the recorder."""
         threading.Thread.__init__(self, name="Recorder")
 
-        self.hass = hass
+        self.menuai = menuai
         self.thread_id: int | None = None
         self.recorder_and_worker_thread_ids: set[int] = set()
         self.auto_purge = auto_purge
         self.auto_repack = auto_repack
         self.keep_days = keep_days
         self.is_running: bool = False
-        self._hass_started: asyncio.Future[object] = hass.loop.create_future()
+        self._menuai_started: asyncio.Future[object] = menuai.loop.create_future()
         self.commit_interval = commit_interval
         self._queue: queue.SimpleQueue[RecorderTask | Event] = queue.SimpleQueue()
         self.db_url = uri
@@ -188,10 +188,10 @@ class Recorder(threading.Thread):
         self.db_retry_wait = db_retry_wait
         self.database_engine: DatabaseEngine | None = None
         # Database connection is ready, but non-live migration may be in progress
-        db_connected: asyncio.Future[bool] = hass.data[DATA_RECORDER].db_connected
+        db_connected: asyncio.Future[bool] = menuai.data[DATA_RECORDER].db_connected
         self.async_db_connected: asyncio.Future[bool] = db_connected
         # Database is ready to use but live migration may be in progress
-        self.async_db_ready: asyncio.Future[bool] = hass.loop.create_future()
+        self.async_db_ready: asyncio.Future[bool] = menuai.loop.create_future()
         # Database is ready to use and all migration steps completed (used by tests)
         self.async_recorder_ready = asyncio.Event()
         self._queue_watch = threading.Event()
@@ -324,12 +324,12 @@ class Recorder(threading.Thread):
             # Unknown what it is.
             queue_put(event)
 
-        self._event_listener = self.hass.bus.async_listen(
+        self._event_listener = self.menuai.bus.async_listen(
             MATCH_ALL,
             _event_listener,
         )
         self._queue_watcher = async_track_time_interval(
-            self.hass,
+            self.menuai,
             self._async_check_queue,
             QUEUE_CHECK_INTERVAL,
             name="Recorder queue watcher",
@@ -356,7 +356,7 @@ class Recorder(threading.Thread):
         self, target: Callable[..., _T], *args: Any
     ) -> asyncio.Future[_T]:
         """Add an executor job from within the event loop."""
-        return self.hass.loop.run_in_executor(self._db_executor, target, *args)
+        return self.menuai.loop.run_in_executor(self._db_executor, target, *args)
 
     @callback
     def _async_check_queue(self, *_: Any) -> None:
@@ -437,28 +437,28 @@ class Recorder(threading.Thread):
             except queue.Empty:
                 break
         self.queue_task(StopTask())
-        await self.hass.async_add_executor_job(self.join)
+        await self.menuai.async_add_executor_job(self.join)
 
     async def _async_shutdown(self, event: Event) -> None:
         """Shut down the Recorder at final write."""
-        if not self._hass_started.done():
-            self._hass_started.set_result(SHUTDOWN_TASK)
+        if not self._menuai_started.done():
+            self._menuai_started.set_result(SHUTDOWN_TASK)
         self.queue_task(StopTask())
         self._async_stop_listeners()
-        await self.hass.async_add_executor_job(self.join)
+        await self.menuai.async_add_executor_job(self.join)
 
     @callback
-    def _async_hass_started(self, hass: HomeAssistant) -> None:
-        """Notify that hass has started."""
-        self._hass_started.set_result(None)
+    def _async_menuai_started(self, menuai: menuai) -> None:
+        """Notify that menuai has started."""
+        self._menuai_started.set_result(None)
 
     @callback
     def async_register(self) -> None:
         """Post connection initialize."""
-        bus = self.hass.bus
-        bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, self._async_close)
-        bus.async_listen_once(EVENT_HOMEASSISTANT_FINAL_WRITE, self._async_shutdown)
-        async_at_started(self.hass, self._async_hass_started)
+        bus = self.menuai.bus
+        bus.async_listen_once(EVENT_menuai_CLOSE, self._async_close)
+        bus.async_listen_once(EVENT_menuai_FINAL_WRITE, self._async_shutdown)
+        async_at_started(self.menuai, self._async_menuai_started)
 
     @callback
     def _async_startup_done(self, startup_failed: bool) -> None:
@@ -474,7 +474,7 @@ class Recorder(threading.Thread):
             self.async_db_ready.set_result(False)
         if startup_failed:
             persistent_notification.async_create(
-                self.hass,
+                self.menuai,
                 "The recorder could not start, check [the logs](/config/logs)",
                 "Recorder",
             )
@@ -533,7 +533,7 @@ class Recorder(threading.Thread):
         If the number of entities has increased, increase the size of the LRU
         cache to avoid thrashing.
         """
-        if new_size := self.hass.states.async_entity_ids_count() * 2:
+        if new_size := self.menuai.states.async_entity_ids_count() * 2:
             self.state_attributes_manager.adjust_lru_size(new_size)
             self.states_meta_manager.adjust_lru_size(new_size)
             self.statistics_meta_manager.adjust_lru_size(new_size)
@@ -633,15 +633,15 @@ class Recorder(threading.Thread):
     @callback
     def _async_setup_periodic_tasks(self) -> None:
         """Prepare periodic tasks."""
-        if self.hass.is_stopping or not self._get_session:
-            # Home Assistant is shutting down
+        if self.menuai.is_stopping or not self._get_session:
+            # MenuAI is shutting down
             return
 
         # If the db is using a socket connection, we need to keep alive
         # to prevent errors from unexpected disconnects
         if self.dialect_name != SupportedDialect.SQLITE:
             self._keep_alive_listener = async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._async_keep_alive,
                 timedelta(seconds=KEEPALIVE_TIME),
                 name="Recorder keep alive",
@@ -650,7 +650,7 @@ class Recorder(threading.Thread):
         # If the commit interval is not 0, we need to commit periodically
         if self.commit_interval:
             self._commit_listener = async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._async_commit,
                 timedelta(seconds=self.commit_interval),
                 name="Recorder commit",
@@ -658,23 +658,23 @@ class Recorder(threading.Thread):
 
         # Run nightly tasks at 4:12am
         self._nightly_listener = async_track_time_change(
-            self.hass, self.async_nightly_tasks, hour=4, minute=12, second=0
+            self.menuai, self.async_nightly_tasks, hour=4, minute=12, second=0
         )
 
         # Compile short term statistics every 5 minutes
         self._periodic_listener = async_track_utc_time_change(
-            self.hass, self._async_five_minute_tasks, minute=range(0, 60, 5), second=10
+            self.menuai, self._async_five_minute_tasks, minute=range(0, 60, 5), second=10
         )
 
     async def _async_wait_for_started(self) -> object | None:
-        """Wait for the hass started future."""
-        return await self._hass_started
+        """Wait for the menuai started future."""
+        return await self._menuai_started
 
     def _wait_startup_or_shutdown(self) -> object | None:
         """Wait for startup or shutdown before starting."""
         try:
             return asyncio.run_coroutine_threadsafe(
-                self._async_wait_for_started(), self.hass.loop
+                self._async_wait_for_started(), self.menuai.loop
             ).result()
         except CancelledError as ex:
             _LOGGER.warning(
@@ -706,7 +706,7 @@ class Recorder(threading.Thread):
     def _notify_migration_failed(self) -> None:
         """Notify the user schema migration failed."""
         persistent_notification.create(
-            self.hass,
+            self.menuai,
             "The database migration failed, check [the logs](/config/logs).",
             "Database Migration Failed",
             "recorder_database_migration",
@@ -714,7 +714,7 @@ class Recorder(threading.Thread):
 
     def _dismiss_migration_in_progress(self) -> None:
         """Dismiss notification about migration in progress."""
-        persistent_notification.dismiss(self.hass, "recorder_database_migration")
+        persistent_notification.dismiss(self.menuai, "recorder_database_migration")
 
     def _run(self) -> None:
         """Start processing events to save."""
@@ -729,7 +729,7 @@ class Recorder(threading.Thread):
             # Give up if we could not connect
             return
 
-        schema_status = migration.validate_db_schema(self.hass, self, self.get_session)
+        schema_status = migration.validate_db_schema(self.menuai, self, self.get_session)
         if schema_status is None:
             # Give up if we could not validate the schema
             _LOGGER.error("Failed to validate schema, recorder shutting down")
@@ -738,7 +738,7 @@ class Recorder(threading.Thread):
             _LOGGER.error(
                 "The database schema version %s is newer than %s which is the maximum "
                 "database schema version supported by the installed version of "
-                "Home Assistant Core, either upgrade Home Assistant Core or restore "
+                "MenuAI Core, either upgrade MenuAI Core or restore "
                 "the database from a backup compatible with this version",
                 schema_status.current_version,
                 SCHEMA_VERSION,
@@ -752,7 +752,7 @@ class Recorder(threading.Thread):
             self.migration_in_progress = True
             self.migration_is_live = migration.live_migration(schema_status)
 
-        self.hass.add_job(self.async_connection_success)
+        self.menuai.add_job(self.async_connection_success)
 
         # First do non-live migration steps, if needed
         if schema_status.migration_needed:
@@ -776,7 +776,7 @@ class Recorder(threading.Thread):
         # since it can be cpu intensive and we do not want it to compete
         # with startup which is also cpu intensive
         if self._wait_startup_or_shutdown() is SHUTDOWN_TASK:
-            # Shutdown happened before Home Assistant finished starting
+            # Shutdown happened before MenuAI finished starting
             self.migration_in_progress = False
             # Make sure we cleanly close the run if
             # we restart before startup finishes
@@ -791,7 +791,7 @@ class Recorder(threading.Thread):
                     # If the schema migration takes so long that the end
                     # queue watcher safety kicks in because _reached_max_backlog
                     # was True, we need to reinitialize the listener.
-                    self.hass.add_job(self.async_initialize)
+                    self.menuai.add_job(self.async_initialize)
             else:
                 self.migration_in_progress = False
                 self._dismiss_migration_in_progress()
@@ -808,7 +808,7 @@ class Recorder(threading.Thread):
         self._schedule_compile_missing_statistics()
         _LOGGER.debug("Recorder processing the queue")
         self._adjust_lru_size()
-        self.hass.add_job(self._async_set_recorder_ready_migration_done)
+        self.menuai.add_job(self._async_set_recorder_ready_migration_done)
         self._run_event_loop()
 
     def _activate_and_set_db_ready(
@@ -829,7 +829,7 @@ class Recorder(threading.Thread):
         #
         # This ensures that the history queries will use the new tables
         # and not the old ones as soon as the API is available.
-        self.hass.add_job(self.async_set_db_ready)
+        self.menuai.add_job(self.async_set_db_ready)
 
     def _run_event_loop(self) -> None:
         """Run the event loop for the recorder."""
@@ -945,14 +945,14 @@ class Recorder(threading.Thread):
         self, schema_status: migration.SchemaValidationStatus
     ) -> None:
         """Migrate data."""
-        with self.hass.timeout.freeze(DOMAIN):
+        with self.menuai.timeout.freeze(DOMAIN):
             migration.migrate_data_non_live(self, self.get_session, schema_status)
 
     def _migrate_schema_offline(
         self, schema_status: migration.SchemaValidationStatus
     ) -> tuple[bool, migration.SchemaValidationStatus]:
         """Migrate schema to the latest version."""
-        with self.hass.timeout.freeze(DOMAIN):
+        with self.menuai.timeout.freeze(DOMAIN):
             return self._migrate_schema(schema_status, False)
 
     def _migrate_schema_live(
@@ -960,7 +960,7 @@ class Recorder(threading.Thread):
     ) -> tuple[bool, migration.SchemaValidationStatus]:
         """Migrate schema to the latest version."""
         persistent_notification.create(
-            self.hass,
+            self.menuai,
             (
                 "System performance will temporarily degrade during the database"
                 " upgrade. Do not power down or restart the system until the upgrade"
@@ -987,7 +987,7 @@ class Recorder(threading.Thread):
             else:
                 migrator = migration.migrate_schema_non_live
             new_schema_status = migrator(
-                self, self.hass, self.engine, self.get_session, schema_status
+                self, self.menuai, self.engine, self.get_session, schema_status
             )
         except exc.DatabaseError as err:
             if self._handle_database_error(err, setup_run=False):
@@ -1016,10 +1016,10 @@ class Recorder(threading.Thread):
             task.database_locked.set()
 
         local_start_time = dt_util.now()
-        hass = self.hass
+        menuai = self.menuai
         with write_lock_db_sqlite(self):
             # Notify that lock is being held, wait until database can be used again.
-            hass.add_job(_async_set_database_locked, task)
+            menuai.add_job(_async_set_database_locked, task)
             while not task.database_unlock.wait(timeout=DB_LOCK_QUEUE_CHECK_TIMEOUT):
                 if self._reached_max_backlog():
                     _LOGGER.warning(
@@ -1030,8 +1030,8 @@ class Recorder(threading.Thread):
                         self.backlog,
                     )
                     task.queue_overflow = True
-                    hass.add_job(
-                        async_create_backup_failure_issue, self.hass, local_start_time
+                    menuai.add_job(
+                        async_create_backup_failure_issue, self.menuai, local_start_time
                     )
                     break
         _LOGGER.info(
@@ -1315,7 +1315,7 @@ class Recorder(threading.Thread):
         """Return a future that will wait for the next commit or None if nothing pending."""
         if self._queue.empty() and not self._event_session_has_pending_writes:
             return None
-        future: asyncio.Future[None] = self.hass.loop.create_future()
+        future: asyncio.Future[None] = self.menuai.loop.create_future()
         self.queue_task(SynchronizeTask(future))
         return future
 
@@ -1497,7 +1497,7 @@ class Recorder(threading.Thread):
         startup_failed = (
             not self.schema_version or self.schema_version != SCHEMA_VERSION
         )
-        self.hass.add_job(self._async_startup_done, startup_failed)
+        self.menuai.add_job(self._async_startup_done, startup_failed)
 
         try:
             self._end_session()

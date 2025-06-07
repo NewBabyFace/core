@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import av
 import av.container
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from .const import (
     RECORDER_CONTAINER_FORMAT,
@@ -22,13 +22,13 @@ from .core import PROVIDERS, IdleTimer, Segment, StreamOutput, StreamSettings
 from .fmp4utils import read_init, transform_init
 
 if TYPE_CHECKING:
-    from homeassistant.components.camera import DynamicStreamSettings
+    from menuai.components.camera import DynamicStreamSettings
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_setup_recorder(hass: HomeAssistant) -> None:
+def async_setup_recorder(menuai: menuai) -> None:
     """Only here so Provider Registry works."""
 
 
@@ -38,13 +38,13 @@ class RecorderOutput(StreamOutput):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         idle_timer: IdleTimer,
         stream_settings: StreamSettings,
         dynamic_stream_settings: DynamicStreamSettings,
     ) -> None:
         """Initialize recorder output."""
-        super().__init__(hass, idle_timer, stream_settings, dynamic_stream_settings)
+        super().__init__(menuai, idle_timer, stream_settings, dynamic_stream_settings)
         self.video_path: str
 
     @property
@@ -196,7 +196,7 @@ class RecorderOutput(StreamOutput):
 
         # Write lookback segments
         while len(self._segments) > 1:  # The last segment is in progress
-            await self._hass.async_add_executor_job(
+            await self._menuai.async_add_executor_job(
                 write_segment, self._segments.popleft()
             )
         # Make sure the first segment has been added
@@ -205,10 +205,10 @@ class RecorderOutput(StreamOutput):
         # Write segments as soon as they are completed
         while not self.idle:
             await self.recv()
-            await self._hass.async_add_executor_job(
+            await self._menuai.async_add_executor_job(
                 write_segment, self._segments.popleft()
             )
         # Write remaining segments and close output
-        await self._hass.async_add_executor_job(
+        await self._menuai.async_add_executor_job(
             finish_writing, self._segments, output, self.video_path
         )

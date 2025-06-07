@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.util.uuid import random_uuid_hex
+from menuai.core import menuai, callback
+from menuai.helpers.event import async_call_later
+from menuai.util.uuid import random_uuid_hex
 
 PUSH_CONFIRM_TIMEOUT = 10  # seconds
 
@@ -17,14 +17,14 @@ class PushChannel:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         webhook_id: str,
         support_confirm: bool,
         send_message: Callable[[dict], None],
         on_teardown: Callable[[], None],
     ) -> None:
         """Initialize a local push channel."""
-        self.hass = hass
+        self.menuai = menuai
         self.webhook_id = webhook_id
         self.support_confirm = support_confirm
         self._send_message = send_message
@@ -39,7 +39,7 @@ class PushChannel:
             return
 
         confirm_id = random_uuid_hex()
-        data["hass_confirm_id"] = confirm_id
+        data["menuai_confirm_id"] = confirm_id
 
         async def handle_push_failed(_=None):
             """Handle a failed local push notification."""
@@ -57,7 +57,7 @@ class PushChannel:
 
         self.pending_confirms[confirm_id] = {
             "unsub_scheduled_push_failed": async_call_later(
-                self.hass, PUSH_CONFIRM_TIMEOUT, handle_push_failed
+                self.menuai, PUSH_CONFIRM_TIMEOUT, handle_push_failed
             ),
             "handle_push_failed": handle_push_failed,
         }

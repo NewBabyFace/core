@@ -6,12 +6,12 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from homeassistant.components.trace import (
+from menuai.components.trace import (
     CONF_STORED_TRACES,
     ActionTrace,
     async_store_trace,
 )
-from homeassistant.core import Context, HomeAssistant
+from menuai.core import Context, menuai
 
 from .const import DOMAIN
 
@@ -24,7 +24,7 @@ class ScriptTrace(ActionTrace):
 
 @contextmanager
 def trace_script(
-    hass: HomeAssistant,
+    menuai: menuai,
     item_id: str,
     config: dict[str, Any] | None,
     blueprint_inputs: dict[str, Any] | None,
@@ -33,7 +33,7 @@ def trace_script(
 ) -> Iterator[ScriptTrace]:
     """Trace execution of a script."""
     trace = ScriptTrace(item_id, config, blueprint_inputs, context)
-    async_store_trace(hass, trace, trace_config[CONF_STORED_TRACES])
+    async_store_trace(menuai, trace, trace_config[CONF_STORED_TRACES])
 
     try:
         yield trace

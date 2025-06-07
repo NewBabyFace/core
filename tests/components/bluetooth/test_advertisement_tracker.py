@@ -7,18 +7,18 @@ import time
 from habluetooth.advertisement_tracker import ADVERTISING_TIMES_NEEDED
 import pytest
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     async_get_learned_advertising_interval,
     async_register_scanner,
     async_track_unavailable,
 )
-from homeassistant.components.bluetooth.const import (
+from menuai.components.bluetooth.const import (
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
     SOURCE_LOCAL,
     UNAVAILABLE_TRACK_SECONDS,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.util import dt as dt_util
 
 from . import (
     FakeScanner,
@@ -36,7 +36,7 @@ ONE_HOUR_SECONDS = 3600
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_advertisment_interval_shorter_than_adapter_stack_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can determine the advertisement interval."""
     start_monotonic_time = time.monotonic()
@@ -54,7 +54,7 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout(
 
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i * 2),
@@ -62,11 +62,11 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout(
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:12"
+        menuai, "44:44:33:11:23:12"
     ) == pytest.approx(2.0)
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass, _switchbot_device_unavailable_callback, switchbot_device.address
+        menuai, _switchbot_device_unavailable_callback, switchbot_device.address
     )
 
     monotonic_now = start_monotonic_time + ((ADVERTISING_TIMES_NEEDED - 1) * 2)
@@ -74,9 +74,9 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout(
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is True
     switchbot_device_unavailable_cancel()
@@ -84,7 +84,7 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout(
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_advertisment_interval_longer_than_adapter_stack_timeout_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test device with a long advertisement interval."""
     start_monotonic_time = time.monotonic()
@@ -102,7 +102,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_connectab
 
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i * ONE_HOUR_SECONDS),
@@ -110,11 +110,11 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_connectab
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:18"
+        menuai, "44:44:33:11:23:18"
     ) == pytest.approx(ONE_HOUR_SECONDS)
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass, _switchbot_device_unavailable_callback, switchbot_device.address
+        menuai, _switchbot_device_unavailable_callback, switchbot_device.address
     )
 
     monotonic_now = start_monotonic_time + (
@@ -124,9 +124,9 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_connectab
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is True
     switchbot_device_unavailable_cancel()
@@ -134,7 +134,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_connectab
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_change_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test device with a long advertisement interval with an adapter change."""
     start_monotonic_time = time.monotonic()
@@ -152,7 +152,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
 
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i * 2),
@@ -160,12 +160,12 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:45"
+        menuai, "44:44:33:11:23:45"
     ) == pytest.approx(2.0)
 
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i * ONE_HOUR_SECONDS),
@@ -173,11 +173,11 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:45"
+        menuai, "44:44:33:11:23:45"
     ) == pytest.approx(ONE_HOUR_SECONDS)
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass, _switchbot_device_unavailable_callback, switchbot_device.address
+        menuai, _switchbot_device_unavailable_callback, switchbot_device.address
     )
 
     monotonic_now = start_monotonic_time + (
@@ -187,9 +187,9 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is True
     switchbot_device_unavailable_cancel()
@@ -197,7 +197,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_advertisment_interval_longer_than_adapter_stack_timeout_not_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test device with a long advertisement interval that is not connectable not reaching the advertising interval."""
     start_monotonic_time = time.monotonic()
@@ -215,7 +215,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_not_conne
 
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i * ONE_HOUR_SECONDS),
@@ -223,11 +223,11 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_not_conne
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:45"
+        menuai, "44:44:33:11:23:45"
     ) == pytest.approx(ONE_HOUR_SECONDS)
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass,
+        menuai,
         _switchbot_device_unavailable_callback,
         switchbot_device.address,
         connectable=False,
@@ -240,9 +240,9 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_not_conne
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is False
     switchbot_device_unavailable_cancel()
@@ -250,7 +250,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_not_conne
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_advertisment_interval_shorter_than_adapter_stack_timeout_adapter_change_not_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test device with a short advertisement interval with an adapter change that is not connectable."""
     start_monotonic_time = time.monotonic()
@@ -270,7 +270,7 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout_adapter_
 
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i * ONE_HOUR_SECONDS),
@@ -278,7 +278,7 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout_adapter_
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:5C"
+        menuai, "44:44:33:11:23:5C"
     ) == pytest.approx(ONE_HOUR_SECONDS)
 
     switchbot_adv_better_rssi = generate_advertisement_data(
@@ -288,7 +288,7 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout_adapter_
     )
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv_better_rssi,
             start_monotonic_time + (i * 2),
@@ -296,11 +296,11 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout_adapter_
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:5C"
+        menuai, "44:44:33:11:23:5C"
     ) == pytest.approx(2.0)
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass,
+        menuai,
         _switchbot_device_unavailable_callback,
         switchbot_device.address,
         connectable=False,
@@ -313,9 +313,9 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout_adapter_
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is True
     switchbot_device_unavailable_cancel()
@@ -323,7 +323,7 @@ async def test_advertisment_interval_shorter_than_adapter_stack_timeout_adapter_
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_change_not_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test device with a long advertisement interval with an adapter change that is not connectable."""
     start_monotonic_time = time.monotonic()
@@ -336,7 +336,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
     switchbot_device_went_unavailable = False
 
     scanner = FakeScanner("new", "fake_adapter")
-    cancel_scanner = async_register_scanner(hass, scanner)
+    cancel_scanner = async_register_scanner(menuai, scanner)
 
     @callback
     def _switchbot_device_unavailable_callback(_address: str) -> None:
@@ -346,7 +346,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
 
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source_connectable(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i * 2),
@@ -355,7 +355,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:45"
+        menuai, "44:44:33:11:23:45"
     ) == pytest.approx(2.0)
 
     switchbot_better_rssi_adv = generate_advertisement_data(
@@ -365,7 +365,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
     )
     for i in range(ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source_connectable(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_better_rssi_adv,
             start_monotonic_time + (i * ONE_HOUR_SECONDS),
@@ -374,11 +374,11 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:45"
+        menuai, "44:44:33:11:23:45"
     ) == pytest.approx(ONE_HOUR_SECONDS)
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass,
+        menuai,
         _switchbot_device_unavailable_callback,
         switchbot_device.address,
         connectable=False,
@@ -391,9 +391,9 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is False
     cancel_scanner()
@@ -403,9 +403,9 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is False
 
@@ -414,11 +414,11 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is False
 
@@ -427,7 +427,7 @@ async def test_advertisment_interval_longer_than_adapter_stack_timeout_adapter_c
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_advertisment_interval_longer_increasing_than_adapter_stack_timeout_adapter_change_not_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test device with a increasing advertisement interval with an adapter change that is not connectable."""
     start_monotonic_time = time.monotonic()
@@ -445,7 +445,7 @@ async def test_advertisment_interval_longer_increasing_than_adapter_stack_timeou
 
     for i in range(ADVERTISING_TIMES_NEEDED, 2 * ADVERTISING_TIMES_NEEDED):
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device,
             switchbot_adv,
             start_monotonic_time + (i**2),
@@ -453,11 +453,11 @@ async def test_advertisment_interval_longer_increasing_than_adapter_stack_timeou
         )
 
     assert async_get_learned_advertising_interval(
-        hass, "44:44:33:11:23:45"
+        menuai, "44:44:33:11:23:45"
     ) == pytest.approx(61.0)
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass,
+        menuai,
         _switchbot_device_unavailable_callback,
         switchbot_device.address,
         connectable=False,
@@ -468,9 +468,9 @@ async def test_advertisment_interval_longer_increasing_than_adapter_stack_timeou
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is False
     switchbot_device_unavailable_cancel()

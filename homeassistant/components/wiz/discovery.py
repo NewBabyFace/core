@@ -8,10 +8,10 @@ import logging
 
 from pywizlight.discovery import DiscoveredBulb, find_wizlights
 
-from homeassistant import config_entries
-from homeassistant.components import network
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import discovery_flow
+from menuai import config_entries
+from menuai.components import network
+from menuai.core import menuai, callback
+from menuai.helpers import discovery_flow
 
 from .const import DOMAIN
 
@@ -19,10 +19,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_discover_devices(
-    hass: HomeAssistant, timeout: int
+    menuai: menuai, timeout: int
 ) -> list[DiscoveredBulb]:
     """Discover wiz devices."""
-    broadcast_addrs = await network.async_get_ipv4_broadcast_addresses(hass)
+    broadcast_addrs = await network.async_get_ipv4_broadcast_addresses(menuai)
     targets = [str(address) for address in broadcast_addrs]
     combined_discoveries: dict[str, DiscoveredBulb] = {}
     for idx, discovered in enumerate(
@@ -45,13 +45,13 @@ async def async_discover_devices(
 
 @callback
 def async_trigger_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovered_devices: list[DiscoveredBulb],
 ) -> None:
     """Trigger config flows for discovered devices."""
     for device in discovered_devices:
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=asdict(device),

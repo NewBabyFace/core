@@ -5,9 +5,9 @@ from __future__ import annotations
 from xknx import XKNX
 from xknx.devices import Device as XknxDevice, RawValue
 
-from homeassistant import config_entries
-from homeassistant.components.select import SelectEntity
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.select import SelectEntity
+from menuai.const import (
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
     CONF_PAYLOAD,
@@ -15,10 +15,10 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
 
 from . import KNXModule
 from .const import (
@@ -34,12 +34,12 @@ from .schema import SelectSchema
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up select(s) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     config: list[ConfigType] = knx_module.config_yaml[Platform.SELECT]
 
     async_add_entities(KNXSelect(knx_module, entity_config) for entity_config in config)
@@ -78,9 +78,9 @@ class KNXSelect(KnxYamlEntity, SelectEntity, RestoreEntity):
         self._attr_entity_category = config.get(CONF_ENTITY_CATEGORY)
         self._attr_unique_id = str(self._device.remote_value.group_address)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if not self._device.remote_value.readable and (
             last_state := await self.async_get_last_state()
         ):

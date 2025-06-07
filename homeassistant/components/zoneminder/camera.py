@@ -7,11 +7,11 @@ import logging
 from zoneminder.monitor import Monitor
 from zoneminder.zm import ZoneMinder
 
-from homeassistant.components.mjpeg import MjpegCamera, filter_urllib3_logging
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.mjpeg import MjpegCamera, filter_urllib3_logging
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -28,7 +28,7 @@ def setup_platform(
     filter_urllib3_logging()
     cameras = []
     zm_client: ZoneMinder
-    for zm_client in hass.data[DOMAIN].values():
+    for zm_client in menuai.data[DOMAIN].values():
         if not (monitors := zm_client.get_monitors()):
             raise PlatformNotReady(
                 "Camera could not fetch any monitors from ZoneMinder"

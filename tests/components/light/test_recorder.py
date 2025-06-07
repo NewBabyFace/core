@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import light
-from homeassistant.components.light import (
+from menuai.components import light
+from menuai.components.light import (
     _DEPRECATED_ATTR_COLOR_TEMP,
     _DEPRECATED_ATTR_MAX_MIREDS,
     _DEPRECATED_ATTR_MIN_MIREDS,
@@ -27,12 +27,12 @@ from homeassistant.components.light import (
     ATTR_XY_COLOR,
     DOMAIN,
 )
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.const import ATTR_FRIENDLY_NAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.history import get_significant_states
+from menuai.const import ATTR_FRIENDLY_NAME, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 from tests.components.recorder.common import async_wait_recording_done
@@ -42,26 +42,26 @@ from tests.components.recorder.common import async_wait_recording_done
 async def light_only() -> None:
     """Enable only the light platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.LIGHT],
     ):
         yield
 
 
-async def test_exclude_attributes(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_exclude_attributes(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test light registered attributes to be excluded."""
     now = dt_util.utcnow()
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
     await async_setup_component(
-        hass, light.DOMAIN, {light.DOMAIN: {"platform": "demo"}}
+        menuai, light.DOMAIN, {light.DOMAIN: {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5))
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5))
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, hass.states.async_entity_ids(DOMAIN)
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, menuai.states.async_entity_ids(DOMAIN)
     )
     assert len(states) >= 1
     for entity_states in states.values():

@@ -7,10 +7,10 @@ from aiohttp.client_exceptions import ClientError
 from pykoplenti import ApiClient, AuthenticationException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_BASE, CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_BASE, CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_SERVICE_CODE, DOMAIN
 from .helper import get_hostname_id
@@ -26,13 +26,13 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def test_connection(hass: HomeAssistant, data) -> str:
+async def test_connection(menuai: menuai, data) -> str:
     """Test the connection to the inverter.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     async with ApiClient(session, data[CONF_HOST]) as client:
         await client.login(
             data[CONF_PASSWORD], service_code=data.get(CONF_SERVICE_CODE)
@@ -58,7 +58,7 @@ class KostalPlenticoreConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
 
             try:
-                hostname = await test_connection(self.hass, user_input)
+                hostname = await test_connection(self.menuai, user_input)
             except AuthenticationException as ex:
                 errors[CONF_PASSWORD] = "invalid_auth"
                 _LOGGER.error("Error response: %s", ex)
@@ -83,7 +83,7 @@ class KostalPlenticoreConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
             try:
-                hostname = await test_connection(self.hass, user_input)
+                hostname = await test_connection(self.menuai, user_input)
             except AuthenticationException as ex:
                 errors[CONF_PASSWORD] = "invalid_auth"
                 _LOGGER.error("Error response: %s", ex)

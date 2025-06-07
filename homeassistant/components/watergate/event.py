@@ -2,10 +2,10 @@
 
 from watergate_local_api.models.auto_shut_off_report import AutoShutOffReport
 
-from homeassistant.components.event import EventEntity, EventEntityDescription
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity, EventEntityDescription
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WatergateConfigEntry
 from .const import AUTO_SHUT_OFF_EVENT_NAME
@@ -33,7 +33,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: WatergateConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -58,12 +58,12 @@ class AutoShutOffEvent(WatergateEntity, EventEntity):
         super().__init__(coordinator, entity_description.key)
         self.entity_description = entity_description
 
-    async def async_added_to_hass(self):
+    async def async_added_to_menuai(self):
         """Register the callback for event handling when the entity is added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 AUTO_SHUT_OFF_EVENT_NAME.format(self.event_types[0]),
                 self._async_handle_event,
             )

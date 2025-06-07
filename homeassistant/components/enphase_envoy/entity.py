@@ -9,9 +9,9 @@ from httpx import HTTPError
 from pyenphase import EnvoyData
 from pyenphase.exceptions import EnvoyError
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import EnphaseUpdateCoordinator
@@ -56,7 +56,7 @@ def exception_handler[_EntityT: EnvoyBaseEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except ACTIONERRORS as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="action_error",
                 translation_placeholders={

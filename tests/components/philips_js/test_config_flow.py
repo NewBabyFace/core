@@ -5,10 +5,10 @@ from unittest.mock import ANY
 from haphilipsjs import PairingFailure
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.philips_js.const import CONF_ALLOW_NOTIFY, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.philips_js.const import CONF_ALLOW_NOTIFY, DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import (
     MOCK_CONFIG,
@@ -39,19 +39,19 @@ async def mock_tv_pairable(mock_tv):
     return mock_tv
 
 
-async def test_form(hass: HomeAssistant, mock_setup_entry) -> None:
+async def test_form(menuai: menuai, mock_setup_entry) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USERINPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Philips TV (1234567890)"
@@ -60,26 +60,26 @@ async def test_form(hass: HomeAssistant, mock_setup_entry) -> None:
 
 
 async def test_reauth(
-    hass: HomeAssistant, mock_setup_entry, mock_config_entry: MockConfigEntry, mock_tv
+    menuai: menuai, mock_setup_entry, mock_config_entry: MockConfigEntry, mock_tv
 ) -> None:
     """Test we get the form."""
 
     mock_tv.system = MOCK_SYSTEM | {"model": "changed"}
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
     assert len(mock_setup_entry.mock_calls) == 1
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USERINPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
@@ -87,14 +87,14 @@ async def test_reauth(
     assert len(mock_setup_entry.mock_calls) == 2
 
 
-async def test_form_cannot_connect(hass: HomeAssistant, mock_tv) -> None:
+async def test_form_cannot_connect(menuai: menuai, mock_tv) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_tv.system = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_USERINPUT
     )
 
@@ -102,14 +102,14 @@ async def test_form_cannot_connect(hass: HomeAssistant, mock_tv) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_unexpected_error(hass: HomeAssistant, mock_tv) -> None:
+async def test_form_unexpected_error(menuai: menuai, mock_tv) -> None:
     """Test we handle unexpected exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_tv.getSystem.side_effect = Exception("Unexpected exception")
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_USERINPUT
     )
 
@@ -117,17 +117,17 @@ async def test_form_unexpected_error(hass: HomeAssistant, mock_tv) -> None:
     assert result["errors"] == {"base": "unknown"}
 
 
-async def test_pairing(hass: HomeAssistant, mock_tv_pairable, mock_setup_entry) -> None:
+async def test_pairing(menuai: menuai, mock_tv_pairable, mock_setup_entry) -> None:
     """Test we get the form."""
     mock_tv = mock_tv_pairable
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USERINPUT,
     )
@@ -138,7 +138,7 @@ async def test_pairing(hass: HomeAssistant, mock_tv_pairable, mock_setup_entry) 
     mock_tv.setTransport.assert_called_with(True)
     mock_tv.pairRequest.assert_called()
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": "1234"}
     )
 
@@ -158,24 +158,24 @@ async def test_pairing(hass: HomeAssistant, mock_tv_pairable, mock_setup_entry) 
         "subentries": (),
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 async def test_pair_request_failed(
-    hass: HomeAssistant, mock_tv_pairable, mock_setup_entry
+    menuai: menuai, mock_tv_pairable, mock_setup_entry
 ) -> None:
     """Test we get the form."""
     mock_tv = mock_tv_pairable
     mock_tv.pairRequest.side_effect = PairingFailure({})
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USERINPUT,
     )
@@ -190,18 +190,18 @@ async def test_pair_request_failed(
 
 
 async def test_pair_grant_failed(
-    hass: HomeAssistant, mock_tv_pairable, mock_setup_entry
+    menuai: menuai, mock_tv_pairable, mock_setup_entry
 ) -> None:
     """Test we get the form."""
     mock_tv = mock_tv_pairable
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USERINPUT,
     )
@@ -213,7 +213,7 @@ async def test_pair_grant_failed(
 
     # Test with invalid pin
     mock_tv.pairGrant.side_effect = PairingFailure({"error_id": "INVALID_PIN"})
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": "1234"}
     )
 
@@ -222,7 +222,7 @@ async def test_pair_grant_failed(
 
     # Test with unexpected failure
     mock_tv.pairGrant.side_effect = PairingFailure({})
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": "1234"}
     )
 
@@ -235,24 +235,24 @@ async def test_pair_grant_failed(
     }
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test config flow options."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="123456",
         data=MOCK_CONFIG_PAIRED,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_ALLOW_NOTIFY: True}
     )
 

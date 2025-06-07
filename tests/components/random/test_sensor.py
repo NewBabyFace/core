@@ -1,10 +1,10 @@
 """The test for the random number sensor platform."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_random_sensor(hass: HomeAssistant) -> None:
+async def test_random_sensor(menuai: menuai) -> None:
     """Test the Random number sensor."""
     config = {
         "sensor": {
@@ -16,13 +16,13 @@ async def test_random_sensor(hass: HomeAssistant) -> None:
     }
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "sensor",
         config,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
 
     assert int(state.state) <= config["sensor"]["maximum"]
     assert int(state.state) >= config["sensor"]["minimum"]

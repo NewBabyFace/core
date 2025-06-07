@@ -6,11 +6,11 @@ from collections.abc import Callable
 import json
 from typing import Any
 
-from homeassistant.components.fronius.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.components.fronius.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -20,7 +20,7 @@ MOCK_UID = "123.4567890"
 
 
 async def setup_fronius_integration(
-    hass: HomeAssistant, is_logger: bool = True, unique_id: str = MOCK_UID
+    menuai: menuai, is_logger: bool = True, unique_id: str = MOCK_UID
 ) -> ConfigEntry:
     """Create the Fronius integration."""
     entry = MockConfigEntry(
@@ -32,9 +32,9 @@ async def setup_fronius_integration(
             "is_logger": is_logger,
         },
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     return entry
 
 

@@ -1,12 +1,12 @@
 """Tests for the Adax integration."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
-async def setup_integration(hass: HomeAssistant, entry: MockConfigEntry) -> None:
-    """Set up the Adax integration in Home Assistant."""
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+async def setup_integration(menuai: menuai, entry: MockConfigEntry) -> None:
+    """Set up the Adax integration in MenuAI."""
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()

@@ -8,7 +8,7 @@ from typing import Any, Literal, Self
 
 import voluptuous as vol
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_EXCEPTIONAL,
@@ -31,21 +31,21 @@ from homeassistant.components.weather import (
     WeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_NAME,
     CONF_TEMPERATURE_UNIT,
     CONF_UNIQUE_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.unit_conversion import (
+from menuai.core import menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import ExtraStoredData, RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.unit_conversion import (
     DistanceConverter,
     PressureConverter,
     SpeedConverter,
@@ -138,7 +138,7 @@ PLATFORM_SCHEMA = WEATHER_PLATFORM_SCHEMA.extend(WEATHER_SCHEMA.schema)
 @callback
 def _async_create_template_tracking_entities(
     async_add_entities: AddEntitiesCallback,
-    hass: HomeAssistant,
+    menuai: menuai,
     definitions: list[dict],
     unique_id_prefix: str | None,
 ) -> None:
@@ -153,7 +153,7 @@ def _async_create_template_tracking_entities(
 
         entities.append(
             WeatherTemplate(
-                hass,
+                menuai,
                 entity_conf,
                 unique_id,
             )
@@ -163,19 +163,19 @@ def _async_create_template_tracking_entities(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Template weather."""
     if discovery_info is None:
-        config = rewrite_common_legacy_to_modern_conf(hass, config)
+        config = rewrite_common_legacy_to_modern_conf(menuai, config)
         unique_id = config.get(CONF_UNIQUE_ID)
         async_add_entities(
             [
                 WeatherTemplate(
-                    hass,
+                    menuai,
                     config,
                     unique_id,
                 )
@@ -185,14 +185,14 @@ async def async_setup_platform(
 
     if "coordinator" in discovery_info:
         async_add_entities(
-            TriggerWeatherEntity(hass, discovery_info["coordinator"], config)
+            TriggerWeatherEntity(menuai, discovery_info["coordinator"], config)
             for config in discovery_info["entities"]
         )
         return
 
     _async_create_template_tracking_entities(
         async_add_entities,
-        hass,
+        menuai,
         discovery_info["entities"],
         discovery_info["unique_id"],
     )
@@ -205,12 +205,12 @@ class WeatherTemplate(TemplateEntity, WeatherEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         unique_id: str | None,
     ) -> None:
         """Initialize the Template weather."""
-        super().__init__(hass, config=config, unique_id=unique_id)
+        super().__init__(menuai, config=config, unique_id=unique_id)
 
         name = self._attr_name
         self._condition_template = config[CONF_CONDITION_TEMPLATE]
@@ -240,7 +240,7 @@ class WeatherTemplate(TemplateEntity, WeatherEntity):
         self._attr_native_visibility_unit = config.get(CONF_VISIBILITY_UNIT)
         self._attr_native_wind_speed_unit = config.get(CONF_WIND_SPEED_UNIT)
 
-        self.entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, name, hass=hass)
+        self.entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, name, menuai=menuai)
 
         self._condition = None
         self._temperature = None
@@ -343,7 +343,7 @@ class WeatherTemplate(TemplateEntity, WeatherEntity):
     def attribution(self) -> str | None:
         """Return the attribution."""
         if self._attribution is None:
-            return "Powered by Home Assistant"
+            return "Powered by MenuAI"
         return self._attribution
 
     @callback
@@ -450,7 +450,7 @@ class WeatherTemplate(TemplateEntity, WeatherEntity):
         """Save template result and trigger forecast listener."""
         attr_result = None if isinstance(result, TemplateError) else result
         setattr(self, f"_forecast_{forecast_type}", attr_result)
-        self.hass.async_create_task(
+        self.menuai.async_create_task(
             self.async_update_listeners([forecast_type]), eager_start=True
         )
 
@@ -544,12 +544,12 @@ class TriggerWeatherEntity(TriggerEntity, WeatherEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: TriggerUpdateCoordinator,
         config: ConfigType,
     ) -> None:
         """Initialize."""
-        super().__init__(hass, coordinator, config)
+        super().__init__(menuai, coordinator, config)
         self._attr_native_precipitation_unit = config.get(CONF_PRECIPITATION_UNIT)
         self._attr_native_pressure_unit = config.get(CONF_PRESSURE_UNIT)
         self._attr_native_temperature_unit = config.get(CONF_TEMPERATURE_UNIT)
@@ -582,9 +582,9 @@ class TriggerWeatherEntity(TriggerEntity, WeatherEntity, RestoreEntity):
                 self._to_render_simple.append(key)
                 self._parse_result.add(key)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (
             (state := await self.async_get_last_state())
             and state.state is not None

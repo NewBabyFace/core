@@ -19,9 +19,9 @@ from pywebpush import WebPusher
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.notify import (
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
@@ -29,15 +29,15 @@ from homeassistant.components.notify import (
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.config_entries import SOURCE_IMPORT
-from homeassistant.const import ATTR_NAME, URL_ROOT
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import ensure_unique_string
-from homeassistant.util.json import JsonObjectType, load_json_object
+from menuai.config_entries import SOURCE_IMPORT
+from menuai.const import ATTR_NAME, URL_ROOT
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import save_json
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import ensure_unique_string
+from menuai.util.json import JsonObjectType, load_json_object
 
 from .const import (
     ATTR_VAPID_EMAIL,
@@ -159,18 +159,18 @@ HTML5_SHOWNOTIFICATION_PARAMETERS = (
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> HTML5NotificationService | None:
     """Get the HTML5 push notification service."""
     if config:
-        existing_config_entry = hass.config_entries.async_entries(DOMAIN)
+        existing_config_entry = menuai.config_entries.async_entries(DOMAIN)
         if existing_config_entry:
-            async_create_html5_issue(hass, True)
+            async_create_html5_issue(menuai, True)
             return None
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": SOURCE_IMPORT}, data=config
             )
         )
@@ -179,37 +179,37 @@ async def async_get_service(
     if discovery_info is None:
         return None
 
-    json_path = hass.config.path(REGISTRATIONS_FILE)
+    json_path = menuai.config.path(REGISTRATIONS_FILE)
 
-    registrations = await hass.async_add_executor_job(_load_config, json_path)
+    registrations = await menuai.async_add_executor_job(_load_config, json_path)
 
     vapid_pub_key = discovery_info[ATTR_VAPID_PUB_KEY]
     vapid_prv_key = discovery_info[ATTR_VAPID_PRV_KEY]
     vapid_email = discovery_info[ATTR_VAPID_EMAIL]
 
-    def websocket_appkey(_hass, connection, msg):
+    def websocket_appkey(_menuai, connection, msg):
         connection.send_message(websocket_api.result_message(msg["id"], vapid_pub_key))
 
     websocket_api.async_register_command(
-        hass, WS_TYPE_APPKEY, websocket_appkey, SCHEMA_WS_APPKEY
+        menuai, WS_TYPE_APPKEY, websocket_appkey, SCHEMA_WS_APPKEY
     )
 
-    hass.http.register_view(HTML5PushRegistrationView(registrations, json_path))
-    hass.http.register_view(HTML5PushCallbackView(registrations))
+    menuai.http.register_view(HTML5PushRegistrationView(registrations, json_path))
+    menuai.http.register_view(HTML5PushCallbackView(registrations))
 
     return HTML5NotificationService(
-        hass, vapid_prv_key, vapid_email, registrations, json_path
+        menuai, vapid_prv_key, vapid_email, registrations, json_path
     )
 
 
 def _load_config(filename: str) -> JsonObjectType:
     """Load configuration."""
-    with suppress(HomeAssistantError):
+    with suppress(menuaiError):
         return load_json_object(filename)
     return {}
 
 
-class HTML5PushRegistrationView(HomeAssistantView):
+class HTML5PushRegistrationView(menuaiView):
     """Accepts push registrations from a browser."""
 
     url = "/api/notify.html5"
@@ -240,13 +240,13 @@ class HTML5PushRegistrationView(HomeAssistantView):
         self.registrations[name] = data
 
         try:
-            hass = request.app[KEY_HASS]
+            menuai = request.app[KEY_menuai]
 
-            await hass.async_add_executor_job(
+            await menuai.async_add_executor_job(
                 save_json, self.json_path, self.registrations
             )
             return self.json_message("Push notification subscriber registered.")
-        except HomeAssistantError:
+        except menuaiError:
             if previous_registration is not None:
                 self.registrations[name] = previous_registration
             else:
@@ -288,12 +288,12 @@ class HTML5PushRegistrationView(HomeAssistantView):
         reg = self.registrations.pop(found)
 
         try:
-            hass = request.app[KEY_HASS]
+            menuai = request.app[KEY_menuai]
 
-            await hass.async_add_executor_job(
+            await menuai.async_add_executor_job(
                 save_json, self.json_path, self.registrations
             )
-        except HomeAssistantError:
+        except menuaiError:
             self.registrations[found] = reg
             return self.json_message(
                 "Error saving registration.", HTTPStatus.INTERNAL_SERVER_ERROR
@@ -302,7 +302,7 @@ class HTML5PushRegistrationView(HomeAssistantView):
         return self.json_message("Push notification subscriber unregistered.")
 
 
-class HTML5PushCallbackView(HomeAssistantView):
+class HTML5PushCallbackView(menuaiView):
     """Accepts push registrations from a browser."""
 
     requires_auth = False
@@ -397,14 +397,14 @@ class HTML5PushCallbackView(HomeAssistantView):
             )
 
         event_name = f"{NOTIFY_CALLBACK_EVENT}.{event_payload[ATTR_TYPE]}"
-        request.app[KEY_HASS].bus.fire(event_name, event_payload)
+        request.app[KEY_menuai].bus.fire(event_name, event_payload)
         return self.json({"status": "ok", "event": event_payload[ATTR_TYPE]})
 
 
 class HTML5NotificationService(BaseNotificationService):
     """Implement the notification service for HTML5."""
 
-    def __init__(self, hass, vapid_prv, vapid_email, registrations, json_path):
+    def __init__(self, menuai, vapid_prv, vapid_email, registrations, json_path):
         """Initialize the service."""
         self._vapid_prv = vapid_prv
         self._vapid_email = vapid_email
@@ -424,7 +424,7 @@ class HTML5NotificationService(BaseNotificationService):
 
             await self.async_dismiss(**kwargs)
 
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             SERVICE_DISMISS,
             async_dismiss_message,
@@ -449,7 +449,7 @@ class HTML5NotificationService(BaseNotificationService):
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(partial(self.dismiss, **kwargs))
+        await self.menuai.async_add_executor_job(partial(self.dismiss, **kwargs))
 
     def send_message(self, message="", **kwargs):
         """Send a message to a user."""
@@ -533,7 +533,7 @@ class HTML5NotificationService(BaseNotificationService):
                 reg = self.registrations.pop(target)
                 try:
                     save_json(self.registrations_json_path, self.registrations)
-                except HomeAssistantError:
+                except menuaiError:
                     self.registrations[target] = reg
                     _LOGGER.error("Error saving registration")
                 else:

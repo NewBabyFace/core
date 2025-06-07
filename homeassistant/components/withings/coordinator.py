@@ -22,10 +22,10 @@ from aiowithings import (
     aggregate_measurements,
 )
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 from .const import LOGGER
 
@@ -46,13 +46,13 @@ class WithingsDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WithingsConfigEntry,
         client: WithingsClient,
     ) -> None:
         """Initialize the Withings data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="",
@@ -103,12 +103,12 @@ class WithingsMeasurementDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WithingsConfigEntry,
         client: WithingsClient,
     ) -> None:
         """Initialize the Withings data coordinator."""
-        super().__init__(hass, config_entry, client)
+        super().__init__(menuai, config_entry, client)
         self.notification_categories = {
             NotificationCategory.WEIGHT,
             NotificationCategory.PRESSURE,
@@ -146,12 +146,12 @@ class WithingsSleepDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WithingsConfigEntry,
         client: WithingsClient,
     ) -> None:
         """Initialize the Withings data coordinator."""
-        super().__init__(hass, config_entry, client)
+        super().__init__(menuai, config_entry, client)
         self.notification_categories = {
             NotificationCategory.SLEEP,
         }
@@ -202,12 +202,12 @@ class WithingsBedPresenceDataUpdateCoordinator(WithingsDataUpdateCoordinator[Non
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WithingsConfigEntry,
         client: WithingsClient,
     ) -> None:
         """Initialize the Withings data coordinator."""
-        super().__init__(hass, config_entry, client)
+        super().__init__(menuai, config_entry, client)
         self.notification_categories = {
             NotificationCategory.IN_BED,
             NotificationCategory.OUT_BED,
@@ -249,12 +249,12 @@ class WithingsActivityDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WithingsConfigEntry,
         client: WithingsClient,
     ) -> None:
         """Initialize the Withings data coordinator."""
-        super().__init__(hass, config_entry, client)
+        super().__init__(menuai, config_entry, client)
         self.notification_categories = {
             NotificationCategory.ACTIVITY,
         }
@@ -293,12 +293,12 @@ class WithingsWorkoutDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WithingsConfigEntry,
         client: WithingsClient,
     ) -> None:
         """Initialize the Withings data coordinator."""
-        super().__init__(hass, config_entry, client)
+        super().__init__(menuai, config_entry, client)
         self.notification_categories = {
             NotificationCategory.ACTIVITY,
         }

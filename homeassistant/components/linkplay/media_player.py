@@ -12,8 +12,8 @@ from linkplay.controller import LinkPlayController, LinkPlayMultiroom
 from linkplay.exceptions import LinkPlayRequestException
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
@@ -23,11 +23,11 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import utcnow
 
 from . import SHARED_DATA, LinkPlayConfigEntry
 from .const import DOMAIN
@@ -121,7 +121,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LinkPlayConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -158,10 +158,10 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
             mode.value for mode in bridge.player.available_equalizer_modes
         ]
 
-    async def async_added_to_hass(self) -> None:
-        """Handle common setup when added to hass."""
-        await super().async_added_to_hass()
-        self.hass.data[DOMAIN][SHARED_DATA].entity_to_bridge[self.entity_id] = (
+    async def async_added_to_menuai(self) -> None:
+        """Handle common setup when added to menuai."""
+        await super().async_added_to_menuai()
+        self.menuai.data[DOMAIN][SHARED_DATA].entity_to_bridge[self.entity_id] = (
             self._bridge.device.uuid
         )
 
@@ -241,7 +241,7 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
         "media_player/browse_media" websocket command.
         """
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             # This allows filtering content. In this case it will only show audio sources.
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
@@ -254,11 +254,11 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
         """Play a piece of media."""
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
 
-        url = async_process_play_media_url(self.hass, media_id)
+        url = async_process_play_media_url(self.menuai, media_id)
         await self._bridge.player.play(url)
 
     @exception_wrap
@@ -267,7 +267,7 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
         try:
             await self._bridge.player.play_preset(preset_number)
         except ValueError as err:
-            raise HomeAssistantError(err) from err
+            raise menuaiError(err) from err
 
     @exception_wrap
     async def async_media_seek(self, position: float) -> None:
@@ -278,7 +278,7 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
     async def async_join_players(self, group_members: list[str]) -> None:
         """Join `group_members` as a player group with the current player."""
 
-        controller: LinkPlayController = self.hass.data[DOMAIN][SHARED_DATA].controller
+        controller: LinkPlayController = self.menuai.data[DOMAIN][SHARED_DATA].controller
         multiroom = self._bridge.multiroom
         if multiroom is None:
             multiroom = LinkPlayMultiroom(self._bridge)
@@ -293,7 +293,7 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
     async def _get_linkplay_bridge(self, entity_id: str) -> LinkPlayBridge:
         """Get linkplay bridge from entity_id."""
 
-        shared_data = self.hass.data[DOMAIN][SHARED_DATA]
+        shared_data = self.menuai.data[DOMAIN][SHARED_DATA]
         controller = shared_data.controller
         bridge_uuid = shared_data.entity_to_bridge.get(entity_id, None)
         bridge = await controller.find_bridge(bridge_uuid)
@@ -314,7 +314,7 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
         if multiroom is None:
             return []
 
-        shared_data = self.hass.data[DOMAIN][SHARED_DATA]
+        shared_data = self.menuai.data[DOMAIN][SHARED_DATA]
 
         return [
             entity_id
@@ -334,7 +334,7 @@ class LinkPlayMediaPlayerEntity(LinkPlayBaseEntity, MediaPlayerEntity):
     @exception_wrap
     async def async_unjoin_player(self) -> None:
         """Remove this player from any group."""
-        controller: LinkPlayController = self.hass.data[DOMAIN][SHARED_DATA].controller
+        controller: LinkPlayController = self.menuai.data[DOMAIN][SHARED_DATA].controller
 
         multiroom = self._bridge.multiroom
         if multiroom is not None:

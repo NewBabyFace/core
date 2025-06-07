@@ -8,9 +8,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.components.coolmaster.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.climate import HVACMode
+from menuai.components.coolmaster.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -112,8 +112,8 @@ class CoolMasterNetMock:
 
 
 @pytest.fixture
-async def load_int(hass: HomeAssistant) -> MockConfigEntry:
-    """Set up the Coolmaster integration in Home Assistant."""
+async def load_int(menuai: menuai) -> MockConfigEntry:
+    """Set up the Coolmaster integration in MenuAI."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -123,13 +123,13 @@ async def load_int(hass: HomeAssistant) -> MockConfigEntry:
         },
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.coolmaster.CoolMasterNet",
+        "menuai.components.coolmaster.CoolMasterNet",
         new=CoolMasterNetMock,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry

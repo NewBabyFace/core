@@ -5,16 +5,16 @@ import copy
 import pytest
 from zwave_js_server.model.node import Node
 
-from homeassistant.components.zwave_js.const import DOMAIN
-from homeassistant.components.zwave_js.helpers import get_device_id
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.zwave_js.const import DOMAIN
+from menuai.components.zwave_js.helpers import get_device_id
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .common import AIR_TEMPERATURE_SENSOR, NOTIFICATION_MOTION_BINARY_SENSOR
 
 
 async def test_unique_id_migration_dupes(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     multisensor_6_state,
     client,
@@ -58,7 +58,7 @@ async def test_unique_id_migration_dupes(
     event = {"node": node}
 
     client.driver.controller.emit("node added", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check that new RegistryEntry is using new unique ID format
     entity_entry = entity_registry.async_get(AIR_TEMPERATURE_SENSOR)
@@ -81,7 +81,7 @@ async def test_unique_id_migration_dupes(
     ],
 )
 async def test_unique_id_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     multisensor_6_state,
     client,
@@ -110,7 +110,7 @@ async def test_unique_id_migration(
     event = {"node": node}
 
     client.driver.controller.emit("node added", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check that new RegistryEntry is using new unique ID format
     entity_entry = entity_registry.async_get(AIR_TEMPERATURE_SENSOR)
@@ -128,7 +128,7 @@ async def test_unique_id_migration(
     ],
 )
 async def test_unique_id_migration_property_key(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     hank_binary_switch_state,
     client,
@@ -157,7 +157,7 @@ async def test_unique_id_migration_property_key(
     event = {"node": node}
 
     client.driver.controller.emit("node added", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check that new RegistryEntry is using new unique ID format
     entity_entry = entity_registry.async_get(SENSOR_NAME)
@@ -167,7 +167,7 @@ async def test_unique_id_migration_property_key(
 
 
 async def test_unique_id_migration_notification_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     multisensor_6_state,
     client,
@@ -197,7 +197,7 @@ async def test_unique_id_migration_notification_binary_sensor(
     event = {"node": node}
 
     client.driver.controller.emit("node added", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check that new RegistryEntry is using new unique ID format
     entity_entry = entity_registry.async_get(NOTIFICATION_MOTION_BINARY_SENSOR)
@@ -213,7 +213,7 @@ async def test_unique_id_migration_notification_binary_sensor(
 
 
 async def test_old_entity_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hank_binary_switch_state,
@@ -254,7 +254,7 @@ async def test_old_entity_migration(
         # Add a ready node, unique ID should be migrated
         event = {"node": node}
         driver.controller.emit("node added", event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Check that new RegistryEntry is using new unique ID format
         entity_entry = entity_registry.async_get(SENSOR_NAME)
@@ -266,7 +266,7 @@ async def test_old_entity_migration(
 
 
 async def test_different_endpoint_migration_status_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hank_binary_switch_state,
@@ -307,7 +307,7 @@ async def test_different_endpoint_migration_status_sensor(
         # Add a ready node, unique ID should be migrated
         event = {"node": node}
         driver.controller.emit("node added", event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Check that the RegistryEntry is using the same unique ID
         entity_entry = entity_registry.async_get(SENSOR_NAME)
@@ -315,7 +315,7 @@ async def test_different_endpoint_migration_status_sensor(
 
 
 async def test_skip_old_entity_migration_for_multiple(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hank_binary_switch_state,
@@ -367,7 +367,7 @@ async def test_skip_old_entity_migration_for_multiple(
     # Add a ready node, unique ID should be migrated
     event = {"node": node}
     driver.controller.emit("node added", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check that new RegistryEntry is created using new unique ID format
     entity_entry = entity_registry.async_get(SENSOR_NAME)
@@ -380,7 +380,7 @@ async def test_skip_old_entity_migration_for_multiple(
 
 
 async def test_old_entity_migration_notification_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     multisensor_6_state,
@@ -422,7 +422,7 @@ async def test_old_entity_migration_notification_binary_sensor(
         # Add a ready node, unique ID should be migrated
         event = {"node": node}
         driver.controller.emit("node added", event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Check that new RegistryEntry is using new unique ID format
         entity_entry = entity_registry.async_get(NOTIFICATION_MOTION_BINARY_SENSOR)

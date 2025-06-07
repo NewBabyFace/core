@@ -15,14 +15,14 @@ from homematicip.device import Device
 from homematicip.group import Group
 from homematicip.home import Home
 
-from homeassistant.components.homematicip_cloud import DOMAIN
-from homeassistant.components.homematicip_cloud.entity import (
+from menuai.components.homematicip_cloud import DOMAIN
+from menuai.components.homematicip_cloud.entity import (
     ATTR_IS_GROUP,
     ATTR_MODEL_TYPE,
 )
-from homeassistant.components.homematicip_cloud.hap import HomematicipHAP
-from homeassistant.core import HomeAssistant, State
-from homeassistant.setup import async_setup_component
+from menuai.components.homematicip_cloud.hap import HomematicipHAP
+from menuai.core import menuai, State
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -33,14 +33,14 @@ FIXTURE_DATA = load_fixture("homematicip_cloud.json", "homematicip_cloud")
 
 
 def get_and_check_entity_basics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_hap: HomematicipHAP,
     entity_id: str,
     entity_name: str,
     device_model: str | None,
 ) -> tuple[State, HomeMaticIPObject | None]:
     """Get and test basic device."""
-    ha_state = hass.states.get(entity_id)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state is not None
     if device_model:
         assert ha_state.attributes[ATTR_MODEL_TYPE] == device_model
@@ -57,7 +57,7 @@ def get_and_check_entity_basics(
 
 
 async def async_manipulate_test_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     hmip_device: HomeMaticIPObject,
     attribute: str,
     new_value: Any,
@@ -78,7 +78,7 @@ async def async_manipulate_test_data(
     else:
         fire_target.fire_update_event()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 class HomeFactory:
@@ -86,12 +86,12 @@ class HomeFactory:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         mock_connection,
         hmip_config_entry: MockConfigEntry,
     ) -> None:
         """Initialize the Factory."""
-        self.hass = hass
+        self.menuai = menuai
         self.mock_connection = mock_connection
         self.hmip_config_entry = hmip_config_entry
 
@@ -111,14 +111,14 @@ class HomeFactory:
             .get_async_home_mock()
         )
 
-        self.hmip_config_entry.add_to_hass(self.hass)
+        self.hmip_config_entry.add_to_menuai(self.menuai)
         with patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipHAP.get_hap",
+            "menuai.components.homematicip_cloud.hap.HomematicipHAP.get_hap",
             return_value=mock_home,
         ):
-            assert await async_setup_component(self.hass, DOMAIN, {})
+            assert await async_setup_component(self.menuai, DOMAIN, {})
 
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
 
         hap = self.hmip_config_entry.runtime_data
         mock_home.on_update(hap.async_update)

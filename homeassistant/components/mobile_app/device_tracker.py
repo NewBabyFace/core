@@ -2,25 +2,25 @@
 
 from typing import Any
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     ATTR_BATTERY,
     ATTR_GPS,
     ATTR_GPS_ACCURACY,
     ATTR_LOCATION_NAME,
     TrackerEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_DEVICE_ID,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     ATTR_ALTITUDE,
@@ -36,7 +36,7 @@ ATTR_KEYS = (ATTR_ALTITUDE, ATTR_COURSE, ATTR_SPEED, ATTR_VERTICAL_ACCURACY)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -112,11 +112,11 @@ class MobileAppEntity(TrackerEntity, RestoreEntity):
         """Return the device info."""
         return device_info(self._entry.data)
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to MenuAI."""
+        await super().async_added_to_menuai()
         self._dispatch_unsub = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_LOCATION_UPDATE.format(self._entry.entry_id),
             self.update_data,
         )
@@ -138,9 +138,9 @@ class MobileAppEntity(TrackerEntity, RestoreEntity):
         data.update({key: attr[key] for key in attr if key in ATTR_KEYS})
         self._data = data
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Call when entity is being removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Call when entity is being removed from menuai."""
+        await super().async_will_remove_from_menuai()
 
         if self._dispatch_unsub:
             self._dispatch_unsub()

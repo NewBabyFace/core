@@ -6,31 +6,31 @@ from caldav.lib.error import AuthorizationError, DAVError
 import pytest
 import requests
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture(autouse=True)
-async def mock_add_to_hass(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def mock_add_to_menuai(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Fixture to add the ConfigEntry."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
 
 async def test_load_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test loading and unloading of the config entry."""
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
-    with patch("homeassistant.components.caldav.config_flow.caldav.DAVClient"):
-        await hass.config_entries.async_setup(config_entry.entry_id)
+    with patch("menuai.components.caldav.config_flow.caldav.DAVClient"):
+        await menuai.config_entries.async_setup(config_entry.entry_id)
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -49,7 +49,7 @@ async def test_load_unload(
     ],
 )
 async def test_client_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     side_effect: Exception,
     expected_state: ConfigEntryState,
@@ -60,13 +60,13 @@ async def test_client_failure(
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
     with patch(
-        "homeassistant.components.caldav.config_flow.caldav.DAVClient"
+        "menuai.components.caldav.config_flow.caldav.DAVClient"
     ) as mock_client:
         mock_client.return_value.principal.side_effect = side_effect
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert config_entry.state == expected_state
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert [flow.get("step_id") for flow in flows] == expected_flows

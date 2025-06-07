@@ -9,16 +9,16 @@ from alpha_vantage.foreignexchange import ForeignExchange
 from alpha_vantage.timeseries import TimeSeries
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.sensor import (
+from menuai.components import persistent_notification
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import CONF_API_KEY, CONF_CURRENCY, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_API_KEY, CONF_CURRENCY, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -84,7 +84,7 @@ def setup_platform(
 
     if not symbols and not conversions:
         msg = "No symbols or currencies configured."
-        persistent_notification.create(hass, msg, "Sensor alpha_vantage")
+        persistent_notification.create(menuai, msg, "Sensor alpha_vantage")
         _LOGGER.warning(msg)
         return
 

@@ -4,10 +4,10 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import (
     CONFIG_ENTRY_DATA_OLD_FORMAT,
@@ -28,10 +28,10 @@ def platforms() -> list[Platform]:
 
 @pytest.fixture(autouse=True)
 async def setup_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> list[Platform]:
     """Fixture to setup the config entry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
 
@@ -40,14 +40,14 @@ async def setup_config_entry(
     [(RAIN_SENSOR_OFF, "off"), (RAIN_SENSOR_ON, "on")],
 )
 async def test_rainsensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     responses: list[AiohttpClientMockResponse],
     entity_registry: er.EntityRegistry,
     expected_state: bool,
 ) -> None:
     """Test rainsensor binary sensor."""
 
-    rainsensor = hass.states.get("binary_sensor.rain_bird_controller_rainsensor")
+    rainsensor = menuai.states.get("binary_sensor.rain_bird_controller_rainsensor")
     assert rainsensor is not None
     assert rainsensor.state == expected_state
     assert rainsensor.attributes == {
@@ -62,7 +62,7 @@ async def test_rainsensor(
     ],
 )
 async def test_no_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     responses: list[AiohttpClientMockResponse],
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
@@ -72,10 +72,10 @@ async def test_no_unique_id(
     # Failure to migrate config entry to a unique id
     responses.insert(0, mock_response_error(HTTPStatus.SERVICE_UNAVAILABLE))
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    rainsensor = hass.states.get("binary_sensor.rain_bird_controller_rainsensor")
+    rainsensor = menuai.states.get("binary_sensor.rain_bird_controller_rainsensor")
     assert rainsensor is not None
     assert (
         rainsensor.attributes.get("friendly_name") == "Rain Bird Controller Rainsensor"

@@ -14,16 +14,16 @@ from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
     BaseNotificationService,
 )
-from homeassistant.const import ATTR_ICON, CONF_PATH
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv, template
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_ICON, CONF_PATH
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client, config_validation as cv, template
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_BLOCKS,
@@ -104,14 +104,14 @@ class MessageT(TypedDict, total=False):
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> SlackNotificationService | None:
     """Set up the Slack notification service."""
     if discovery_info:
         return SlackNotificationService(
-            hass,
+            menuai,
             discovery_info[SLACK_DATA][DATA_CLIENT],
             discovery_info,
         )
@@ -136,12 +136,12 @@ class SlackNotificationService(BaseNotificationService):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         client: AsyncWebClient,
         config: dict[str, str],
     ) -> None:
         """Initialize."""
-        self._hass = hass
+        self._menuai = menuai
         self._client = client
         self._config = config
 
@@ -154,7 +154,7 @@ class SlackNotificationService(BaseNotificationService):
         thread_ts: str | None,
     ) -> None:
         """Upload a local file (with message) to Slack."""
-        if not self._hass.config.is_allowed_path(path):
+        if not self._menuai.config.is_allowed_path(path):
             _LOGGER.error("Path does not exist or is not allowed: %s", path)
             return
 
@@ -191,12 +191,12 @@ class SlackNotificationService(BaseNotificationService):
         password: str | None = None,
     ) -> None:
         """Upload a remote file (with message) to Slack."""
-        if not self._hass.config.is_allowed_external_url(url):
+        if not self._menuai.config.is_allowed_external_url(url):
             _LOGGER.error("URL is not allowed: %s", url)
             return
 
         filename = _async_get_filename_from_url(url)
-        session = aiohttp_client.async_get_clientsession(self._hass)
+        session = aiohttp_client.async_get_clientsession(self._menuai)
 
         # Fetch the remote file
         kwargs: AuthDictT = {}

@@ -19,12 +19,12 @@ from bring_api import (
 )
 from mashumaro.mixins.orjson import DataClassORJSONMixin
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -70,11 +70,11 @@ class BringDataUpdateCoordinator(BringBaseCoordinator[dict[str, BringData]]):
     user_settings: BringUserSettingsResponse
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: BringConfigEntry, bring: Bring
+        self, menuai: menuai, config_entry: BringConfigEntry, bring: Bring
     ) -> None:
         """Initialize the Bring data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -165,7 +165,7 @@ class BringDataUpdateCoordinator(BringBaseCoordinator[dict[str, BringData]]):
     def _purge_deleted_lists(self) -> None:
         """Purge device entries of deleted lists."""
 
-        device_reg = dr.async_get(self.hass)
+        device_reg = dr.async_get(self.menuai)
         identifiers = {
             (DOMAIN, f"{self.config_entry.unique_id}_{lst.listUuid}")
             for lst in self.lists
@@ -187,13 +187,13 @@ class BringActivityCoordinator(BringBaseCoordinator[dict[str, BringActivityData]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: BringConfigEntry,
         coordinator: BringDataUpdateCoordinator,
     ) -> None:
         """Initialize the Bring Activity data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

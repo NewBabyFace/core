@@ -4,10 +4,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import bootstrap
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import recorder as recorder_helper
-from homeassistant.setup import async_setup_component
+from menuai import bootstrap
+from menuai.core import menuai
+from menuai.helpers import recorder as recorder_helper
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture(autouse=True, name="stub_blueprint_populate")
@@ -19,9 +19,9 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 def mock_ssdp():
     """Mock ssdp."""
     with (
-        patch("homeassistant.components.ssdp.Scanner.async_scan"),
-        patch("homeassistant.components.ssdp.Server.async_start"),
-        patch("homeassistant.components.ssdp.Server.async_stop"),
+        patch("menuai.components.ssdp.Scanner.async_scan"),
+        patch("menuai.components.ssdp.Server.async_start"),
+        patch("menuai.components.ssdp.Server.async_stop"),
     ):
         yield
 
@@ -29,17 +29,17 @@ def mock_ssdp():
 @pytest.fixture(autouse=True)
 def recorder_url_mock():
     """Mock recorder url."""
-    with patch("homeassistant.components.recorder.DEFAULT_URL", "sqlite://"):
+    with patch("menuai.components.recorder.DEFAULT_URL", "sqlite://"):
         yield
 
 
 @pytest.mark.usefixtures("mock_bluetooth", "mock_zeroconf")
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(menuai: menuai) -> None:
     """Test setup."""
-    recorder_helper.async_initialize_recorder(hass)
-    # default_config needs the homeassistant integration, assert it will be
+    recorder_helper.async_initialize_recorder(menuai)
+    # default_config needs the menuai integration, assert it will be
     # automatically setup by bootstrap and set it up manually for this test
-    assert "homeassistant" in bootstrap.CORE_INTEGRATIONS
-    assert await async_setup_component(hass, "homeassistant", {"foo": "bar"})
+    assert "menuai" in bootstrap.CORE_INTEGRATIONS
+    assert await async_setup_component(menuai, "menuai", {"foo": "bar"})
 
-    assert await async_setup_component(hass, "default_config", {"foo": "bar"})
+    assert await async_setup_component(menuai, "default_config", {"foo": "bar"})

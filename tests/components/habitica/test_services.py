@@ -23,7 +23,7 @@ from habiticalib import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.habitica.const import (
+from menuai.components.habitica.const import (
     ATTR_ADD_CHECKLIST_ITEM,
     ATTR_ALIAS,
     ATTR_CLEAR_DATE,
@@ -76,11 +76,11 @@ from homeassistant.components.habitica.const import (
     SERVICE_UPDATE_REWARD,
     SERVICE_UPDATE_TODO,
 )
-from homeassistant.components.todo import ATTR_RENAME
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_DATE, ATTR_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.components.todo import ATTR_RENAME
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_DATE, ATTR_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from .conftest import (
     ERROR_BAD_REQUEST,
@@ -99,7 +99,7 @@ RATE_LIMIT_EXCEPTION_MSG = "Rate limit exceeded, try again in 5 seconds"
 def services_only() -> Generator[None]:
     """Enable only services."""
     with patch(
-        "homeassistant.components.habitica.PLATFORMS",
+        "menuai.components.habitica.PLATFORMS",
         [],
     ):
         yield
@@ -107,15 +107,15 @@ def services_only() -> Generator[None]:
 
 @pytest.fixture(autouse=True)
 async def load_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     services_only: Generator,
 ) -> None:
     """Load config entry."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -206,7 +206,7 @@ def uuid_mock() -> Generator[None]:
     ],
 )
 async def test_cast_skill(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -214,7 +214,7 @@ async def test_cast_skill(
 ) -> None:
     """Test Habitica cast skill action."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CAST_SKILL,
         service_data={
@@ -250,7 +250,7 @@ async def test_cast_skill(
                 ATTR_SKILL: "smash",
             },
             ERROR_TOO_MANY_REQUESTS,
-            HomeAssistantError,
+            menuaiError,
             RATE_LIMIT_EXCEPTION_MSG,
         ),
         (
@@ -277,7 +277,7 @@ async def test_cast_skill(
                 ATTR_SKILL: "smash",
             },
             ERROR_BAD_REQUEST,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
@@ -286,13 +286,13 @@ async def test_cast_skill(
                 ATTR_SKILL: "smash",
             },
             ClientError,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
     ],
 )
 async def test_cast_skill_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -304,7 +304,7 @@ async def test_cast_skill_exceptions(
 
     habitica.cast_skill.side_effect = raise_exception
     with pytest.raises(expected_exception, match=expected_exception_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CAST_SKILL,
             service_data={
@@ -317,16 +317,16 @@ async def test_cast_skill_exceptions(
 
 
 async def test_get_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test Habitica config entry exceptions."""
 
     with pytest.raises(
         ServiceValidationError,
-        match="The selected character is not configured in Home Assistant",
+        match="The selected character is not configured in MenuAI",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CAST_SKILL,
             service_data={
@@ -338,13 +338,13 @@ async def test_get_config_entry(
             blocking=True,
         )
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
 
     with pytest.raises(
         ServiceValidationError,
-        match="The selected character is currently not loaded or disabled in Home Assistant",
+        match="The selected character is currently not loaded or disabled in MenuAI",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CAST_SKILL,
             service_data={
@@ -369,14 +369,14 @@ async def test_get_config_entry(
     ],
 )
 async def test_handle_quests(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service: str,
 ) -> None:
     """Test Habitica actions for quest handling."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         service,
         service_data={ATTR_CONFIG_ENTRY: config_entry.entry_id},
@@ -396,7 +396,7 @@ async def test_handle_quests(
     [
         (
             ERROR_TOO_MANY_REQUESTS,
-            HomeAssistantError,
+            menuaiError,
             RATE_LIMIT_EXCEPTION_MSG,
         ),
         (
@@ -411,12 +411,12 @@ async def test_handle_quests(
         ),
         (
             ERROR_BAD_REQUEST,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
             ClientError,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
     ],
@@ -433,7 +433,7 @@ async def test_handle_quests(
     ],
 )
 async def test_handle_quests_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     raise_exception: Exception,
@@ -445,7 +445,7 @@ async def test_handle_quests_exceptions(
 
     getattr(habitica, service).side_effect = raise_exception
     with pytest.raises(expected_exception, match=expected_exception_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             service_data={ATTR_CONFIG_ENTRY: config_entry.entry_id},
@@ -521,7 +521,7 @@ async def test_handle_quests_exceptions(
     ],
 )
 async def test_score_task(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service: str,
@@ -530,7 +530,7 @@ async def test_score_task(
 ) -> None:
     """Test Habitica score task action."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         service,
         service_data={
@@ -567,7 +567,7 @@ async def test_score_task(
                 ATTR_DIRECTION: "up",
             },
             ERROR_TOO_MANY_REQUESTS,
-            HomeAssistantError,
+            menuaiError,
             RATE_LIMIT_EXCEPTION_MSG,
         ),
         (
@@ -576,7 +576,7 @@ async def test_score_task(
                 ATTR_DIRECTION: "up",
             },
             ERROR_BAD_REQUEST,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
@@ -585,7 +585,7 @@ async def test_score_task(
                 ATTR_DIRECTION: "up",
             },
             ClientError,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
         (
@@ -594,13 +594,13 @@ async def test_score_task(
                 ATTR_DIRECTION: "up",
             },
             ERROR_NOT_AUTHORIZED,
-            HomeAssistantError,
+            menuaiError,
             "Unable to buy reward, not enough gold. Your character has 137.63 GP, but the reward costs 10.00 GP",
         ),
     ],
 )
 async def test_score_task_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -612,7 +612,7 @@ async def test_score_task_exceptions(
 
     habitica.update_score.side_effect = raise_exception
     with pytest.raises(expected_exception, match=expected_exception_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SCORE_HABIT,
             service_data={
@@ -731,7 +731,7 @@ async def test_score_task_exceptions(
     ],
 )
 async def test_transformation(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -739,7 +739,7 @@ async def test_transformation(
 ) -> None:
     """Test Habitica use transformation item action."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_TRANSFORMATION,
         service_data={
@@ -789,7 +789,7 @@ async def test_transformation(
             },
             ERROR_BAD_REQUEST,
             None,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
@@ -799,7 +799,7 @@ async def test_transformation(
             },
             None,
             ERROR_TOO_MANY_REQUESTS,
-            HomeAssistantError,
+            menuaiError,
             RATE_LIMIT_EXCEPTION_MSG,
         ),
         (
@@ -819,7 +819,7 @@ async def test_transformation(
             },
             None,
             ERROR_BAD_REQUEST,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
@@ -829,7 +829,7 @@ async def test_transformation(
             },
             None,
             ClientError,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
         (
@@ -839,13 +839,13 @@ async def test_transformation(
             },
             ClientError,
             None,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
     ],
 )
 async def test_transformation_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -859,7 +859,7 @@ async def test_transformation_exceptions(
     habitica.cast_skill.side_effect = raise_exception_cast
     habitica.get_group_members.side_effect = raise_exception_members
     with pytest.raises(expected_exception, match=expected_exception_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_TRANSFORMATION,
             service_data={
@@ -890,7 +890,7 @@ async def test_transformation_exceptions(
         {ATTR_TASK: ["alias_zahnseide_benutzen"]},
         {ATTR_TAG: ["Training", "Gesundheit + Wohlbefinden"]},
         {ATTR_KEYWORD: "gewohnheit"},
-        {ATTR_TAG: ["Home Assistant"]},
+        {ATTR_TAG: ["MenuAI"]},
     ],
     ids=[
         "all_tasks",
@@ -914,14 +914,14 @@ async def test_transformation_exceptions(
 )
 @pytest.mark.usefixtures("habitica")
 async def test_get_tasks(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     service_data: dict[str, Any],
 ) -> None:
     """Test Habitica get_tasks action."""
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_TASKS,
         service_data={
@@ -940,17 +940,17 @@ async def test_get_tasks(
     [
         (
             ERROR_TOO_MANY_REQUESTS,
-            HomeAssistantError,
+            menuaiError,
             RATE_LIMIT_EXCEPTION_MSG,
         ),
         (
             ERROR_BAD_REQUEST,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
             ClientError,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
     ],
@@ -966,7 +966,7 @@ async def test_get_tasks(
 )
 @pytest.mark.usefixtures("habitica")
 async def test_update_task_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -979,7 +979,7 @@ async def test_update_task_exceptions(
 
     habitica.update_task.side_effect = exception
     with pytest.raises(expected_exception, match=exception_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             service_data={
@@ -996,17 +996,17 @@ async def test_update_task_exceptions(
     [
         (
             ERROR_TOO_MANY_REQUESTS,
-            HomeAssistantError,
+            menuaiError,
             RATE_LIMIT_EXCEPTION_MSG,
         ),
         (
             ERROR_BAD_REQUEST,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
             ClientError,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
     ],
@@ -1022,7 +1022,7 @@ async def test_update_task_exceptions(
 )
 @pytest.mark.usefixtures("habitica")
 async def test_create_task_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -1034,7 +1034,7 @@ async def test_create_task_exceptions(
 
     habitica.create_task.side_effect = exception
     with pytest.raises(expected_exception, match=exception_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             service_data={
@@ -1048,7 +1048,7 @@ async def test_create_task_exceptions(
 
 @pytest.mark.usefixtures("habitica")
 async def test_task_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
 ) -> None:
@@ -1059,7 +1059,7 @@ async def test_task_not_found(
         ServiceValidationError,
         match="Unable to complete action, could not find the task '7f902bbc-eb3d-4a8f-82cf-4e2025d69af1'",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_UPDATE_REWARD,
             service_data={
@@ -1101,7 +1101,7 @@ async def test_task_not_found(
     ],
 )
 async def test_update_reward(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -1111,9 +1111,9 @@ async def test_update_reward(
     task_id = "5e2ea1df-f6e6-4ba3-bccb-97c5ec63e99b"
 
     habitica.update_task.return_value = HabiticaTaskResponse.from_json(
-        await async_load_fixture(hass, "task.json", DOMAIN)
+        await async_load_fixture(menuai, "task.json", DOMAIN)
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_UPDATE_REWARD,
         service_data={
@@ -1160,7 +1160,7 @@ async def test_update_reward(
     ],
 )
 async def test_create_reward(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -1168,7 +1168,7 @@ async def test_create_reward(
 ) -> None:
     """Test Habitica create_reward action."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CREATE_REWARD,
         service_data={
@@ -1242,7 +1242,7 @@ async def test_create_reward(
     ],
 )
 async def test_update_habit(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -1251,7 +1251,7 @@ async def test_update_habit(
     """Test Habitica habit action."""
     task_id = "f21fa608-cfc6-4413-9fc7-0eb1b48ca43a"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_UPDATE_HABIT,
         service_data={
@@ -1326,7 +1326,7 @@ async def test_update_habit(
     ],
 )
 async def test_create_habit(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -1334,7 +1334,7 @@ async def test_create_habit(
 ) -> None:
     """Test Habitica create_habit action."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CREATE_HABIT,
         service_data={
@@ -1502,7 +1502,7 @@ async def test_create_habit(
 )
 @pytest.mark.usefixtures("mock_uuid4")
 async def test_update_todo(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -1511,7 +1511,7 @@ async def test_update_todo(
     """Test Habitica update todo action."""
     task_id = "88de7cd9-af2b-49ce-9afd-bf941d87336b"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_UPDATE_TODO,
         service_data={
@@ -1600,7 +1600,7 @@ async def test_update_todo(
 )
 @pytest.mark.usefixtures("mock_uuid4")
 async def test_create_todo(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -1608,7 +1608,7 @@ async def test_create_todo(
 ) -> None:
     """Test Habitica create todo action."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CREATE_TODO,
         service_data={
@@ -1820,7 +1820,7 @@ async def test_create_todo(
 @pytest.mark.usefixtures("mock_uuid4")
 @freeze_time("2025-02-25T22:00:00.000Z")
 async def test_update_daily(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -1829,7 +1829,7 @@ async def test_update_daily(
     """Test Habitica update daily action."""
     task_id = "6e53f1f5-a315-4edd-984d-8d762e4a08ef"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_UPDATE_DAILY,
         service_data={
@@ -1998,7 +1998,7 @@ async def test_update_daily(
 @pytest.mark.usefixtures("mock_uuid4")
 @freeze_time("2025-02-25T22:00:00.000Z")
 async def test_create_daily(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -2006,7 +2006,7 @@ async def test_create_daily(
 ) -> None:
     """Test Habitica create daily action."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CREATE_DAILY,
         service_data={
@@ -2039,7 +2039,7 @@ async def test_create_daily(
 @pytest.mark.usefixtures("mock_uuid4")
 @freeze_time("2025-02-25T22:00:00.000Z")
 async def test_update_daily_service_validation_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     service_data: dict[str, Any],
@@ -2048,7 +2048,7 @@ async def test_update_daily_service_validation_errors(
     task_id = "6e53f1f5-a315-4edd-984d-8d762e4a08ef"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_UPDATE_DAILY,
             service_data={
@@ -2062,14 +2062,14 @@ async def test_update_daily_service_validation_errors(
 
 
 async def test_tags(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
 ) -> None:
     """Test adding tags to a task."""
     task_id = "5e2ea1df-f6e6-4ba3-bccb-97c5ec63e99b"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_UPDATE_REWARD,
         service_data={
@@ -2091,26 +2091,26 @@ async def test_tags(
 
 
 async def test_create_new_tag(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
 ) -> None:
     """Test adding a non-existent tag and create it as new."""
     task_id = "5e2ea1df-f6e6-4ba3-bccb-97c5ec63e99b"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_UPDATE_REWARD,
         service_data={
             ATTR_CONFIG_ENTRY: config_entry.entry_id,
             ATTR_TASK: task_id,
-            ATTR_TAG: ["Home Assistant"],
+            ATTR_TAG: ["MenuAI"],
         },
         return_response=True,
         blocking=True,
     )
 
-    habitica.create_tag.assert_awaited_with("Home Assistant")
+    habitica.create_tag.assert_awaited_with("MenuAI")
 
     call_args = habitica.update_task.call_args[0]
     assert call_args[0] == UUID(task_id)
@@ -2126,23 +2126,23 @@ async def test_create_new_tag(
     [
         (
             ERROR_TOO_MANY_REQUESTS,
-            HomeAssistantError,
+            menuaiError,
             RATE_LIMIT_EXCEPTION_MSG,
         ),
         (
             ERROR_BAD_REQUEST,
-            HomeAssistantError,
+            menuaiError,
             REQUEST_EXCEPTION_MSG,
         ),
         (
             ClientError,
-            HomeAssistantError,
+            menuaiError,
             "Unable to connect to Habitica: ",
         ),
     ],
 )
 async def test_create_new_tag_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -2154,13 +2154,13 @@ async def test_create_new_tag_exception(
 
     habitica.create_tag.side_effect = exception
     with pytest.raises(expected_exception, match=exception_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_UPDATE_REWARD,
             service_data={
                 ATTR_CONFIG_ENTRY: config_entry.entry_id,
                 ATTR_TASK: task_id,
-                ATTR_TAG: ["Home Assistant"],
+                ATTR_TAG: ["MenuAI"],
             },
             return_response=True,
             blocking=True,
@@ -2168,14 +2168,14 @@ async def test_create_new_tag_exception(
 
 
 async def test_remove_tags(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
 ) -> None:
     """Test removing tags from a task."""
     task_id = "5e2ea1df-f6e6-4ba3-bccb-97c5ec63e99b"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_UPDATE_REWARD,
         service_data={

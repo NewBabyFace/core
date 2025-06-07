@@ -121,10 +121,10 @@
       "message": "Initial update failed on startup with error {error}"
     },
     "entry_not_found": {
-      "message": "The Nord Pool integration is not configured in Home Assistant."
+      "message": "The Nord Pool integration is not configured in MenuAI."
     },
     "entry_not_loaded": {
-      "message": "The Nord Pool integration is currently not loaded or disabled in Home Assistant."
+      "message": "The Nord Pool integration is currently not loaded or disabled in MenuAI."
     },
     "authentication_error": {
       "message": "There was an authentication error as you tried to retrieve data too far in the past."

@@ -3,23 +3,23 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.sensor import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     DOMAIN,
     SensorDeviceClass,
     SensorStateClass,
     device_condition,
 )
-from homeassistant.components.sensor.const import NON_NUMERIC_DEVICE_CLASSES
-from homeassistant.components.sensor.device_condition import ENTITY_CONDITIONS
-from homeassistant.const import CONF_PLATFORM, PERCENTAGE, STATE_UNKNOWN, EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import load_json
+from menuai.components.sensor.const import NON_NUMERIC_DEVICE_CLASSES
+from menuai.components.sensor.device_condition import ENTITY_CONDITIONS
+from menuai.const import CONF_PLATFORM, PERCENTAGE, STATE_UNKNOWN, EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
+from menuai.util.json import load_json
 
 from .common import UNITS_OF_MEASUREMENT, MockSensor
 
@@ -72,24 +72,24 @@ def test_matches_device_classes(device_class: SensorDeviceClass) -> None:
     )
     assert constant_value in schema_types
     # Ensure it is present in string.json
-    strings = load_json("homeassistant/components/sensor/strings.json")
+    strings = load_json("menuai/components/sensor/strings.json")
     assert constant_value in strings["device_automation"]["condition_type"]
 
 
 async def test_get_conditions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_sensor_entities: dict[str, MockSensor],
 ) -> None:
     """Test we get the expected conditions from a sensor."""
-    setup_test_component_platform(hass, DOMAIN, mock_sensor_entities.values())
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    setup_test_component_platform(menuai, DOMAIN, mock_sensor_entities.values())
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
     sensor_entries = {}
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -117,7 +117,7 @@ async def test_get_conditions(
         if device_class != "none"
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert len(conditions) == 28
     assert conditions == unordered(expected_conditions)
@@ -133,7 +133,7 @@ async def test_get_conditions(
     ],
 )
 async def test_get_conditions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -141,7 +141,7 @@ async def test_get_conditions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected conditions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -167,19 +167,19 @@ async def test_get_conditions_hidden_auxiliary(
         for condition in ("is_value",)
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
 
 async def test_get_conditions_no_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected conditions from a sensor."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -195,7 +195,7 @@ async def test_get_conditions_no_state(
             unit_of_measurement=UNITS_OF_MEASUREMENT.get(device_class),
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     expected_conditions = [
         {
@@ -212,7 +212,7 @@ async def test_get_conditions_no_state(
         if device_class != "none"
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
@@ -228,7 +228,7 @@ async def test_get_conditions_no_state(
     ],
 )
 async def test_get_conditions_no_unit_or_stateclass(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     state_class,
@@ -237,7 +237,7 @@ async def test_get_conditions_no_unit_or_stateclass(
 ) -> None:
     """Test we get the expected conditions from an entity with no unit or state class."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -262,7 +262,7 @@ async def test_get_conditions_no_unit_or_stateclass(
         for condition in condition_types
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
@@ -275,7 +275,7 @@ async def test_get_conditions_no_unit_or_stateclass(
     ],
 )
 async def test_get_condition_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_sensor_entities: dict[str, MockSensor],
@@ -286,10 +286,10 @@ async def test_get_condition_capabilities(
     unit_state,
 ) -> None:
     """Test we get the expected capabilities from a sensor condition."""
-    setup_test_component_platform(hass, DOMAIN, mock_sensor_entities.values())
+    setup_test_component_platform(menuai, DOMAIN, mock_sensor_entities.values())
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -303,7 +303,7 @@ async def test_get_condition_capabilities(
         unit_of_measurement=unit_reg,
     ).entity_id
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             None,
             {"device_class": device_class_state, "unit_of_measurement": unit_state},
@@ -326,12 +326,12 @@ async def test_get_condition_capabilities(
         ]
     }
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert len(conditions) == 1
     for condition in conditions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.CONDITION, condition
+            menuai, DeviceAutomationType.CONDITION, condition
         )
         assert capabilities == expected_capabilities
 
@@ -344,7 +344,7 @@ async def test_get_condition_capabilities(
     ],
 )
 async def test_get_condition_capabilities_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_sensor_entities: dict[str, MockSensor],
@@ -355,10 +355,10 @@ async def test_get_condition_capabilities_legacy(
     unit_state,
 ) -> None:
     """Test we get the expected capabilities from a sensor condition."""
-    setup_test_component_platform(hass, DOMAIN, mock_sensor_entities.values())
+    setup_test_component_platform(menuai, DOMAIN, mock_sensor_entities.values())
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -372,7 +372,7 @@ async def test_get_condition_capabilities_legacy(
         unit_of_measurement=unit_reg,
     ).entity_id
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             None,
             {"device_class": device_class_state, "unit_of_measurement": unit_state},
@@ -395,7 +395,7 @@ async def test_get_condition_capabilities_legacy(
         ]
     }
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert len(conditions) == 1
     for condition in conditions:
@@ -403,13 +403,13 @@ async def test_get_condition_capabilities_legacy(
             condition["entity_id"]
         ).entity_id
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.CONDITION, condition
+            menuai, DeviceAutomationType.CONDITION, condition
         )
         assert capabilities == expected_capabilities
 
 
 async def test_get_condition_capabilities_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected capabilities from a sensor condition."""
@@ -417,10 +417,10 @@ async def test_get_condition_capabilities_none(
         name="none sensor",
         unique_id="unique_none",
     )
-    setup_test_component_platform(hass, DOMAIN, [entity])
+    setup_test_component_platform(menuai, DOMAIN, [entity])
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     entry_none = entity_registry.async_get_or_create(
         DOMAIN,
@@ -428,8 +428,8 @@ async def test_get_condition_capabilities_none(
         entity.unique_id,
     )
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     conditions = [
         {
@@ -451,21 +451,21 @@ async def test_get_condition_capabilities_none(
     expected_capabilities = {}
     for condition in conditions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.CONDITION, condition
+            menuai, DeviceAutomationType.CONDITION, condition
         )
         assert capabilities == expected_capabilities
 
 
 @pytest.mark.usefixtures("enable_custom_integrations")
 async def test_if_state_not_above_below(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for bad value conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -475,7 +475,7 @@ async def test_if_state_not_above_below(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -500,14 +500,14 @@ async def test_if_state_not_above_below(
 
 @pytest.mark.usefixtures("enable_custom_integrations")
 async def test_if_state_above(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for value conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -516,10 +516,10 @@ async def test_if_state_above(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
+    menuai.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -548,35 +548,35 @@ async def test_if_state_above(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 9)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 9)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 11)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 11)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "event - test_event1"
 
 
 @pytest.mark.usefixtures("enable_custom_integrations")
 async def test_if_state_above_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for value conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -585,10 +585,10 @@ async def test_if_state_above_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
+    menuai.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -617,35 +617,35 @@ async def test_if_state_above_legacy(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 9)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 9)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 11)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 11)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "event - test_event1"
 
 
 @pytest.mark.usefixtures("enable_custom_integrations")
 async def test_if_state_below(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for value conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -654,10 +654,10 @@ async def test_if_state_below(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
+    menuai.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -686,35 +686,35 @@ async def test_if_state_below(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 11)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 11)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 9)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 9)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "event - test_event1"
 
 
 @pytest.mark.usefixtures("enable_custom_integrations")
 async def test_if_state_between(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for value conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -723,10 +723,10 @@ async def test_if_state_between(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
+    menuai.states.async_set(entry.entity_id, STATE_UNKNOWN, {"device_class": "battery"})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -756,31 +756,31 @@ async def test_if_state_between(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 9)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 9)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, 11)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 11)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "event - test_event1"
 
-    hass.states.async_set(entry.entity_id, 21)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 21)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
-    hass.states.async_set(entry.entity_id, 19)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, 19)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "event - test_event1"

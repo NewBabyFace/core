@@ -5,22 +5,22 @@ from unittest.mock import AsyncMock, MagicMock
 from azure.kusto.data.exceptions import KustoAuthenticationError, KustoServiceError
 import pytest
 
-from homeassistant import config_entries, data_entry_flow
-from homeassistant.components.azure_data_explorer.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai import config_entries, data_entry_flow
+from menuai.components.azure_data_explorer.const import DOMAIN
+from menuai.core import menuai
 
 from .const import BASE_CONFIG
 
 
-async def test_config_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_config_flow(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=None
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         BASE_CONFIG.copy(),
     )
@@ -40,11 +40,11 @@ async def test_config_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> 
 async def test_config_flow_errors(
     test_input: Exception,
     expected: str,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_execute_query: MagicMock,
 ) -> None:
     """Test we handle connection KustoServiceError."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=None,
@@ -55,14 +55,14 @@ async def test_config_flow_errors(
     # Test error handling with error
 
     mock_execute_query.side_effect = test_input
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         BASE_CONFIG.copy(),
     )
     assert result2["type"] == data_entry_flow.FlowResultType.FORM
     assert result2["errors"] == {"base": expected}
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] == data_entry_flow.FlowResultType.FORM
 
@@ -70,11 +70,11 @@ async def test_config_flow_errors(
 
     mock_execute_query.side_effect = None
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         BASE_CONFIG.copy(),
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY

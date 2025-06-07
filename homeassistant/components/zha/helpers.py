@@ -91,13 +91,13 @@ import zigpy.util
 import zigpy.zcl
 from zigpy.zcl.foundation import CommandSchema
 
-from homeassistant import __path__ as HOMEASSISTANT_PATH
-from homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon import (
+from menuai import __path__ as menuai_PATH
+from menuai.components.menuai_hardware.silabs_multiprotocol_addon import (
     is_multiprotocol_url,
 )
-from homeassistant.components.system_log import LogEntry
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.system_log import LogEntry
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_AREA_ID,
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
@@ -105,17 +105,17 @@ from homeassistant.const import (
     ATTR_NAME,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send, dispatcher_send
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.logging import HomeAssistantQueueHandler
+from menuai.helpers.dispatcher import async_dispatcher_send, dispatcher_send
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType
+from menuai.util.logging import menuaiQueueHandler
 
 from .const import (
     ATTR_ACTIVE_COORDINATOR,
@@ -177,7 +177,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 DEBUG_COMP_BELLOWS = "bellows"
-DEBUG_COMP_ZHA = "homeassistant.components.zha"
+DEBUG_COMP_ZHA = "menuai.components.zha"
 DEBUG_LIB_ZHA = "zha"
 DEBUG_COMP_ZIGPY = "zigpy"
 DEBUG_COMP_ZIGPY_ZNP = "zigpy_znp"
@@ -257,7 +257,7 @@ class ZHAGroupProxy(LogMixin):
 
     def associated_entities(self, member: GroupMember) -> list[GroupEntityReference]:
         """Return the list of entities that were derived from this endpoint."""
-        entity_registry = er.async_get(self.gateway_proxy.hass)
+        entity_registry = er.async_get(self.gateway_proxy.menuai)
         entity_refs: collections.defaultdict[EUI64, list[EntityReference]] = (
             self.gateway_proxy.ha_entity_refs
         )
@@ -408,7 +408,7 @@ class ZHADeviceProxy(EventBase):
                 )
         device_info[ATTR_ENDPOINT_NAMES] = names
 
-        device_registry = dr.async_get(self.gateway_proxy.hass)
+        device_registry = dr.async_get(self.gateway_proxy.menuai)
         reg_device = device_registry.async_get(self.device_id)
         if reg_device is not None:
             device_info[USER_GIVEN_NAME] = reg_device.name_by_user
@@ -430,7 +430,7 @@ class ZHADeviceProxy(EventBase):
         else:
             unique_id = zha_event.unique_id
 
-        self.gateway_proxy.hass.bus.async_fire(
+        self.gateway_proxy.menuai.bus.async_fire(
             ZHA_EVENT,
             {
                 ATTR_DEVICE_IEEE: str(zha_event.device_ieee),
@@ -448,7 +448,7 @@ class ZHADeviceProxy(EventBase):
     ) -> None:
         """Handle a ZHA cluster configure reporting event."""
         async_dispatcher_send(
-            self.gateway_proxy.hass,
+            self.gateway_proxy.menuai,
             ZHA_CLUSTER_HANDLER_MSG,
             {
                 ATTR_TYPE: ZHA_CLUSTER_HANDLER_MSG_CFG_RPT,
@@ -466,7 +466,7 @@ class ZHADeviceProxy(EventBase):
     ) -> None:
         """Handle a ZHA cluster configure reporting event."""
         async_dispatcher_send(
-            self.gateway_proxy.hass,
+            self.gateway_proxy.menuai,
             ZHA_CLUSTER_HANDLER_MSG,
             {
                 ATTR_TYPE: ZHA_CLUSTER_HANDLER_CFG_DONE,
@@ -477,7 +477,7 @@ class ZHADeviceProxy(EventBase):
     def handle_zha_channel_bind(self, event: ClusterBindEvent) -> None:
         """Handle a ZHA cluster bind event."""
         async_dispatcher_send(
-            self.gateway_proxy.hass,
+            self.gateway_proxy.menuai,
             ZHA_CLUSTER_HANDLER_MSG,
             {
                 ATTR_TYPE: ZHA_CLUSTER_HANDLER_MSG_BIND,
@@ -503,11 +503,11 @@ class ZHAGatewayProxy(EventBase):
     """Proxy class to interact with the ZHA gateway."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, gateway: Gateway
+        self, menuai: menuai, config_entry: ConfigEntry, gateway: Gateway
     ) -> None:
         """Initialize the gateway proxy."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.gateway = gateway
         self.device_proxies: dict[EUI64, ZHADeviceProxy] = {}
@@ -521,9 +521,9 @@ class ZHAGatewayProxy(EventBase):
         }
         self.debug_enabled: bool = False
 
-        log_relay_handler: LogRelayHandler = LogRelayHandler(hass, self)
+        log_relay_handler: LogRelayHandler = LogRelayHandler(menuai, self)
         log_simple_queue: queue.SimpleQueue[logging.Handler] = queue.SimpleQueue()
-        self._log_queue_handler = HomeAssistantQueueHandler(log_simple_queue)
+        self._log_queue_handler = menuaiQueueHandler(log_simple_queue)
         self._log_queue_handler.listener = logging.handlers.QueueListener(
             log_simple_queue, log_relay_handler
         )
@@ -533,7 +533,7 @@ class ZHAGatewayProxy(EventBase):
         self._unsubs.append(self.gateway.on_all_events(self._handle_event_protocol))
         self._reload_task: asyncio.Task | None = None
         config_entry.async_on_unload(
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 er.EVENT_ENTITY_REGISTRY_UPDATED,
                 self._handle_entity_registry_updated,
             )
@@ -551,7 +551,7 @@ class ZHAGatewayProxy(EventBase):
         ha_device_info: dr.DeviceInfo,
         remove_future: asyncio.Future[Any],
     ) -> None:
-        """Record the creation of a hass entity associated with ieee."""
+        """Record the creation of a menuai entity associated with ieee."""
         self._ha_entity_refs[entity_data.device_proxy.device.ieee].append(
             EntityReference(
                 ha_entity_id=ha_entity_id,
@@ -566,7 +566,7 @@ class ZHAGatewayProxy(EventBase):
     ) -> None:
         """Handle when entity registry updated."""
         entity_id = event.data["entity_id"]
-        entity_entry: er.RegistryEntry | None = er.async_get(self.hass).async_get(
+        entity_entry: er.RegistryEntry | None = er.async_get(self.menuai).async_get(
             entity_id
         )
         if (
@@ -575,7 +575,7 @@ class ZHAGatewayProxy(EventBase):
             or entity_entry.device_id is None
         ):
             return
-        device_entry: dr.DeviceEntry | None = dr.async_get(self.hass).async_get(
+        device_entry: dr.DeviceEntry | None = dr.async_get(self.menuai).async_get(
             entity_entry.device_id
         )
         assert device_entry
@@ -623,15 +623,15 @@ class ZHAGatewayProxy(EventBase):
             _LOGGER.debug("Ignoring reset, one is already running")
             return
 
-        self._reload_task = self.hass.async_create_task(
-            self.hass.config_entries.async_reload(self.config_entry.entry_id),
+        self._reload_task = self.menuai.async_create_task(
+            self.menuai.config_entries.async_reload(self.config_entry.entry_id),
         )
 
     @callback
     def handle_device_joined(self, event: DeviceJoinedEvent) -> None:
         """Handle a device joined event."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             ZHA_GW_MSG,
             {
                 ATTR_TYPE: ZHA_GW_MSG_DEVICE_JOINED,
@@ -652,16 +652,16 @@ class ZHAGatewayProxy(EventBase):
             device_info = zha_device_proxy.zha_device_info
             # zha_device_proxy.async_cleanup_handles()
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{SIGNAL_REMOVE_ENTITIES}_{zha_device_proxy.device.ieee!s}",
             )
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self._async_remove_device(zha_device_proxy, entity_refs),
                 "ZHAGateway._async_remove_device",
             )
             if device_info is not None:
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     ZHA_GW_MSG,
                     {
                         ATTR_TYPE: ZHA_GW_MSG_DEVICE_REMOVED,
@@ -678,7 +678,7 @@ class ZHAGatewayProxy(EventBase):
         """Handle a raw device initialized event."""
         manuf = event.device_info.manufacturer
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             ZHA_GW_MSG,
             {
                 ATTR_TYPE: ZHA_GW_MSG_RAW_INIT,
@@ -707,9 +707,9 @@ class ZHAGatewayProxy(EventBase):
         device_info[DEVICE_PAIRING_STATUS] = event.device_info.pairing_status.name
         if event.new_join:
             self._create_entity_metadata(zha_device_proxy)
-            async_dispatcher_send(self.hass, SIGNAL_ADD_ENTITIES)
+            async_dispatcher_send(self.menuai, SIGNAL_ADD_ENTITIES)
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             ZHA_GW_MSG,
             {
                 ATTR_TYPE: ZHA_GW_MSG_DEVICE_FULL_INIT,
@@ -835,7 +835,7 @@ class ZHAGatewayProxy(EventBase):
             zha_device_proxy = ZHADeviceProxy(zha_device, self)
             self.device_proxies[zha_device_proxy.device.ieee] = zha_device_proxy
 
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             device_registry_device = device_registry.async_get_or_create(
                 config_entry_id=self.config_entry.entry_id,
                 connections={(dr.CONNECTION_ZIGBEE, str(zha_device.ieee))},
@@ -861,7 +861,7 @@ class ZHAGatewayProxy(EventBase):
         self, proxy_object: ZHADeviceProxy | ZHAGroupProxy
     ) -> None:
         """Create HA entity metadata."""
-        ha_zha_data = get_zha_data(self.hass)
+        ha_zha_data = get_zha_data(self.menuai)
         coordinator_proxy = self.device_proxies[
             self.gateway.coordinator_zha_device.ieee
         ]
@@ -894,7 +894,7 @@ class ZHAGatewayProxy(EventBase):
         ]
 
         # then we get all group entity entries tied to the coordinator
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         assert self.gateway.coordinator_zha_device
         coordinator_proxy = self.device_proxies[
             self.gateway.coordinator_zha_device.ieee
@@ -923,20 +923,20 @@ class ZHAGatewayProxy(EventBase):
     def _update_group_entities(self, group_event: GroupEvent) -> None:
         """Update group entities when a group event is received."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{SIGNAL_REMOVE_ENTITIES}_group_{group_event.group_info.group_id}",
         )
         self._create_entity_metadata(
             self.group_proxies[group_event.group_info.group_id]
         )
-        async_dispatcher_send(self.hass, SIGNAL_ADD_ENTITIES)
+        async_dispatcher_send(self.menuai, SIGNAL_ADD_ENTITIES)
 
     def _send_group_gateway_message(
         self, zha_group_proxy: ZHAGroupProxy, gateway_message_type: str
     ) -> None:
         """Send the gateway event for a zigpy group event."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             ZHA_GW_MSG,
             {
                 ATTR_TYPE: gateway_message_type,
@@ -954,7 +954,7 @@ class ZHAGatewayProxy(EventBase):
             if remove_tasks:
                 await asyncio.wait(remove_tasks)
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         reg_device = device_registry.async_get(device.device_id)
         if reg_device is not None:
             device_registry.async_remove_device(reg_device.id)
@@ -999,15 +999,15 @@ def async_set_logger_levels(levels: dict[str, int]) -> None:
 class LogRelayHandler(logging.Handler):
     """Log handler for error messages."""
 
-    def __init__(self, hass: HomeAssistant, gateway: ZHAGatewayProxy) -> None:
+    def __init__(self, menuai: menuai, gateway: ZHAGatewayProxy) -> None:
         """Initialize a new LogErrorHandler."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self.gateway = gateway
-        hass_path: str = HOMEASSISTANT_PATH[0]
-        config_dir = self.hass.config.config_dir
+        menuai_path: str = menuai_PATH[0]
+        config_dir = self.menuai.config.config_dir
         self.paths_re = re.compile(
-            rf"(?:{re.escape(hass_path)}|{re.escape(config_dir)})/(.*)"
+            rf"(?:{re.escape(menuai_path)}|{re.escape(config_dir)})/(.*)"
         )
 
     def emit(self, record: LogRecord) -> None:
@@ -1016,7 +1016,7 @@ class LogRelayHandler(logging.Handler):
             record, self.paths_re, figure_out_source=record.levelno >= logging.WARNING
         )
         dispatcher_send(
-            self.hass,
+            self.menuai,
             ZHA_GW_MSG,
             {ATTR_TYPE: ZHA_GW_MSG_LOG_OUTPUT, ZHA_GW_MSG_LOG_ENTRY: entry.to_dict()},
         )
@@ -1024,7 +1024,7 @@ class LogRelayHandler(logging.Handler):
 
 @dataclasses.dataclass(kw_only=True, slots=True)
 class HAZHAData:
-    """ZHA data stored in `hass.data`."""
+    """ZHA data stored in `menuai.data`."""
 
     yaml_config: ConfigType = dataclasses.field(default_factory=dict)
     config_entry: ConfigEntry | None = dataclasses.field(default=None)
@@ -1054,47 +1054,47 @@ class EntityData:
         return self.group_proxy is not None and isinstance(self.entity, GroupEntity)
 
 
-def get_zha_data(hass: HomeAssistant) -> HAZHAData:
+def get_zha_data(menuai: menuai) -> HAZHAData:
     """Get the global ZHA data object."""
-    if DATA_ZHA not in hass.data:
-        hass.data[DATA_ZHA] = HAZHAData()
+    if DATA_ZHA not in menuai.data:
+        menuai.data[DATA_ZHA] = HAZHAData()
 
-    return hass.data[DATA_ZHA]
+    return menuai.data[DATA_ZHA]
 
 
-def get_zha_gateway(hass: HomeAssistant) -> Gateway:
+def get_zha_gateway(menuai: menuai) -> Gateway:
     """Get the ZHA gateway object."""
-    if (gateway_proxy := get_zha_data(hass).gateway_proxy) is None:
+    if (gateway_proxy := get_zha_data(menuai).gateway_proxy) is None:
         raise ValueError("No gateway object exists")
 
     return gateway_proxy.gateway
 
 
-def get_zha_gateway_proxy(hass: HomeAssistant) -> ZHAGatewayProxy:
+def get_zha_gateway_proxy(menuai: menuai) -> ZHAGatewayProxy:
     """Get the ZHA gateway object."""
-    if (gateway_proxy := get_zha_data(hass).gateway_proxy) is None:
+    if (gateway_proxy := get_zha_data(menuai).gateway_proxy) is None:
         raise ValueError("No gateway object exists")
 
     return gateway_proxy
 
 
-def get_config_entry(hass: HomeAssistant) -> ConfigEntry:
+def get_config_entry(menuai: menuai) -> ConfigEntry:
     """Get the ZHA gateway object."""
-    if (gateway_proxy := get_zha_data(hass).gateway_proxy) is None:
+    if (gateway_proxy := get_zha_data(menuai).gateway_proxy) is None:
         raise ValueError("No gateway object exists to retrieve the config entry from.")
 
     return gateway_proxy.config_entry
 
 
 @callback
-def async_get_zha_device_proxy(hass: HomeAssistant, device_id: str) -> ZHADeviceProxy:
+def async_get_zha_device_proxy(menuai: menuai, device_id: str) -> ZHADeviceProxy:
     """Get a ZHA device for the given device registry id."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     registry_device = device_registry.async_get(device_id)
     if not registry_device:
         _LOGGER.error("Device id `%s` not found in registry", device_id)
         raise KeyError(f"Device id `{device_id}` not found in registry.")
-    zha_gateway_proxy = get_zha_gateway_proxy(hass)
+    zha_gateway_proxy = get_zha_gateway_proxy(menuai)
     ieee_address = next(
         identifier
         for domain, identifier in registry_device.identifiers
@@ -1172,9 +1172,9 @@ def convert_to_zcl_values(
     return converted_fields
 
 
-def async_cluster_exists(hass: HomeAssistant, cluster_id, skip_coordinator=True):
+def async_cluster_exists(menuai: menuai, cluster_id, skip_coordinator=True):
     """Determine if a device containing the specified in cluster is paired."""
-    zha_gateway = get_zha_gateway(hass)
+    zha_gateway = get_zha_gateway(menuai)
     zha_devices = zha_gateway.devices.values()
     for zha_device in zha_devices:
         if skip_coordinator and zha_device.is_coordinator:
@@ -1262,7 +1262,7 @@ CONF_ZHA_ALARM_SCHEMA = vol.Schema(
 )
 
 
-def create_zha_config(hass: HomeAssistant, ha_zha_data: HAZHAData) -> ZHAData:
+def create_zha_config(menuai: menuai, ha_zha_data: HAZHAData) -> ZHAData:
     """Create ZHA lib configuration from HA config objects."""
 
     # ensure that we have the necessary HA configuration data
@@ -1277,7 +1277,7 @@ def create_zha_config(hass: HomeAssistant, ha_zha_data: HAZHAData) -> ZHAData:
     if path != cleaned_path:
         _LOGGER.debug("Cleaned serial port path %r -> %r", path, cleaned_path)
         ha_zha_data.config_entry.data[CONF_DEVICE][CONF_DEVICE_PATH] = cleaned_path
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             ha_zha_data.config_entry, data=ha_zha_data.config_entry.data
         )
 
@@ -1286,7 +1286,7 @@ def create_zha_config(hass: HomeAssistant, ha_zha_data: HAZHAData) -> ZHAData:
     app_config = copy.deepcopy(ha_zha_data.yaml_config.get(CONF_ZIGPY, {}))
     database = ha_zha_data.yaml_config.get(
         CONF_DATABASE,
-        hass.config.path(DEFAULT_DATABASE_NAME),
+        menuai.config.path(DEFAULT_DATABASE_NAME),
     )
     app_config[CONF_DATABASE] = database
     app_config[CONF_DEVICE] = ha_zha_data.config_entry.data[CONF_DEVICE]
@@ -1357,21 +1357,21 @@ def create_zha_config(hass: HomeAssistant, ha_zha_data: HAZHAData) -> ZHAData:
             quirks_configuration=quirks_config,
             device_overrides=overrides_config,
         ),
-        local_timezone=ZoneInfo(hass.config.time_zone),
+        local_timezone=ZoneInfo(menuai.config.time_zone),
     )
 
 
 def convert_zha_error_to_ha_error[**_P, _EntityT: ZHAEntity](
     func: Callable[Concatenate[_EntityT, _P], Awaitable[None]],
 ) -> Callable[Concatenate[_EntityT, _P], Coroutine[Any, Any, None]]:
-    """Decorate ZHA commands and re-raises ZHAException as HomeAssistantError."""
+    """Decorate ZHA commands and re-raises ZHAException as menuaiError."""
 
     @functools.wraps(func)
     async def handler(self: _EntityT, *args: _P.args, **kwargs: _P.kwargs) -> None:
         try:
             return await func(self, *args, **kwargs)
         except ZHAException as err:
-            raise HomeAssistantError(err) from err
+            raise menuaiError(err) from err
 
     return handler
 

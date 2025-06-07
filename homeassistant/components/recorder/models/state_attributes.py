@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.util.json import json_loads_object
+from menuai.util.json import json_loads_object
 
 EMPTY_JSON_OBJECT = "{}"
 _LOGGER = logging.getLogger(__name__)

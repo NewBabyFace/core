@@ -8,14 +8,14 @@ from typing import Any, cast
 from aiohttp import ClientSession
 from aiovodafone import VodafoneStationDevice, VodafoneStationSercommApi, exceptions
 
-from homeassistant.components.device_tracker import DEFAULT_CONSIDER_HOME
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.components.device_tracker import DEFAULT_CONSIDER_HOME
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import _LOGGER, DOMAIN, SCAN_INTERVAL
 from .helpers import cleanup_device_tracker
@@ -49,7 +49,7 @@ class VodafoneStationRouter(DataUpdateCoordinator[UpdateCoordinatorDataType]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         host: str,
         username: str,
         password: str,
@@ -65,13 +65,13 @@ class VodafoneStationRouter(DataUpdateCoordinator[UpdateCoordinatorDataType]):
         self._id = config_entry.unique_id
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             name=f"{DOMAIN}-{host}-coordinator",
             update_interval=timedelta(seconds=SCAN_INTERVAL),
             config_entry=config_entry,
         )
-        device_reg = dr.async_get(self.hass)
+        device_reg = dr.async_get(self.menuai)
         device_list = dr.async_entries_for_config_entry(
             device_reg, self.config_entry.entry_id
         )
@@ -162,7 +162,7 @@ class VodafoneStationRouter(DataUpdateCoordinator[UpdateCoordinatorDataType]):
             _LOGGER.debug(
                 "Found %s stale devices: %s", len(stale_devices), stale_devices
             )
-            await cleanup_device_tracker(self.hass, self.config_entry, data_devices)
+            await cleanup_device_tracker(self.menuai, self.config_entry, data_devices)
 
         self.previous_devices = current_devices
 

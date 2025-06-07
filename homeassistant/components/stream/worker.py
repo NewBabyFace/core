@@ -18,8 +18,8 @@ import av.container
 from av.container import InputContainer
 import av.stream
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import redact_credentials
 from .const import (
@@ -67,13 +67,13 @@ class StreamState:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         outputs_callback: Callable[[], Mapping[str, StreamOutput]],
         diagnostics: Diagnostics,
     ) -> None:
         """Initialize StreamState."""
         self._stream_id: int = 0
-        self.hass = hass
+        self.menuai = menuai
         self._outputs_callback: Callable[[], Mapping[str, StreamOutput]] = (
             outputs_callback
         )
@@ -133,7 +133,7 @@ class StreamMuxer:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         video_stream: av.VideoStream,
         audio_stream: av.audio.AudioStream | None,
         audio_bsf: str | None,
@@ -141,7 +141,7 @@ class StreamMuxer:
         stream_settings: StreamSettings,
     ) -> None:
         """Initialize StreamMuxer."""
-        self._hass = hass
+        self._menuai = menuai
         self._input_video_stream = video_stream
         self._input_audio_stream = audio_stream
         self._audio_bsf = audio_bsf
@@ -356,7 +356,7 @@ class StreamMuxer:
             adjusted_dts = packet.dts
         assert self._segment
         self._memory_file.seek(self._memory_file_pos)
-        self._hass.loop.call_soon_threadsafe(
+        self._menuai.loop.call_soon_threadsafe(
             self._segment.async_add_part,
             Part(
                 duration=float(
@@ -640,7 +640,7 @@ def stream_worker(
         ) from ex
 
     muxer = StreamMuxer(
-        stream_state.hass,
+        stream_state.menuai,
         video_stream,
         audio_stream,
         audio_bsf,

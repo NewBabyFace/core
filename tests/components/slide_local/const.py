@@ -1,6 +1,6 @@
 """Common const used across tests for slide_local."""
 
-from homeassistant.components.slide_local.const import DOMAIN
+from menuai.components.slide_local.const import DOMAIN
 
 from tests.common import load_json_object_fixture
 

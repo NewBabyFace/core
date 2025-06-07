@@ -7,13 +7,13 @@ from raincloudy.core import RainCloudy
 from requests.exceptions import ConnectTimeout, HTTPError
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import persistent_notification
+from menuai.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.event import track_time_interval
+from menuai.helpers.typing import ConfigType
 
 from .const import DATA_RAINCLOUD, SIGNAL_UPDATE_RAINCLOUD
 
@@ -40,7 +40,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Melnor RainCloud component."""
     conf = config[DOMAIN]
     username = conf.get(CONF_USERNAME)
@@ -51,12 +51,12 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         raincloud = RainCloudy(username=username, password=password)
         if not raincloud.is_connected:
             raise HTTPError  # noqa: TRY301
-        hass.data[DATA_RAINCLOUD] = RainCloudHub(raincloud)
+        menuai.data[DATA_RAINCLOUD] = RainCloudHub(raincloud)
     except (ConnectTimeout, HTTPError) as ex:
         _LOGGER.error("Unable to connect to Rain Cloud service: %s", str(ex))
         persistent_notification.create(
-            hass,
-            f"Error: {ex}<br />You will need to restart hass after fixing.",
+            menuai,
+            f"Error: {ex}<br />You will need to restart menuai after fixing.",
             title=NOTIFICATION_TITLE,
             notification_id=NOTIFICATION_ID,
         )
@@ -65,11 +65,11 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def hub_refresh(event_time):
         """Call Raincloud hub to refresh information."""
         _LOGGER.debug("Updating RainCloud Hub component")
-        hass.data[DATA_RAINCLOUD].data.update()
-        dispatcher_send(hass, SIGNAL_UPDATE_RAINCLOUD)
+        menuai.data[DATA_RAINCLOUD].data.update()
+        dispatcher_send(menuai, SIGNAL_UPDATE_RAINCLOUD)
 
     # Call the Raincloud API to refresh updates
-    track_time_interval(hass, hub_refresh, scan_interval)
+    track_time_interval(menuai, hub_refresh, scan_interval)
 
     return True
 

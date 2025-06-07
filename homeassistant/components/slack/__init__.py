@@ -8,18 +8,18 @@ from aiohttp.client_exceptions import ClientError
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client, config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import aiohttp_client, config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_URL,
     ATTR_USER_ID,
     DATA_CLIENT,
-    DATA_HASS_CONFIG,
+    DATA_menuai_CONFIG,
     DOMAIN,
     SLACK_DATA,
 )
@@ -31,15 +31,15 @@ PLATFORMS = [Platform.NOTIFY, Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Slack component."""
-    hass.data[DATA_HASS_CONFIG] = config
+    menuai.data[DATA_menuai_CONFIG] = config
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Slack from a config entry."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
     slack = AsyncWebClient(
         token=entry.data[CONF_API_KEY], session=session
     )  # No run_async
@@ -57,19 +57,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ATTR_URL: res[ATTR_URL],
         ATTR_USER_ID: res[ATTR_USER_ID],
     }
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data | {SLACK_DATA: data}
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data | {SLACK_DATA: data}
 
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass,
+            menuai,
             Platform.NOTIFY,
             DOMAIN,
-            hass.data[DOMAIN][entry.entry_id],
-            hass.data[DATA_HASS_CONFIG],
+            menuai.data[DOMAIN][entry.entry_id],
+            menuai.data[DATA_menuai_CONFIG],
         )
     )
 
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )
 

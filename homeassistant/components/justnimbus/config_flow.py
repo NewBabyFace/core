@@ -9,9 +9,9 @@ from typing import Any
 import justnimbus
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CLIENT_ID
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CLIENT_ID
+from menuai.helpers import config_validation as cv
 
 from .const import CONF_ZIP_CODE, DOMAIN
 
@@ -50,7 +50,7 @@ class JustNimbusConfigFlow(ConfigFlow, domain=DOMAIN):
             client_id=user_input[CONF_CLIENT_ID], zip_code=user_input[CONF_ZIP_CODE]
         )
         try:
-            await self.hass.async_add_executor_job(client.get_data)
+            await self.menuai.async_add_executor_job(client.get_data)
         except justnimbus.InvalidClientID:
             errors["base"] = "invalid_auth"
         except justnimbus.JustNimbusError:

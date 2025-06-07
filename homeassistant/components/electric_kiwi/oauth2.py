@@ -5,13 +5,13 @@ from __future__ import annotations
 import base64
 from typing import Any, cast
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     AuthImplementation,
     AuthorizationServer,
     ClientCredential,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import SCOPE_VALUES
 
@@ -21,14 +21,14 @@ class ElectricKiwiLocalOAuth2Implementation(AuthImplementation):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         domain: str,
         client_credential: ClientCredential,
         authorization_server: AuthorizationServer,
     ) -> None:
         """Set up Electric Kiwi oauth."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             auth_domain=domain,
             credential=client_credential,
             authorization_server=authorization_server,
@@ -63,7 +63,7 @@ class ElectricKiwiLocalOAuth2Implementation(AuthImplementation):
 
     async def _token_request(self, data: dict) -> dict:
         """Make a token request."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         client_str = f"{self.client_id}:{self.client_secret}"
         client_string_bytes = client_str.encode("ascii")
 

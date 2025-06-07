@@ -8,11 +8,11 @@ from typing import Any
 
 from pyfreedompro import get_list, get_states
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -24,16 +24,16 @@ type FreedomproConfigEntry = ConfigEntry[FreedomproDataUpdateCoordinator]
 class FreedomproDataUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
     """Class to manage fetching Freedompro data API."""
 
-    def __init__(self, hass: HomeAssistant, entry: FreedomproConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: FreedomproConfigEntry) -> None:
         """Initialize."""
 
-        self._hass = hass
+        self._menuai = menuai
         self._api_key = entry.data[CONF_API_KEY]
         self._devices: list[dict[str, Any]] | None = None
 
         update_interval = timedelta(minutes=1)
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -43,7 +43,7 @@ class FreedomproDataUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]
     async def _async_update_data(self):
         if self._devices is None:
             result = await get_list(
-                aiohttp_client.async_get_clientsession(self._hass), self._api_key
+                aiohttp_client.async_get_clientsession(self._menuai), self._api_key
             )
             if result["state"]:
                 self._devices = result["devices"]
@@ -51,7 +51,7 @@ class FreedomproDataUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]
                 raise UpdateFailed
 
         result = await get_states(
-            aiohttp_client.async_get_clientsession(self._hass), self._api_key
+            aiohttp_client.async_get_clientsession(self._menuai), self._api_key
         )
 
         for device in self._devices:

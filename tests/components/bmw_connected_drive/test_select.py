@@ -8,13 +8,13 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.bmw_connected_drive import DOMAIN
-from homeassistant.components.bmw_connected_drive.select import SELECT_TYPES
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.translation import async_get_translations
+from menuai.components.bmw_connected_drive import DOMAIN
+from menuai.components.bmw_connected_drive.select import SELECT_TYPES
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.translation import async_get_translations
 
 from . import (
     REMOTE_SERVICE_EXC_REASON,
@@ -29,7 +29,7 @@ from tests.common import snapshot_platform
 @pytest.mark.usefixtures("bmw_fixture")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity_state_attrs(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -37,12 +37,12 @@ async def test_entity_state_attrs(
 
     # Setup component
     with patch(
-        "homeassistant.components.bmw_connected_drive.PLATFORMS",
+        "menuai.components.bmw_connected_drive.PLATFORMS",
         [Platform.SELECT],
     ):
-        mock_config_entry = await setup_mocked_integration(hass)
+        mock_config_entry = await setup_mocked_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -64,7 +64,7 @@ async def test_entity_state_attrs(
     ],
 )
 async def test_service_call_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     new_value: str,
     old_value: str,
@@ -74,12 +74,12 @@ async def test_service_call_success(
     """Test successful input change."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    hass.states.async_set(entity_id, old_value)
-    assert hass.states.get(entity_id).state == old_value
+    assert await setup_mocked_integration(menuai)
+    menuai.states.async_set(entity_id, old_value)
+    assert menuai.states.get(entity_id).state == old_value
 
     # Test
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         service_data={"option": new_value},
@@ -87,7 +87,7 @@ async def test_service_call_success(
         target={"entity_id": entity_id},
     )
     check_remote_service_call(bmw_fixture, remote_service)
-    assert hass.states.get(entity_id).state == new_value
+    assert menuai.states.get(entity_id).state == new_value
 
 
 @pytest.mark.usefixtures("bmw_fixture")
@@ -99,29 +99,29 @@ async def test_service_call_success(
     ],
 )
 async def test_service_call_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     value: str,
 ) -> None:
     """Test not allowed values for select inputs."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    old_value = hass.states.get(entity_id).state
+    assert await setup_mocked_integration(menuai)
+    old_value = menuai.states.get(entity_id).state
 
     # Test
     with pytest.raises(
         ServiceValidationError,
         match=f"Option {value} is not valid for entity {entity_id}",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "select",
             "select_option",
             service_data={"option": value},
             blocking=True,
             target={"entity_id": entity_id},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value
 
 
 @pytest.mark.usefixtures("bmw_fixture")
@@ -130,18 +130,18 @@ async def test_service_call_invalid_input(
     [
         (
             MyBMWRemoteServiceError(REMOTE_SERVICE_EXC_REASON),
-            HomeAssistantError,
+            menuaiError,
             REMOTE_SERVICE_EXC_TRANSLATION,
         ),
         (
             MyBMWAPIError(REMOTE_SERVICE_EXC_REASON),
-            HomeAssistantError,
+            menuaiError,
             REMOTE_SERVICE_EXC_TRANSLATION,
         ),
     ],
 )
 async def test_service_call_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     raised: Exception,
     expected: Exception,
     exc_translation: str,
@@ -150,9 +150,9 @@ async def test_service_call_fail(
     """Test exception handling."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
     entity_id = "select.i4_edrive40_ac_charging_limit"
-    old_value = hass.states.get(entity_id).state
+    old_value = menuai.states.get(entity_id).state
 
     # Setup exception
     monkeypatch.setattr(
@@ -163,28 +163,28 @@ async def test_service_call_fail(
 
     # Test
     with pytest.raises(expected, match=exc_translation):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "select",
             "select_option",
             service_data={"option": "16"},
             blocking=True,
             target={"entity_id": entity_id},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value
 
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_entity_option_translations(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Ensure all enum sensor values are translated."""
 
     # Setup component to load translations
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     prefix = f"component.{DOMAIN}.entity.{Platform.SELECT.value}"
 
-    translations = await async_get_translations(hass, "en", "entity", [DOMAIN])
+    translations = await async_get_translations(menuai, "en", "entity", [DOMAIN])
     translation_states = {
         k for k in translations if k.startswith(prefix) and ".state." in k
     }

@@ -7,12 +7,12 @@ from unittest.mock import patch
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from homeassistant import config_entries
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.components.sql.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.recorder import Recorder
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.components.sql.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import (
     ENTRY_CONFIG,
@@ -37,24 +37,24 @@ from . import (
 from tests.common import MockConfigEntry
 
 
-async def test_form(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_form(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             ENTRY_CONFIG,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Get Value"
@@ -70,25 +70,25 @@ async def test_form(recorder_mock: Recorder, hass: HomeAssistant) -> None:
 
 
 async def test_form_with_value_template(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test for with value template."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             ENTRY_CONFIG_WITH_VALUE_TEMPLATE,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Get Value"
@@ -102,9 +102,9 @@ async def test_form_with_value_template(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_flow_fails_db_url(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_flow_fails_db_url(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test config flow fails incorrect db url."""
-    result4 = await hass.config_entries.flow.async_init(
+    result4 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -112,10 +112,10 @@ async def test_flow_fails_db_url(recorder_mock: Recorder, hass: HomeAssistant) -
     assert result4["step_id"] == config_entries.SOURCE_USER
 
     with patch(
-        "homeassistant.components.sql.config_flow.sqlalchemy.create_engine",
+        "menuai.components.sql.config_flow.sqlalchemy.create_engine",
         side_effect=SQLAlchemyError("error_message"),
     ):
-        result4 = await hass.config_entries.flow.async_configure(
+        result4 = await menuai.config_entries.flow.async_configure(
             result4["flow_id"],
             user_input=ENTRY_CONFIG,
         )
@@ -124,17 +124,17 @@ async def test_flow_fails_db_url(recorder_mock: Recorder, hass: HomeAssistant) -
 
 
 async def test_flow_fails_invalid_query(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test config flow fails incorrect db url."""
-    result4 = await hass.config_entries.flow.async_init(
+    result4 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result4["type"] is FlowResultType.FORM
     assert result4["step_id"] == config_entries.SOURCE_USER
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_QUERY,
     )
@@ -144,7 +144,7 @@ async def test_flow_fails_invalid_query(
         "query": "query_invalid",
     }
 
-    result6 = await hass.config_entries.flow.async_configure(
+    result6 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_QUERY_2,
     )
@@ -154,7 +154,7 @@ async def test_flow_fails_invalid_query(
         "query": "query_invalid",
     }
 
-    result6 = await hass.config_entries.flow.async_configure(
+    result6 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_QUERY_3,
     )
@@ -164,7 +164,7 @@ async def test_flow_fails_invalid_query(
         "query": "query_invalid",
     }
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_QUERY_NO_READ_ONLY,
     )
@@ -174,7 +174,7 @@ async def test_flow_fails_invalid_query(
         "query": "query_no_read_only",
     }
 
-    result6 = await hass.config_entries.flow.async_configure(
+    result6 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_QUERY_NO_READ_ONLY_CTE,
     )
@@ -184,7 +184,7 @@ async def test_flow_fails_invalid_query(
         "query": "query_no_read_only",
     }
 
-    result6 = await hass.config_entries.flow.async_configure(
+    result6 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_MULTIPLE_QUERIES,
     )
@@ -194,7 +194,7 @@ async def test_flow_fails_invalid_query(
         "query": "multiple_queries",
     }
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_NO_RESULTS,
     )
@@ -204,7 +204,7 @@ async def test_flow_fails_invalid_query(
         "query": "query_invalid",
     }
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG,
     )
@@ -222,17 +222,17 @@ async def test_flow_fails_invalid_query(
 
 
 async def test_flow_fails_invalid_column_name(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test config flow fails invalid column name."""
-    result4 = await hass.config_entries.flow.async_init(
+    result4 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result4["type"] is FlowResultType.FORM
     assert result4["step_id"] == "user"
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_COLUMN_NAME,
     )
@@ -242,7 +242,7 @@ async def test_flow_fails_invalid_column_name(
         "column": "column_invalid",
     }
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         user_input=ENTRY_CONFIG,
     )
@@ -259,7 +259,7 @@ async def test_flow_fails_invalid_column_name(
     }
 
 
-async def test_options_flow(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_options_flow(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test options config flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -274,21 +274,21 @@ async def test_options_flow(recorder_mock: Recorder, hass: HomeAssistant) -> Non
             "state_class": SensorStateClass.TOTAL,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "db_url": "sqlite://",
@@ -314,7 +314,7 @@ async def test_options_flow(recorder_mock: Recorder, hass: HomeAssistant) -> Non
 
 
 async def test_options_flow_name_previously_removed(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test options config flow where the name was missing."""
     entry = MockConfigEntry(
@@ -328,21 +328,21 @@ async def test_options_flow_name_previously_removed(
         },
         title="Get Value Title",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "db_url": "sqlite://",
@@ -351,7 +351,7 @@ async def test_options_flow_name_previously_removed(
                 "unit_of_measurement": "MiB",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 1
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -364,7 +364,7 @@ async def test_options_flow_name_previously_removed(
 
 
 async def test_options_flow_fails_db_url(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test options flow fails incorrect db url."""
     entry = MockConfigEntry(
@@ -378,22 +378,22 @@ async def test_options_flow_fails_db_url(
             "unit_of_measurement": "MiB",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     with patch(
-        "homeassistant.components.sql.config_flow.sqlalchemy.create_engine",
+        "menuai.components.sql.config_flow.sqlalchemy.create_engine",
         side_effect=SQLAlchemyError("error_message"),
     ):
-        result2 = await hass.config_entries.options.async_configure(
+        result2 = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "db_url": "sqlite://",
@@ -407,7 +407,7 @@ async def test_options_flow_fails_db_url(
 
 
 async def test_options_flow_fails_invalid_query(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test options flow fails incorrect query and template."""
     entry = MockConfigEntry(
@@ -421,18 +421,18 @@ async def test_options_flow_fails_invalid_query(
             "unit_of_measurement": "MiB",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_QUERY_OPT,
     )
@@ -442,7 +442,7 @@ async def test_options_flow_fails_invalid_query(
         "query": "query_invalid",
     }
 
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_QUERY_2_OPT,
     )
@@ -452,7 +452,7 @@ async def test_options_flow_fails_invalid_query(
         "query": "query_invalid",
     }
 
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_QUERY_3_OPT,
     )
@@ -462,7 +462,7 @@ async def test_options_flow_fails_invalid_query(
         "query": "query_invalid",
     }
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG_QUERY_NO_READ_ONLY_OPT,
     )
@@ -472,7 +472,7 @@ async def test_options_flow_fails_invalid_query(
         "query": "query_no_read_only",
     }
 
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG_QUERY_NO_READ_ONLY_CTE_OPT,
     )
@@ -482,7 +482,7 @@ async def test_options_flow_fails_invalid_query(
         "query": "query_no_read_only",
     }
 
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG_MULTIPLE_QUERIES_OPT,
     )
@@ -492,7 +492,7 @@ async def test_options_flow_fails_invalid_query(
         "query": "multiple_queries",
     }
 
-    result4 = await hass.config_entries.options.async_configure(
+    result4 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "db_url": "sqlite://",
@@ -512,7 +512,7 @@ async def test_options_flow_fails_invalid_query(
 
 
 async def test_options_flow_fails_invalid_column_name(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test options flow fails invalid column name."""
     entry = MockConfigEntry(
@@ -525,18 +525,18 @@ async def test_options_flow_fails_invalid_column_name(
             "unit_of_measurement": "MiB",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG_INVALID_COLUMN_NAME_OPT,
     )
@@ -546,7 +546,7 @@ async def test_options_flow_fails_invalid_column_name(
         "column": "column_invalid",
     }
 
-    result4 = await hass.config_entries.options.async_configure(
+    result4 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "query": "SELECT 5 as value",
@@ -565,7 +565,7 @@ async def test_options_flow_fails_invalid_column_name(
 
 
 async def test_options_flow_db_url_empty(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test options config flow with leaving db_url empty."""
     entry = MockConfigEntry(
@@ -579,27 +579,27 @@ async def test_options_flow_db_url_empty(
             "unit_of_measurement": "MiB",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     with (
         patch(
-            "homeassistant.components.sql.async_setup_entry",
+            "menuai.components.sql.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "query": "SELECT 5 as size",
@@ -607,7 +607,7 @@ async def test_options_flow_db_url_empty(
                 "unit_of_measurement": "MiB",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -620,11 +620,11 @@ async def test_options_flow_db_url_empty(
 
 async def test_full_flow_not_recorder_db(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     tmp_path: Path,
 ) -> None:
     """Test full config flow with not using recorder db."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -634,11 +634,11 @@ async def test_full_flow_not_recorder_db(
 
     with (
         patch(
-            "homeassistant.components.sql.async_setup_entry",
+            "menuai.components.sql.async_setup_entry",
             return_value=True,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "db_url": db_path_str,
@@ -647,7 +647,7 @@ async def test_full_flow_not_recorder_db(
                 "column": "value",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Get Value"
@@ -658,20 +658,20 @@ async def test_full_flow_not_recorder_db(
         "column": "value",
     }
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     with (
         patch(
-            "homeassistant.components.sql.async_setup_entry",
+            "menuai.components.sql.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "query": "SELECT 5 as value",
@@ -680,7 +680,7 @@ async def test_full_flow_not_recorder_db(
                 "unit_of_measurement": "MiB",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -692,9 +692,9 @@ async def test_full_flow_not_recorder_db(
     }
 
     # Need to test same again to mitigate issue with db_url removal
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "query": "SELECT 5 as value",
@@ -703,7 +703,7 @@ async def test_full_flow_not_recorder_db(
             "unit_of_measurement": "MB",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -723,7 +723,7 @@ async def test_full_flow_not_recorder_db(
     }
 
 
-async def test_device_state_class(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_device_state_class(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test we get the form."""
 
     entry = MockConfigEntry(
@@ -736,17 +736,17 @@ async def test_device_state_class(recorder_mock: Recorder, hass: HomeAssistant) 
             "unit_of_measurement": "MiB",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ):
-        result2 = await hass.config_entries.options.async_configure(
+        result2 = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "query": "SELECT 5 as value",
@@ -756,7 +756,7 @@ async def test_device_state_class(recorder_mock: Recorder, hass: HomeAssistant) 
                 "state_class": SensorStateClass.TOTAL,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == {
@@ -768,15 +768,15 @@ async def test_device_state_class(recorder_mock: Recorder, hass: HomeAssistant) 
         "state_class": SensorStateClass.TOTAL,
     }
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     with patch(
-        "homeassistant.components.sql.async_setup_entry",
+        "menuai.components.sql.async_setup_entry",
         return_value=True,
     ):
-        result3 = await hass.config_entries.options.async_configure(
+        result3 = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "query": "SELECT 5 as value",
@@ -784,7 +784,7 @@ async def test_device_state_class(recorder_mock: Recorder, hass: HomeAssistant) 
                 "unit_of_measurement": "MiB",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert "device_class" not in result3["data"]

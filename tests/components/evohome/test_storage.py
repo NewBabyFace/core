@@ -7,9 +7,9 @@ from typing import Any, Final, NotRequired, TypedDict
 
 import pytest
 
-from homeassistant.components.evohome.const import DOMAIN, STORAGE_KEY, STORAGE_VER
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.evohome.const import DOMAIN, STORAGE_KEY, STORAGE_VER
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .conftest import setup_evohome
 from .const import ACCESS_TOKEN, REFRESH_TOKEN, SESSION_ID, USERNAME
@@ -78,21 +78,21 @@ DOMAIN_STORAGE_BASE: Final = {
 @pytest.mark.parametrize("install", ["minimal"])
 @pytest.mark.parametrize("idx", TEST_STORAGE_NULL)
 async def test_auth_tokens_null(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     config: dict[str, str],
     idx: str,
     install: str,
 ) -> None:
     """Test credentials manager when cache is empty."""
 
-    hass_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": TEST_STORAGE_NULL[idx]}
+    menuai_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": TEST_STORAGE_NULL[idx]}
 
-    async for _ in setup_evohome(hass, config, install=install):
+    async for _ in setup_evohome(menuai, config, install=install):
         pass
 
     # Confirm the expected tokens were cached to storage...
-    data: _TokenStoreT = hass_storage[DOMAIN]["data"]
+    data: _TokenStoreT = menuai_storage[DOMAIN]["data"]
 
     assert data[SZ_USERNAME] == USERNAME_SAME
     assert data[SZ_REFRESH_TOKEN] == f"new_{REFRESH_TOKEN}"
@@ -106,21 +106,21 @@ async def test_auth_tokens_null(
 @pytest.mark.parametrize("install", ["minimal"])
 @pytest.mark.parametrize("idx", TEST_STORAGE_DATA)
 async def test_auth_tokens_same(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     config: dict[str, str],
     idx: str,
     install: str,
 ) -> None:
     """Test credentials manager when cache contains valid data for this user."""
 
-    hass_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": TEST_STORAGE_DATA[idx]}
+    menuai_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": TEST_STORAGE_DATA[idx]}
 
-    async for _ in setup_evohome(hass, config, install=install):
+    async for _ in setup_evohome(menuai, config, install=install):
         pass
 
     # Confirm the expected tokens were cached to storage...
-    data: _TokenStoreT = hass_storage[DOMAIN]["data"]
+    data: _TokenStoreT = menuai_storage[DOMAIN]["data"]
 
     assert data[SZ_USERNAME] == USERNAME_SAME
     assert data[SZ_REFRESH_TOKEN] == REFRESH_TOKEN
@@ -131,8 +131,8 @@ async def test_auth_tokens_same(
 @pytest.mark.parametrize("install", ["minimal"])
 @pytest.mark.parametrize("idx", TEST_STORAGE_DATA)
 async def test_auth_tokens_past(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     config: dict[str, str],
     idx: str,
     install: str,
@@ -145,13 +145,13 @@ async def test_auth_tokens_past(
     test_data = TEST_STORAGE_DATA[idx].copy()  # shallow copy is OK here
     test_data[SZ_ACCESS_TOKEN_EXPIRES] = dt_str
 
-    hass_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": test_data}
+    menuai_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": test_data}
 
-    async for _ in setup_evohome(hass, config, install=install):
+    async for _ in setup_evohome(menuai, config, install=install):
         pass
 
     # Confirm the expected tokens were cached to storage...
-    data: _TokenStoreT = hass_storage[DOMAIN]["data"]
+    data: _TokenStoreT = menuai_storage[DOMAIN]["data"]
 
     assert data[SZ_USERNAME] == USERNAME_SAME
     assert data[SZ_REFRESH_TOKEN] == f"new_{REFRESH_TOKEN}"
@@ -165,22 +165,22 @@ async def test_auth_tokens_past(
 @pytest.mark.parametrize("install", ["minimal"])
 @pytest.mark.parametrize("idx", TEST_STORAGE_DATA)
 async def test_auth_tokens_diff(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     config: dict[str, str],
     idx: str,
     install: str,
 ) -> None:
     """Test credentials manager when cache contains data for a different user."""
 
-    hass_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": TEST_STORAGE_DATA[idx]}
+    menuai_storage[DOMAIN] = DOMAIN_STORAGE_BASE | {"data": TEST_STORAGE_DATA[idx]}
     config["username"] = USERNAME_DIFF
 
-    async for _ in setup_evohome(hass, config, install=install):
+    async for _ in setup_evohome(menuai, config, install=install):
         pass
 
     # Confirm the expected tokens were cached to storage...
-    data: _TokenStoreT = hass_storage[DOMAIN]["data"]
+    data: _TokenStoreT = menuai_storage[DOMAIN]["data"]
 
     assert data[SZ_USERNAME] == USERNAME_DIFF
     assert data[SZ_REFRESH_TOKEN] == f"new_{REFRESH_TOKEN}"

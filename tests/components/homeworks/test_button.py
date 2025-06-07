@@ -2,15 +2,15 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def test_button_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homeworks: MagicMock,
 ) -> None:
@@ -19,14 +19,14 @@ async def test_button_service_calls(
     mock_controller = MagicMock()
     mock_homeworks.return_value = mock_controller
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert entity_id in hass.states.async_entity_ids(BUTTON_DOMAIN)
+    assert entity_id in menuai.states.async_entity_ids(BUTTON_DOMAIN)
 
     mock_controller._send.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
     assert len(mock_controller._send.mock_calls) == 1
@@ -34,7 +34,7 @@ async def test_button_service_calls(
 
 
 async def test_button_service_calls_delay(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homeworks: MagicMock,
 ) -> None:
@@ -43,14 +43,14 @@ async def test_button_service_calls_delay(
     mock_controller = MagicMock()
     mock_homeworks.return_value = mock_controller
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert entity_id in hass.states.async_entity_ids(BUTTON_DOMAIN)
+    assert entity_id in menuai.states.async_entity_ids(BUTTON_DOMAIN)
 
     mock_controller._send.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
     assert len(mock_controller._send.mock_calls) == 2

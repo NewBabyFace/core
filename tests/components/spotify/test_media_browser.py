@@ -5,11 +5,11 @@ from unittest.mock import MagicMock
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.media_player import BrowseError
-from homeassistant.components.spotify import DOMAIN
-from homeassistant.components.spotify.browse_media import async_browse_media
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.media_player import BrowseError
+from menuai.components.spotify import DOMAIN
+from menuai.components.spotify.browse_media import async_browse_media
+from menuai.const import CONF_ID
+from menuai.core import menuai
 
 from . import setup_integration
 from .conftest import SCOPES
@@ -19,14 +19,14 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("setup_credentials")
 async def test_browse_media_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_spotify: MagicMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     expires_at: int,
 ) -> None:
     """Test browsing the root."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     # We add a second config entry to test that lowercase entry_ids also work
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -45,22 +45,22 @@ async def test_browse_media_root(
         },
         entry_id="32oesphrnacjcf7vw5bf6odx3",
     )
-    await setup_integration(hass, config_entry)
-    response = await async_browse_media(hass, None, None)
+    await setup_integration(menuai, config_entry)
+    response = await async_browse_media(menuai, None, None)
     assert response.as_dict() == snapshot
 
 
 @pytest.mark.usefixtures("setup_credentials")
 async def test_browse_media_categories(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_spotify: MagicMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test browsing categories."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     response = await async_browse_media(
-        hass, "spotify://library", f"spotify://{mock_config_entry.entry_id}"
+        menuai, "spotify://library", f"spotify://{mock_config_entry.entry_id}"
     )
     assert response.as_dict() == snapshot
 
@@ -70,7 +70,7 @@ async def test_browse_media_categories(
 )
 @pytest.mark.usefixtures("setup_credentials")
 async def test_browse_media_playlists(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_id: str,
     mock_spotify: MagicMock,
     snapshot: SnapshotAssertion,
@@ -92,9 +92,9 @@ async def test_browse_media_playlists(
         },
         entry_id=config_entry_id,
     )
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     response = await async_browse_media(
-        hass,
+        menuai,
         "spotify://current_user_playlists",
         f"spotify://{config_entry_id}/current_user_playlists",
     )
@@ -121,7 +121,7 @@ async def test_browse_media_playlists(
 )
 @pytest.mark.usefixtures("setup_credentials")
 async def test_browsing(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_spotify: MagicMock,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
@@ -129,9 +129,9 @@ async def test_browsing(
     media_content_id: str,
 ) -> None:
     """Test browsing playlists for the two config entries."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     response = await async_browse_media(
-        hass,
+        menuai,
         f"spotify://{media_content_type}",
         f"spotify://{mock_config_entry.entry_id}/{media_content_id}",
     )
@@ -147,16 +147,16 @@ async def test_browsing(
 )
 @pytest.mark.usefixtures("setup_credentials")
 async def test_invalid_spotify_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_spotify: MagicMock,
     mock_config_entry: MockConfigEntry,
     media_content_id: str | None,
 ) -> None:
     """Test browsing with an invalid Spotify URL."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     with pytest.raises(BrowseError, match="Invalid Spotify URL specified"):
         await async_browse_media(
-            hass,
+            menuai,
             "spotify://artist",
             media_content_id,
         )
@@ -164,14 +164,14 @@ async def test_invalid_spotify_url(
 
 @pytest.mark.usefixtures("setup_credentials")
 async def test_browsing_not_loaded_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_spotify: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test browsing with an unloaded config entry."""
     with pytest.raises(BrowseError, match="Invalid Spotify account specified"):
         await async_browse_media(
-            hass,
+            menuai,
             "spotify://artist",
             f"spotify://{mock_config_entry.entry_id}/spotify:artist:0TnOYISbd1XYRBk9myaseg",
         )

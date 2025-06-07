@@ -10,8 +10,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_COMMAND
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import CONF_COMMAND
+from menuai.exceptions import menuaiError
 
 from ..models import AuthFlowContext, AuthFlowResult, Credentials, UserMeta
 from . import AUTH_PROVIDER_SCHEMA, AUTH_PROVIDERS, AuthProvider, LoginFlow
@@ -33,7 +33,7 @@ CONFIG_SCHEMA = AUTH_PROVIDER_SCHEMA.extend(
 _LOGGER = logging.getLogger(__name__)
 
 
-class InvalidAuthError(HomeAssistantError):
+class InvalidAuthError(menuaiError):
     """Raised when authentication with given credentials fails."""
 
 

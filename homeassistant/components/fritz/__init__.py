@@ -2,17 +2,17 @@
 
 import logging
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_FEATURE_DEVICE_TRACKING,
@@ -31,18 +31,18 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up fritzboxtools integration."""
-    await async_setup_services(hass)
+    await async_setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FritzConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FritzConfigEntry) -> bool:
     """Set up fritzboxtools from config entry."""
     _LOGGER.debug("Setting up FRITZ!Box Tools component")
 
     avm_wrapper = AvmWrapper(
-        hass=hass,
+        menuai=menuai,
         config_entry=entry,
         host=entry.data[CONF_HOST],
         port=entry.data[CONF_PORT],
@@ -72,31 +72,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzConfigEntry) -> boo
 
     entry.runtime_data = avm_wrapper
 
-    if FRITZ_DATA_KEY not in hass.data:
-        hass.data[FRITZ_DATA_KEY] = FritzData()
+    if FRITZ_DATA_KEY not in menuai.data:
+        menuai.data[FRITZ_DATA_KEY] = FritzData()
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     # Load the other platforms like switch
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FritzConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FritzConfigEntry) -> bool:
     """Unload FRITZ!Box Tools config entry."""
     avm_wrapper = entry.runtime_data
 
-    fritz_data = hass.data[FRITZ_DATA_KEY]
+    fritz_data = menuai.data[FRITZ_DATA_KEY]
     fritz_data.tracked.pop(avm_wrapper.unique_id)
 
     if not bool(fritz_data.tracked):
-        hass.data.pop(FRITZ_DATA_KEY)
+        menuai.data.pop(FRITZ_DATA_KEY)
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def update_listener(hass: HomeAssistant, entry: FritzConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: FritzConfigEntry) -> None:
     """Update when config_entry options update."""
     if entry.options:
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)

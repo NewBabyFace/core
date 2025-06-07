@@ -7,16 +7,16 @@ from typing import Any
 
 from rpi_bad_power import new_under_voltage
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.config_entry_flow import DiscoveryFlowHandler
+from menuai.config_entries import ConfigFlowResult
+from menuai.core import menuai
+from menuai.helpers.config_entry_flow import DiscoveryFlowHandler
 
 from .const import DOMAIN
 
 
-async def _async_supported(hass: HomeAssistant) -> bool:
+async def _async_supported(menuai: menuai) -> bool:
     """Return if the system supports under voltage detection."""
-    under_voltage = await hass.async_add_executor_job(new_under_voltage)
+    under_voltage = await menuai.async_add_executor_job(new_under_voltage)
     return under_voltage is not None
 
 
@@ -37,7 +37,7 @@ class RPiPowerFlow(DiscoveryFlowHandler[Awaitable[bool]], domain=DOMAIN):
         self, data: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle a flow initialized by onboarding."""
-        has_devices = await self._discovery_function(self.hass)
+        has_devices = await self._discovery_function(self.menuai)
 
         if not has_devices:
             return self.async_abort(reason="no_devices_found")

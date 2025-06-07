@@ -26,10 +26,10 @@ from zigpy.config import (
 )
 from zigpy.exceptions import NetworkNotFormed
 
-from homeassistant import config_entries
-from homeassistant.components import usb
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai import config_entries
+from menuai.components import usb
+from menuai.core import menuai
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from . import repairs
 from .const import (
@@ -134,7 +134,7 @@ def _prevent_overwrite_ezsp_ieee(
 class ZhaRadioManager:
     """Helper class with radio related functionality."""
 
-    hass: HomeAssistant
+    menuai: menuai
 
     def __init__(self) -> None:
         """Initialize ZhaRadioManager instance."""
@@ -147,11 +147,11 @@ class ZhaRadioManager:
 
     @classmethod
     def from_config_entry(
-        cls, hass: HomeAssistant, config_entry: config_entries.ConfigEntry
+        cls, menuai: menuai, config_entry: config_entries.ConfigEntry
     ) -> Self:
         """Create an instance from a config entry."""
         mgr = cls()
-        mgr.hass = hass
+        mgr.menuai = menuai
         mgr.device_path = config_entry.data[CONF_DEVICE][CONF_DEVICE_PATH]
         mgr.device_settings = config_entry.data[CONF_DEVICE]
         mgr.radio_type = RadioType[config_entry.data[CONF_RADIO_TYPE]]
@@ -163,16 +163,16 @@ class ZhaRadioManager:
         """Connect to the radio with the current config and then clean up."""
         assert self.radio_type is not None
 
-        config = get_zha_data(self.hass).yaml_config
+        config = get_zha_data(self.menuai).yaml_config
         app_config = config.get(CONF_ZIGPY, {}).copy()
 
         database_path = config.get(
             CONF_DATABASE,
-            self.hass.config.path(DEFAULT_DATABASE_NAME),
+            self.menuai.config.path(DEFAULT_DATABASE_NAME),
         )
 
         # Don't create `zigbee.db` if it doesn't already exist
-        if not await self.hass.async_add_executor_job(os.path.exists, database_path):
+        if not await self.menuai.async_add_executor_job(os.path.exists, database_path):
             database_path = None
 
         app_config[CONF_DATABASE] = database_path
@@ -231,12 +231,12 @@ class ZhaRadioManager:
             self.radio_type = radio
             self.device_settings = dev_config
 
-            repairs.async_delete_blocking_issues(self.hass)
+            repairs.async_delete_blocking_issues(self.menuai)
             return ProbeResult.RADIO_TYPE_DETECTED
 
         with suppress(repairs.wrong_silabs_firmware.AlreadyRunningEZSP):
             if await repairs.wrong_silabs_firmware.warn_on_wrong_silabs_firmware(
-                self.hass, self.device_path
+                self.menuai, self.device_path
             ):
                 return ProbeResult.WRONG_FIRMWARE_INSTALLED
 
@@ -338,18 +338,18 @@ class ZhaMultiPANMigrationHelper:
     """Helper class for automatic migration when upgrading the firmware of a radio.
 
     This class is currently only intended to be used when changing the firmware on the
-    radio used in the Home Assistant SkyConnect USB stick and the Home Assistant Yellow
+    radio used in the MenuAI SkyConnect USB stick and the MenuAI Yellow
     from Zigbee only firmware to firmware supporting both Zigbee and Thread.
     """
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry
+        self, menuai: menuai, config_entry: config_entries.ConfigEntry
     ) -> None:
         """Initialize MigrationHelper instance."""
         self._config_entry = config_entry
-        self._hass = hass
+        self._menuai = menuai
         self._radio_mgr = ZhaRadioManager()
-        self._radio_mgr.hass = hass
+        self._radio_mgr.menuai = menuai
 
     async def async_initiate_migration(self, data: dict[str, Any]) -> bool:
         """Initiate ZHA migration.
@@ -377,7 +377,7 @@ class ZhaMultiPANMigrationHelper:
             old_device_path = migration_data["old_discovery_info"]["hw"]["port"]["path"]
         else:  # usb
             device = migration_data["old_discovery_info"]["usb"].device
-            old_device_path = await self._hass.async_add_executor_job(
+            old_device_path = await self._menuai.async_add_executor_job(
                 usb.get_serial_by_id, device
             )
 
@@ -387,12 +387,12 @@ class ZhaMultiPANMigrationHelper:
 
         # OperationNotAllowed: ZHA is not running
         with suppress(config_entries.OperationNotAllowed):
-            await self._hass.config_entries.async_unload(self._config_entry.entry_id)
+            await self._menuai.config_entries.async_unload(self._config_entry.entry_id)
 
         # Temporarily connect to the old radio to read its settings
         config_entry_data = self._config_entry.data
         old_radio_mgr = ZhaRadioManager()
-        old_radio_mgr.hass = self._hass
+        old_radio_mgr.menuai = self._menuai
         old_radio_mgr.device_path = config_entry_data[CONF_DEVICE][CONF_DEVICE_PATH]
         old_radio_mgr.device_settings = config_entry_data[CONF_DEVICE]
         old_radio_mgr.radio_type = RadioType[config_entry_data[CONF_RADIO_TYPE]]
@@ -423,7 +423,7 @@ class ZhaMultiPANMigrationHelper:
         device_settings = self._radio_mgr.device_settings.copy()
 
         # Update the config entry settings
-        self._hass.config_entries.async_update_entry(
+        self._menuai.config_entries.async_update_entry(
             entry=self._config_entry,
             data={
                 CONF_DEVICE: device_settings,
@@ -463,4 +463,4 @@ class ZhaMultiPANMigrationHelper:
         # Launch ZHA again
         # OperationNotAllowed: ZHA is not unloaded
         with suppress(config_entries.OperationNotAllowed):
-            await self._hass.config_entries.async_setup(self._config_entry.entry_id)
+            await self._menuai.config_entries.async_setup(self._config_entry.entry_id)

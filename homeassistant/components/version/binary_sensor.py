@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from awesomeversion import AwesomeVersion
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import CONF_NAME, EntityCategory, __version__ as HA_VERSION
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import CONF_NAME, EntityCategory, __version__ as HA_VERSION
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_SOURCE, DEFAULT_NAME
 from .coordinator import VersionConfigEntry
@@ -21,7 +21,7 @@ HA_VERSION_OBJECT = AwesomeVersion(HA_VERSION)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: VersionConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -2,15 +2,15 @@
 
 import pytest
 
-from homeassistant.components.dsmr_reader.const import DOMAIN
-from homeassistant.components.dsmr_reader.definitions import (
+from menuai.components.dsmr_reader.const import DOMAIN
+from menuai.components.dsmr_reader.definitions import (
     DSMRReaderSensorEntityDescription,
     dsmr_transform,
     tariff_transform,
 )
-from homeassistant.components.dsmr_reader.sensor import DSMRSensor
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.components.dsmr_reader.sensor import DSMRSensor
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, MockEntityPlatform, async_fire_mqtt_message
 
@@ -40,7 +40,7 @@ async def test_tariff_transform(input, expected) -> None:
 
 
 @pytest.mark.usefixtures("mqtt_mock")
-async def test_entity_tariff(hass: HomeAssistant) -> None:
+async def test_entity_tariff(menuai: menuai) -> None:
     """Test the state attribute of DSMRReaderSensorEntityDescription when a tariff transform is needed."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -49,30 +49,30 @@ async def test_entity_tariff(hass: HomeAssistant) -> None:
         entry_id="TEST_ENTRY_ID",
         unique_id="UNIQUE_TEST_ID",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test if the payload is empty
-    async_fire_mqtt_message(hass, "dsmr/meter-stats/electricity_tariff", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "dsmr/meter-stats/electricity_tariff", "")
+    await menuai.async_block_till_done()
 
     electricity_tariff = "sensor.dsmr_meter_stats_electricity_tariff"
-    assert hass.states.get(electricity_tariff).state == STATE_UNKNOWN
+    assert menuai.states.get(electricity_tariff).state == STATE_UNKNOWN
 
     # Test high tariff
-    async_fire_mqtt_message(hass, "dsmr/meter-stats/electricity_tariff", "0")
-    await hass.async_block_till_done()
-    assert hass.states.get(electricity_tariff).state == "high"
+    async_fire_mqtt_message(menuai, "dsmr/meter-stats/electricity_tariff", "0")
+    await menuai.async_block_till_done()
+    assert menuai.states.get(electricity_tariff).state == "high"
 
     # Test low tariff
-    async_fire_mqtt_message(hass, "dsmr/meter-stats/electricity_tariff", "1")
-    await hass.async_block_till_done()
-    assert hass.states.get(electricity_tariff).state == "low"
+    async_fire_mqtt_message(menuai, "dsmr/meter-stats/electricity_tariff", "1")
+    await menuai.async_block_till_done()
+    assert menuai.states.get(electricity_tariff).state == "low"
 
 
 @pytest.mark.usefixtures("mqtt_mock")
-async def test_entity_dsmr_transform(hass: HomeAssistant) -> None:
+async def test_entity_dsmr_transform(menuai: menuai) -> None:
     """Test the state attribute of DSMRReaderSensorEntityDescription when a dsmr transform is needed."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -81,9 +81,9 @@ async def test_entity_dsmr_transform(hass: HomeAssistant) -> None:
         entry_id="TEST_ENTRY_ID",
         unique_id="UNIQUE_TEST_ID",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Create the entity, since it's not by default
     description = DSMRReaderSensorEntityDescription(
@@ -92,19 +92,19 @@ async def test_entity_dsmr_transform(hass: HomeAssistant) -> None:
         state=dsmr_transform,
     )
     sensor = DSMRSensor(description, config_entry)
-    sensor.hass = hass
-    sensor.platform = MockEntityPlatform(hass)
-    await sensor.async_added_to_hass()
+    sensor.menuai = menuai
+    sensor.platform = MockEntityPlatform(menuai)
+    await sensor.async_added_to_menuai()
 
     # Test dsmr version, if it's a digit
-    async_fire_mqtt_message(hass, "dsmr/meter-stats/dsmr_version", "42")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "dsmr/meter-stats/dsmr_version", "42")
+    await menuai.async_block_till_done()
 
     dsmr_version = "sensor.dsmr_meter_stats_dsmr_version"
-    assert hass.states.get(dsmr_version).state == "4.2"
+    assert menuai.states.get(dsmr_version).state == "4.2"
 
     # Test dsmr version, if it's not a digit
-    async_fire_mqtt_message(hass, "dsmr/meter-stats/dsmr_version", "version 5")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "dsmr/meter-stats/dsmr_version", "version 5")
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(dsmr_version).state == "version 5"
+    assert menuai.states.get(dsmr_version).state == "version 5"

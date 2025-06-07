@@ -1,12 +1,12 @@
 """The sensor tests for the Nightscout platform."""
 
-from homeassistant.components.nightscout.const import (
+from menuai.components.nightscout.const import (
     ATTR_DELTA,
     ATTR_DEVICE,
     ATTR_DIRECTION,
 )
-from homeassistant.const import ATTR_DATE, ATTR_ICON, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_DATE, ATTR_ICON, STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from . import (
     GLUCOSE_READINGS,
@@ -16,37 +16,37 @@ from . import (
 )
 
 
-async def test_sensor_state(hass: HomeAssistant) -> None:
+async def test_sensor_state(menuai: menuai) -> None:
     """Test sensor state data."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    test_glucose_sensor = hass.states.get("sensor.blood_sugar")
+    test_glucose_sensor = menuai.states.get("sensor.blood_sugar")
     assert test_glucose_sensor.state == str(
         GLUCOSE_READINGS[0].sgv  # pylint: disable=maybe-no-member
     )
 
 
-async def test_sensor_error(hass: HomeAssistant) -> None:
+async def test_sensor_error(menuai: menuai) -> None:
     """Test sensor state data."""
-    await init_integration_unavailable(hass)
+    await init_integration_unavailable(menuai)
 
-    test_glucose_sensor = hass.states.get("sensor.blood_sugar")
+    test_glucose_sensor = menuai.states.get("sensor.blood_sugar")
     assert test_glucose_sensor.state == STATE_UNAVAILABLE
 
 
-async def test_sensor_empty_response(hass: HomeAssistant) -> None:
+async def test_sensor_empty_response(menuai: menuai) -> None:
     """Test sensor state data."""
-    await init_integration_empty_response(hass)
+    await init_integration_empty_response(menuai)
 
-    test_glucose_sensor = hass.states.get("sensor.blood_sugar")
+    test_glucose_sensor = menuai.states.get("sensor.blood_sugar")
     assert test_glucose_sensor.state == STATE_UNAVAILABLE
 
 
-async def test_sensor_attributes(hass: HomeAssistant) -> None:
+async def test_sensor_attributes(menuai: menuai) -> None:
     """Test sensor attributes."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    test_glucose_sensor = hass.states.get("sensor.blood_sugar")
+    test_glucose_sensor = menuai.states.get("sensor.blood_sugar")
     reading = GLUCOSE_READINGS[0]
     assert reading is not None
 

@@ -8,9 +8,9 @@ from typing import Any
 
 from blinkpy.blinkpy import Blink
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -26,12 +26,12 @@ class BlinkUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: BlinkConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: BlinkConfigEntry, api: Blink
+        self, menuai: menuai, config_entry: BlinkConfigEntry, api: Blink
     ) -> None:
         """Initialize the data service."""
         self.api = api
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

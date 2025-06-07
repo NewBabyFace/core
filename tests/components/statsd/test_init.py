@@ -6,10 +6,10 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import statsd
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import statsd
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture
@@ -29,21 +29,21 @@ def test_invalid_config() -> None:
         statsd.CONFIG_SCHEMA(config)
 
 
-async def test_statsd_setup_full(hass: HomeAssistant) -> None:
+async def test_statsd_setup_full(menuai: menuai) -> None:
     """Test setup with all data."""
     config = {"statsd": {"host": "host", "port": 123, "rate": 1, "prefix": "foo"}}
     with patch("statsd.StatsClient") as mock_init:
-        assert await async_setup_component(hass, statsd.DOMAIN, config)
+        assert await async_setup_component(menuai, statsd.DOMAIN, config)
 
         assert mock_init.call_count == 1
         assert mock_init.call_args == mock.call(host="host", port=123, prefix="foo")
 
-        hass.states.async_set("domain.test", "on")
-        await hass.async_block_till_done()
+        menuai.states.async_set("domain.test", "on")
+        await menuai.async_block_till_done()
         assert len(mock_init.mock_calls) == 3
 
 
-async def test_statsd_setup_defaults(hass: HomeAssistant) -> None:
+async def test_statsd_setup_defaults(menuai: menuai) -> None:
     """Test setup with defaults."""
     config = {"statsd": {"host": "host"}}
 
@@ -51,27 +51,27 @@ async def test_statsd_setup_defaults(hass: HomeAssistant) -> None:
     config["statsd"][statsd.CONF_PREFIX] = statsd.DEFAULT_PREFIX
 
     with patch("statsd.StatsClient") as mock_init:
-        assert await async_setup_component(hass, statsd.DOMAIN, config)
+        assert await async_setup_component(menuai, statsd.DOMAIN, config)
 
         assert mock_init.call_count == 1
-        assert mock_init.call_args == mock.call(host="host", port=8125, prefix="hass")
-        hass.states.async_set("domain.test", "on")
-        await hass.async_block_till_done()
+        assert mock_init.call_args == mock.call(host="host", port=8125, prefix="menuai")
+        menuai.states.async_set("domain.test", "on")
+        await menuai.async_block_till_done()
         assert len(mock_init.mock_calls) == 3
 
 
-async def test_event_listener_defaults(hass: HomeAssistant, mock_client) -> None:
+async def test_event_listener_defaults(menuai: menuai, mock_client) -> None:
     """Test event listener."""
     config = {"statsd": {"host": "host", "value_mapping": {"custom": 3}}}
 
     config["statsd"][statsd.CONF_RATE] = statsd.DEFAULT_RATE
 
-    await async_setup_component(hass, statsd.DOMAIN, config)
+    await async_setup_component(menuai, statsd.DOMAIN, config)
 
     valid = {"1": 1, "1.0": 1.0, "custom": 3, STATE_ON: 1, STATE_OFF: 0}
     for in_, out in valid.items():
-        hass.states.async_set("domain.test", in_, {"attribute key": 3.2})
-        await hass.async_block_till_done()
+        menuai.states.async_set("domain.test", in_, {"attribute key": 3.2})
+        await menuai.async_block_till_done()
         mock_client.gauge.assert_has_calls(
             [mock.call("domain.test", out, statsd.DEFAULT_RATE)]
         )
@@ -85,24 +85,24 @@ async def test_event_listener_defaults(hass: HomeAssistant, mock_client) -> None
         mock_client.incr.reset_mock()
 
     for invalid in ("foo", "", object):
-        hass.states.async_set("domain.test", invalid, {})
-        await hass.async_block_till_done()
+        menuai.states.async_set("domain.test", invalid, {})
+        await menuai.async_block_till_done()
         assert not mock_client.gauge.called
         assert mock_client.incr.called
 
 
-async def test_event_listener_attr_details(hass: HomeAssistant, mock_client) -> None:
+async def test_event_listener_attr_details(menuai: menuai, mock_client) -> None:
     """Test event listener."""
     config = {"statsd": {"host": "host", "log_attributes": True}}
 
     config["statsd"][statsd.CONF_RATE] = statsd.DEFAULT_RATE
 
-    await async_setup_component(hass, statsd.DOMAIN, config)
+    await async_setup_component(menuai, statsd.DOMAIN, config)
 
     valid = {"1": 1, "1.0": 1.0, STATE_ON: 1, STATE_OFF: 0}
     for in_, out in valid.items():
-        hass.states.async_set("domain.test", in_, {"attribute key": 3.2})
-        await hass.async_block_till_done()
+        menuai.states.async_set("domain.test", in_, {"attribute key": 3.2})
+        await menuai.async_block_till_done()
         mock_client.gauge.assert_has_calls(
             [
                 mock.call("domain.test.state", out, statsd.DEFAULT_RATE),
@@ -119,7 +119,7 @@ async def test_event_listener_attr_details(hass: HomeAssistant, mock_client) -> 
         mock_client.incr.reset_mock()
 
     for invalid in ("foo", "", object):
-        hass.states.async_set("domain.test", invalid, {})
-        await hass.async_block_till_done()
+        menuai.states.async_set("domain.test", invalid, {})
+        await menuai.async_block_till_done()
         assert not mock_client.gauge.called
         assert mock_client.incr.called

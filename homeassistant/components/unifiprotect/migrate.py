@@ -9,12 +9,12 @@ from typing import TypedDict
 from uiprotect import ProtectApiClient
 from uiprotect.data import Bootstrap
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.helpers.issue_registry import IssueSeverity
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.helpers.issue_registry import IssueSeverity
 
 from .const import DOMAIN
 from .data import UFPConfigEntry
@@ -38,11 +38,11 @@ class EntityUsage(TypedDict):
 
 @callback
 def check_if_used(
-    hass: HomeAssistant, entry: UFPConfigEntry, entities: dict[str, EntityRef]
+    menuai: menuai, entry: UFPConfigEntry, entities: dict[str, EntityRef]
 ) -> dict[str, EntityUsage]:
     """Check for usages of entities and return them."""
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     refs: dict[str, EntityUsage] = {
         ref: {"automations": {}, "scripts": {}} for ref in entities
     }
@@ -54,8 +54,8 @@ def check_if_used(
                 and entity.disabled_by is None
                 and ref["id"] in entity.unique_id
             ):
-                entity_automations = automations_with_entity(hass, entity.entity_id)
-                entity_scripts = scripts_with_entity(hass, entity.entity_id)
+                entity_automations = automations_with_entity(menuai, entity.entity_id)
+                entity_scripts = scripts_with_entity(menuai, entity.entity_id)
                 if entity_automations:
                     refs[ref_id]["automations"][entity.entity_id] = entity_automations
                 if entity_scripts:
@@ -66,14 +66,14 @@ def check_if_used(
 
 @callback
 def create_repair_if_used(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     breaks_in: str,
     entities: dict[str, EntityRef],
 ) -> None:
     """Create repairs for used entities that are deprecated."""
 
-    usages = check_if_used(hass, entry, entities)
+    usages = check_if_used(menuai, entry, entities)
     for ref_id, refs in usages.items():
         issue_id = f"deprecate_{ref_id}"
         automations = refs["automations"]
@@ -83,7 +83,7 @@ def create_repair_if_used(
                 set(chain.from_iterable(chain(automations.values(), scripts.values())))
             )
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 issue_id,
                 is_fixable=False,
@@ -96,11 +96,11 @@ def create_repair_if_used(
             )
         else:
             _LOGGER.debug("No found usages of %s", ref_id)
-            ir.async_delete_issue(hass, DOMAIN, issue_id)
+            ir.async_delete_issue(menuai, DOMAIN, issue_id)
 
 
 async def async_migrate_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     protect: ProtectApiClient,
     bootstrap: Bootstrap,
@@ -108,12 +108,12 @@ async def async_migrate_data(
     """Run all valid UniFi Protect data migrations."""
 
     _LOGGER.debug("Start Migrate: async_deprecate_hdr")
-    async_deprecate_hdr(hass, entry)
+    async_deprecate_hdr(menuai, entry)
     _LOGGER.debug("Completed Migrate: async_deprecate_hdr")
 
 
 @callback
-def async_deprecate_hdr(hass: HomeAssistant, entry: UFPConfigEntry) -> None:
+def async_deprecate_hdr(menuai: menuai, entry: UFPConfigEntry) -> None:
     """Check for usages of hdr_mode switch and raise repair if it is used.
 
     UniFi Protect v3.0.22 changed how HDR works so it is no longer a simple on/off toggle. There is
@@ -123,7 +123,7 @@ def async_deprecate_hdr(hass: HomeAssistant, entry: UFPConfigEntry) -> None:
     """
 
     create_repair_if_used(
-        hass,
+        menuai,
         entry,
         "2024.10.0",
         {"hdr_switch": {"id": "hdr_mode", "platform": Platform.SWITCH}},

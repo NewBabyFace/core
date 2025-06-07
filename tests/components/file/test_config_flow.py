@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.file import DOMAIN
-from homeassistant.const import CONF_UNIT_OF_MEASUREMENT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.file import DOMAIN
+from menuai.const import CONF_UNIT_OF_MEASUREMENT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -34,7 +34,7 @@ MOCK_OPTIONS_SENSOR = {"value_template": "{{ value | round(1) }}"}
     ],
 )
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_is_allowed_path: bool,
     platform: str,
@@ -42,24 +42,24 @@ async def test_form(
     options: dict[str, Any],
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": platform},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     user_input = {**data, **options}
     user_input.pop("platform")
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=user_input
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == data
@@ -76,7 +76,7 @@ async def test_form(
     ],
 )
 async def test_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_is_allowed_path: bool,
     platform: str,
@@ -85,29 +85,29 @@ async def test_already_configured(
 ) -> None:
     """Test aborting if the entry is already configured."""
     entry = MockConfigEntry(domain=DOMAIN, data=data, options=options)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": platform},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == platform
 
     user_input = {**data, **options}
     user_input.pop("platform")
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=user_input,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_configured"
@@ -123,7 +123,7 @@ async def test_already_configured(
     ],
 )
 async def test_not_allowed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_is_allowed_path: bool,
     platform: str,
@@ -131,27 +131,27 @@ async def test_not_allowed(
     options: dict[str, Any],
 ) -> None:
     """Test aborting if the file path is not allowed."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": platform},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == platform
 
     user_input = {**data, **options}
     user_input.pop("platform")
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=user_input,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"file_path": "not_allowed"}
@@ -170,7 +170,7 @@ async def test_not_allowed(
     ],
 )
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_is_allowed_path: bool,
     platform: str,
     data: dict[str, Any],
@@ -179,25 +179,25 @@ async def test_options_flow(
 ) -> None:
     """Test options config flow."""
     entry = MockConfigEntry(domain=DOMAIN, data=data, options=options, version=2)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=new_options,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == new_options
 
-    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(entry.entry_id)
     assert entry.state is config_entries.ConfigEntryState.LOADED
     assert entry.options == new_options

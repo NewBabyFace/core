@@ -1,4 +1,4 @@
-"""Native Home Assistant iOS app component."""
+"""Native MenuAI iOS app component."""
 
 import datetime
 from http import HTTPStatus
@@ -7,16 +7,16 @@ from typing import Any
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.json import load_json_object
+from menuai import config_entries
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.json import save_json
+from menuai.helpers.typing import ConfigType
+from menuai.util.json import load_json_object
 
 from .const import (
     ATTR_BATTERY,
@@ -216,43 +216,43 @@ CONFIGURATION_FILE = ".ios.conf"
 PLATFORMS = [Platform.SENSOR]
 
 
-def devices_with_push(hass: HomeAssistant) -> dict[str, str]:
+def devices_with_push(menuai: menuai) -> dict[str, str]:
     """Return a dictionary of push enabled targets."""
     return {
         device_name: device.get(ATTR_PUSH_ID)
-        for device_name, device in hass.data[DOMAIN][ATTR_DEVICES].items()
+        for device_name, device in menuai.data[DOMAIN][ATTR_DEVICES].items()
         if device.get(ATTR_PUSH_ID) is not None
     }
 
 
-def enabled_push_ids(hass: HomeAssistant) -> list[str]:
+def enabled_push_ids(menuai: menuai) -> list[str]:
     """Return a list of push enabled target push IDs."""
     return [
         device.get(ATTR_PUSH_ID)
-        for device in hass.data[DOMAIN][ATTR_DEVICES].values()
+        for device in menuai.data[DOMAIN][ATTR_DEVICES].values()
         if device.get(ATTR_PUSH_ID) is not None
     ]
 
 
-def devices(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
+def devices(menuai: menuai) -> dict[str, dict[str, Any]]:
     """Return a dictionary of all identified devices."""
-    return hass.data[DOMAIN][ATTR_DEVICES]  # type: ignore[no-any-return]
+    return menuai.data[DOMAIN][ATTR_DEVICES]  # type: ignore[no-any-return]
 
 
-def device_name_for_push_id(hass: HomeAssistant, push_id: str) -> str | None:
+def device_name_for_push_id(menuai: menuai, push_id: str) -> str | None:
     """Return the device name for the push ID."""
-    for device_name, device in hass.data[DOMAIN][ATTR_DEVICES].items():
+    for device_name, device in menuai.data[DOMAIN][ATTR_DEVICES].items():
         if device.get(ATTR_PUSH_ID) is push_id:
             return device_name  # type: ignore[no-any-return]
     return None
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the iOS component."""
     conf: ConfigType | None = config.get(DOMAIN)
 
-    ios_config = await hass.async_add_executor_job(
-        load_json_object, hass.config.path(CONFIGURATION_FILE)
+    ios_config = await menuai.async_add_executor_job(
+        load_json_object, menuai.config.path(CONFIGURATION_FILE)
     )
 
     if ios_config == {}:
@@ -263,14 +263,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     ios_config[CONF_USER] = conf_user
 
-    hass.data[DOMAIN] = ios_config
+    menuai.data[DOMAIN] = ios_config
 
     # No entry support for notify component yet
-    discovery.load_platform(hass, Platform.NOTIFY, DOMAIN, {}, config)
+    discovery.load_platform(menuai, Platform.NOTIFY, DOMAIN, {}, config)
 
     if conf is not None:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_IMPORT}
             )
         )
@@ -279,19 +279,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: config_entries.ConfigEntry
+    menuai: menuai, entry: config_entries.ConfigEntry
 ) -> bool:
     """Set up an iOS entry."""
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    hass.http.register_view(iOSIdentifyDeviceView(hass.config.path(CONFIGURATION_FILE)))
-    hass.http.register_view(iOSPushConfigView(hass.data[DOMAIN][CONF_USER][CONF_PUSH]))
-    hass.http.register_view(iOSConfigView(hass.data[DOMAIN][CONF_USER]))
+    menuai.http.register_view(iOSIdentifyDeviceView(menuai.config.path(CONFIGURATION_FILE)))
+    menuai.http.register_view(iOSPushConfigView(menuai.data[DOMAIN][CONF_USER][CONF_PUSH]))
+    menuai.http.register_view(iOSConfigView(menuai.data[DOMAIN][CONF_USER]))
 
     return True
 
 
-class iOSPushConfigView(HomeAssistantView):
+class iOSPushConfigView(menuaiView):
     """A view that provides the push categories configuration."""
 
     url = "/api/ios/push"
@@ -307,7 +307,7 @@ class iOSPushConfigView(HomeAssistantView):
         return self.json(self.push_config)
 
 
-class iOSConfigView(HomeAssistantView):
+class iOSConfigView(menuaiView):
     """A view that provides the whole user-defined configuration."""
 
     url = "/api/ios/config"
@@ -323,7 +323,7 @@ class iOSConfigView(HomeAssistantView):
         return self.json(self.config)
 
 
-class iOSIdentifyDeviceView(HomeAssistantView):
+class iOSIdentifyDeviceView(menuaiView):
     """A view that accepts device identification requests."""
 
     url = "/api/ios/identify"
@@ -340,19 +340,19 @@ class iOSIdentifyDeviceView(HomeAssistantView):
         except ValueError:
             return self.json_message("Invalid JSON", HTTPStatus.BAD_REQUEST)
 
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         data[ATTR_LAST_SEEN_AT] = datetime.datetime.now().isoformat()
 
         device_id = data[ATTR_DEVICE_ID]
 
-        hass.data[DOMAIN][ATTR_DEVICES][device_id] = data
+        menuai.data[DOMAIN][ATTR_DEVICES][device_id] = data
 
-        async_dispatcher_send(hass, f"{DOMAIN}.{device_id}", data)
+        async_dispatcher_send(menuai, f"{DOMAIN}.{device_id}", data)
 
         try:
-            save_json(self._config_path, hass.data[DOMAIN])
-        except HomeAssistantError:
+            save_json(self._config_path, menuai.data[DOMAIN])
+        except menuaiError:
             return self.json_message(
                 "Error saving device.", HTTPStatus.INTERNAL_SERVER_ERROR
             )

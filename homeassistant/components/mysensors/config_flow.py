@@ -12,16 +12,16 @@ from awesomeversion import (
 )
 import voluptuous as vol
 
-from homeassistant.components.mqtt import (
+from menuai.components.mqtt import (
     DOMAIN as MQTT_DOMAIN,
     valid_publish_topic,
     valid_subscribe_topic,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.typing import VolDictType
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE
+from menuai.core import callback
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_BAUD_RATE,
@@ -208,7 +208,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Create a config entry for a mqtt gateway."""
         # Naive check that doesn't consider config entry state.
-        if MQTT_DOMAIN not in self.hass.config.components:
+        if MQTT_DOMAIN not in self.menuai.config.components:
             return self.async_abort(reason="mqtt_required")
 
         gw_type = self._gw_type = CONF_GATEWAY_TYPE_MQTT
@@ -267,7 +267,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
     def _normalize_persistence_file(self, path: str) -> str:
-        return os.path.realpath(os.path.normcase(self.hass.config.path(path)))
+        return os.path.realpath(os.path.normcase(self.menuai.config.path(path)))
 
     async def validate_common(
         self,
@@ -285,7 +285,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 verification_func = is_serial_port
 
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     verification_func, user_input[CONF_DEVICE]
                 )
             except vol.Invalid:
@@ -319,7 +319,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     break
 
         # if no errors so far, try to connect
-        if not errors and not await try_connect(self.hass, gw_type, user_input):
+        if not errors and not await try_connect(self.menuai, gw_type, user_input):
             errors["base"] = "cannot_connect"
 
         return errors

@@ -4,11 +4,11 @@ from typing import Any
 
 from tesla_powerwall import GridStatus, IslandMode, PowerwallError
 
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchDeviceClass, SwitchEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import PowerWallEntity
 from .models import PowerwallConfigEntry, PowerwallRuntimeData
@@ -20,7 +20,7 @@ OFF_GRID_STATUSES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PowerwallConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -58,7 +58,7 @@ class PowerwallOffGridEnabledEntity(PowerWallEntity, SwitchEntity):
         try:
             await self.power_wall.set_island_mode(island_mode)
         except PowerwallError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Setting off-grid operation to {island_mode} failed: {ex}"
             ) from ex
 

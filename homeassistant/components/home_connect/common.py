@@ -7,7 +7,7 @@ from typing import cast
 
 from aiohomeconnect.model import EventKey
 
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import HomeConnectApplianceData, HomeConnectConfigEntry
 from .entity import HomeConnectEntity, HomeConnectOptionEntity

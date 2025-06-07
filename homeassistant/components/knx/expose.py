@@ -11,7 +11,7 @@ from xknx.dpt import DPTNumeric, DPTString
 from xknx.exceptions import ConversionError
 from xknx.remote_value import RemoteValueSensor
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ENTITY_ID,
     CONF_VALUE_TEMPLATE,
     STATE_OFF,
@@ -19,18 +19,18 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, StateType
-from homeassistant.util import dt as dt_util
+from menuai.exceptions import TemplateError
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, StateType
+from menuai.util import dt as dt_util
 
 from .const import CONF_RESPOND_TO_READ, KNX_ADDRESS
 from .schema import ExposeSchema
@@ -40,7 +40,7 @@ _LOGGER = logging.getLogger(__name__)
 
 @callback
 def create_knx_exposure(
-    hass: HomeAssistant, xknx: XKNX, config: ConfigType
+    menuai: menuai, xknx: XKNX, config: ConfigType
 ) -> KNXExposeSensor | KNXExposeTime:
     """Create exposures from config."""
 
@@ -57,7 +57,7 @@ def create_knx_exposure(
         )
     else:
         exposure = KNXExposeSensor(
-            hass,
+            menuai,
             xknx=xknx,
             config=config,
         )
@@ -66,16 +66,16 @@ def create_knx_exposure(
 
 
 class KNXExposeSensor:
-    """Object to Expose Home Assistant entity to KNX bus."""
+    """Object to Expose MenuAI entity to KNX bus."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         xknx: XKNX,
         config: ConfigType,
     ) -> None:
         """Initialize of Expose class."""
-        self.hass = hass
+        self.menuai = menuai
         self.xknx = xknx
 
         self.entity_id: str = config[CONF_ENTITY_ID]
@@ -100,7 +100,7 @@ class KNXExposeSensor:
     def async_register(self) -> None:
         """Register listener."""
         self._remove_listener = async_track_state_change_event(
-            self.hass, [self.entity_id], self._async_entity_changed
+            self.menuai, [self.entity_id], self._async_entity_changed
         )
         self.xknx.devices.async_add(self.device)
         self._init_expose_state()
@@ -108,7 +108,7 @@ class KNXExposeSensor:
     @callback
     def _init_expose_state(self) -> None:
         """Initialize state of the exposure."""
-        init_state = self.hass.states.get(self.entity_id)
+        init_state = self.menuai.states.get(self.entity_id)
         state_value = self._get_expose_value(init_state)
         try:
             self.device.sensor_value.value = state_value

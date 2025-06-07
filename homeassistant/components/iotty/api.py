@@ -1,4 +1,4 @@
-"""API for iotty bound to Home Assistant OAuth."""
+"""API for iotty bound to MenuAI OAuth."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from typing import Any
 from aiohttp import ClientSession
 from iottycloud.cloudapi import CloudApi
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
-OAUTH2_CLIENT_ID = "hass-iotty"
-IOTTYAPI_BASE = "https://homeassistant.iotty.com/"
+OAUTH2_CLIENT_ID = "menuai-iotty"
+IOTTYAPI_BASE = "https://menuai.iotty.com/"
 
 
 class IottyProxy(CloudApi):
@@ -19,7 +19,7 @@ class IottyProxy(CloudApi):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         websession: ClientSession,
         oauth_session: config_entry_oauth2_flow.OAuth2Session,
     ) -> None:
@@ -29,7 +29,7 @@ class IottyProxy(CloudApi):
         if oauth_session is None:
             raise ValueError("oauth_session")
         self._oauth_session = oauth_session
-        self._hass = hass
+        self._menuai = menuai
 
     async def async_get_access_token(self) -> Any:
         """Return a valid access token."""

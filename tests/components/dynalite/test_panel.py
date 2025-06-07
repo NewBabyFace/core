@@ -2,17 +2,17 @@
 
 from unittest.mock import patch
 
-from homeassistant.components import dynalite
-from homeassistant.components.cover import DEVICE_CLASSES
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components import dynalite
+from menuai.components.cover import DEVICE_CLASSES
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
 
 
 async def test_get_config(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Get the config via websocket."""
     host = "1.2.3.4"
@@ -22,15 +22,15 @@ async def test_get_config(
         domain=dynalite.DOMAIN,
         data={CONF_HOST: host, CONF_PORT: port},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.dynalite.bridge.DynaliteDevices.async_setup",
+        "menuai.components.dynalite.bridge.DynaliteDevices.async_setup",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -54,7 +54,7 @@ async def test_get_config(
 
 
 async def test_save_config(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Save the config via websocket."""
     host1 = "1.2.3.4"
@@ -68,26 +68,26 @@ async def test_save_config(
         domain=dynalite.DOMAIN,
         data={CONF_HOST: host1, CONF_PORT: port1},
     )
-    entry1.add_to_hass(hass)
+    entry1.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.dynalite.bridge.DynaliteDevices.async_setup",
+        "menuai.components.dynalite.bridge.DynaliteDevices.async_setup",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry1.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry1.entry_id)
+        await menuai.async_block_till_done()
     entry2 = MockConfigEntry(
         domain=dynalite.DOMAIN,
         data={CONF_HOST: host2, CONF_PORT: port2},
     )
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.dynalite.bridge.DynaliteDevices.async_setup",
+        "menuai.components.dynalite.bridge.DynaliteDevices.async_setup",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry2.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry2.entry_id)
+        await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -102,15 +102,15 @@ async def test_save_config(
     assert msg["success"]
     assert msg["result"] == {}
 
-    existing_entry = hass.config_entries.async_get_entry(entry1.entry_id)
+    existing_entry = menuai.config_entries.async_get_entry(entry1.entry_id)
     assert existing_entry.data == {CONF_HOST: host1, CONF_PORT: port1}
-    modified_entry = hass.config_entries.async_get_entry(entry2.entry_id)
+    modified_entry = menuai.config_entries.async_get_entry(entry2.entry_id)
     assert modified_entry.data[CONF_HOST] == host3
     assert modified_entry.data[CONF_PORT] == port3
 
 
 async def test_save_config_invalid_entry(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Try to update nonexistent entry."""
     host1 = "1.2.3.4"
@@ -122,15 +122,15 @@ async def test_save_config_invalid_entry(
         domain=dynalite.DOMAIN,
         data={CONF_HOST: host1, CONF_PORT: port1},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.dynalite.bridge.DynaliteDevices.async_setup",
+        "menuai.components.dynalite.bridge.DynaliteDevices.async_setup",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {
             "id": 24,
@@ -144,5 +144,5 @@ async def test_save_config_invalid_entry(
     assert msg["success"]
     assert msg["result"] == {"error": True}
 
-    existing_entry = hass.config_entries.async_get_entry(entry.entry_id)
+    existing_entry = menuai.config_entries.async_get_entry(entry.entry_id)
     assert existing_entry.data == {CONF_HOST: host1, CONF_PORT: port1}

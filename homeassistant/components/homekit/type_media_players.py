@@ -6,7 +6,7 @@ from typing import Any
 from pyhap.characteristic import Characteristic
 from pyhap.const import CATEGORY_SWITCH
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_INPUT_SOURCE_LIST,
     ATTR_MEDIA_VOLUME_LEVEL,
@@ -15,7 +15,7 @@ from homeassistant.components.media_player import (
     SERVICE_SELECT_SOURCE,
     MediaPlayerEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_MEDIA_PAUSE,
@@ -34,7 +34,7 @@ from homeassistant.const import (
     STATE_STANDBY,
     STATE_UNKNOWN,
 )
-from homeassistant.core import State, callback
+from menuai.core import State, callback
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -88,7 +88,7 @@ class MediaPlayer(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a Switch accessory object."""
         super().__init__(*args, category=CATEGORY_SWITCH)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self.chars: dict[str, Characteristic | None] = {
             FEATURE_ON_OFF: None,
@@ -263,7 +263,7 @@ class TelevisionMediaPlayer(RemoteInputSelectAccessory):
             *args,
             **kwargs,
         )
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
 
@@ -356,7 +356,7 @@ class TelevisionMediaPlayer(RemoteInputSelectAccessory):
 
         if key_name == KEY_PLAY_PAUSE and self._supports_play_pause:
             # Handle Play Pause by directly updating the media player entity.
-            state_obj = self.hass.states.get(self.entity_id)
+            state_obj = self.menuai.states.get(self.entity_id)
             assert state_obj
             state = state_obj.state
             if state in (STATE_PLAYING, STATE_PAUSED):
@@ -370,7 +370,7 @@ class TelevisionMediaPlayer(RemoteInputSelectAccessory):
             return
 
         # Unhandled keys can be handled by listening to the event bus
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_HOMEKIT_TV_REMOTE_KEY_PRESSED,
             {ATTR_KEY_NAME: key_name, ATTR_ENTITY_ID: self.entity_id},
         )

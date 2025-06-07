@@ -6,11 +6,11 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.jewish_calendar.const import DOMAIN
-from homeassistant.const import CONF_PLATFORM, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.jewish_calendar.const import DOMAIN
+from menuai.const import CONF_PLATFORM, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import async_fire_time_changed
 
@@ -107,16 +107,16 @@ MELACHA_PARAMS = [
 )
 @pytest.mark.usefixtures("setup_at_time")
 async def test_issur_melacha_sensor(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, results: dict[str, Any]
+    menuai: menuai, freezer: FrozenDateTimeFactory, results: dict[str, Any]
 ) -> None:
     """Test Issur Melacha sensor output."""
     sensor_id = "binary_sensor.jewish_calendar_issur_melacha_in_effect"
-    assert hass.states.get(sensor_id).state == results["state"]
+    assert menuai.states.get(sensor_id).state == results["state"]
 
     freezer.move_to(results["update"])
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass.states.get(sensor_id).state == results["new_state"]
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(sensor_id).state == results["new_state"]
 
 
 @pytest.mark.parametrize(
@@ -130,27 +130,27 @@ async def test_issur_melacha_sensor(
 )
 @pytest.mark.usefixtures("setup_at_time")
 async def test_issur_melacha_sensor_update(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, results: list[str]
+    menuai: menuai, freezer: FrozenDateTimeFactory, results: list[str]
 ) -> None:
     """Test Issur Melacha sensor output."""
     sensor_id = "binary_sensor.jewish_calendar_issur_melacha_in_effect"
-    assert hass.states.get(sensor_id).state == results[0]
+    assert menuai.states.get(sensor_id).state == results[0]
 
     freezer.tick(timedelta(microseconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass.states.get(sensor_id).state == results[1]
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(sensor_id).state == results[1]
 
 
 async def test_no_discovery_info(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup without discovery info."""
-    assert BINARY_SENSOR_DOMAIN not in hass.config.components
+    assert BINARY_SENSOR_DOMAIN not in menuai.config.components
     assert await async_setup_component(
-        hass,
+        menuai,
         BINARY_SENSOR_DOMAIN,
         {BINARY_SENSOR_DOMAIN: {CONF_PLATFORM: DOMAIN}},
     )
-    await hass.async_block_till_done()
-    assert BINARY_SENSOR_DOMAIN in hass.config.components
+    await menuai.async_block_till_done()
+    assert BINARY_SENSOR_DOMAIN in menuai.config.components

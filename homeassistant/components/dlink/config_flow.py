@@ -8,9 +8,9 @@ from typing import Any
 from pyW215.pyW215 import SmartPlug
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_USE_LEGACY_PROTOCOL, DEFAULT_NAME, DEFAULT_USERNAME, DOMAIN
 
@@ -30,10 +30,10 @@ class DLinkFlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle dhcp discovery."""
         await self.async_set_unique_id(discovery_info.macaddress)
         self._abort_if_unique_id_configured(updates={CONF_HOST: discovery_info.ip})
-        for entry in self.hass.config_entries.async_entries(DOMAIN):
+        for entry in self.menuai.config_entries.async_entries(DOMAIN):
             if not entry.unique_id and entry.data[CONF_HOST] == discovery_info.ip:
                 # Add mac address as the unique id, can be removed with import
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry, unique_id=discovery_info.macaddress
                 )
                 return self.async_abort(reason="already_configured")
@@ -48,7 +48,7 @@ class DLinkFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             if (
-                error := await self.hass.async_add_executor_job(
+                error := await self.menuai.async_add_executor_job(
                     self._try_connect, user_input
                 )
             ) is None:
@@ -83,7 +83,7 @@ class DLinkFlowHandler(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
 
             if (
-                error := await self.hass.async_add_executor_job(
+                error := await self.menuai.async_add_executor_job(
                     self._try_connect, user_input
                 )
             ) is None:

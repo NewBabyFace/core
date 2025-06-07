@@ -62,7 +62,7 @@
       'HwHasPlc': False,
       'HwHasRfid': True,
       'HwHasRs485': True,
-      'HwHasSocket': False,
+      'Hwmenuaiocket': False,
       'HwHasTpm': False,
       'HwHasWlan': True,
       'HwMaxCurrent': 16,

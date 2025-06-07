@@ -8,17 +8,17 @@ from pyatv import exceptions
 from pyatv.const import PairingRequirement, Protocol
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.apple_tv import CONF_ADDRESS, config_flow
-from homeassistant.components.apple_tv.const import (
+from menuai import config_entries
+from menuai.components.apple_tv import CONF_ADDRESS, config_flow
+from menuai.components.apple_tv.const import (
     CONF_IDENTIFIERS,
     CONF_START_OFF,
     DOMAIN,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .common import airplay_service, create_conf, mrp_service, raop_service
 
@@ -62,7 +62,7 @@ def use_mocked_zeroconf(mock_async_zeroconf: MagicMock) -> None:
 def mock_setup_entry() -> Generator[Mock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.apple_tv.async_setup_entry", return_value=True
+        "menuai.components.apple_tv.async_setup_entry", return_value=True
     ) as setup_entry:
         yield setup_entry
 
@@ -71,15 +71,15 @@ def mock_setup_entry() -> Generator[Mock]:
 
 
 @pytest.mark.usefixtures("mrp_device")
-async def test_user_input_device_not_found(hass: HomeAssistant) -> None:
+async def test_user_input_device_not_found(menuai: menuai) -> None:
     """Test when user specifies a non-existing device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "none"},
     )
@@ -89,15 +89,15 @@ async def test_user_input_device_not_found(hass: HomeAssistant) -> None:
 
 
 async def test_user_input_unexpected_error(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test that unexpected error yields an error message."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_scan.side_effect = Exception
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "dummy"},
     )
@@ -107,15 +107,15 @@ async def test_user_input_unexpected_error(
 
 
 @pytest.mark.usefixtures("full_device", "pairing")
-async def test_user_adds_full_device(hass: HomeAssistant) -> None:
+async def test_user_adds_full_device(menuai: menuai) -> None:
     """Test adding device with all services."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "MRP Device"},
     )
@@ -125,21 +125,21 @@ async def test_user_adds_full_device(hass: HomeAssistant) -> None:
         "type": "Unknown",
     }
 
-    result3 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result3 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result3["type"] is FlowResultType.FORM
     assert result3["description_placeholders"] == {"protocol": "MRP"}
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": 1111}
     )
     assert result4["type"] is FlowResultType.FORM
     assert result4["description_placeholders"] == {"protocol": "DMAP", "pin": "1111"}
 
-    result5 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result5 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result5["type"] is FlowResultType.FORM
     assert result5["description_placeholders"] == {"protocol": "AirPlay"}
 
-    result6 = await hass.config_entries.flow.async_configure(
+    result6 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": 1234}
     )
     assert result6["type"] is FlowResultType.CREATE_ENTRY
@@ -156,13 +156,13 @@ async def test_user_adds_full_device(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("dmap_device", "dmap_pin", "pairing")
-async def test_user_adds_dmap_device(hass: HomeAssistant) -> None:
+async def test_user_adds_dmap_device(menuai: menuai) -> None:
     """Test adding device with only DMAP service."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "DMAP Device"},
     )
@@ -172,11 +172,11 @@ async def test_user_adds_dmap_device(hass: HomeAssistant) -> None:
         "type": "Unknown",
     }
 
-    result3 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result3 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result3["type"] is FlowResultType.FORM
     assert result3["description_placeholders"] == {"pin": "1111", "protocol": "DMAP"}
 
-    result6 = await hass.config_entries.flow.async_configure(
+    result6 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": 1234}
     )
     assert result6["type"] is FlowResultType.CREATE_ENTRY
@@ -190,35 +190,35 @@ async def test_user_adds_dmap_device(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("dmap_device", "dmap_pin")
 async def test_user_adds_dmap_device_failed(
-    hass: HomeAssistant, pairing: AsyncMock
+    menuai: menuai, pairing: AsyncMock
 ) -> None:
     """Test adding DMAP device where remote device did not attempt to pair."""
     pairing.always_fail = True
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "DMAP Device"},
     )
 
-    await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "device_did_not_pair"
 
 
 @pytest.mark.usefixtures("dmap_device_with_credentials", "mock_scan")
-async def test_user_adds_device_with_ip_filter(hass: HomeAssistant) -> None:
+async def test_user_adds_device_with_ip_filter(menuai: menuai) -> None:
     """Test add device filtering by IP."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "127.0.0.1"},
     )
@@ -231,18 +231,18 @@ async def test_user_adds_device_with_ip_filter(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("pairing_requirement", [(PairingRequirement.NotNeeded)])
 @pytest.mark.usefixtures("dmap_with_requirement", "pairing_mock")
-async def test_user_pair_no_interaction(hass: HomeAssistant) -> None:
+async def test_user_pair_no_interaction(menuai: menuai) -> None:
     """Test pairing service without user interaction."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "DMAP Device"},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -255,14 +255,14 @@ async def test_user_pair_no_interaction(hass: HomeAssistant) -> None:
 
 
 async def test_user_adds_device_by_ip_uses_unicast_scan(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test add device by IP-address, verify unicast scan is used."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "127.0.0.1"},
     )
@@ -271,15 +271,15 @@ async def test_user_adds_device_by_ip_uses_unicast_scan(
 
 
 @pytest.mark.usefixtures("mrp_device")
-async def test_user_adds_existing_device(hass: HomeAssistant) -> None:
+async def test_user_adds_existing_device(menuai: menuai) -> None:
     """Test that it is not possible to add existing device."""
-    MockConfigEntry(domain="apple_tv", unique_id="mrpid").add_to_hass(hass)
+    MockConfigEntry(domain="apple_tv", unique_id="mrpid").add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "127.0.0.1"},
     )
@@ -289,26 +289,26 @@ async def test_user_adds_existing_device(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mrp_device")
 async def test_user_connection_failed(
-    hass: HomeAssistant, pairing_mock: AsyncMock
+    menuai: menuai, pairing_mock: AsyncMock
 ) -> None:
     """Test error message when connection to device fails."""
     pairing_mock.begin.side_effect = exceptions.ConnectionFailedError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "MRP Device"},
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -318,21 +318,21 @@ async def test_user_connection_failed(
 
 @pytest.mark.usefixtures("mrp_device")
 async def test_user_start_pair_error_failed(
-    hass: HomeAssistant, pairing_mock: AsyncMock
+    menuai: menuai, pairing_mock: AsyncMock
 ) -> None:
     """Test initiating pairing fails."""
     pairing_mock.begin.side_effect = exceptions.PairingError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "MRP Device"},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -341,25 +341,25 @@ async def test_user_start_pair_error_failed(
 
 
 @pytest.mark.usefixtures("airplay_device_with_password", "pairing_mock")
-async def test_user_pair_service_with_password(hass: HomeAssistant) -> None:
+async def test_user_pair_service_with_password(menuai: menuai) -> None:
     """Test pairing with service requiring a password (not supported)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "AirPlay Device"},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "password"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -369,25 +369,25 @@ async def test_user_pair_service_with_password(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("pairing_requirement", [(PairingRequirement.Disabled)])
 @pytest.mark.usefixtures("dmap_with_requirement", "pairing_mock")
-async def test_user_pair_disabled_service(hass: HomeAssistant) -> None:
+async def test_user_pair_disabled_service(menuai: menuai) -> None:
     """Test pairing with disabled service (is ignored with message)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "DMAP Device"},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "protocol_disabled"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -397,18 +397,18 @@ async def test_user_pair_disabled_service(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("pairing_requirement", [(PairingRequirement.Unsupported)])
 @pytest.mark.usefixtures("dmap_with_requirement", "pairing_mock")
-async def test_user_pair_ignore_unsupported(hass: HomeAssistant) -> None:
+async def test_user_pair_ignore_unsupported(menuai: menuai) -> None:
     """Test pairing with disabled service (is ignored silently)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "DMAP Device"},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -418,26 +418,26 @@ async def test_user_pair_ignore_unsupported(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mrp_device")
 async def test_user_pair_invalid_pin(
-    hass: HomeAssistant, pairing_mock: AsyncMock
+    menuai: menuai, pairing_mock: AsyncMock
 ) -> None:
     """Test pairing with invalid pin."""
     pairing_mock.finish.side_effect = exceptions.PairingError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "MRP Device"},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"pin": 1111},
     )
@@ -447,26 +447,26 @@ async def test_user_pair_invalid_pin(
 
 @pytest.mark.usefixtures("mrp_device")
 async def test_user_pair_unexpected_error(
-    hass: HomeAssistant, pairing_mock: AsyncMock
+    menuai: menuai, pairing_mock: AsyncMock
 ) -> None:
     """Test unexpected error when entering PIN code."""
 
     pairing_mock.finish.side_effect = Exception
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "MRP Device"},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"pin": 1111},
     )
@@ -476,21 +476,21 @@ async def test_user_pair_unexpected_error(
 
 @pytest.mark.usefixtures("mrp_device")
 async def test_user_pair_backoff_error(
-    hass: HomeAssistant, pairing_mock: AsyncMock
+    menuai: menuai, pairing_mock: AsyncMock
 ) -> None:
     """Test that backoff error is displayed in case device requests it."""
     pairing_mock.begin.side_effect = exceptions.BackOffError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "MRP Device"},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -500,21 +500,21 @@ async def test_user_pair_backoff_error(
 
 @pytest.mark.usefixtures("mrp_device")
 async def test_user_pair_begin_unexpected_error(
-    hass: HomeAssistant, pairing_mock: AsyncMock
+    menuai: menuai, pairing_mock: AsyncMock
 ) -> None:
     """Test unexpected error during start of pairing."""
     pairing_mock.begin.side_effect = Exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "MRP Device"},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -523,14 +523,14 @@ async def test_user_pair_begin_unexpected_error(
 
 
 @pytest.mark.usefixtures("airplay_with_disabled_mrp", "pairing")
-async def test_ignores_disabled_service(hass: HomeAssistant) -> None:
+async def test_ignores_disabled_service(menuai: menuai) -> None:
     """Test adding device with only DMAP service."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     # Find based on mrpid (but do not pair that service since it's disabled)
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"device_input": "mrpid"},
     )
@@ -540,11 +540,11 @@ async def test_ignores_disabled_service(hass: HomeAssistant) -> None:
         "type": "Unknown",
     }
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result2["type"] is FlowResultType.FORM
     assert result2["description_placeholders"] == {"protocol": "AirPlay"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": 1111}
     )
     assert result3["type"] is FlowResultType.CREATE_ENTRY
@@ -561,9 +561,9 @@ async def test_ignores_disabled_service(hass: HomeAssistant) -> None:
 # Zeroconf
 
 
-async def test_zeroconf_unsupported_service_aborts(hass: HomeAssistant) -> None:
+async def test_zeroconf_unsupported_service_aborts(menuai: menuai) -> None:
     """Test discovering unsupported zeroconf service."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -581,9 +581,9 @@ async def test_zeroconf_unsupported_service_aborts(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mrp_device", "pairing")
-async def test_zeroconf_add_mrp_device(hass: HomeAssistant) -> None:
+async def test_zeroconf_add_mrp_device(menuai: menuai) -> None:
     """Test add MRP device discovered by zeroconf."""
-    unrelated_result = await hass.config_entries.flow.async_init(
+    unrelated_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -598,7 +598,7 @@ async def test_zeroconf_add_mrp_device(hass: HomeAssistant) -> None:
     )
     assert unrelated_result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -617,14 +617,14 @@ async def test_zeroconf_add_mrp_device(hass: HomeAssistant) -> None:
         "type": "Unknown",
     }
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
     assert result2["type"] is FlowResultType.FORM
     assert result2["description_placeholders"] == {"protocol": "MRP"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": 1111}
     )
     assert result3["type"] is FlowResultType.CREATE_ENTRY
@@ -637,9 +637,9 @@ async def test_zeroconf_add_mrp_device(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("dmap_device", "dmap_pin", "pairing")
-async def test_zeroconf_add_dmap_device(hass: HomeAssistant) -> None:
+async def test_zeroconf_add_dmap_device(menuai: menuai) -> None:
     """Test add DMAP device discovered by zeroconf."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=DMAP_SERVICE
     )
     assert result["type"] is FlowResultType.FORM
@@ -648,14 +648,14 @@ async def test_zeroconf_add_dmap_device(hass: HomeAssistant) -> None:
         "type": "Unknown",
     }
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
     assert result2["type"] is FlowResultType.FORM
     assert result2["description_placeholders"] == {"protocol": "DMAP", "pin": "1111"}
 
-    result3 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result3 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["data"] == {
         "address": "127.0.0.1",
@@ -665,7 +665,7 @@ async def test_zeroconf_add_dmap_device(hass: HomeAssistant) -> None:
     }
 
 
-async def test_zeroconf_ip_change(hass: HomeAssistant, mock_scan: AsyncMock) -> None:
+async def test_zeroconf_ip_change(menuai: menuai, mock_scan: AsyncMock) -> None:
     """Test that the config entry gets updated when the ip changes and reloads."""
     entry = MockConfigEntry(
         domain="apple_tv", unique_id="mrpid", data={CONF_ADDRESS: "127.0.0.2"}
@@ -673,8 +673,8 @@ async def test_zeroconf_ip_change(hass: HomeAssistant, mock_scan: AsyncMock) -> 
     unrelated_entry = MockConfigEntry(
         domain="apple_tv", unique_id="unrelated", data={CONF_ADDRESS: "127.0.0.2"}
     )
-    unrelated_entry.add_to_hass(hass)
-    entry.add_to_hass(hass)
+    unrelated_entry.add_to_menuai(menuai)
+    entry.add_to_menuai(menuai)
     mock_scan.result = [
         create_conf(
             IPv4Address("127.0.0.1"), "Device", mrp_service(), airplay_service()
@@ -682,14 +682,14 @@ async def test_zeroconf_ip_change(hass: HomeAssistant, mock_scan: AsyncMock) -> 
     ]
 
     with patch(
-        "homeassistant.components.apple_tv.async_setup_entry", return_value=True
+        "menuai.components.apple_tv.async_setup_entry", return_value=True
     ) as mock_async_setup:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=DMAP_SERVICE,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -699,7 +699,7 @@ async def test_zeroconf_ip_change(hass: HomeAssistant, mock_scan: AsyncMock) -> 
 
 
 async def test_zeroconf_ip_change_after_ip_conflict_with_ignored_entry(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test that the config entry gets updated when the ip changes and reloads."""
     entry = MockConfigEntry(
@@ -711,8 +711,8 @@ async def test_zeroconf_ip_change_after_ip_conflict_with_ignored_entry(
         data={CONF_ADDRESS: "127.0.0.2"},
         source=config_entries.SOURCE_IGNORE,
     )
-    ignored_entry.add_to_hass(hass)
-    entry.add_to_hass(hass)
+    ignored_entry.add_to_menuai(menuai)
+    entry.add_to_menuai(menuai)
     mock_scan.result = [
         create_conf(
             IPv4Address("127.0.0.1"), "Device", mrp_service(), airplay_service()
@@ -720,14 +720,14 @@ async def test_zeroconf_ip_change_after_ip_conflict_with_ignored_entry(
     ]
 
     with patch(
-        "homeassistant.components.apple_tv.async_setup_entry", return_value=True
+        "menuai.components.apple_tv.async_setup_entry", return_value=True
     ) as mock_async_setup:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=DMAP_SERVICE,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -737,7 +737,7 @@ async def test_zeroconf_ip_change_after_ip_conflict_with_ignored_entry(
 
 
 async def test_zeroconf_ip_change_via_secondary_identifier(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test that the config entry gets updated when the ip changes and reloads.
 
@@ -752,8 +752,8 @@ async def test_zeroconf_ip_change_via_secondary_identifier(
     unrelated_entry = MockConfigEntry(
         domain="apple_tv", unique_id="unrelated", data={CONF_ADDRESS: "127.0.0.2"}
     )
-    unrelated_entry.add_to_hass(hass)
-    entry.add_to_hass(hass)
+    unrelated_entry.add_to_menuai(menuai)
+    entry.add_to_menuai(menuai)
     mock_scan.result = [
         create_conf(
             IPv4Address("127.0.0.1"), "Device", mrp_service(), airplay_service()
@@ -761,14 +761,14 @@ async def test_zeroconf_ip_change_via_secondary_identifier(
     ]
 
     with patch(
-        "homeassistant.components.apple_tv.async_setup_entry", return_value=True
+        "menuai.components.apple_tv.async_setup_entry", return_value=True
     ) as mock_async_setup:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=DMAP_SERVICE,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -779,7 +779,7 @@ async def test_zeroconf_ip_change_via_secondary_identifier(
 
 
 async def test_zeroconf_updates_identifiers_for_ignored_entries(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test that an ignored config entry gets updated when the ip changes.
 
@@ -795,8 +795,8 @@ async def test_zeroconf_updates_identifiers_for_ignored_entries(
     unrelated_entry = MockConfigEntry(
         domain="apple_tv", unique_id="unrelated", data={CONF_ADDRESS: "127.0.0.2"}
     )
-    unrelated_entry.add_to_hass(hass)
-    entry.add_to_hass(hass)
+    unrelated_entry.add_to_menuai(menuai)
+    entry.add_to_menuai(menuai)
     mock_scan.result = [
         create_conf(
             IPv4Address("127.0.0.1"), "Device", mrp_service(), airplay_service()
@@ -804,14 +804,14 @@ async def test_zeroconf_updates_identifiers_for_ignored_entries(
     ]
 
     with patch(
-        "homeassistant.components.apple_tv.async_setup_entry", return_value=True
+        "menuai.components.apple_tv.async_setup_entry", return_value=True
     ) as mock_async_setup:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=DMAP_SERVICE,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -824,13 +824,13 @@ async def test_zeroconf_updates_identifiers_for_ignored_entries(
 
 
 @pytest.mark.usefixtures("dmap_device")
-async def test_zeroconf_add_existing_aborts(hass: HomeAssistant) -> None:
+async def test_zeroconf_add_existing_aborts(menuai: menuai) -> None:
     """Test start new zeroconf flow while existing flow is active aborts."""
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=DMAP_SERVICE
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=DMAP_SERVICE
     )
     assert result["type"] is FlowResultType.ABORT
@@ -838,9 +838,9 @@ async def test_zeroconf_add_existing_aborts(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_scan")
-async def test_zeroconf_add_but_device_not_found(hass: HomeAssistant) -> None:
+async def test_zeroconf_add_but_device_not_found(menuai: menuai) -> None:
     """Test add device which is not found with another scan."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=DMAP_SERVICE
     )
     assert result["type"] is FlowResultType.ABORT
@@ -848,11 +848,11 @@ async def test_zeroconf_add_but_device_not_found(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("dmap_device")
-async def test_zeroconf_add_existing_device(hass: HomeAssistant) -> None:
+async def test_zeroconf_add_existing_device(menuai: menuai) -> None:
     """Test add already existing device from zeroconf."""
-    MockConfigEntry(domain="apple_tv", unique_id="dmapid").add_to_hass(hass)
+    MockConfigEntry(domain="apple_tv", unique_id="dmapid").add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=DMAP_SERVICE
     )
     assert result["type"] is FlowResultType.ABORT
@@ -860,12 +860,12 @@ async def test_zeroconf_add_existing_device(hass: HomeAssistant) -> None:
 
 
 async def test_zeroconf_unexpected_error(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test unexpected error aborts in zeroconf."""
     mock_scan.side_effect = Exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=DMAP_SERVICE
     )
     assert result["type"] is FlowResultType.ABORT
@@ -873,14 +873,14 @@ async def test_zeroconf_unexpected_error(
 
 
 async def test_zeroconf_abort_if_other_in_progress(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test discovering unsupported zeroconf service."""
     mock_scan.result = [
         create_conf(IPv4Address("127.0.0.1"), "Device", airplay_service())
     ]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -903,7 +903,7 @@ async def test_zeroconf_abort_if_other_in_progress(
         )
     ]
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -922,7 +922,7 @@ async def test_zeroconf_abort_if_other_in_progress(
 
 @pytest.mark.usefixtures("pairing", "mock_zeroconf")
 async def test_zeroconf_missing_device_during_protocol_resolve(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test discovery after service been added to existing flow with missing device."""
     mock_scan.result = [
@@ -930,7 +930,7 @@ async def test_zeroconf_missing_device_during_protocol_resolve(
     ]
 
     # Find device with AirPlay service and set up flow for it
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -952,7 +952,7 @@ async def test_zeroconf_missing_device_during_protocol_resolve(
 
     # Find the same device again, but now also with MRP service. The first flow should
     # be updated with the MRP service.
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -971,7 +971,7 @@ async def test_zeroconf_missing_device_during_protocol_resolve(
     # Number of services found during initial scan (1) will not match the updated count
     # (2), so it will trigger a re-scan to find all services. This will fail as no
     # device is found.
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -981,7 +981,7 @@ async def test_zeroconf_missing_device_during_protocol_resolve(
 
 @pytest.mark.usefixtures("pairing", "mock_zeroconf")
 async def test_zeroconf_additional_protocol_resolve_failure(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test discovery with missing service."""
     mock_scan.result = [
@@ -989,7 +989,7 @@ async def test_zeroconf_additional_protocol_resolve_failure(
     ]
 
     # Find device with AirPlay service and set up flow for it
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -1011,7 +1011,7 @@ async def test_zeroconf_additional_protocol_resolve_failure(
 
     # Find the same device again, but now also with MRP service. The first flow should
     # be updated with the MRP service.
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -1032,7 +1032,7 @@ async def test_zeroconf_additional_protocol_resolve_failure(
     # Number of services found during initial scan (1) will not match the updated count
     # (2), so it will trigger a re-scan to find all services. This will however fail
     # due to only one of the services found, yielding an error message.
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -1042,7 +1042,7 @@ async def test_zeroconf_additional_protocol_resolve_failure(
 
 @pytest.mark.usefixtures("pairing", "mock_zeroconf")
 async def test_zeroconf_pair_additionally_found_protocols(
-    hass: HomeAssistant, mock_scan: AsyncMock
+    menuai: menuai, mock_scan: AsyncMock
 ) -> None:
     """Test discovered protocols are merged to original flow."""
     mock_scan.result = [
@@ -1050,7 +1050,7 @@ async def test_zeroconf_pair_additionally_found_protocols(
     ]
 
     # Find device with AirPlay service and set up flow for it
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -1064,7 +1064,7 @@ async def test_zeroconf_pair_additionally_found_protocols(
         ),
     )
     assert result["type"] is FlowResultType.FORM
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_scan.result = [
         create_conf(
@@ -1074,12 +1074,12 @@ async def test_zeroconf_pair_additionally_found_protocols(
 
     # Find the same device again, but now also with RAOP service. The first flow should
     # be updated with the RAOP service.
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=RAOP_SERVICE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_scan.result = [
         create_conf(
@@ -1093,7 +1093,7 @@ async def test_zeroconf_pair_additionally_found_protocols(
 
     # Find the same device again, but now also with MRP service. The first flow should
     # be updated with the MRP service.
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -1106,10 +1106,10 @@ async def test_zeroconf_pair_additionally_found_protocols(
             properties={"UniqueIdentifier": "mrpid", "Name": "Kitchen"},
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify that all protocols are paired
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -1119,7 +1119,7 @@ async def test_zeroconf_pair_additionally_found_protocols(
     assert result2["description_placeholders"] == {"pin": ANY, "protocol": "RAOP"}
 
     # Verify that all protocols are paired
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -1128,7 +1128,7 @@ async def test_zeroconf_pair_additionally_found_protocols(
     assert result3["step_id"] == "pair_with_pin"
     assert result3["description_placeholders"] == {"protocol": "MRP"}
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"pin": 1234},
     )
@@ -1136,7 +1136,7 @@ async def test_zeroconf_pair_additionally_found_protocols(
     assert result4["step_id"] == "pair_with_pin"
     assert result4["description_placeholders"] == {"protocol": "AirPlay"}
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"pin": 1234},
     )
@@ -1144,7 +1144,7 @@ async def test_zeroconf_pair_additionally_found_protocols(
 
 
 @pytest.mark.usefixtures("pairing", "mock_zeroconf")
-async def test_zeroconf_mismatch(hass: HomeAssistant, mock_scan: AsyncMock) -> None:
+async def test_zeroconf_mismatch(menuai: menuai, mock_scan: AsyncMock) -> None:
     """Test the technically possible case where a protocol has no service.
 
     This could happen in case of mDNS issues.
@@ -1155,7 +1155,7 @@ async def test_zeroconf_mismatch(hass: HomeAssistant, mock_scan: AsyncMock) -> N
     mock_scan.result[0].get_service = Mock(return_value=None)
 
     # Find device with AirPlay service and set up flow for it
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -1169,9 +1169,9 @@ async def test_zeroconf_mismatch(hass: HomeAssistant, mock_scan: AsyncMock) -> N
         ),
     )
     assert result["type"] is FlowResultType.FORM
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -1184,17 +1184,17 @@ async def test_zeroconf_mismatch(hass: HomeAssistant, mock_scan: AsyncMock) -> N
 
 @pytest.mark.usefixtures("mrp_device", "pairing")
 async def test_reconfigure_update_credentials(
-    hass: HomeAssistant, mock_setup_entry: Mock
+    menuai: menuai, mock_setup_entry: Mock
 ) -> None:
     """Test that reconfigure flow updates config entry."""
     config_entry = MockConfigEntry(
         domain="apple_tv", unique_id="mrpid", data={"identifiers": ["mrpid"]}
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass, data={"name": "apple tv"})
+    result = await config_entry.start_reauth_flow(menuai, data={"name": "apple tv"})
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -1204,7 +1204,7 @@ async def test_reconfigure_update_credentials(
         "protocol": "MRP",
     }
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": 1111}
     )
     assert result3["type"] is FlowResultType.ABORT
@@ -1217,24 +1217,24 @@ async def test_reconfigure_update_credentials(
         "identifiers": ["mrpid"],
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 # Options
 
 
-async def test_option_start_off(hass: HomeAssistant) -> None:
+async def test_option_start_off(menuai: menuai) -> None:
     """Test start off-option flag."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, unique_id="dmapid", options={"start_off": False}
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_START_OFF: True}
     )
     assert result2["type"] is FlowResultType.CREATE_ENTRY
@@ -1242,9 +1242,9 @@ async def test_option_start_off(hass: HomeAssistant) -> None:
     assert config_entry.options[CONF_START_OFF]
 
 
-async def test_zeroconf_rejects_ipv6(hass: HomeAssistant) -> None:
+async def test_zeroconf_rejects_ipv6(menuai: menuai) -> None:
     """Test zeroconf discovery rejects ipv6."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(

@@ -1,6 +1,6 @@
 """Automatically generated file.
 
-To update, run python3 -m script.hassfest
+To update, run python3 -m script.menuaifest
 """
 
 FLOWS = {
@@ -260,7 +260,7 @@ FLOWS = {
         "hlk_sw16",
         "holiday",
         "home_connect",
-        "homeassistant_sky_connect",
+        "menuai_sky_connect",
         "homee",
         "homekit",
         "homekit_controller",
@@ -528,7 +528,7 @@ FLOWS = {
         "renson",
         "reolink",
         "rfxtrx",
-        "rhasspy",
+        "rmenuaipy",
         "ridwell",
         "ring",
         "risco",

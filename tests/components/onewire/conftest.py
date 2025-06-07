@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pyownet.protocol import ConnError
 import pytest
 
-from homeassistant.components.onewire.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.onewire.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from .const import MOCK_OWPROXY_DEVICES
 
@@ -20,7 +20,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.onewire.async_setup_entry", return_value=True
+        "menuai.components.onewire.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -32,7 +32,7 @@ def get_device_id(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture(name="config_entry")
-def get_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def get_config_entry(menuai: menuai) -> MockConfigEntry:
     """Create and register mock config entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -49,14 +49,14 @@ def get_config_entry(hass: HomeAssistant) -> MockConfigEntry:
         },
         entry_id="2",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 @pytest.fixture(name="owproxy")
 def get_owproxy() -> Generator[MagicMock]:
     """Mock owproxy."""
-    with patch("homeassistant.components.onewire.onewirehub.protocol.proxy") as owproxy:
+    with patch("menuai.components.onewire.onewirehub.protocol.proxy") as owproxy:
         yield owproxy
 
 
@@ -64,7 +64,7 @@ def get_owproxy() -> Generator[MagicMock]:
 def get_owproxy_with_connerror() -> Generator[MagicMock]:
     """Mock owproxy."""
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
         side_effect=ConnError,
     ) as owproxy:
         yield owproxy

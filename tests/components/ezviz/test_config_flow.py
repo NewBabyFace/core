@@ -10,7 +10,7 @@ from pyezvizapi.exceptions import (
 )
 import pytest
 
-from homeassistant.components.ezviz.const import (
+from menuai.components.ezviz.const import (
     ATTR_SERIAL,
     ATTR_TYPE_CAMERA,
     ATTR_TYPE_CLOUD,
@@ -21,8 +21,8 @@ from homeassistant.components.ezviz.const import (
     DEFAULT_TIMEOUT,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_INTEGRATION_DISCOVERY, SOURCE_USER
+from menuai.const import (
     CONF_CUSTOMIZE,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
@@ -31,8 +31,8 @@ from homeassistant.const import (
     CONF_URL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import setup_integration
 
@@ -40,17 +40,17 @@ from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("mock_ezviz_client")
-async def test_full_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_full_flow(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -74,14 +74,14 @@ async def test_full_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> No
 
 @pytest.mark.usefixtures("mock_ezviz_client")
 async def test_user_custom_url(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test custom url step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -94,7 +94,7 @@ async def test_user_custom_url(
     assert result["step_id"] == "user_custom_url"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_URL: "test-user"},
     )
@@ -112,17 +112,17 @@ async def test_user_custom_url(
 
 @pytest.mark.usefixtures("mock_ezviz_client", "mock_setup_entry")
 async def test_async_step_reauth(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test the reauth step."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -136,11 +136,11 @@ async def test_async_step_reauth(
 
 @pytest.mark.usefixtures("mock_ezviz_client")
 async def test_step_discovery_abort_if_cloud_account_missing(
-    hass: HomeAssistant, mock_test_rtsp_auth: AsyncMock
+    menuai: menuai, mock_test_rtsp_auth: AsyncMock
 ) -> None:
     """Test discovery and confirm step, abort if cloud account was removed."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_INTEGRATION_DISCOVERY},
         data={
@@ -154,7 +154,7 @@ async def test_step_discovery_abort_if_cloud_account_missing(
     assert result["step_id"] == "confirm"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-user",
@@ -168,25 +168,25 @@ async def test_step_discovery_abort_if_cloud_account_missing(
 
 @pytest.mark.usefixtures("mock_ezviz_client", "mock_test_rtsp_auth")
 async def test_step_reauth_abort_if_cloud_account_missing(
-    hass: HomeAssistant, mock_camera_config_entry: MockConfigEntry
+    menuai: menuai, mock_camera_config_entry: MockConfigEntry
 ) -> None:
     """Test reauth and confirm step, abort if cloud account was removed."""
 
-    mock_camera_config_entry.add_to_hass(hass)
+    mock_camera_config_entry.add_to_menuai(menuai)
 
-    result = await mock_camera_config_entry.start_reauth_flow(hass)
+    result = await mock_camera_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "ezviz_cloud_account_missing"
 
 
 @pytest.mark.usefixtures("mock_ezviz_client", "mock_test_rtsp_auth", "mock_setup_entry")
 async def test_async_step_integration_discovery(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test discovery and confirm step."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_INTEGRATION_DISCOVERY},
         data={
@@ -200,7 +200,7 @@ async def test_async_step_integration_discovery(
     assert result["step_id"] == "confirm"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-user",
@@ -218,20 +218,20 @@ async def test_async_step_integration_discovery(
 
 
 async def test_options_flow(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test updating options."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.options[CONF_FFMPEG_ARGUMENTS] == DEFAULT_FFMPEG_ARGUMENTS
     assert mock_config_entry.options[CONF_TIMEOUT] == DEFAULT_TIMEOUT
 
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     assert result["errors"] is None
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_FFMPEG_ARGUMENTS: "/H.264", CONF_TIMEOUT: 25},
     )
@@ -251,7 +251,7 @@ async def test_options_flow(
     ],
 )
 async def test_user_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
@@ -259,7 +259,7 @@ async def test_user_flow_errors(
 ) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -268,7 +268,7 @@ async def test_user_flow_errors(
 
     mock_ezviz_client.login.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -283,7 +283,7 @@ async def test_user_flow_errors(
 
     mock_ezviz_client.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -307,11 +307,11 @@ async def test_user_flow_errors(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_user_flow_unknown_exception(
-    hass: HomeAssistant, mock_ezviz_client: AsyncMock
+    menuai: menuai, mock_ezviz_client: AsyncMock
 ) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -320,7 +320,7 @@ async def test_user_flow_unknown_exception(
 
     mock_ezviz_client.login.side_effect = Exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -343,7 +343,7 @@ async def test_user_flow_unknown_exception(
     ],
 )
 async def test_user_custom_url_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
@@ -351,7 +351,7 @@ async def test_user_custom_url_errors(
 ) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -360,7 +360,7 @@ async def test_user_custom_url_errors(
 
     mock_ezviz_client.login.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -373,7 +373,7 @@ async def test_user_custom_url_errors(
     assert result["step_id"] == "user_custom_url"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_URL: "test-user"},
     )
@@ -384,7 +384,7 @@ async def test_user_custom_url_errors(
 
     mock_ezviz_client.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_URL: "test-user"},
     )
@@ -404,11 +404,11 @@ async def test_user_custom_url_errors(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_user_custom_url_unknown_exception(
-    hass: HomeAssistant, mock_ezviz_client: AsyncMock
+    menuai: menuai, mock_ezviz_client: AsyncMock
 ) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -417,7 +417,7 @@ async def test_user_custom_url_unknown_exception(
 
     mock_ezviz_client.login.side_effect = Exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -430,7 +430,7 @@ async def test_user_custom_url_unknown_exception(
     assert result["step_id"] == "user_custom_url"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_URL: "test-user"},
     )
@@ -440,16 +440,16 @@ async def test_user_custom_url_unknown_exception(
 
 
 async def test_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the flow when the account is already configured."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -458,7 +458,7 @@ async def test_already_configured(
 
 
 async def test_async_step_integration_discovery_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_test_rtsp_auth: AsyncMock,
     mock_setup_entry: AsyncMock,
@@ -466,10 +466,10 @@ async def test_async_step_integration_discovery_duplicate(
     mock_camera_config_entry: MockConfigEntry,
 ) -> None:
     """Test discovery and confirm step."""
-    mock_config_entry.add_to_hass(hass)
-    mock_camera_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    mock_camera_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_INTEGRATION_DISCOVERY},
         data={
@@ -494,7 +494,7 @@ async def test_async_step_integration_discovery_duplicate(
     ],
 )
 async def test_camera_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_test_rtsp_auth: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -503,9 +503,9 @@ async def test_camera_errors(
 ) -> None:
     """Test the camera flow with errors."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_INTEGRATION_DISCOVERY},
         data={
@@ -521,7 +521,7 @@ async def test_camera_errors(
 
     mock_ezviz_client.login.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -535,7 +535,7 @@ async def test_camera_errors(
 
     mock_ezviz_client.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -555,16 +555,16 @@ async def test_camera_errors(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_camera_unknown_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_test_rtsp_auth: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the camera flow with errors."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_INTEGRATION_DISCOVERY},
         data={
@@ -580,7 +580,7 @@ async def test_camera_unknown_error(
 
     mock_ezviz_client.login.side_effect = Exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -603,23 +603,23 @@ async def test_camera_unknown_error(
     ],
 )
 async def test_reauth_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     exception: Exception,
     error: str,
 ) -> None:
     """Test the reauth step."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
 
     mock_ezviz_client.login.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -632,7 +632,7 @@ async def test_reauth_errors(
 
     mock_ezviz_client.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -646,21 +646,21 @@ async def test_reauth_errors(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_reauth_unknown_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ezviz_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the reauth step."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
 
     mock_ezviz_client.login.side_effect = Exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",

@@ -10,13 +10,13 @@ from PyViCare.PyViCare import PyViCare
 from PyViCare.PyViCareDevice import Device as PyViCareDevice
 from PyViCare.PyViCareDeviceConfig import PyViCareDeviceConfig
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_COMFORT,
     PRESET_ECO,
     PRESET_HOME,
     PRESET_SLEEP,
 )
-from homeassistant.config_entries import ConfigEntry
+from menuai.config_entries import ConfigEntry
 
 
 class HeatingProgram(enum.StrEnum):
@@ -39,7 +39,7 @@ class HeatingProgram(enum.StrEnum):
 
     @staticmethod
     def to_ha_preset(program: str) -> str | None:
-        """Return the mapped Home Assistant preset for the ViCare heating program."""
+        """Return the mapped MenuAI preset for the ViCare heating program."""
 
         try:
             heating_program = HeatingProgram(program)
@@ -52,7 +52,7 @@ class HeatingProgram(enum.StrEnum):
     def from_ha_preset(
         ha_preset: str, supported_heating_programs: list[str]
     ) -> str | None:
-        """Return the mapped ViCare heating program for the Home Assistant preset."""
+        """Return the mapped ViCare heating program for the MenuAI preset."""
         for program in supported_heating_programs:
             with suppress(ValueError):
                 if (

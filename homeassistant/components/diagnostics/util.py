@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any, cast, overload
 
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .const import REDACTED
 

@@ -9,22 +9,22 @@ from pylutron_caseta.pairing import PAIR_CA, PAIR_CERT, PAIR_KEY
 from pylutron_caseta.smartbridge import Smartbridge
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.lutron_caseta import (
+from menuai import config_entries
+from menuai.components.lutron_caseta import (
     DOMAIN,
     config_flow as CasetaConfigFlow,
 )
-from homeassistant.components.lutron_caseta.const import (
+from menuai.components.lutron_caseta.const import (
     CONF_CA_CERTS,
     CONF_CERTFILE,
     CONF_KEYFILE,
     ERROR_CANNOT_CONNECT,
     STEP_IMPORT_FAILED,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import ENTRY_MOCK_DATA, MockBridge
 
@@ -47,7 +47,7 @@ MOCK_ASYNC_PAIR_SUCCESS = {
 }
 
 
-async def test_bridge_import_flow(hass: HomeAssistant) -> None:
+async def test_bridge_import_flow(menuai: menuai) -> None:
     """Test a bridge entry gets created and set up during the import flow."""
 
     entry_mock_data = {
@@ -59,10 +59,10 @@ async def test_bridge_import_flow(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.lutron_caseta.async_setup_entry",
+            "menuai.components.lutron_caseta.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
-        patch("homeassistant.components.lutron_caseta.async_setup", return_value=True),
+        patch("menuai.components.lutron_caseta.async_setup", return_value=True),
         patch.object(
             Smartbridge,
             "create_tls",
@@ -70,12 +70,12 @@ async def test_bridge_import_flow(hass: HomeAssistant) -> None:
     ):
         create_tls.return_value = MockBridge(can_connect=True)
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data=entry_mock_data,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == CasetaConfigFlow.ENTRY_DEFAULT_TITLE
@@ -85,7 +85,7 @@ async def test_bridge_import_flow(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_bridge_cannot_connect(hass: HomeAssistant) -> None:
+async def test_bridge_cannot_connect(menuai: menuai) -> None:
     """Test checking for connection and cannot_connect error."""
 
     entry_mock_data = {
@@ -98,7 +98,7 @@ async def test_bridge_cannot_connect(hass: HomeAssistant) -> None:
     with patch.object(Smartbridge, "create_tls") as create_tls:
         create_tls.return_value = MockBridge(can_connect=False)
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data=entry_mock_data,
@@ -108,20 +108,20 @@ async def test_bridge_cannot_connect(hass: HomeAssistant) -> None:
     assert result["step_id"] == STEP_IMPORT_FAILED
     assert result["errors"] == {"base": ERROR_CANNOT_CONNECT}
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == CasetaConfigFlow.ABORT_REASON_CANNOT_CONNECT
 
 
-async def test_bridge_cannot_connect_unknown_error(hass: HomeAssistant) -> None:
+async def test_bridge_cannot_connect_unknown_error(menuai: menuai) -> None:
     """Test checking for connection and encountering an unknown error."""
 
     with patch.object(Smartbridge, "create_tls") as create_tls:
         mock_bridge = MockBridge()
         mock_bridge.connect = AsyncMock(side_effect=TimeoutError)
         create_tls.return_value = mock_bridge
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data=EMPTY_MOCK_CONFIG_ENTRY,
@@ -131,17 +131,17 @@ async def test_bridge_cannot_connect_unknown_error(hass: HomeAssistant) -> None:
     assert result["step_id"] == STEP_IMPORT_FAILED
     assert result["errors"] == {"base": ERROR_CANNOT_CONNECT}
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == CasetaConfigFlow.ABORT_REASON_CANNOT_CONNECT
 
 
-async def test_bridge_invalid_ssl_error(hass: HomeAssistant) -> None:
+async def test_bridge_invalid_ssl_error(menuai: menuai) -> None:
     """Test checking for connection and encountering invalid ssl certs."""
 
     with patch.object(Smartbridge, "create_tls", side_effect=ssl.SSLError):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data=EMPTY_MOCK_CONFIG_ENTRY,
@@ -151,24 +151,24 @@ async def test_bridge_invalid_ssl_error(hass: HomeAssistant) -> None:
     assert result["step_id"] == STEP_IMPORT_FAILED
     assert result["errors"] == {"base": ERROR_CANNOT_CONNECT}
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == CasetaConfigFlow.ABORT_REASON_CANNOT_CONNECT
 
 
-async def test_duplicate_bridge_import(hass: HomeAssistant) -> None:
+async def test_duplicate_bridge_import(menuai: menuai) -> None:
     """Test that creating a bridge entry with a duplicate host errors."""
 
     mock_entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_MOCK_DATA)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.lutron_caseta.async_setup_entry",
+        "menuai.components.lutron_caseta.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         # Mock entry added, try initializing flow with duplicate host
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data=ENTRY_MOCK_DATA,
@@ -179,15 +179,15 @@ async def test_duplicate_bridge_import(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 0
 
 
-async def test_already_configured_with_ignored(hass: HomeAssistant) -> None:
+async def test_already_configured_with_ignored(menuai: menuai) -> None:
     """Test ignored entries do not break checking for existing entries."""
 
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={}, source=config_entries.SOURCE_IGNORE
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={
@@ -200,47 +200,47 @@ async def test_already_configured_with_ignored(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
 
 
-async def test_form_user(hass: HomeAssistant, tmp_path: Path) -> None:
+async def test_form_user(menuai: menuai, tmp_path: Path) -> None:
     """Test we get the form and can pair."""
     config_dir = tmp_path / "tls_assets"
-    await hass.async_add_executor_job(config_dir.mkdir)
-    hass.config.config_dir = str(config_dir)
+    await menuai.async_add_executor_job(config_dir.mkdir)
+    menuai.config.config_dir = str(config_dir)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["step_id"] == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "link"
 
     with (
         patch(
-            "homeassistant.components.lutron_caseta.config_flow.async_pair",
+            "menuai.components.lutron_caseta.config_flow.async_pair",
             return_value=MOCK_ASYNC_PAIR_SUCCESS,
         ),
         patch(
-            "homeassistant.components.lutron_caseta.async_setup", return_value=True
+            "menuai.components.lutron_caseta.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.lutron_caseta.async_setup_entry",
+            "menuai.components.lutron_caseta.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "1.1.1.1"
@@ -254,47 +254,47 @@ async def test_form_user(hass: HomeAssistant, tmp_path: Path) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_pairing_fails(hass: HomeAssistant, tmp_path: Path) -> None:
+async def test_form_user_pairing_fails(menuai: menuai, tmp_path: Path) -> None:
     """Test we get the form and we handle pairing failure."""
     config_dir = tmp_path / "tls_assets"
-    await hass.async_add_executor_job(config_dir.mkdir)
-    hass.config.config_dir = str(config_dir)
+    await menuai.async_add_executor_job(config_dir.mkdir)
+    menuai.config.config_dir = str(config_dir)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["step_id"] == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "link"
 
     with (
         patch(
-            "homeassistant.components.lutron_caseta.config_flow.async_pair",
+            "menuai.components.lutron_caseta.config_flow.async_pair",
             side_effect=TimeoutError,
         ),
         patch(
-            "homeassistant.components.lutron_caseta.async_setup", return_value=True
+            "menuai.components.lutron_caseta.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.lutron_caseta.async_setup_entry",
+            "menuai.components.lutron_caseta.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.FORM
     assert result3["errors"] == {"base": "cannot_connect"}
@@ -303,48 +303,48 @@ async def test_form_user_pairing_fails(hass: HomeAssistant, tmp_path: Path) -> N
 
 
 async def test_form_user_reuses_existing_assets_when_pairing_again(
-    hass: HomeAssistant, tmp_path: Path
+    menuai: menuai, tmp_path: Path
 ) -> None:
     """Test the tls assets saved on disk are reused when pairing again."""
     config_dir = tmp_path / "tls_assets"
-    await hass.async_add_executor_job(config_dir.mkdir)
-    hass.config.config_dir = str(config_dir)
+    await menuai.async_add_executor_job(config_dir.mkdir)
+    menuai.config.config_dir = str(config_dir)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["step_id"] == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "link"
 
     with (
         patch(
-            "homeassistant.components.lutron_caseta.config_flow.async_pair",
+            "menuai.components.lutron_caseta.config_flow.async_pair",
             return_value=MOCK_ASYNC_PAIR_SUCCESS,
         ),
         patch(
-            "homeassistant.components.lutron_caseta.async_setup", return_value=True
+            "menuai.components.lutron_caseta.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.lutron_caseta.async_setup_entry",
+            "menuai.components.lutron_caseta.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "1.1.1.1"
@@ -358,14 +358,14 @@ async def test_form_user_reuses_existing_assets_when_pairing_again(
     assert len(mock_setup_entry.mock_calls) == 1
 
     with patch(
-        "homeassistant.components.lutron_caseta.async_unload_entry", return_value=True
+        "menuai.components.lutron_caseta.async_unload_entry", return_value=True
     ) as mock_unload:
-        await hass.config_entries.async_remove(result3["result"].entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_remove(result3["result"].entry_id)
+        await menuai.async_block_till_done()
 
     assert len(mock_unload.mock_calls) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -374,29 +374,29 @@ async def test_form_user_reuses_existing_assets_when_pairing_again(
 
     with patch.object(Smartbridge, "create_tls") as create_tls:
         create_tls.return_value = MockBridge(can_connect=True)
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "link"
 
     with (
-        patch("homeassistant.components.lutron_caseta.async_setup", return_value=True),
+        patch("menuai.components.lutron_caseta.async_setup", return_value=True),
         patch(
-            "homeassistant.components.lutron_caseta.async_setup_entry",
+            "menuai.components.lutron_caseta.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "1.1.1.1"
@@ -409,18 +409,18 @@ async def test_form_user_reuses_existing_assets_when_pairing_again(
 
 
 async def test_zeroconf_host_already_configured(
-    hass: HomeAssistant, tmp_path: Path
+    menuai: menuai, tmp_path: Path
 ) -> None:
     """Test starting a flow from discovery when the host is already configured."""
     config_dir = tmp_path / "tls_assets"
-    await hass.async_add_executor_job(config_dir.mkdir)
-    hass.config.config_dir = str(config_dir)
+    await menuai.async_add_executor_job(config_dir.mkdir)
+    menuai.config.config_dir = str(config_dir)
 
     config_entry = MockConfigEntry(domain=DOMAIN, data={CONF_HOST: "1.1.1.1"})
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -433,22 +433,22 @@ async def test_zeroconf_host_already_configured(
             type="mock_type",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_zeroconf_lutron_id_already_configured(hass: HomeAssistant) -> None:
+async def test_zeroconf_lutron_id_already_configured(menuai: menuai) -> None:
     """Test starting a flow from discovery when lutron id already configured."""
 
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "4.5.6.7"}, unique_id="abc"
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -461,17 +461,17 @@ async def test_zeroconf_lutron_id_already_configured(hass: HomeAssistant) -> Non
             type="mock_type",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert config_entry.data[CONF_HOST] == "1.1.1.1"
 
 
-async def test_zeroconf_not_lutron_device(hass: HomeAssistant) -> None:
+async def test_zeroconf_not_lutron_device(menuai: menuai) -> None:
     """Test starting a flow from discovery when it is not a lutron device."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -484,7 +484,7 @@ async def test_zeroconf_not_lutron_device(hass: HomeAssistant) -> None:
             type="mock_type",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "not_lutron_device"
@@ -493,13 +493,13 @@ async def test_zeroconf_not_lutron_device(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     "source", [config_entries.SOURCE_ZEROCONF, config_entries.SOURCE_HOMEKIT]
 )
-async def test_zeroconf(hass: HomeAssistant, source, tmp_path: Path) -> None:
+async def test_zeroconf(menuai: menuai, source, tmp_path: Path) -> None:
     """Test starting a flow from discovery."""
     config_dir = tmp_path / "tls_assets"
-    await hass.async_add_executor_job(config_dir.mkdir)
-    hass.config.config_dir = str(config_dir)
+    await menuai.async_add_executor_job(config_dir.mkdir)
+    menuai.config.config_dir = str(config_dir)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": source},
         data=ZeroconfServiceInfo(
@@ -512,29 +512,29 @@ async def test_zeroconf(hass: HomeAssistant, source, tmp_path: Path) -> None:
             type="mock_type",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "link"
 
     with (
         patch(
-            "homeassistant.components.lutron_caseta.config_flow.async_pair",
+            "menuai.components.lutron_caseta.config_flow.async_pair",
             return_value=MOCK_ASYNC_PAIR_SUCCESS,
         ),
         patch(
-            "homeassistant.components.lutron_caseta.async_setup", return_value=True
+            "menuai.components.lutron_caseta.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.lutron_caseta.async_setup_entry",
+            "menuai.components.lutron_caseta.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "abc"

@@ -6,10 +6,10 @@ import aiohttp
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.wmspro.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.wmspro.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import setup_config_entry
 
@@ -17,26 +17,26 @@ from tests.common import MockConfigEntry
 
 
 async def test_config_entry_device_config_ping_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_hub_ping: AsyncMock,
 ) -> None:
     """Test that a config entry will be retried due to ConfigEntryNotReady."""
     mock_hub_ping.side_effect = aiohttp.ClientError
-    await setup_config_entry(hass, mock_config_entry)
+    await setup_config_entry(menuai, mock_config_entry)
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
     assert len(mock_hub_ping.mock_calls) == 1
 
 
 async def test_config_entry_device_config_refresh_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_hub_ping: AsyncMock,
     mock_hub_refresh: AsyncMock,
 ) -> None:
     """Test that a config entry will be retried due to ConfigEntryNotReady."""
     mock_hub_refresh.side_effect = aiohttp.ClientError
-    await setup_config_entry(hass, mock_config_entry)
+    await setup_config_entry(menuai, mock_config_entry)
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
     assert len(mock_hub_ping.mock_calls) == 1
     assert len(mock_hub_refresh.mock_calls) == 1
@@ -54,7 +54,7 @@ async def test_config_entry_device_config_refresh_failed(
     ],
 )
 async def test_cover_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_hub_ping: AsyncMock,
     mock_hub_configuration: AsyncMock,
@@ -67,7 +67,7 @@ async def test_cover_device(
     mock_hub_configuration = request.getfixturevalue(mock_hub_configuration)
     mock_hub_status = request.getfixturevalue(mock_hub_status)
 
-    assert await setup_config_entry(hass, mock_config_entry)
+    assert await setup_config_entry(menuai, mock_config_entry)
     assert len(mock_hub_ping.mock_calls) == 1
     assert len(mock_hub_configuration.mock_calls) == 1
     assert len(mock_hub_status.mock_calls) > 0

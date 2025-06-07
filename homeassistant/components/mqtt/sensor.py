@@ -8,8 +8,8 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components import sensor
-from homeassistant.components.sensor import (
+from menuai.components import sensor
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASS_UNITS,
     DEVICE_CLASSES_SCHEMA,
@@ -21,8 +21,8 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_FORCE_UPDATE,
     CONF_NAME,
@@ -31,14 +31,14 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, State, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util import dt as dt_util
+from menuai.core import CALLBACK_TYPE, menuai, State, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util import dt as dt_util
 
 from . import subscription
 from .config import MQTT_RO_SCHEMA
@@ -161,13 +161,13 @@ DISCOVERY_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT sensor through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttSensor,
         sensor.DOMAIN,
@@ -209,7 +209,7 @@ class MqttSensor(MqttEntity, RestoreSensor):
             not in DEVICE_CLASS_UNITS[self.device_class]
         ):
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 self.entity_id,
                 issue_domain=sensor.DOMAIN,
@@ -225,7 +225,7 @@ class MqttSensor(MqttEntity, RestoreSensor):
                 breaks_in_ha_version="2025.7.0",
             )
 
-    async def mqtt_async_added_to_hass(self) -> None:
+    async def mqtt_async_added_to_menuai(self) -> None:
         """Restore state for entities with expire_after set."""
         self.async_check_uom()
         last_state: State | None
@@ -238,7 +238,7 @@ class MqttSensor(MqttEntity, RestoreSensor):
             and (last_sensor_data := await self.async_get_last_sensor_data())
             is not None
             # We might have set up a trigger already after subscribing from
-            # MqttEntity.async_added_to_hass(), then we should not restore state
+            # MqttEntity.async_added_to_menuai(), then we should not restore state
             and not self._expiration_trigger
         ):
             expiration_at = last_state.last_changed + timedelta(seconds=_expire_after)
@@ -252,7 +252,7 @@ class MqttSensor(MqttEntity, RestoreSensor):
             self._attr_native_value = last_sensor_data.native_value
 
             self._expiration_trigger = async_call_later(
-                self.hass, remain_seconds, self._value_is_expired
+                self.menuai, remain_seconds, self._value_is_expired
             )
             _LOGGER.debug(
                 (
@@ -263,14 +263,14 @@ class MqttSensor(MqttEntity, RestoreSensor):
                 remain_seconds,
             )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove expire triggers."""
         if self._expiration_trigger:
             _LOGGER.debug("Clean up expire after trigger for %s", self.entity_id)
             self._expiration_trigger()
             self._expiration_trigger = None
             self._expired = False
-        await MqttEntity.async_will_remove_from_hass(self)
+        await MqttEntity.async_will_remove_from_menuai(self)
 
     @staticmethod
     def config_schema() -> VolSchemaType:
@@ -317,7 +317,7 @@ class MqttSensor(MqttEntity, RestoreSensor):
 
             # Set new trigger
             self._expiration_trigger = async_call_later(
-                self.hass, self._expire_after, self._value_is_expired
+                self.menuai, self._expire_after, self._value_is_expired
             )
 
         if template := self._template:
@@ -407,7 +407,7 @@ class MqttSensor(MqttEntity, RestoreSensor):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     @callback
     def _value_is_expired(self, *_: datetime) -> None:

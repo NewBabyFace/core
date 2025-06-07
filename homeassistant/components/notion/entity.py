@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from aionotion.bridge.models import Bridge
 from aionotion.listener.models import Listener, ListenerKind
 
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LOGGER
 from .coordinator import NotionDataUpdateCoordinator
@@ -99,7 +99,7 @@ class NotionEntity(CoordinatorEntity[NotionDataUpdateCoordinator]):
 
         self._bridge_id = sensor.bridge.id
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         this_device = device_registry.async_get_device(
             identifiers={(DOMAIN, sensor.hardware_id)}
         )

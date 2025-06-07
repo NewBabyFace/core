@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from pyplaato.plaato import PlaatoKeg
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_USE_WEBHOOK, COORDINATOR, DOMAIN
 from .entity import PlaatoEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -26,10 +26,10 @@ async def async_setup_entry(
     if config_entry.data[CONF_USE_WEBHOOK]:
         return
 
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][COORDINATOR]
+    coordinator = menuai.data[DOMAIN][config_entry.entry_id][COORDINATOR]
     async_add_entities(
         PlaatoBinarySensor(
-            hass.data[DOMAIN][config_entry.entry_id],
+            menuai.data[DOMAIN][config_entry.entry_id],
             sensor_type,
             coordinator,
         )

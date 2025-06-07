@@ -9,11 +9,11 @@ from aiohttp import ClientError
 import aiosolaredge
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util import slugify
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_NAME
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.util import slugify
 
 from .const import CONF_SITE_ID, DEFAULT_NAME, DOMAIN
 
@@ -42,7 +42,7 @@ class SolarEdgeConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_check_site(self, site_id: str, api_key: str) -> bool:
         """Check if we can connect to the soleredge api service."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         api = aiosolaredge.SolarEdge(api_key, session)
         try:
             response = await api.get_details(site_id)

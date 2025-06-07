@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 from mastodon.Mastodon import Account, InstanceV2
 import pytest
 
-from homeassistant.components.mastodon.const import CONF_BASE_URL, DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.components.mastodon.const import CONF_BASE_URL, DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry, load_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.mastodon.async_setup_entry",
+        "menuai.components.mastodon.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -27,7 +27,7 @@ def mock_mastodon_client() -> Generator[AsyncMock]:
     """Mock a Mastodon client."""
     with (
         patch(
-            "homeassistant.components.mastodon.utils.Mastodon",
+            "menuai.components.mastodon.utils.Mastodon",
             autospec=True,
         ) as mock_client,
     ):

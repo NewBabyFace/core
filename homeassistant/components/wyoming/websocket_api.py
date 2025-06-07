@@ -5,8 +5,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
 
 from .const import DOMAIN
 from .models import DomainDataItem
@@ -15,21 +15,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_register_websocket_api(hass: HomeAssistant) -> None:
+def async_register_websocket_api(menuai: menuai) -> None:
     """Register the websocket API."""
-    websocket_api.async_register_command(hass, websocket_info)
+    websocket_api.async_register_command(menuai, websocket_info)
 
 
 @callback
 @websocket_api.require_admin
 @websocket_api.websocket_command({vol.Required("type"): "wyoming/info"})
 def websocket_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List service information for Wyoming all config entries."""
-    entry_items: dict[str, DomainDataItem] = hass.data.get(DOMAIN, {})
+    entry_items: dict[str, DomainDataItem] = menuai.data.get(DOMAIN, {})
 
     connection.send_result(
         msg["id"],

@@ -6,7 +6,7 @@ from unittest.mock import Mock
 from freebox_api.exceptions import HttpRequestError
 import pytest
 
-from homeassistant.components.freebox.router import get_hosts_list_if_supported, is_json
+from menuai.components.freebox.router import get_hosts_list_if_supported, is_json
 
 from .const import DATA_LAN_GET_HOSTS_LIST_MODE_BRIDGE, DATA_WIFI_GET_GLOBAL_CONFIG
 

@@ -19,7 +19,7 @@
       }
     },
     "abort": {
-      "not_hassio": "[%key:component::homeassistant_hardware::silabs_multiprotocol_hardware::options::abort::not_hassio%]",
+      "not_menuaiio": "[%key:component::menuai_hardware::silabs_multiprotocol_hardware::options::abort::not_menuaiio%]",
       "read_hw_settings_error": "Failed to read hardware settings",
       "write_hw_settings_error": "Failed to write hardware settings"
     }

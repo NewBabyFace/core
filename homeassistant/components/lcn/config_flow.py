@@ -8,8 +8,8 @@ from typing import Any
 import pypck
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.const import (
     CONF_BASE,
     CONF_DEVICES,
     CONF_ENTITIES,
@@ -19,8 +19,8 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from . import PchkConnectionManager
 from .const import CONF_ACKNOWLEDGE, CONF_DIM_MODE, CONF_SK_NUM_TRIES, DIM_MODES, DOMAIN
@@ -144,7 +144,7 @@ class LcnFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             )
 
-            await self.hass.config_entries.async_unload(reconfigure_entry.entry_id)
+            await self.menuai.config_entries.async_unload(reconfigure_entry.entry_id)
 
             if (error := await validate_connection(user_input)) is None:
                 return self.async_update_reload_and_abort(
@@ -152,7 +152,7 @@ class LcnFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
             errors = {CONF_BASE: error}
-            await self.hass.config_entries.async_setup(reconfigure_entry.entry_id)
+            await self.menuai.config_entries.async_setup(reconfigure_entry.entry_id)
 
         return self.async_show_form(
             step_id="reconfigure",

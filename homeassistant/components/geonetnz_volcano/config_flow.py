@@ -4,17 +4,17 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
     CONF_UNIT_SYSTEM,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (
     DEFAULT_RADIUS,
@@ -26,11 +26,11 @@ from .const import (
 
 
 @callback
-def configured_instances(hass: HomeAssistant) -> set[str]:
+def configured_instances(menuai: menuai) -> set[str]:
     """Return a set of configured GeoNet NZ Volcano instances."""
     return {
         f"{entry.data[CONF_LATITUDE]}, {entry.data[CONF_LONGITUDE]}"
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in menuai.config_entries.async_entries(DOMAIN)
     }
 
 
@@ -58,16 +58,16 @@ class GeonetnzVolcanoFlowHandler(ConfigFlow, domain=DOMAIN):
         if not user_input:
             return await self._show_form()
 
-        latitude = user_input.get(CONF_LATITUDE, self.hass.config.latitude)
+        latitude = user_input.get(CONF_LATITUDE, self.menuai.config.latitude)
         user_input[CONF_LATITUDE] = latitude
-        longitude = user_input.get(CONF_LONGITUDE, self.hass.config.longitude)
+        longitude = user_input.get(CONF_LONGITUDE, self.menuai.config.longitude)
         user_input[CONF_LONGITUDE] = longitude
 
         identifier = f"{user_input[CONF_LATITUDE]}, {user_input[CONF_LONGITUDE]}"
-        if identifier in configured_instances(self.hass):
+        if identifier in configured_instances(self.menuai):
             return await self._show_form({"base": "already_configured"})
 
-        if self.hass.config.units is US_CUSTOMARY_SYSTEM:
+        if self.menuai.config.units is US_CUSTOMARY_SYSTEM:
             user_input[CONF_UNIT_SYSTEM] = IMPERIAL_UNITS
         else:
             user_input[CONF_UNIT_SYSTEM] = METRIC_UNITS

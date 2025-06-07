@@ -10,14 +10,14 @@ from typing import Any
 from pysmlight import Sensors, SettingsEvent
 from pysmlight.const import Settings
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SmConfigEntry, SmDataUpdateCoordinator
 from .entity import SmEntity
@@ -67,7 +67,7 @@ SWITCHES: list[SmSwitchEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -96,9 +96,9 @@ class SmSwitch(SmEntity, SwitchEntity):
 
         self._page, self._toggle = description.setting.value
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.client.sse.register_settings_cb(
                 self.entity_description.setting, self.event_callback

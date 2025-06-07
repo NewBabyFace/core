@@ -8,10 +8,10 @@ import logging
 from aioacaia.acaiascale import AcaiaScale
 from aioacaia.exceptions import AcaiaDeviceNotFound, AcaiaError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_IS_NEW_STYLE_SCALE
 
@@ -27,10 +27,10 @@ class AcaiaCoordinator(DataUpdateCoordinator[None]):
 
     config_entry: AcaiaConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: AcaiaConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: AcaiaConfigEntry) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name="acaia coordinator",
             update_interval=SCAN_INTERVAL,
@@ -71,7 +71,7 @@ class AcaiaCoordinator(DataUpdateCoordinator[None]):
         # connected, set up background tasks
         if not self._scale.heartbeat_task or self._scale.heartbeat_task.done():
             self._scale.heartbeat_task = self.config_entry.async_create_background_task(
-                hass=self.hass,
+                menuai=self.menuai,
                 target=self._scale.send_heartbeats(),
                 name="acaia_heartbeat_task",
             )
@@ -79,7 +79,7 @@ class AcaiaCoordinator(DataUpdateCoordinator[None]):
         if not self._scale.process_queue_task or self._scale.process_queue_task.done():
             self._scale.process_queue_task = (
                 self.config_entry.async_create_background_task(
-                    hass=self.hass,
+                    menuai=self.menuai,
                     target=self._scale.process_queue(),
                     name="acaia_process_queue_task",
                 )

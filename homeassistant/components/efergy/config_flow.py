@@ -8,9 +8,9 @@ from typing import Any
 from pyefergy import Efergy, exceptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_NAME, DOMAIN, LOGGER
 
@@ -61,8 +61,8 @@ class EfergyFlowHandler(ConfigFlow, domain=DOMAIN):
         """Try connecting to Efergy servers."""
         api = Efergy(
             api_key,
-            session=async_get_clientsession(self.hass),
-            utc_offset=self.hass.config.time_zone,
+            session=async_get_clientsession(self.menuai),
+            utc_offset=self.menuai.config.time_zone,
         )
         try:
             await api.async_status()

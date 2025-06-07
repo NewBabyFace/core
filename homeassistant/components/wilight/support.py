@@ -52,8 +52,8 @@ def wilight_trigger(value: Any) -> str | None:
     raise vol.Invalid(err_desc)
 
 
-def wilight_to_hass_trigger(value: str | None) -> str | None:
-    """Convert wilight trigger to hass description.
+def wilight_to_menuai_trigger(value: str | None) -> str | None:
+    """Convert wilight trigger to menuai description.
 
     Ex: "12719001" -> "sun mon tue wed thu fri sat 19:00 On"
         "00000000" -> "00:00 Off"

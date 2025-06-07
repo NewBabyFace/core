@@ -9,8 +9,8 @@ from typing import Literal, TypedDict
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, singleton, storage
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, singleton, storage
 
 from .const import DOMAIN
 
@@ -19,9 +19,9 @@ STORAGE_KEY = DOMAIN
 
 
 @singleton.singleton(f"{DOMAIN}_manager")
-async def async_get_manager(hass: HomeAssistant) -> EnergyManager:
+async def async_get_manager(menuai: menuai) -> EnergyManager:
     """Return an initialized data manager."""
-    manager = EnergyManager(hass)
+    manager = EnergyManager(menuai)
     await manager.async_initialize()
     return manager
 
@@ -303,11 +303,11 @@ DEVICE_CONSUMPTION_SCHEMA = vol.Schema(
 class EnergyManager:
     """Manage the instance energy prefs."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize energy manager."""
-        self._hass = hass
+        self._menuai = menuai
         self._store = storage.Store[EnergyPreferences](
-            hass, STORAGE_VERSION, STORAGE_KEY
+            menuai, STORAGE_VERSION, STORAGE_KEY
         )
         self.data: EnergyPreferences | None = None
         self._update_listeners: list[Callable[[], Awaitable]] = []

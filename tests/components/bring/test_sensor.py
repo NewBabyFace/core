@@ -7,11 +7,11 @@ from bring_api import BringItemsResponse
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.bring.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.bring.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_load_fixture, snapshot_platform
 
@@ -20,14 +20,14 @@ from tests.common import MockConfigEntry, async_load_fixture, snapshot_platform
 def sensor_only() -> Generator[None]:
     """Enable only the sensor platform."""
     with patch(
-        "homeassistant.components.bring.PLATFORMS",
+        "menuai.components.bring.PLATFORMS",
         [Platform.SENSOR],
     ):
         yield
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -37,20 +37,20 @@ async def test_setup(
 
     mock_bring_client.get_list.side_effect = [
         BringItemsResponse.from_json(
-            await async_load_fixture(hass, "items.json", DOMAIN)
+            await async_load_fixture(menuai, "items.json", DOMAIN)
         ),
         BringItemsResponse.from_json(
-            await async_load_fixture(hass, "items2.json", DOMAIN)
+            await async_load_fixture(menuai, "items2.json", DOMAIN)
         ),
     ]
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
     await snapshot_platform(
-        hass, entity_registry, snapshot, bring_config_entry.entry_id
+        menuai, entity_registry, snapshot, bring_config_entry.entry_id
     )
 
 
@@ -63,7 +63,7 @@ async def test_setup(
     ],
 )
 async def test_list_access_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
     fixture: str,
@@ -72,13 +72,13 @@ async def test_list_access_states(
     """Snapshot test states of list access sensor."""
 
     mock_bring_client.get_list.return_value = BringItemsResponse.from_json(
-        await async_load_fixture(hass, f"{fixture}.json", DOMAIN)
+        await async_load_fixture(menuai, f"{fixture}.json", DOMAIN)
     )
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
-    assert (state := hass.states.get("sensor.einkauf_list_access"))
+    assert (state := menuai.states.get("sensor.einkauf_list_access"))
     assert state.state == entity_state

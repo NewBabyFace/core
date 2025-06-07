@@ -9,8 +9,8 @@ import logging
 import pyrepetierng as pyrepetier
 import voluptuous as vol
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntityDescription
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass, SensorEntityDescription
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_MONITORED_CONDITIONS,
@@ -20,13 +20,13 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import track_time_interval
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify as util_slugify
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.event import track_time_interval
+from menuai.helpers.typing import ConfigType
+from menuai.util import slugify as util_slugify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class RepetierRequiredKeysMixin:
 
 
 @dataclass(frozen=True)
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class RepetierSensorEntityDescription(
     SensorEntityDescription, RepetierRequiredKeysMixin
 ):
@@ -219,9 +219,9 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Repetier Server component."""
-    hass.data[REPETIER_API] = {}
+    menuai.data[REPETIER_API] = {}
 
     for repetier in config[DOMAIN]:
         _LOGGER.debug("Repetier server config %s", repetier[CONF_HOST])
@@ -238,11 +238,11 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             return False
 
         sensors = repetier[CONF_SENSORS][CONF_MONITORED_CONDITIONS]
-        api = PrinterAPI(hass, client, printers, sensors, repetier[CONF_NAME], config)
+        api = PrinterAPI(menuai, client, printers, sensors, repetier[CONF_NAME], config)
         api.update()
-        track_time_interval(hass, api.update, SCAN_INTERVAL)
+        track_time_interval(menuai, api.update, SCAN_INTERVAL)
 
-        hass.data[REPETIER_API][repetier[CONF_NAME]] = api
+        menuai.data[REPETIER_API][repetier[CONF_NAME]] = api
 
     return True
 
@@ -250,9 +250,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class PrinterAPI:
     """Handle the printer API."""
 
-    def __init__(self, hass, client, printers, sensors, conf_name, config):
+    def __init__(self, menuai, client, printers, sensors, conf_name, config):
         """Set up instance."""
-        self._hass = hass
+        self._menuai = menuai
         self._client = client
         self.printers = printers
         self.sensors = sensors
@@ -285,7 +285,7 @@ class PrinterAPI:
         for printer in self.printers:
             printer.get_data()
         self._load_entities()
-        dispatcher_send(self._hass, UPDATE_SIGNAL)
+        dispatcher_send(self._menuai, UPDATE_SIGNAL)
 
     def _load_entities(self):
         sensor_info = []
@@ -318,5 +318,5 @@ class PrinterAPI:
         if not sensor_info:
             return
         load_platform(
-            self._hass, "sensor", DOMAIN, {"sensors": sensor_info}, self.config
+            self._menuai, "sensor", DOMAIN, {"sensors": sensor_info}, self.config
         )

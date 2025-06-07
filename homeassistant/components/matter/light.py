@@ -7,7 +7,7 @@ from typing import Any
 from chip.clusters import Objects as clusters
 from matter_server.client.models import device_types
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
@@ -21,19 +21,19 @@ from homeassistant.components.light import (
     LightEntityFeature,
     filter_supported_color_modes,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from .const import LOGGER
 from .entity import MatterEntity
 from .helpers import get_matter
 from .models import MatterDiscoverySchema
 from .util import (
-    convert_to_hass_hs,
-    convert_to_hass_xy,
+    convert_to_menuai_hs,
+    convert_to_menuai_xy,
     convert_to_matter_hs,
     convert_to_matter_xy,
     renormalize,
@@ -75,12 +75,12 @@ TRANSITION_BLOCKLIST = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter Light from Config Entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     matter.register_platform_handler(Platform.LIGHT, async_add_entities)
 
 
@@ -191,7 +191,7 @@ class MatterLight(MatterEntity, LightEntity):
         assert x_color is not None
         assert y_color is not None
 
-        xy_color = convert_to_hass_xy((x_color, y_color))
+        xy_color = convert_to_menuai_xy((x_color, y_color))
         LOGGER.debug(
             "Got xy color %s for %s",
             xy_color,
@@ -214,7 +214,7 @@ class MatterLight(MatterEntity, LightEntity):
         assert hue is not None
         assert saturation is not None
 
-        hs_color = convert_to_hass_hs((hue, saturation))
+        hs_color = convert_to_menuai_hs((hue, saturation))
 
         LOGGER.debug(
             "Got hs color %s for %s",

@@ -10,7 +10,7 @@ import requests.exceptions
 from requests.exceptions import ConnectTimeout, SSLError
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -18,11 +18,11 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .common import ProxmoxClient, call_api_container_vm, parse_api_container_vm
 from .const import (
@@ -85,13 +85,13 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the platform."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     def build_client() -> ProxmoxAPI:
         """Build the Proxmox client connection."""
-        hass.data[PROXMOX_CLIENTS] = {}
+        menuai.data[PROXMOX_CLIENTS] = {}
 
         for entry in config[DOMAIN]:
             host = entry[CONF_HOST]
@@ -101,7 +101,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             password = entry[CONF_PASSWORD]
             verify_ssl = entry[CONF_VERIFY_SSL]
 
-            hass.data[PROXMOX_CLIENTS][host] = None
+            menuai.data[PROXMOX_CLIENTS][host] = None
 
             try:
                 # Construct an API client with the given data for the given host
@@ -131,21 +131,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 _LOGGER.warning("Host %s is not reachable", host)
                 continue
 
-            hass.data[PROXMOX_CLIENTS][host] = proxmox_client
+            menuai.data[PROXMOX_CLIENTS][host] = proxmox_client
 
-    await hass.async_add_executor_job(build_client)
+    await menuai.async_add_executor_job(build_client)
 
     coordinators: dict[
         str, dict[str, dict[int, DataUpdateCoordinator[dict[str, Any] | None]]]
     ] = {}
-    hass.data[DOMAIN][COORDINATORS] = coordinators
+    menuai.data[DOMAIN][COORDINATORS] = coordinators
 
     # Create a coordinator for each vm/container
     for host_config in config[DOMAIN]:
         host_name = host_config["host"]
         coordinators[host_name] = {}
 
-        proxmox_client = hass.data[PROXMOX_CLIENTS][host_name]
+        proxmox_client = menuai.data[PROXMOX_CLIENTS][host_name]
 
         # Skip invalid hosts
         if proxmox_client is None:
@@ -159,7 +159,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             for vm_id in node_config["vms"]:
                 coordinator = create_coordinator_container_vm(
-                    hass, proxmox, host_name, node_name, vm_id, TYPE_VM
+                    menuai, proxmox, host_name, node_name, vm_id, TYPE_VM
                 )
 
                 # Fetch initial data
@@ -169,7 +169,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             for container_id in node_config["containers"]:
                 coordinator = create_coordinator_container_vm(
-                    hass, proxmox, host_name, node_name, container_id, TYPE_CONTAINER
+                    menuai, proxmox, host_name, node_name, container_id, TYPE_CONTAINER
                 )
 
                 # Fetch initial data
@@ -178,15 +178,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 node_coordinators[container_id] = coordinator
 
     for component in PLATFORMS:
-        await hass.async_create_task(
-            async_load_platform(hass, component, DOMAIN, {"config": config}, config)
+        await menuai.async_create_task(
+            async_load_platform(menuai, component, DOMAIN, {"config": config}, config)
         )
 
     return True
 
 
 def create_coordinator_container_vm(
-    hass: HomeAssistant,
+    menuai: menuai,
     proxmox: ProxmoxAPI,
     host_name: str,
     node_name: str,
@@ -202,7 +202,7 @@ def create_coordinator_container_vm(
             """Call the api."""
             return call_api_container_vm(proxmox, node_name, vm_id, vm_type)
 
-        vm_status = await hass.async_add_executor_job(poll_api)
+        vm_status = await menuai.async_add_executor_job(poll_api)
 
         if vm_status is None:
             _LOGGER.warning(
@@ -213,7 +213,7 @@ def create_coordinator_container_vm(
         return parse_api_container_vm(vm_status)
 
     return DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         name=f"proxmox_coordinator_{host_name}_{node_name}_{vm_id}",
         update_method=async_update_data,

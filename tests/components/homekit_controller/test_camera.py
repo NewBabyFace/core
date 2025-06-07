@@ -7,9 +7,9 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.services import ServicesTypes
 from aiohomekit.testing import FAKE_CAMERA_IMAGE
 
-from homeassistant.components import camera
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components import camera
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -20,7 +20,7 @@ def create_camera(accessory: Accessory) -> None:
 
 
 async def test_migrate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -31,23 +31,23 @@ async def test_migrate_unique_ids(
         "homekit_controller",
         f"homekit-0001-aid:{aid}",
     )
-    await setup_test_component(hass, aid, create_camera)
+    await setup_test_component(menuai, aid, create_camera)
     assert (
         entity_registry.async_get(camera.entity_id).unique_id
         == f"00:00:00:00:00:00_{aid}"
     )
 
 
-async def test_read_state(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_read_state(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test reading the state of a HomeKit camera."""
-    helper = await setup_test_component(hass, get_next_aid(), create_camera)
+    helper = await setup_test_component(menuai, get_next_aid(), create_camera)
 
     state = await helper.poll_and_get_state()
     assert state.state == "idle"
 
 
-async def test_get_image(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_get_image(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test getting a JPEG from a camera."""
-    helper = await setup_test_component(hass, get_next_aid(), create_camera)
-    image = await camera.async_get_image(hass, helper.entity_id)
+    helper = await setup_test_component(menuai, get_next_aid(), create_camera)
+    image = await camera.async_get_image(menuai, helper.entity_id)
     assert image.content == base64.b64decode(FAKE_CAMERA_IMAGE)

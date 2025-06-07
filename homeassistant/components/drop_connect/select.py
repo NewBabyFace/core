@@ -7,9 +7,9 @@ from dataclasses import dataclass
 import logging
 from typing import Any
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_DEVICE_TYPE, DEV_HUB
 from .coordinator import DROPConfigEntry, DROPDeviceDataUpdateCoordinator
@@ -48,7 +48,7 @@ DEVICE_SELECTS: dict[str, list[str]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DROPConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

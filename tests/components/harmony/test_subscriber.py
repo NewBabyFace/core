@@ -3,11 +3,11 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-from homeassistant.components.harmony.subscriber import (
+from menuai.components.harmony.subscriber import (
     HarmonyCallback,
     HarmonySubscriberMixin,
 )
-from homeassistant.core import HassJob, HomeAssistant
+from menuai.core import menuaiJob, menuai
 
 _NO_PARAM_CALLBACKS = {
     "connected": "_connected",
@@ -27,31 +27,31 @@ _ALL_CALLBACK_NAMES = list(_NO_PARAM_CALLBACKS.keys()) + list(
 _ACTIVITY_TUPLE = ("not", "used")
 
 
-async def test_no_callbacks(hass: HomeAssistant) -> None:
+async def test_no_callbacks(menuai: menuai) -> None:
     """Ensure we handle no subscriptions."""
-    subscriber = HarmonySubscriberMixin(hass)
+    subscriber = HarmonySubscriberMixin(menuai)
     _call_all_callbacks(subscriber)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_empty_callbacks(hass: HomeAssistant) -> None:
+async def test_empty_callbacks(menuai: menuai) -> None:
     """Ensure we handle a missing callback in a subscription."""
-    subscriber = HarmonySubscriberMixin(hass)
+    subscriber = HarmonySubscriberMixin(menuai)
 
     callbacks = dict.fromkeys(_ALL_CALLBACK_NAMES)
     subscriber.async_subscribe(HarmonyCallback(**callbacks))
     _call_all_callbacks(subscriber)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_async_callbacks(hass: HomeAssistant) -> None:
+async def test_async_callbacks(menuai: menuai) -> None:
     """Ensure we handle async callbacks."""
-    subscriber = HarmonySubscriberMixin(hass)
+    subscriber = HarmonySubscriberMixin(menuai)
 
-    callbacks = {k: HassJob(AsyncMock()) for k in _ALL_CALLBACK_NAMES}
+    callbacks = {k: menuaiJob(AsyncMock()) for k in _ALL_CALLBACK_NAMES}
     subscriber.async_subscribe(HarmonyCallback(**callbacks))
     _call_all_callbacks(subscriber)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for callback_name in _NO_PARAM_CALLBACKS:
         callback_mock = callbacks[callback_name]
@@ -62,9 +62,9 @@ async def test_async_callbacks(hass: HomeAssistant) -> None:
         callback_mock.target.assert_awaited_once_with(_ACTIVITY_TUPLE)
 
 
-async def test_long_async_callbacks(hass: HomeAssistant) -> None:
+async def test_long_async_callbacks(menuai: menuai) -> None:
     """Ensure we handle async callbacks that may have sleeps."""
-    subscriber = HarmonySubscriberMixin(hass)
+    subscriber = HarmonySubscriberMixin(menuai)
 
     blocker_event = asyncio.Event()
     notifier_event_one = asyncio.Event()
@@ -77,8 +77,8 @@ async def test_long_async_callbacks(hass: HomeAssistant) -> None:
     async def notifies_when_called():
         notifier_event_two.set()
 
-    callbacks_one = {k: HassJob(blocks_until_notified) for k in _ALL_CALLBACK_NAMES}
-    callbacks_two = {k: HassJob(notifies_when_called) for k in _ALL_CALLBACK_NAMES}
+    callbacks_one = {k: menuaiJob(blocks_until_notified) for k in _ALL_CALLBACK_NAMES}
+    callbacks_two = {k: menuaiJob(notifies_when_called) for k in _ALL_CALLBACK_NAMES}
     subscriber.async_subscribe(HarmonyCallback(**callbacks_one))
     subscriber.async_subscribe(HarmonyCallback(**callbacks_two))
 
@@ -88,14 +88,14 @@ async def test_long_async_callbacks(hass: HomeAssistant) -> None:
     await notifier_event_one.wait()
 
 
-async def test_callbacks(hass: HomeAssistant) -> None:
+async def test_callbacks(menuai: menuai) -> None:
     """Ensure we handle non-async callbacks."""
-    subscriber = HarmonySubscriberMixin(hass)
+    subscriber = HarmonySubscriberMixin(menuai)
 
-    callbacks = {k: HassJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
+    callbacks = {k: menuaiJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
     subscriber.async_subscribe(HarmonyCallback(**callbacks))
     _call_all_callbacks(subscriber)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for callback_name in _NO_PARAM_CALLBACKS:
         callback_mock = callbacks[callback_name]
@@ -106,22 +106,22 @@ async def test_callbacks(hass: HomeAssistant) -> None:
         callback_mock.target.assert_called_once_with(_ACTIVITY_TUPLE)
 
 
-async def test_subscribe_unsubscribe(hass: HomeAssistant) -> None:
+async def test_subscribe_unsubscribe(menuai: menuai) -> None:
     """Ensure we handle subscriptions and unsubscriptions correctly."""
-    subscriber = HarmonySubscriberMixin(hass)
+    subscriber = HarmonySubscriberMixin(menuai)
 
-    callback_one = {k: HassJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
+    callback_one = {k: menuaiJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
     unsub_one = subscriber.async_subscribe(HarmonyCallback(**callback_one))
-    callback_two = {k: HassJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
+    callback_two = {k: menuaiJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
     _ = subscriber.async_subscribe(HarmonyCallback(**callback_two))
-    callback_three = {k: HassJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
+    callback_three = {k: menuaiJob(MagicMock()) for k in _ALL_CALLBACK_NAMES}
     unsub_three = subscriber.async_subscribe(HarmonyCallback(**callback_three))
 
     unsub_one()
     unsub_three()
 
     _call_all_callbacks(subscriber)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for callback_name in _NO_PARAM_CALLBACKS:
         callback_one[callback_name].target.assert_not_called()

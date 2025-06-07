@@ -2,7 +2,7 @@
 
 from pyHomee.const import NodeProfile
 
-from homeassistant.const import (
+from menuai.const import (
     DEGREE,
     LIGHT_LUX,
     PERCENTAGE,

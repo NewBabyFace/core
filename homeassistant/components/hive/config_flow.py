@@ -14,14 +14,14 @@ from apyhiveapi.helper.hive_exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
-from homeassistant.core import callback
+from menuai.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from menuai.core import callback
 
 from . import HiveConfigEntry
 from .const import CONF_CODE, CONF_DEVICE_NAME, CONFIG_ENTRY_VERSION, DOMAIN
@@ -38,7 +38,7 @@ class HiveFlowHandler(ConfigFlow, domain=DOMAIN):
         self.data: dict[str, Any] = {}
         self.tokens: dict[str, str] = {}
         self.device_registration: bool = False
-        self.device_name = "Home Assistant"
+        self.device_name = "MenuAI"
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

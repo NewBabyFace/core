@@ -9,8 +9,8 @@ from typing import Any, Concatenate, Literal
 from aiovlc.client import Client
 from aiovlc.exceptions import AuthError, CommandError, ConnectError
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -18,12 +18,12 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import SOURCE_HASSIO, ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import SOURCE_menuaiIO, ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import VlcConfigEntry
 from .const import DEFAULT_NAME, DOMAIN, LOGGER
@@ -39,7 +39,7 @@ def _get_str(data: dict, key: str) -> str | None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: VlcConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -110,7 +110,7 @@ class VlcDevice(MediaPlayerEntity):
             manufacturer="VideoLAN",
             name=name,
         )
-        self._using_addon = config_entry.source == SOURCE_HASSIO
+        self._using_addon = config_entry.source == SOURCE_menuaiIO
 
     @catch_vlc_errors
     async def async_update(self) -> None:
@@ -126,8 +126,8 @@ class VlcDevice(MediaPlayerEntity):
                 await self._vlc.login()
             except AuthError:
                 LOGGER.debug("Failed to login to VLC")
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(self._config_entry.entry_id)
+                self.menuai.async_create_task(
+                    self.menuai.config_entries.async_reload(self._config_entry.entry_id)
                 )
                 return
 
@@ -247,13 +247,13 @@ class VlcDevice(MediaPlayerEntity):
         # Handle media_source
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = sourced_media.url
 
         # If media ID is a relative URL, we serve it from HA.
         media_id = async_process_play_media_url(
-            self.hass, media_id, for_supervisor_network=self._using_addon
+            self.menuai, media_id, for_supervisor_network=self._using_addon
         )
 
         await self._vlc.add(media_id)
@@ -286,4 +286,4 @@ class VlcDevice(MediaPlayerEntity):
         media_content_id: str | None = None,
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
-        return await media_source.async_browse_media(self.hass, media_content_id)
+        return await media_source.async_browse_media(self.menuai, media_content_id)

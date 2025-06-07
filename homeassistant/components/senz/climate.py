@@ -6,30 +6,30 @@ from typing import Any
 
 from aiosenz import MODE_AUTO, Thermostat
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import SENZDataUpdateCoordinator
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the SENZ climate entities from a config entry."""
-    coordinator: SENZDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SENZDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         SENZClimate(thermostat, coordinator) for thermostat in coordinator.data.values()
     )

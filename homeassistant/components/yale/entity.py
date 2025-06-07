@@ -8,11 +8,11 @@ from yalexs.keypad import KeypadDetail
 from yalexs.lock import Lock, LockDetail
 from yalexs.util import get_configuration_url
 
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.const import ATTR_CONNECTIONS
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from . import DOMAIN, YaleData
 from .const import MANUFACTURER
@@ -72,7 +72,7 @@ class YaleEntity(Entity):
     def _update_from_data(self) -> None:
         """Update the entity state from the data object."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self.async_on_remove(
             self._data.async_subscribe_device_id(

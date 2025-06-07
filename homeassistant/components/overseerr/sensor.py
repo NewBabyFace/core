@@ -5,13 +5,13 @@ from dataclasses import dataclass
 
 from python_overseerr import RequestCount
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import REQUESTS
 from .coordinator import OverseerrConfigEntry, OverseerrCoordinator
@@ -74,7 +74,7 @@ SENSORS: tuple[OverseerrSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: OverseerrConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

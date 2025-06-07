@@ -8,15 +8,15 @@ from typing import Any
 from pyws66i import WS66i, get_ws66i
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import CONF_IP_ADDRESS
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .const import (
     CONF_SOURCE_1,
@@ -78,7 +78,7 @@ def _verify_connection(ws66i: WS66i) -> bool:
 
 
 async def validate_input(
-    hass: HomeAssistant, input_data: dict[str, Any]
+    menuai: menuai, input_data: dict[str, Any]
 ) -> dict[str, Any]:
     """Validate the user input.
 
@@ -86,7 +86,7 @@ async def validate_input(
     """
     ws66i: WS66i = get_ws66i(input_data[CONF_IP_ADDRESS])
 
-    is_valid: bool = await hass.async_add_executor_job(_verify_connection, ws66i)
+    is_valid: bool = await menuai.async_add_executor_job(_verify_connection, ws66i)
     if not is_valid:
         raise CannotConnect("Not a valid WS66i connection")
 
@@ -106,7 +106,7 @@ class WS66iConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -168,5 +168,5 @@ class Ws66iOptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

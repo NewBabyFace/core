@@ -6,7 +6,7 @@ from collections.abc import Generator
 import logging
 from typing import Any
 
-from homeassistant.components import (
+from menuai.components import (
     button,
     climate,
     cover,
@@ -24,14 +24,14 @@ from homeassistant.components import (
     valve,
     water_heater,
 )
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.components.climate import HVACMode
-from homeassistant.components.lock import LockState
-from homeassistant.const import (
+from menuai.components.climate import HVACMode
+from menuai.components.lock import LockState
+from menuai.const import (
     ATTR_CODE_FORMAT,
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
@@ -49,8 +49,8 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.util import color as color_util, dt as dt_util
+from menuai.core import menuai, State
+from menuai.util import color as color_util, dt as dt_util
 
 from .const import (
     API_TEMP_UNITS,
@@ -104,7 +104,7 @@ class AlexaCapability:
     """Base class for Alexa capability interfaces.
 
     The Smart Home Skills API defines a number of "capability interfaces",
-    roughly analogous to domains in Home Assistant. The supported interfaces
+    roughly analogous to domains in MenuAI. The supported interfaces
     describe what actions can be performed on a particular device.
 
     https://developer.amazon.com/docs/device-apis/message-guide.html
@@ -295,7 +295,7 @@ class Alexa(AlexaCapability):
 
     https://developer.amazon.com/docs/device-apis/alexa-interface.html
 
-    To compare current supported locales in Home Assistant
+    To compare current supported locales in MenuAI
     with Alexa supported locales, run the following script:
     python -m script.alexa_locales
     """
@@ -350,10 +350,10 @@ class AlexaEndpointHealth(AlexaCapability):
         "pt-BR",
     }
 
-    def __init__(self, hass: HomeAssistant, entity: State) -> None:
+    def __init__(self, menuai: menuai, entity: State) -> None:
         """Initialize the entity."""
         super().__init__(entity)
-        self.hass = hass
+        self.menuai = menuai
 
     def name(self) -> str:
         """Return the Alexa API name of this interface."""
@@ -926,10 +926,10 @@ class AlexaTemperatureSensor(AlexaCapability):
         "pt-BR",
     }
 
-    def __init__(self, hass: HomeAssistant, entity: State) -> None:
+    def __init__(self, menuai: menuai, entity: State) -> None:
         """Initialize the entity."""
         super().__init__(entity)
-        self.hass = hass
+        self.menuai = menuai
 
     def name(self) -> str:
         """Return the Alexa API name of this interface."""
@@ -953,14 +953,14 @@ class AlexaTemperatureSensor(AlexaCapability):
             raise UnsupportedProperty(name)
 
         unit: str = self.entity.attributes.get(
-            ATTR_UNIT_OF_MEASUREMENT, self.hass.config.units.temperature_unit
+            ATTR_UNIT_OF_MEASUREMENT, self.menuai.config.units.temperature_unit
         )
         temp: str | None = self.entity.state
         if self.entity.domain == climate.DOMAIN:
-            unit = self.hass.config.units.temperature_unit
+            unit = self.menuai.config.units.temperature_unit
             temp = self.entity.attributes.get(climate.ATTR_CURRENT_TEMPERATURE)
         elif self.entity.domain == water_heater.DOMAIN:
-            unit = self.hass.config.units.temperature_unit
+            unit = self.menuai.config.units.temperature_unit
             temp = self.entity.attributes.get(water_heater.ATTR_CURRENT_TEMPERATURE)
 
         if temp is None or temp in (STATE_UNAVAILABLE, STATE_UNKNOWN):
@@ -1006,10 +1006,10 @@ class AlexaContactSensor(AlexaCapability):
         "pt-BR",
     }
 
-    def __init__(self, hass: HomeAssistant, entity: State) -> None:
+    def __init__(self, menuai: menuai, entity: State) -> None:
         """Initialize the entity."""
         super().__init__(entity)
-        self.hass = hass
+        self.menuai = menuai
 
     def name(self) -> str:
         """Return the Alexa API name of this interface."""
@@ -1061,10 +1061,10 @@ class AlexaMotionSensor(AlexaCapability):
         "pt-BR",
     }
 
-    def __init__(self, hass: HomeAssistant, entity: State) -> None:
+    def __init__(self, menuai: menuai, entity: State) -> None:
         """Initialize the entity."""
         super().__init__(entity)
-        self.hass = hass
+        self.menuai = menuai
 
     def name(self) -> str:
         """Return the Alexa API name of this interface."""
@@ -1118,10 +1118,10 @@ class AlexaThermostatController(AlexaCapability):
         "pt-BR",
     }
 
-    def __init__(self, hass: HomeAssistant, entity: State) -> None:
+    def __init__(self, menuai: menuai, entity: State) -> None:
         """Initialize the entity."""
         super().__init__(entity)
-        self.hass = hass
+        self.menuai = menuai
 
     def name(self) -> str:
         """Return the Alexa API name of this interface."""
@@ -1179,7 +1179,7 @@ class AlexaThermostatController(AlexaCapability):
                 mode = API_THERMOSTAT_MODES[HVACMode(self.entity.state)]
             return mode
 
-        unit = self.hass.config.units.temperature_unit
+        unit = self.menuai.config.units.temperature_unit
         if name == "targetSetpoint":
             temp = self.entity.attributes.get(ATTR_TEMPERATURE)
         elif name == "lowerSetpoint":
@@ -1305,10 +1305,10 @@ class AlexaSecurityPanelController(AlexaCapability):
         "pt-BR",
     }
 
-    def __init__(self, hass: HomeAssistant, entity: State) -> None:
+    def __init__(self, menuai: menuai, entity: State) -> None:
         """Initialize the entity."""
         super().__init__(entity)
-        self.hass = hass
+        self.menuai = menuai
 
     def name(self) -> str:
         """Return the Alexa API name of this interface."""
@@ -2299,10 +2299,10 @@ class AlexaEventDetectionSensor(AlexaCapability):
 
     supported_locales = {"en-US"}
 
-    def __init__(self, hass: HomeAssistant, entity: State) -> None:
+    def __init__(self, menuai: menuai, entity: State) -> None:
         """Initialize the entity."""
         super().__init__(entity)
-        self.hass = hass
+        self.menuai = menuai
 
     def name(self) -> str:
         """Return the Alexa API name of this interface."""

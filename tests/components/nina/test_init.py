@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 from pynina import ApiError
 
-from homeassistant.components.nina.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.nina.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import mocked_request_function
 
@@ -22,8 +22,8 @@ ENTRY_DATA: dict[str, Any] = {
 }
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
-    """Set up the NINA integration in Home Assistant."""
+async def init_integration(menuai: menuai) -> MockConfigEntry:
+    """Set up the NINA integration in MenuAI."""
 
     with patch(
         "pynina.baseApi.BaseAPI._makeRequest",
@@ -32,14 +32,14 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
         entry: MockConfigEntry = MockConfigEntry(
             domain=DOMAIN, title="NINA", data=ENTRY_DATA
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         return entry
 
 
-async def test_config_migration(hass: HomeAssistant) -> None:
+async def test_config_migration(menuai: menuai) -> None:
     """Test the migration to a new configuration layout."""
 
     old_entry_data: dict[str, Any] = {
@@ -52,22 +52,22 @@ async def test_config_migration(hass: HomeAssistant) -> None:
         domain=DOMAIN, title="NINA", data=old_entry_data
     )
 
-    old_conf_entry.add_to_hass(hass)
+    old_conf_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(old_conf_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(old_conf_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert dict(old_conf_entry.data) == ENTRY_DATA
 
 
-async def test_config_entry_not_ready(hass: HomeAssistant) -> None:
+async def test_config_entry_not_ready(menuai: menuai) -> None:
     """Test the configuration entry."""
-    entry: MockConfigEntry = await init_integration(hass)
+    entry: MockConfigEntry = await init_integration(menuai)
 
     assert entry.state is ConfigEntryState.LOADED
 
 
-async def test_sensors_connection_error(hass: HomeAssistant) -> None:
+async def test_sensors_connection_error(menuai: menuai) -> None:
     """Test the creation and values of the NINA sensors with no connected."""
     with patch(
         "pynina.baseApi.BaseAPI._makeRequest",
@@ -77,9 +77,9 @@ async def test_sensors_connection_error(hass: HomeAssistant) -> None:
             domain=DOMAIN, title="NINA", data=ENTRY_DATA
         )
 
-        conf_entry.add_to_hass(hass)
+        conf_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(conf_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(conf_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert conf_entry.state is ConfigEntryState.SETUP_RETRY

@@ -2,10 +2,10 @@
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.script_variables import ScriptRunVariables, ScriptVariables
+from menuai.core import menuai
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.script_variables import ScriptRunVariables, ScriptVariables
 
 
 async def test_static_vars() -> None:
@@ -47,14 +47,14 @@ async def test_static_vars_run_args_simple() -> None:
     assert orig == orig_copy
 
 
-async def test_template_vars(hass: HomeAssistant) -> None:
+async def test_template_vars(menuai: menuai) -> None:
     """Test template vars."""
     var = cv.SCRIPT_VARIABLES_SCHEMA({"hello": "{{ 1 + 1 }}"})
-    rendered = var.async_render(hass, None)
+    rendered = var.async_render(menuai, None)
     assert rendered == {"hello": 2}
 
 
-async def test_template_vars_run_args(hass: HomeAssistant) -> None:
+async def test_template_vars_run_args(menuai: menuai) -> None:
     """Test template vars."""
     var = cv.SCRIPT_VARIABLES_SCHEMA(
         {
@@ -63,7 +63,7 @@ async def test_template_vars_run_args(hass: HomeAssistant) -> None:
         }
     )
     rendered = var.async_render(
-        hass,
+        menuai,
         {
             "run_var_ex": 5,
             "something_2": 1,
@@ -76,14 +76,14 @@ async def test_template_vars_run_args(hass: HomeAssistant) -> None:
     }
 
 
-async def test_template_vars_simple(hass: HomeAssistant) -> None:
+async def test_template_vars_simple(menuai: menuai) -> None:
     """Test template vars."""
     var = cv.SCRIPT_VARIABLES_SCHEMA({"hello": "{{ 1 + 1 }}"})
     rendered = var.async_simple_render({})
     assert rendered == {"hello": 2}
 
 
-async def test_template_vars_run_args_simple(hass: HomeAssistant) -> None:
+async def test_template_vars_run_args_simple(menuai: menuai) -> None:
     """Test template vars."""
     var = cv.SCRIPT_VARIABLES_SCHEMA(
         {
@@ -103,11 +103,11 @@ async def test_template_vars_run_args_simple(hass: HomeAssistant) -> None:
     }
 
 
-async def test_template_vars_error(hass: HomeAssistant) -> None:
+async def test_template_vars_error(menuai: menuai) -> None:
     """Test template vars."""
     var = cv.SCRIPT_VARIABLES_SCHEMA({"hello": "{{ canont.work }}"})
     with pytest.raises(TemplateError):
-        var.async_render(hass, None)
+        var.async_render(menuai, None)
 
 
 async def test_script_vars_exit_top_level() -> None:

@@ -4,7 +4,7 @@ All containing methods are legacy helpers that should not be used by new
 components. Instead call the service directly.
 """
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -19,19 +19,19 @@ from homeassistant.components.fan import (
     SERVICE_SET_PRESET_MODE,
     FanEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockEntity
 
 
 async def async_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id=ENTITY_MATCH_ALL,
     percentage: int | None = None,
     preset_mode: str | None = None,
@@ -47,20 +47,20 @@ async def async_turn_on(
         if value is not None
     }
 
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
-async def async_turn_off(hass: HomeAssistant, entity_id=ENTITY_MATCH_ALL) -> None:
+async def async_turn_off(menuai: menuai, entity_id=ENTITY_MATCH_ALL) -> None:
     """Turn all or specified fan off."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
 
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
 async def async_oscillate(
-    hass: HomeAssistant, entity_id=ENTITY_MATCH_ALL, should_oscillate: bool = True
+    menuai: menuai, entity_id=ENTITY_MATCH_ALL, should_oscillate: bool = True
 ) -> None:
     """Set oscillation on all or specified fan."""
     data = {
@@ -72,12 +72,12 @@ async def async_oscillate(
         if value is not None
     }
 
-    await hass.services.async_call(DOMAIN, SERVICE_OSCILLATE, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_OSCILLATE, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
 async def async_set_preset_mode(
-    hass: HomeAssistant, entity_id=ENTITY_MATCH_ALL, preset_mode: str | None = None
+    menuai: menuai, entity_id=ENTITY_MATCH_ALL, preset_mode: str | None = None
 ) -> None:
     """Set preset mode for all or specified fan."""
     data = {
@@ -86,12 +86,12 @@ async def async_set_preset_mode(
         if value is not None
     }
 
-    await hass.services.async_call(DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
 async def async_set_percentage(
-    hass: HomeAssistant, entity_id=ENTITY_MATCH_ALL, percentage: int | None = None
+    menuai: menuai, entity_id=ENTITY_MATCH_ALL, percentage: int | None = None
 ) -> None:
     """Set percentage for all or specified fan."""
     data = {
@@ -100,12 +100,12 @@ async def async_set_percentage(
         if value is not None
     }
 
-    await hass.services.async_call(DOMAIN, SERVICE_SET_PERCENTAGE, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_SET_PERCENTAGE, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
 async def async_increase_speed(
-    hass: HomeAssistant, entity_id=ENTITY_MATCH_ALL, percentage_step: int | None = None
+    menuai: menuai, entity_id=ENTITY_MATCH_ALL, percentage_step: int | None = None
 ) -> None:
     """Increase speed for all or specified fan."""
     data = {
@@ -117,12 +117,12 @@ async def async_increase_speed(
         if value is not None
     }
 
-    await hass.services.async_call(DOMAIN, SERVICE_INCREASE_SPEED, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_INCREASE_SPEED, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
 async def async_decrease_speed(
-    hass: HomeAssistant, entity_id=ENTITY_MATCH_ALL, percentage_step: int | None = None
+    menuai: menuai, entity_id=ENTITY_MATCH_ALL, percentage_step: int | None = None
 ) -> None:
     """Decrease speed for all or specified fan."""
     data = {
@@ -134,12 +134,12 @@ async def async_decrease_speed(
         if value is not None
     }
 
-    await hass.services.async_call(DOMAIN, SERVICE_DECREASE_SPEED, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_DECREASE_SPEED, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
 async def async_set_direction(
-    hass: HomeAssistant, entity_id=ENTITY_MATCH_ALL, direction: str | None = None
+    menuai: menuai, entity_id=ENTITY_MATCH_ALL, direction: str | None = None
 ) -> None:
     """Set direction for all or specified fan."""
     data = {
@@ -148,8 +148,8 @@ async def async_set_direction(
         if value is not None
     }
 
-    await hass.services.async_call(DOMAIN, SERVICE_SET_DIRECTION, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_SET_DIRECTION, data, blocking=True)
+    await menuai.async_block_till_done()
 
 
 class MockFan(MockEntity, FanEntity):

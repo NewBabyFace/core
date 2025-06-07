@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import water_heater
-from homeassistant.components.water_heater import (
+from menuai.components import water_heater
+from menuai.components.water_heater import (
     DOMAIN,
     SERVICE_SET_OPERATION_MODE,
     SET_TEMPERATURE_SCHEMA,
@@ -18,12 +18,12 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntityDescription,
     WaterHeaterEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from tests.common import (
     MockConfigEntry,
@@ -37,38 +37,38 @@ from tests.common import (
 
 
 async def test_set_temp_schema_no_req(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the set temperature schema with missing required data."""
     domain = "climate"
     service = "test_set_temperature"
     schema = cv.make_entity_service_schema(SET_TEMPERATURE_SCHEMA)
-    calls = async_mock_service(hass, domain, service, schema)
+    calls = async_mock_service(menuai, domain, service, schema)
 
     data = {"hvac_mode": "off", "entity_id": ["climate.test_id"]}
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(domain, service, data)
-    await hass.async_block_till_done()
+        await menuai.services.async_call(domain, service, data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
 
 async def test_set_temp_schema(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the set temperature schema with ok required data."""
     domain = "water_heater"
     service = "test_set_temperature"
     schema = cv.make_entity_service_schema(SET_TEMPERATURE_SCHEMA)
-    calls = async_mock_service(hass, domain, service, schema)
+    calls = async_mock_service(menuai, domain, service, schema)
 
     data = {
         "temperature": 20.0,
         "operation_mode": "gas",
         "entity_id": ["water_heater.test_id"],
     }
-    await hass.services.async_call(domain, service, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(domain, service, data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[-1].data == data
@@ -85,10 +85,10 @@ class MockWaterHeaterEntity(WaterHeaterEntity):
     set_operation_mode: MagicMock = MagicMock()
 
 
-async def test_sync_turn_on(hass: HomeAssistant) -> None:
+async def test_sync_turn_on(menuai: menuai) -> None:
     """Test if async turn_on calls sync turn_on."""
     water_heater = MockWaterHeaterEntity()
-    water_heater.hass = hass
+    water_heater.menuai = menuai
 
     # Test with turn_on method defined
     setattr(water_heater, "turn_on", MagicMock())
@@ -103,10 +103,10 @@ async def test_sync_turn_on(hass: HomeAssistant) -> None:
     assert water_heater.async_turn_on.call_count == 1
 
 
-async def test_sync_turn_off(hass: HomeAssistant) -> None:
+async def test_sync_turn_off(menuai: menuai) -> None:
     """Test if async turn_off calls sync turn_off."""
     water_heater = MockWaterHeaterEntity()
-    water_heater.hass = hass
+    water_heater.menuai = menuai
 
     # Test with turn_off method defined
     setattr(water_heater, "turn_off", MagicMock())
@@ -122,11 +122,11 @@ async def test_sync_turn_off(hass: HomeAssistant) -> None:
 
 
 async def test_operation_mode_validation(
-    hass: HomeAssistant, config_flow_fixture: None
+    menuai: menuai, config_flow_fixture: None
 ) -> None:
     """Test operation mode validation."""
     water_heater_entity = MockWaterHeaterEntity()
-    water_heater_entity.hass = hass
+    water_heater_entity.menuai = menuai
     water_heater_entity._attr_name = "test"
     water_heater_entity._attr_unique_id = "test"
     water_heater_entity._attr_supported_features = (
@@ -136,16 +136,16 @@ async def test_operation_mode_validation(
     water_heater_entity._attr_operation_list = None
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.WATER_HEATER]
         )
         return True
 
     async def async_setup_entry_water_heater_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -153,7 +153,7 @@ async def test_operation_mode_validation(
         async_add_entities([water_heater_entity])
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=async_setup_entry_init,
@@ -161,19 +161,19 @@ async def test_operation_mode_validation(
         built_in=False,
     )
     mock_platform(
-        hass,
+        menuai,
         "test.water_heater",
         MockPlatform(async_setup_entry=async_setup_entry_water_heater_platform),
     )
 
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     data = {"entity_id": "water_heater.test", "operation_mode": "test"}
 
     with pytest.raises(ServiceValidationError) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_SET_OPERATION_MODE, data, blocking=True
         )
     assert (
@@ -189,7 +189,7 @@ async def test_operation_mode_validation(
 
     water_heater_entity._attr_operation_list = ["gas", "eco"]
     with pytest.raises(ServiceValidationError) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_SET_OPERATION_MODE, data, blocking=True
         )
     assert (
@@ -205,10 +205,10 @@ async def test_operation_mode_validation(
     }
 
     data = {"entity_id": "water_heater.test", "operation_mode": "eco"}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_SET_OPERATION_MODE, data, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     water_heater_entity.set_operation_mode.assert_has_calls([mock.call("eco")])
 
 

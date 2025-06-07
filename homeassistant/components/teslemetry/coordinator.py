@@ -13,9 +13,9 @@ from tesla_fleet_api.exceptions import (
 )
 from tesla_fleet_api.teslemetry import EnergySite, Vehicle
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import TeslemetryConfigEntry
@@ -47,14 +47,14 @@ class TeslemetryVehicleDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TeslemetryConfigEntry,
         api: Vehicle,
         product: dict,
     ) -> None:
         """Initialize Teslemetry Vehicle Update Coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="Teslemetry Vehicle",
@@ -88,14 +88,14 @@ class TeslemetryEnergySiteLiveCoordinator(DataUpdateCoordinator[dict[str, Any]])
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TeslemetryConfigEntry,
         api: EnergySite,
         data: dict,
     ) -> None:
         """Initialize Teslemetry Energy Site Live coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="Teslemetry Energy Site Live",
@@ -134,14 +134,14 @@ class TeslemetryEnergySiteInfoCoordinator(DataUpdateCoordinator[dict[str, Any]])
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TeslemetryConfigEntry,
         api: EnergySite,
         product: dict,
     ) -> None:
         """Initialize Teslemetry Energy Info coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="Teslemetry Energy Site Info",
@@ -170,13 +170,13 @@ class TeslemetryEnergyHistoryCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TeslemetryConfigEntry,
         api: EnergySite,
     ) -> None:
         """Initialize Teslemetry Energy Info coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"Teslemetry Energy History {api.energy_site_id}",

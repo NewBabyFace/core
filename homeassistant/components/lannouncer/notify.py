@@ -8,15 +8,15 @@ from urllib.parse import urlencode
 
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 ATTR_METHOD = "method"
 ATTR_METHOD_DEFAULT = "speak"
@@ -35,7 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> LannouncerNotificationService:
@@ -43,15 +43,15 @@ def get_service(
     host = config.get(CONF_HOST)
     port = config.get(CONF_PORT)
 
-    return LannouncerNotificationService(hass, host, port)
+    return LannouncerNotificationService(menuai, host, port)
 
 
 class LannouncerNotificationService(BaseNotificationService):
     """Implementation of a notification service for Lannouncer."""
 
-    def __init__(self, hass, host, port):
+    def __init__(self, menuai, host, port):
         """Initialize the service."""
-        self._hass = hass
+        self._menuai = menuai
         self._host = host
         self._port = port
 

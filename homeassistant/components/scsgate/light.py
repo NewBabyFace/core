@@ -8,16 +8,16 @@ from typing import Any
 from scsgate.tasks import ToggleStatusTask
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_STATE, CONF_DEVICES, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_ENTITY_ID, ATTR_STATE, CONF_DEVICES, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_SCS_ID, DOMAIN, SCSGATE_SCHEMA
 
@@ -27,7 +27,7 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -36,7 +36,7 @@ def setup_platform(
     devices = config.get(CONF_DEVICES)
     lights = []
     logger = logging.getLogger(__name__)
-    scsgate = hass.data[DOMAIN]
+    scsgate = menuai.data[DOMAIN]
 
     if devices:
         for entity_info in devices.values():
@@ -116,6 +116,6 @@ class SCSGateLight(LightEntity):
         if self._toggled:
             command = "on"
 
-        self.hass.bus.fire(
+        self.menuai.bus.fire(
             "button_pressed", {ATTR_ENTITY_ID: self._scs_id, ATTR_STATE: command}
         )

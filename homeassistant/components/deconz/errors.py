@@ -1,9 +1,9 @@
 """Errors for the deCONZ component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class DeconzException(HomeAssistantError):
+class DeconzException(menuaiError):
     """Base class for deCONZ exceptions."""
 
 

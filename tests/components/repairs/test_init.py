@@ -6,16 +6,16 @@ from awesomeversion.exceptions import AwesomeVersionStrategyException
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.repairs import repairs_flow_manager
-from homeassistant.components.repairs.const import DOMAIN
-from homeassistant.components.repairs.issue_handler import (
+from menuai.components.repairs import repairs_flow_manager
+from menuai.components.repairs.const import DOMAIN
+from menuai.components.repairs.issue_handler import (
     RepairsFlowManager,
     async_process_repairs_platforms,
 )
-from homeassistant.const import __version__ as ha_version
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.const import __version__ as ha_version
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from tests.common import mock_platform
 from tests.typing import WebSocketGenerator
@@ -24,12 +24,12 @@ from tests.typing import WebSocketGenerator
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 @pytest.mark.freeze_time("2022-07-19 07:53:05")
 async def test_create_update_issue(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test creating and updating issues."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -62,7 +62,7 @@ async def test_create_update_issue(
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -93,7 +93,7 @@ async def test_create_update_issue(
 
     # Update an issue
     ir.async_create_issue(
-        hass,
+        menuai,
         issues[0]["domain"],
         issues[0]["issue_id"],
         breaks_in_ha_version=issues[0]["breaks_in_ha_version"],
@@ -122,12 +122,12 @@ async def test_create_update_issue(
 
 @pytest.mark.parametrize("ha_version", ["2022.9.cat", "In the future: 2023.1.1"])
 async def test_create_issue_invalid_version(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, ha_version
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, ha_version
 ) -> None:
     """Test creating an issue with invalid breaks in version."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     issue = {
         "breaks_in_ha_version": ha_version,
@@ -142,7 +142,7 @@ async def test_create_issue_invalid_version(
 
     with pytest.raises(AwesomeVersionStrategyException):
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -164,12 +164,12 @@ async def test_create_issue_invalid_version(
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 @pytest.mark.freeze_time("2022-07-19 07:53:05")
 async def test_ignore_issue(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test ignoring issues."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -192,7 +192,7 @@ async def test_ignore_issue(
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -223,7 +223,7 @@ async def test_ignore_issue(
 
     # Ignore a non-existing issue
     with pytest.raises(KeyError):
-        ir.async_ignore_issue(hass, issues[0]["domain"], "no_such_issue", True)
+        ir.async_ignore_issue(menuai, issues[0]["domain"], "no_such_issue", True)
 
     await client.send_json({"id": 3, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -243,7 +243,7 @@ async def test_ignore_issue(
     }
 
     # Ignore an existing issue
-    ir.async_ignore_issue(hass, issues[0]["domain"], issues[0]["issue_id"], True)
+    ir.async_ignore_issue(menuai, issues[0]["domain"], issues[0]["issue_id"], True)
 
     await client.send_json({"id": 4, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -263,7 +263,7 @@ async def test_ignore_issue(
     }
 
     # Ignore the same issue again
-    ir.async_ignore_issue(hass, issues[0]["domain"], issues[0]["issue_id"], True)
+    ir.async_ignore_issue(menuai, issues[0]["domain"], issues[0]["issue_id"], True)
 
     await client.send_json({"id": 5, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -284,7 +284,7 @@ async def test_ignore_issue(
 
     # Update an ignored issue
     ir.async_create_issue(
-        hass,
+        menuai,
         issues[0]["domain"],
         issues[0]["issue_id"],
         breaks_in_ha_version=issues[0]["breaks_in_ha_version"],
@@ -310,7 +310,7 @@ async def test_ignore_issue(
     )
 
     # Unignore the same issue
-    ir.async_ignore_issue(hass, issues[0]["domain"], issues[0]["issue_id"], False)
+    ir.async_ignore_issue(menuai, issues[0]["domain"], issues[0]["issue_id"], False)
 
     await client.send_json({"id": 7, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -334,15 +334,15 @@ async def test_ignore_issue(
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["fake_integration"])
 @pytest.mark.freeze_time("2022-07-19 07:53:05")
 async def test_delete_issue(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test we can delete an issue."""
     freezer.move_to("2022-07-19 07:53:05")
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     issues = [
         {
@@ -359,7 +359,7 @@ async def test_delete_issue(
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -389,7 +389,7 @@ async def test_delete_issue(
     }
 
     # Delete a non-existing issue
-    ir.async_delete_issue(hass, issues[0]["domain"], "no_such_issue")
+    ir.async_delete_issue(menuai, issues[0]["domain"], "no_such_issue")
 
     await client.send_json({"id": 2, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -409,7 +409,7 @@ async def test_delete_issue(
     }
 
     # Delete an existing issue
-    ir.async_delete_issue(hass, issues[0]["domain"], issues[0]["issue_id"])
+    ir.async_delete_issue(menuai, issues[0]["domain"], issues[0]["issue_id"])
 
     await client.send_json({"id": 3, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -418,7 +418,7 @@ async def test_delete_issue(
     assert msg["result"] == {"issues": []}
 
     # Delete the same issue again
-    ir.async_delete_issue(hass, issues[0]["domain"], issues[0]["issue_id"])
+    ir.async_delete_issue(menuai, issues[0]["domain"], issues[0]["issue_id"])
 
     await client.send_json({"id": 4, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -431,7 +431,7 @@ async def test_delete_issue(
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -463,40 +463,40 @@ async def test_delete_issue(
 
 @pytest.mark.no_fail_on_log_exception
 async def test_non_compliant_platform(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test non-compliant platforms are not registered."""
 
-    hass.config.components.add("fake_integration")
-    hass.config.components.add("integration_without_repairs")
+    menuai.config.components.add("fake_integration")
+    menuai.config.components.add("integration_without_repairs")
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.repairs",
         Mock(async_create_fix_flow=AsyncMock(return_value=True)),
     )
     mock_platform(
-        hass,
+        menuai,
         "integration_without_repairs.repairs",
         Mock(spec=[]),
     )
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    await async_process_repairs_platforms(hass)
+    await async_process_repairs_platforms(menuai)
 
-    assert list(hass.data[DOMAIN]["platforms"].keys()) == ["fake_integration"]
+    assert list(menuai.data[DOMAIN]["platforms"].keys()) == ["fake_integration"]
 
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["fake_integration"])
 @pytest.mark.freeze_time("2022-07-21 08:22:00")
 async def test_sync_methods(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test sync method for creating and deleting an issue."""
 
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -506,7 +506,7 @@ async def test_sync_methods(
 
     def _create_issue() -> None:
         ir.create_issue(
-            hass,
+            menuai,
             "fake_integration",
             "sync_issue",
             breaks_in_ha_version="2022.9",
@@ -518,7 +518,7 @@ async def test_sync_methods(
             translation_placeholders={"abc": "123"},
         )
 
-    await hass.async_add_executor_job(_create_issue)
+    await menuai.async_add_executor_job(_create_issue)
     await client.send_json({"id": 2, "type": "repairs/list_issues"})
     msg = await client.receive_json()
 
@@ -542,8 +542,8 @@ async def test_sync_methods(
         ]
     }
 
-    await hass.async_add_executor_job(
-        ir.delete_issue, hass, "fake_integration", "sync_issue"
+    await menuai.async_add_executor_job(
+        ir.delete_issue, menuai, "fake_integration", "sync_issue"
     )
     await client.send_json({"id": 3, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -552,12 +552,12 @@ async def test_sync_methods(
     assert msg["result"] == {"issues": []}
 
 
-async def test_flow_manager_helper(hass: HomeAssistant) -> None:
+async def test_flow_manager_helper(menuai: menuai) -> None:
     """Test accessing the repairs flow manager with the helper."""
-    assert repairs_flow_manager(hass) is None
+    assert repairs_flow_manager(menuai) is None
 
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    flow_manager = repairs_flow_manager(hass)
+    flow_manager = repairs_flow_manager(menuai)
     assert flow_manager is not None
     assert isinstance(flow_manager, RepairsFlowManager)

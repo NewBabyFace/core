@@ -4,48 +4,48 @@ from unittest.mock import Mock
 
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     DOMAIN as CALENDAR_DOMAIN,
     EVENT_END_DATETIME,
     EVENT_START_DATETIME,
     SERVICE_GET_EVENTS,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .common import setup_platform
 
 from tests.common import async_fire_time_changed
 
 
-async def test_setup_component(hass: HomeAssistant, service_multiple: Mock) -> None:
+async def test_setup_component(menuai: menuai, service_multiple: Mock) -> None:
     """Test setup component."""
-    await setup_platform(hass, CALENDAR_DOMAIN)
+    await setup_platform(menuai, CALENDAR_DOMAIN)
 
-    state = hass.states.get("calendar.epic_games_store_discount_games")
+    state = menuai.states.get("calendar.epic_games_store_discount_games")
     assert state.name == "Epic Games Store Discount games"
-    state = hass.states.get("calendar.epic_games_store_free_games")
+    state = menuai.states.get("calendar.epic_games_store_free_games")
     assert state.name == "Epic Games Store Free games"
 
 
 async def test_discount_games(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_multiple: Mock,
 ) -> None:
     """Test discount games calendar."""
     freezer.move_to("2022-10-15T00:00:00.000Z")
 
-    await setup_platform(hass, CALENDAR_DOMAIN)
+    await setup_platform(menuai, CALENDAR_DOMAIN)
 
-    state = hass.states.get("calendar.epic_games_store_discount_games")
+    state = menuai.states.get("calendar.epic_games_store_discount_games")
     assert state.state == STATE_OFF
 
     freezer.move_to("2022-10-30T00:00:00.000Z")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
-    state = hass.states.get("calendar.epic_games_store_discount_games")
+    state = menuai.states.get("calendar.epic_games_store_discount_games")
     assert state.state == STATE_ON
 
     cal_attrs = dict(state.attributes)
@@ -61,16 +61,16 @@ async def test_discount_games(
 
 
 async def test_free_games(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_multiple: Mock,
 ) -> None:
     """Test free games calendar."""
     freezer.move_to("2022-10-30T00:00:00.000Z")
 
-    await setup_platform(hass, CALENDAR_DOMAIN)
+    await setup_platform(menuai, CALENDAR_DOMAIN)
 
-    state = hass.states.get("calendar.epic_games_store_free_games")
+    state = menuai.states.get("calendar.epic_games_store_free_games")
     assert state.state == STATE_ON
 
     cal_attrs = dict(state.attributes)
@@ -86,53 +86,53 @@ async def test_free_games(
 
 
 async def test_attribute_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_attribute_not_found: Mock,
 ) -> None:
     """Test setup calendars with attribute not found error."""
     freezer.move_to("2023-10-12T00:00:00.000Z")
 
-    await setup_platform(hass, CALENDAR_DOMAIN)
+    await setup_platform(menuai, CALENDAR_DOMAIN)
 
-    state = hass.states.get("calendar.epic_games_store_discount_games")
+    state = menuai.states.get("calendar.epic_games_store_discount_games")
     assert state.name == "Epic Games Store Discount games"
-    state = hass.states.get("calendar.epic_games_store_free_games")
+    state = menuai.states.get("calendar.epic_games_store_free_games")
     assert state.name == "Epic Games Store Free games"
     assert state.state == STATE_ON
 
 
 async def test_christmas_special(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_christmas_special: Mock,
 ) -> None:
     """Test setup calendars with Christmas special case."""
     freezer.move_to("2023-12-28T00:00:00.000Z")
 
-    await setup_platform(hass, CALENDAR_DOMAIN)
+    await setup_platform(menuai, CALENDAR_DOMAIN)
 
-    state = hass.states.get("calendar.epic_games_store_discount_games")
+    state = menuai.states.get("calendar.epic_games_store_discount_games")
     assert state.name == "Epic Games Store Discount games"
     assert state.state == STATE_OFF
 
-    state = hass.states.get("calendar.epic_games_store_free_games")
+    state = menuai.states.get("calendar.epic_games_store_free_games")
     assert state.name == "Epic Games Store Free games"
     assert state.state == STATE_ON
 
 
 async def test_get_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_multiple: Mock,
 ) -> None:
     """Test setup component with calendars."""
     freezer.move_to("2022-10-30T00:00:00.000Z")
 
-    await setup_platform(hass, CALENDAR_DOMAIN)
+    await setup_platform(menuai, CALENDAR_DOMAIN)
 
     # 1 week in range of data
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -147,7 +147,7 @@ async def test_get_events(
     assert len(result["calendar.epic_games_store_discount_games"]["events"]) == 3
 
     # 1 week out of range of data
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {

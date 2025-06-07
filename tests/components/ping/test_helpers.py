@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.ping.helpers import PingDataSubProcess
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.ping.helpers import PingDataSubProcess
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -29,7 +29,7 @@ class MockAsyncSubprocess:
 
 @pytest.mark.parametrize("exc", [TypeError, ProcessLookupError])
 async def test_async_ping_expected_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     exc: Exception,
@@ -39,12 +39,12 @@ async def test_async_ping_expected_exceptions(
         "asyncio.create_subprocess_exec", return_value=MockAsyncSubprocess(killsig=exc)
     ):
         # Actual parameters irrelevant, as subprocess will not be created
-        ping = PingDataSubProcess(hass, host="10.10.10.10", count=3, privileged=False)
+        ping = PingDataSubProcess(menuai, host="10.10.10.10", count=3, privileged=False)
         assert await ping.async_ping() is None
 
 
 async def test_async_ping_unexpected_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -54,6 +54,6 @@ async def test_async_ping_unexpected_exceptions(
         return_value=MockAsyncSubprocess(killsig=KeyboardInterrupt),
     ):
         # Actual parameters irrelevant, as subprocess will not be created
-        ping = PingDataSubProcess(hass, host="10.10.10.10", count=3, privileged=False)
+        ping = PingDataSubProcess(menuai, host="10.10.10.10", count=3, privileged=False)
         with pytest.raises(KeyboardInterrupt):
             assert await ping.async_ping() is None

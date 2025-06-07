@@ -4,17 +4,17 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, intent
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, intent
 
 from .const import DOMAIN, AssistSatelliteEntityFeature
 
 EXCLUDED_DOMAINS: Final[set[str]] = {"voip"}
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the intents."""
-    intent.async_register(hass, BroadcastIntentHandler())
+    intent.async_register(menuai, BroadcastIntentHandler())
 
 
 class BroadcastIntentHandler(intent.IntentHandler):
@@ -30,12 +30,12 @@ class BroadcastIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Broadcast a message."""
-        hass = intent_obj.hass
-        ent_reg = er.async_get(hass)
+        menuai = intent_obj.menuai
+        ent_reg = er.async_get(menuai)
 
         # Find all assist satellite entities that are not the one invoking the intent
         entities: dict[str, er.RegistryEntry] = {}
-        for entity in hass.states.async_entity_ids(DOMAIN):
+        for entity in menuai.states.async_entity_ids(DOMAIN):
             entry = ent_reg.async_get(entity)
             if (
                 (entry is None)
@@ -55,7 +55,7 @@ class BroadcastIntentHandler(intent.IntentHandler):
             if (
                 entry.config_entry_id
                 and (
-                    config_entry := hass.config_entries.async_get_entry(
+                    config_entry := menuai.config_entries.async_get_entry(
                         entry.config_entry_id
                     )
                 )
@@ -65,7 +65,7 @@ class BroadcastIntentHandler(intent.IntentHandler):
 
             entities[entity] = entry
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "announce",
             {"message": intent_obj.slots["message"]["value"]},
@@ -81,7 +81,7 @@ class BroadcastIntentHandler(intent.IntentHandler):
                 intent.IntentResponseTarget(
                     type=intent.IntentResponseTargetType.ENTITY,
                     id=entity,
-                    name=state.name if (state := hass.states.get(entity)) else entity,
+                    name=state.name if (state := menuai.states.get(entity)) else entity,
                 )
                 for entity in entities
             ]

@@ -1,4 +1,4 @@
-"""Test Home Assistant secret substitution in YAML files."""
+"""Test MenuAI secret substitution in YAML files."""
 
 from dataclasses import dataclass
 import logging
@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from homeassistant.config import YAML_CONFIG_FILE, load_yaml_config_file
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import yaml as yaml_util
-from homeassistant.util.yaml import loader as yaml_loader
+from menuai.config import YAML_CONFIG_FILE, load_yaml_config_file
+from menuai.exceptions import menuaiError
+from menuai.util import yaml as yaml_util
+from menuai.util.yaml import loader as yaml_loader
 
 from tests.common import get_test_config_dir, patch_yaml_files
 
@@ -136,7 +136,7 @@ def test_secrets_from_unrelated_fails(
     unrelated_secrets = YamlFile(
         path=filepaths["unrelated"] / yaml_util.SECRET_YAML, contents="test: failure"
     )
-    with pytest.raises(HomeAssistantError, match="Secret test not defined"):
+    with pytest.raises(menuaiError, match="Secret test not defined"):
         load_config_file(
             config_file.path, [config_file, default_secrets, unrelated_secrets]
         )
@@ -151,7 +151,7 @@ def test_secrets_logger_removed(
         path=filepaths["config"] / YAML_CONFIG_FILE,
         contents="api_password: !secret logger",
     )
-    with pytest.raises(HomeAssistantError, match="Secret logger not defined"):
+    with pytest.raises(menuaiError, match="Secret logger not defined"):
         load_config_file(config_file.path, [config_file, default_secrets])
 
 
@@ -183,5 +183,5 @@ def test_secrets_are_not_dict(
         path=filepaths["config"] / yaml_util.SECRET_YAML,
         contents="- http_pw: pwhttp\n  comp1_un: un1\n  comp1_pw: pw1\n",
     )
-    with pytest.raises(HomeAssistantError, match="Secrets is not a dictionary"):
+    with pytest.raises(menuaiError, match="Secrets is not a dictionary"):
         load_config_file(default_config.path, [default_config, non_dict_secrets])

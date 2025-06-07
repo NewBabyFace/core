@@ -5,9 +5,9 @@ from unittest.mock import patch
 from here_routing import HERERoutingError, HERERoutingUnauthorizedError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.here_travel_time.config_flow import DEFAULT_OPTIONS
-from homeassistant.components.here_travel_time.const import (
+from menuai import config_entries
+from menuai.components.here_travel_time.config_flow import DEFAULT_OPTIONS
+from menuai.components.here_travel_time.const import (
     CONF_ARRIVAL_TIME,
     CONF_DEPARTURE_TIME,
     CONF_DESTINATION_ENTITY_ID,
@@ -23,9 +23,9 @@ from homeassistant.components.here_travel_time.const import (
     TRAVEL_MODE_CAR,
     TRAVEL_MODE_PUBLIC,
 )
-from homeassistant.const import CONF_API_KEY, CONF_MODE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_API_KEY, CONF_MODE, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import (
     API_KEY,
@@ -43,7 +43,7 @@ from tests.common import MockConfigEntry
 def bypass_setup_fixture():
     """Prevent setup."""
     with patch(
-        "homeassistant.components.here_travel_time.async_setup_entry",
+        "menuai.components.here_travel_time.async_setup_entry",
         return_value=True,
     ):
         yield
@@ -51,13 +51,13 @@ def bypass_setup_fixture():
 
 @pytest.fixture(name="user_step_result")
 async def user_step_result_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> config_entries.ConfigFlowResult:
     """Provide the result of a completed user step."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    user_step_result = await hass.config_entries.flow.async_configure(
+    user_step_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {
             CONF_API_KEY: API_KEY,
@@ -65,13 +65,13 @@ async def user_step_result_fixture(
             CONF_NAME: "test",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return user_step_result
 
 
 @pytest.fixture(name="option_init_result")
 async def option_init_result_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> config_entries.ConfigFlowResult:
     """Provide the result of a completed options init step."""
     entry = MockConfigEntry(
@@ -87,11 +87,11 @@ async def option_init_result_fixture(
             CONF_NAME: "test",
         },
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    flow = await hass.config_entries.options.async_init(entry.entry_id)
-    return await hass.config_entries.options.async_configure(
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    flow = await menuai.config_entries.options.async_init(entry.entry_id)
+    return await menuai.config_entries.options.async_configure(
         flow["flow_id"],
         user_input={
             CONF_ROUTE_MODE: ROUTE_MODE_FASTEST,
@@ -101,14 +101,14 @@ async def option_init_result_fixture(
 
 @pytest.fixture(name="origin_step_result")
 async def origin_step_result_fixture(
-    hass: HomeAssistant, user_step_result: config_entries.ConfigFlowResult
+    menuai: menuai, user_step_result: config_entries.ConfigFlowResult
 ) -> config_entries.ConfigFlowResult:
     """Provide the result of a completed origin by coordinates step."""
-    origin_menu_result = await hass.config_entries.flow.async_configure(
+    origin_menu_result = await menuai.config_entries.flow.async_configure(
         user_step_result["flow_id"], {"next_step_id": "origin_coordinates"}
     )
 
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         origin_menu_result["flow_id"],
         {
             "origin": {
@@ -125,15 +125,15 @@ async def origin_step_result_fixture(
     [["origin_coordinates", "origin_entity"]],
 )
 @pytest.mark.usefixtures("valid_response")
-async def test_step_user(hass: HomeAssistant, menu_options) -> None:
+async def test_step_user(menuai: menuai, menu_options) -> None:
     """Test the user step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: API_KEY,
@@ -141,7 +141,7 @@ async def test_step_user(hass: HomeAssistant, menu_options) -> None:
             CONF_NAME: "test",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.MENU
     assert result2["menu_options"] == menu_options
@@ -149,15 +149,15 @@ async def test_step_user(hass: HomeAssistant, menu_options) -> None:
 
 @pytest.mark.usefixtures("valid_response")
 async def test_step_origin_coordinates(
-    hass: HomeAssistant, user_step_result: config_entries.ConfigFlowResult
+    menuai: menuai, user_step_result: config_entries.ConfigFlowResult
 ) -> None:
     """Test the origin coordinates step."""
-    menu_result = await hass.config_entries.flow.async_configure(
+    menu_result = await menuai.config_entries.flow.async_configure(
         user_step_result["flow_id"], {"next_step_id": "origin_coordinates"}
     )
     assert menu_result["type"] is FlowResultType.FORM
 
-    location_selector_result = await hass.config_entries.flow.async_configure(
+    location_selector_result = await menuai.config_entries.flow.async_configure(
         menu_result["flow_id"],
         {
             "origin": {
@@ -172,15 +172,15 @@ async def test_step_origin_coordinates(
 
 @pytest.mark.usefixtures("valid_response")
 async def test_step_origin_entity(
-    hass: HomeAssistant, user_step_result: config_entries.ConfigFlowResult
+    menuai: menuai, user_step_result: config_entries.ConfigFlowResult
 ) -> None:
     """Test the origin coordinates step."""
-    menu_result = await hass.config_entries.flow.async_configure(
+    menu_result = await menuai.config_entries.flow.async_configure(
         user_step_result["flow_id"], {"next_step_id": "origin_entity"}
     )
     assert menu_result["type"] is FlowResultType.FORM
 
-    entity_selector_result = await hass.config_entries.flow.async_configure(
+    entity_selector_result = await menuai.config_entries.flow.async_configure(
         menu_result["flow_id"],
         {"origin_entity_id": "zone.home"},
     )
@@ -189,15 +189,15 @@ async def test_step_origin_entity(
 
 @pytest.mark.usefixtures("valid_response")
 async def test_step_destination_coordinates(
-    hass: HomeAssistant, origin_step_result: config_entries.ConfigFlowResult
+    menuai: menuai, origin_step_result: config_entries.ConfigFlowResult
 ) -> None:
     """Test the origin coordinates step."""
-    menu_result = await hass.config_entries.flow.async_configure(
+    menu_result = await menuai.config_entries.flow.async_configure(
         origin_step_result["flow_id"], {"next_step_id": "destination_coordinates"}
     )
     assert menu_result["type"] is FlowResultType.FORM
 
-    location_selector_result = await hass.config_entries.flow.async_configure(
+    location_selector_result = await menuai.config_entries.flow.async_configure(
         menu_result["flow_id"],
         {
             "destination": {
@@ -208,7 +208,7 @@ async def test_step_destination_coordinates(
         },
     )
     assert location_selector_result["type"] is FlowResultType.CREATE_ENTRY
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.data == {
         CONF_NAME: "test",
         CONF_API_KEY: API_KEY,
@@ -222,21 +222,21 @@ async def test_step_destination_coordinates(
 
 @pytest.mark.usefixtures("valid_response")
 async def test_step_destination_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     origin_step_result: config_entries.ConfigFlowResult,
 ) -> None:
     """Test the origin coordinates step."""
-    menu_result = await hass.config_entries.flow.async_configure(
+    menu_result = await menuai.config_entries.flow.async_configure(
         origin_step_result["flow_id"], {"next_step_id": "destination_entity"}
     )
     assert menu_result["type"] is FlowResultType.FORM
 
-    entity_selector_result = await hass.config_entries.flow.async_configure(
+    entity_selector_result = await menuai.config_entries.flow.async_configure(
         menu_result["flow_id"],
         {"destination_entity_id": "zone.home"},
     )
     assert entity_selector_result["type"] is FlowResultType.CREATE_ENTRY
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.data == {
         CONF_NAME: "test",
         CONF_API_KEY: API_KEY,
@@ -253,21 +253,21 @@ async def test_step_destination_entity(
 
 
 @pytest.mark.usefixtures("valid_response")
-async def test_reconfigure_destination_entity(hass: HomeAssistant) -> None:
+async def test_reconfigure_destination_entity(menuai: menuai) -> None:
     """Test reconfigure flow when choosing a destination entity."""
-    origin_entity_selector_result = await do_common_reconfiguration_steps(hass)
-    menu_result = await hass.config_entries.flow.async_configure(
+    origin_entity_selector_result = await do_common_reconfiguration_steps(menuai)
+    menu_result = await menuai.config_entries.flow.async_configure(
         origin_entity_selector_result["flow_id"], {"next_step_id": "destination_entity"}
     )
     assert menu_result["type"] is FlowResultType.FORM
 
-    destination_entity_selector_result = await hass.config_entries.flow.async_configure(
+    destination_entity_selector_result = await menuai.config_entries.flow.async_configure(
         menu_result["flow_id"],
         {"destination_entity_id": "zone.home"},
     )
     assert destination_entity_selector_result["type"] is FlowResultType.ABORT
     assert destination_entity_selector_result["reason"] == "reconfigure_successful"
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.data == {
         CONF_NAME: "test",
         CONF_API_KEY: API_KEY,
@@ -278,16 +278,16 @@ async def test_reconfigure_destination_entity(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("valid_response")
-async def test_reconfigure_destination_coordinates(hass: HomeAssistant) -> None:
+async def test_reconfigure_destination_coordinates(menuai: menuai) -> None:
     """Test reconfigure flow when choosing destination coordinates."""
-    origin_entity_selector_result = await do_common_reconfiguration_steps(hass)
-    menu_result = await hass.config_entries.flow.async_configure(
+    origin_entity_selector_result = await do_common_reconfiguration_steps(menuai)
+    menu_result = await menuai.config_entries.flow.async_configure(
         origin_entity_selector_result["flow_id"],
         {"next_step_id": "destination_coordinates"},
     )
     assert menu_result["type"] is FlowResultType.FORM
 
-    destination_entity_selector_result = await hass.config_entries.flow.async_configure(
+    destination_entity_selector_result = await menuai.config_entries.flow.async_configure(
         menu_result["flow_id"],
         {
             "destination": {
@@ -299,7 +299,7 @@ async def test_reconfigure_destination_coordinates(hass: HomeAssistant) -> None:
     )
     assert destination_entity_selector_result["type"] is FlowResultType.ABORT
     assert destination_entity_selector_result["reason"] == "reconfigure_successful"
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.data == {
         CONF_NAME: "test",
         CONF_API_KEY: API_KEY,
@@ -310,7 +310,7 @@ async def test_reconfigure_destination_coordinates(hass: HomeAssistant) -> None:
     }
 
 
-async def do_common_reconfiguration_steps(hass: HomeAssistant) -> None:
+async def do_common_reconfiguration_steps(menuai: menuai) -> None:
     """Walk through common flow steps for reconfiguring."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -318,16 +318,16 @@ async def do_common_reconfiguration_steps(hass: HomeAssistant) -> None:
         data=DEFAULT_CONFIG,
         options=DEFAULT_OPTIONS,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    reconfigure_result = await entry.start_reconfigure_flow(hass)
+    reconfigure_result = await entry.start_reconfigure_flow(menuai)
     assert reconfigure_result["type"] is FlowResultType.FORM
     assert reconfigure_result["step_id"] == "user"
 
-    user_step_result = await hass.config_entries.flow.async_configure(
+    user_step_result = await menuai.config_entries.flow.async_configure(
         reconfigure_result["flow_id"],
         {
             CONF_API_KEY: API_KEY,
@@ -335,19 +335,19 @@ async def do_common_reconfiguration_steps(hass: HomeAssistant) -> None:
             CONF_NAME: "test",
         },
     )
-    await hass.async_block_till_done()
-    menu_result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    menu_result = await menuai.config_entries.flow.async_configure(
         user_step_result["flow_id"], {"next_step_id": "origin_entity"}
     )
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         menu_result["flow_id"],
         {"origin_entity_id": "zone.home"},
     )
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -355,7 +355,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
         "here_routing.HERERoutingApi.route",
         side_effect=HERERoutingUnauthorizedError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: API_KEY,
@@ -368,9 +368,9 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_unknown_error(hass: HomeAssistant) -> None:
+async def test_form_unknown_error(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -378,7 +378,7 @@ async def test_form_unknown_error(hass: HomeAssistant) -> None:
         "here_routing.HERERoutingApi.route",
         side_effect=HERERoutingError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: API_KEY,
@@ -392,25 +392,25 @@ async def test_form_unknown_error(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("valid_response")
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test the options flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="0123456789",
         data=DEFAULT_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_ROUTE_MODE: ROUTE_MODE_FASTEST,
@@ -422,14 +422,14 @@ async def test_options_flow(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("valid_response")
 async def test_options_flow_arrival_time_step(
-    hass: HomeAssistant, option_init_result: config_entries.ConfigFlowResult
+    menuai: menuai, option_init_result: config_entries.ConfigFlowResult
 ) -> None:
     """Test the options flow arrival time type."""
-    menu_result = await hass.config_entries.options.async_configure(
+    menu_result = await menuai.config_entries.options.async_configure(
         option_init_result["flow_id"], {"next_step_id": "arrival_time"}
     )
     assert menu_result["type"] is FlowResultType.FORM
-    time_selector_result = await hass.config_entries.options.async_configure(
+    time_selector_result = await menuai.config_entries.options.async_configure(
         option_init_result["flow_id"],
         user_input={
             "arrival_time": "08:00:00",
@@ -437,7 +437,7 @@ async def test_options_flow_arrival_time_step(
     )
 
     assert time_selector_result["type"] is FlowResultType.CREATE_ENTRY
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.options == {
         CONF_ROUTE_MODE: ROUTE_MODE_FASTEST,
         CONF_ARRIVAL_TIME: "08:00:00",
@@ -446,14 +446,14 @@ async def test_options_flow_arrival_time_step(
 
 @pytest.mark.usefixtures("valid_response")
 async def test_options_flow_departure_time_step(
-    hass: HomeAssistant, option_init_result: config_entries.ConfigFlowResult
+    menuai: menuai, option_init_result: config_entries.ConfigFlowResult
 ) -> None:
     """Test the options flow departure time type."""
-    menu_result = await hass.config_entries.options.async_configure(
+    menu_result = await menuai.config_entries.options.async_configure(
         option_init_result["flow_id"], {"next_step_id": "departure_time"}
     )
     assert menu_result["type"] is FlowResultType.FORM
-    time_selector_result = await hass.config_entries.options.async_configure(
+    time_selector_result = await menuai.config_entries.options.async_configure(
         option_init_result["flow_id"],
         user_input={
             "departure_time": "08:00:00",
@@ -461,7 +461,7 @@ async def test_options_flow_departure_time_step(
     )
 
     assert time_selector_result["type"] is FlowResultType.CREATE_ENTRY
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.options == {
         CONF_ROUTE_MODE: ROUTE_MODE_FASTEST,
         CONF_DEPARTURE_TIME: "08:00:00",
@@ -470,15 +470,15 @@ async def test_options_flow_departure_time_step(
 
 @pytest.mark.usefixtures("valid_response")
 async def test_options_flow_no_time_step(
-    hass: HomeAssistant, option_init_result: config_entries.ConfigFlowResult
+    menuai: menuai, option_init_result: config_entries.ConfigFlowResult
 ) -> None:
     """Test the options flow arrival time type."""
-    menu_result = await hass.config_entries.options.async_configure(
+    menu_result = await menuai.config_entries.options.async_configure(
         option_init_result["flow_id"], {"next_step_id": "no_time"}
     )
 
     assert menu_result["type"] is FlowResultType.CREATE_ENTRY
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.options == {
         CONF_ROUTE_MODE: ROUTE_MODE_FASTEST,
     }

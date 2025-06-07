@@ -6,7 +6,7 @@ from typing import Any
 from pyhap.const import CATEGORY_FAN
 from pyhap.service import Service
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -22,7 +22,7 @@ from homeassistant.components.fan import (
     SERVICE_SET_PRESET_MODE,
     FanEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_TURN_OFF,
@@ -30,7 +30,7 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import State, callback
+from menuai.core import State, callback
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -62,7 +62,7 @@ class Fan(HomeAccessory):
         """Initialize a new Fan accessory object."""
         super().__init__(*args, category=category)
         self.chars: list[str] = []
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self._reload_on_change_attrs.extend(
             (
@@ -208,7 +208,7 @@ class Fan(HomeAccessory):
             )
             params[ATTR_PRESET_MODE] = self.preset_modes[0]
             self.async_call_service(FAN_DOMAIN, SERVICE_SET_PRESET_MODE, params)
-        elif current_state := self.hass.states.get(self.entity_id):
+        elif current_state := self.menuai.states.get(self.entity_id):
             percentage: float = current_state.attributes.get(ATTR_PERCENTAGE) or 50.0
             params[ATTR_PERCENTAGE] = percentage
             _LOGGER.debug("%s: Set auto to 0", self.entity_id)
@@ -275,7 +275,7 @@ class Fan(HomeAccessory):
             # We do not change the homekit speed when turning off
             # as it will clear the restore state
             percentage = attributes.get(ATTR_PERCENTAGE)
-            # If the homeassistant component reports its speed as the first entry
+            # If the menuai component reports its speed as the first entry
             # in its speed list but is not off, the hk_speed_value is 0. But 0
             # is a special value in homekit. When you turn on a homekit accessory
             # it will try to restore the last rotation speed state which will be

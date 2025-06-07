@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, template as template_helper
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, template as template_helper
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_ADDRESS,
@@ -35,7 +35,7 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> HomematicNotificationService:
@@ -49,15 +49,15 @@ def get_service(
     if ATTR_INTERFACE in config:
         data[ATTR_INTERFACE] = config[ATTR_INTERFACE]
 
-    return HomematicNotificationService(hass, data)
+    return HomematicNotificationService(menuai, data)
 
 
 class HomematicNotificationService(BaseNotificationService):
     """Implement the notification service for Homematic."""
 
-    def __init__(self, hass, data):
+    def __init__(self, menuai, data):
         """Initialize the service."""
-        self.hass = hass
+        self.menuai = menuai
         self.data = data
 
     def send_message(self, message="", **kwargs):
@@ -65,7 +65,7 @@ class HomematicNotificationService(BaseNotificationService):
         data = {**self.data, **kwargs.get(ATTR_DATA, {})}
 
         if data.get(ATTR_VALUE) is not None:
-            templ = template_helper.Template(self.data[ATTR_VALUE], self.hass)
+            templ = template_helper.Template(self.data[ATTR_VALUE], self.menuai)
             data[ATTR_VALUE] = template_helper.render_complex(templ, None)
 
-        self.hass.services.call(DOMAIN, SERVICE_SET_DEVICE_VALUE, data)
+        self.menuai.services.call(DOMAIN, SERVICE_SET_DEVICE_VALUE, data)

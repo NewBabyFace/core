@@ -7,11 +7,11 @@ import logging
 import os
 import pathlib
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_FILE_PATH
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_FILE_PATH
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -26,10 +26,10 @@ class FileSizeCoordinator(DataUpdateCoordinator[dict[str, int | float | datetime
     config_entry: FileSizeConfigEntry
     path: pathlib.Path
 
-    def __init__(self, hass: HomeAssistant, config_entry: FileSizeConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: FileSizeConfigEntry) -> None:
         """Initialize filesize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -42,7 +42,7 @@ class FileSizeCoordinator(DataUpdateCoordinator[dict[str, int | float | datetime
         """Check if path is valid, allowed and return full path."""
         path = self._unresolved_path
         get_path = pathlib.Path(path)
-        if not self.hass.config.is_allowed_path(path):
+        if not self.menuai.config.is_allowed_path(path):
             raise UpdateFailed(f"Filepath {path} is not valid or allowed")
 
         if not get_path.exists() or not get_path.is_file():
@@ -59,11 +59,11 @@ class FileSizeCoordinator(DataUpdateCoordinator[dict[str, int | float | datetime
 
     async def _async_setup(self) -> None:
         """Set up path."""
-        self.path = await self.hass.async_add_executor_job(self._get_full_path)
+        self.path = await self.menuai.async_add_executor_job(self._get_full_path)
 
     async def _async_update_data(self) -> dict[str, float | int | datetime]:
         """Fetch file information."""
-        statinfo = await self.hass.async_add_executor_job(self._update)
+        statinfo = await self.menuai.async_add_executor_job(self._update)
         size = statinfo.st_size
         last_updated = dt_util.utc_from_timestamp(statinfo.st_mtime)
         created = dt_util.utc_from_timestamp(statinfo.st_ctime)

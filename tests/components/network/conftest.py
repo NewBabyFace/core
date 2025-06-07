@@ -32,7 +32,7 @@ def _generate_mock_adapters():
 def _mock_socket(sockname: list[str]) -> Generator[None]:
     """Mock the network socket."""
     with patch(
-        "homeassistant.components.network.util.socket.socket",
+        "menuai.components.network.util.socket.socket",
         return_value=MagicMock(getsockname=Mock(return_value=sockname)),
     ):
         yield
@@ -42,7 +42,7 @@ def _mock_socket(sockname: list[str]) -> Generator[None]:
 def mock_network() -> Generator[None]:
     """Override mock of network util's async_get_adapters."""
     with patch(
-        "homeassistant.components.network.util.ifaddr.get_adapters",
+        "menuai.components.network.util.ifaddr.get_adapters",
         return_value=_generate_mock_adapters(),
     ):
         yield

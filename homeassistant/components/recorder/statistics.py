@@ -32,16 +32,16 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 import voluptuous as vol
 
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT
-from homeassistant.core import HomeAssistant, callback, valid_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.recorder import DATA_RECORDER
-from homeassistant.helpers.singleton import singleton
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.collection import chunked_or_all
-from homeassistant.util.enum import try_parse_enum
-from homeassistant.util.unit_conversion import (
+from menuai.const import ATTR_UNIT_OF_MEASUREMENT
+from menuai.core import menuai, callback, valid_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers.recorder import DATA_RECORDER
+from menuai.helpers.singleton import singleton
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.util import dt as dt_util
+from menuai.util.collection import chunked_or_all
+from menuai.util.enum import try_parse_enum
+from menuai.util.unit_conversion import (
     AreaConverter,
     BaseUnitConverter,
     BloodGlucoseConcentrationConverter,
@@ -312,7 +312,7 @@ class StatisticsRow(BaseStatisticsRow, total=False):
 
 
 def get_display_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     statistic_id: str,
     statistic_unit: str | None,
 ) -> str | None:
@@ -322,7 +322,7 @@ def get_display_unit(
         return statistic_unit
 
     state_unit: str | None = statistic_unit
-    if state := hass.states.get(statistic_id):
+    if state := menuai.states.get(statistic_id):
         state_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
 
     if state_unit == statistic_unit or state_unit not in converter.VALID_UNITS:
@@ -387,7 +387,7 @@ def _get_unit_converter(
             return conv.converter_factory_allow_none(
                 from_unit=from_unit, to_unit=to_unit
             )
-    raise HomeAssistantError
+    raise menuaiError
 
 
 def can_convert_units(from_unit: str | None, to_unit: str | None) -> bool:
@@ -658,7 +658,7 @@ def _compile_statistics(
     platform_stats: list[StatisticResult] = []
     current_metadata: dict[str, tuple[int, StatisticMetaData]] = {}
     # Collect statistics from all platforms implementing support
-    for domain, platform in instance.hass.data[
+    for domain, platform in instance.menuai.data[
         DATA_RECORDER
     ].recorder_platforms.items():
         if not (
@@ -668,7 +668,7 @@ def _compile_statistics(
         ):
             continue
         compiled: PlatformCompiledStatistics = platform_compile_statistics(
-            instance.hass, session, start, end
+            instance.menuai, session, start, end
         )
         _LOGGER.debug(
             "Statistics for %s during %s-%s: %s",
@@ -698,14 +698,14 @@ def _compile_statistics(
 
     if start.minute == 50:
         # Once every hour, update issues
-        for platform in instance.hass.data[DATA_RECORDER].recorder_platforms.values():
+        for platform in instance.menuai.data[DATA_RECORDER].recorder_platforms.values():
             if not (
                 platform_update_issues := getattr(
                     platform, INTEGRATION_PLATFORM_UPDATE_STATISTICS_ISSUES, None
                 )
             ):
                 continue
-            platform_update_issues(instance.hass, session)
+            platform_update_issues(instance.menuai, session)
 
     if start.minute == 55:
         # A full hour is ready, summarize it
@@ -714,15 +714,15 @@ def _compile_statistics(
     session.add(StatisticsRuns(start=start))
 
     if fire_events:
-        instance.hass.bus.fire(EVENT_RECORDER_5MIN_STATISTICS_GENERATED)
+        instance.menuai.bus.fire(EVENT_RECORDER_5MIN_STATISTICS_GENERATED)
         if start.minute == 55:
-            instance.hass.bus.fire(EVENT_RECORDER_HOURLY_STATISTICS_GENERATED)
+            instance.menuai.bus.fire(EVENT_RECORDER_HOURLY_STATISTICS_GENERATED)
 
     if updated_metadata_ids:
         # These are always the newest statistics, so we can update
         # the run cache without having to check the start_ts.
         session.flush()  # populate the ids of the new StatisticsShortTerm rows
-        run_cache = get_short_term_statistics_run_cache(instance.hass)
+        run_cache = get_short_term_statistics_run_cache(instance.menuai)
         # metadata_id is typed to allow None, but we know it's not None here
         # so we can safely cast it to int.
         run_cache.set_latest_ids_for_metadata_ids(
@@ -836,16 +836,16 @@ def get_metadata_with_session(
 
 
 def get_metadata(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     statistic_ids: set[str] | None = None,
     statistic_type: Literal["mean", "sum"] | None = None,
     statistic_source: str | None = None,
 ) -> dict[str, tuple[int, StatisticMetaData]]:
     """Return metadata for statistic_ids."""
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         return get_metadata_with_session(
-            get_instance(hass),
+            get_instance(menuai),
             session,
             statistic_ids=statistic_ids,
             statistic_type=statistic_type,
@@ -885,7 +885,7 @@ def update_statistics_metadata(
 
 
 async def async_list_statistic_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     statistic_ids: set[str] | None = None,
     statistic_type: Literal["mean", "sum"] | None = None,
 ) -> list[dict]:
@@ -895,7 +895,7 @@ async def async_list_statistic_ids(
     a recorder platform for statistic_ids which will be added in the next statistics
     period.
     """
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
 
     if statistic_ids is not None:
         # Try to get the results from the cache since there is nearly
@@ -903,26 +903,26 @@ async def async_list_statistic_ids(
         statistics_meta_manager = instance.statistics_meta_manager
         metadata = statistics_meta_manager.get_from_cache_threadsafe(statistic_ids)
         if not statistic_ids.difference(metadata):
-            result = _statistic_by_id_from_metadata(hass, metadata)
+            result = _statistic_by_id_from_metadata(menuai, metadata)
             return _flatten_list_statistic_ids_metadata_result(result)
 
     return await instance.async_add_executor_job(
         list_statistic_ids,
-        hass,
+        menuai,
         statistic_ids,
         statistic_type,
     )
 
 
 def _statistic_by_id_from_metadata(
-    hass: HomeAssistant,
+    menuai: menuai,
     metadata: dict[str, tuple[int, StatisticMetaData]],
 ) -> dict[str, dict[str, Any]]:
     """Return a list of results for a given metadata dict."""
     return {
         meta["statistic_id"]: {
             "display_unit_of_measurement": get_display_unit(
-                hass, meta["statistic_id"], meta["unit_of_measurement"]
+                menuai, meta["statistic_id"], meta["unit_of_measurement"]
             ),
             "mean_type": meta["mean_type"],
             "has_sum": meta["has_sum"],
@@ -957,7 +957,7 @@ def _flatten_list_statistic_ids_metadata_result(
 
 
 def list_statistic_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     statistic_ids: set[str] | None = None,
     statistic_type: Literal["mean", "sum"] | None = None,
 ) -> list[dict]:
@@ -968,22 +968,22 @@ def list_statistic_ids(
     period.
     """
     result = {}
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     statistics_meta_manager = instance.statistics_meta_manager
 
     # Query the database
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         metadata = statistics_meta_manager.get_many(
             session, statistic_type=statistic_type, statistic_ids=statistic_ids
         )
-        result = _statistic_by_id_from_metadata(hass, metadata)
+        result = _statistic_by_id_from_metadata(menuai, metadata)
 
     if not statistic_ids or statistic_ids.difference(result):
         # If we want all statistic_ids, or some are missing, we need to query
         # the integrations for the missing ones.
         #
         # Query all integrations with a registered recorder platform
-        for platform in hass.data[DATA_RECORDER].recorder_platforms.values():
+        for platform in menuai.data[DATA_RECORDER].recorder_platforms.values():
             if not (
                 platform_list_statistic_ids := getattr(
                     platform, INTEGRATION_PLATFORM_LIST_STATISTIC_IDS, None
@@ -991,7 +991,7 @@ def list_statistic_ids(
             ):
                 continue
             platform_statistic_ids = platform_list_statistic_ids(
-                hass, statistic_ids=statistic_ids, statistic_type=statistic_type
+                menuai, statistic_ids=statistic_ids, statistic_type=statistic_type
             )
 
             for key, meta in platform_statistic_ids.items():
@@ -1599,7 +1599,7 @@ def _get_newest_sum_statistic(
 
 
 def statistic_during_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: datetime | None,
     end_time: datetime | None,
     statistic_id: str,
@@ -1614,10 +1614,10 @@ def statistic_during_period(
 
     result: dict[str, Any] = {}
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         # Fetch metadata for the given statistic_id
         if not (
-            metadata := get_instance(hass).statistics_meta_manager.get(
+            metadata := get_instance(menuai).statistics_meta_manager.get(
                 session, statistic_id
             )
         ):
@@ -1741,7 +1741,7 @@ def statistic_during_period(
                 result["change"] = None
 
     state_unit = unit = metadata[1]["unit_of_measurement"]
-    if state := hass.states.get(statistic_id):
+    if state := menuai.states.get(statistic_id):
         state_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
     convert = _get_statistic_to_display_unit_converter(unit, state_unit, units)
 
@@ -1801,7 +1801,7 @@ def _extract_metadata_and_discard_impossible_columns(
 
 
 def _augment_result_with_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     start_time: datetime,
     units: dict[str, str] | None,
@@ -1814,7 +1814,7 @@ def _augment_result_with_change(
     drop_sum = "sum" not in _types
     prev_sums = {}
     if tmp := _statistics_at_time(
-        get_instance(hass),
+        get_instance(menuai),
         session,
         {metadata[statistic_id][0] for statistic_id in result},
         table,
@@ -1827,7 +1827,7 @@ def _augment_result_with_change(
             statistic_id = metadata_by_id["statistic_id"]
 
             state_unit = unit = metadata_by_id["unit_of_measurement"]
-            if state := hass.states.get(statistic_id):
+            if state := menuai.states.get(statistic_id):
                 state_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
             convert = _get_statistic_to_display_unit_converter(unit, state_unit, units)
 
@@ -1853,7 +1853,7 @@ def _augment_result_with_change(
 
 
 def _statistics_during_period_with_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     start_time: datetime,
     end_time: datetime | None,
@@ -1872,7 +1872,7 @@ def _statistics_during_period_with_session(
         # for custom integrations that call this method.
         statistic_ids = set(statistic_ids)  # type: ignore[unreachable]
     # Fetch metadata for the given (or all) statistic_ids
-    metadata = get_instance(hass).statistics_meta_manager.get_many(
+    metadata = get_instance(menuai).statistics_meta_manager.get_many(
         session, statistic_ids=statistic_ids
     )
     if not metadata:
@@ -1933,7 +1933,7 @@ def _statistics_during_period_with_session(
         return {}
 
     result = _sorted_statistics_to_dict(
-        hass,
+        menuai,
         stats,
         statistic_ids,
         metadata,
@@ -1954,7 +1954,7 @@ def _statistics_during_period_with_session(
 
     if "change" in _types:
         _augment_result_with_change(
-            hass, session, start_time, units, _types, table, metadata, result
+            menuai, session, start_time, units, _types, table, metadata, result
         )
 
     # filter out mean_weight as it is only needed to reduce statistics
@@ -1968,7 +1968,7 @@ def _statistics_during_period_with_session(
 
 
 def statistics_during_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: datetime,
     end_time: datetime | None,
     statistic_ids: set[str] | None,
@@ -1981,9 +1981,9 @@ def statistics_during_period(
     If end_time is omitted, returns statistics newer than or equal to start_time.
     If statistic_ids is omitted, returns statistics for all statistics ids.
     """
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         return _statistics_during_period_with_session(
-            hass,
+            menuai,
             session,
             start_time,
             end_time,
@@ -2024,7 +2024,7 @@ def _get_last_statistics_short_term_stmt(
 
 
 def _get_last_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     number_of_stats: int,
     statistic_id: str,
     convert_units: bool,
@@ -2033,9 +2033,9 @@ def _get_last_statistics(
 ) -> dict[str, list[StatisticsRow]]:
     """Return the last number_of_stats statistics for a given statistic_id."""
     statistic_ids = {statistic_id}
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         # Fetch metadata for the given statistic_id
-        metadata = get_instance(hass).statistics_meta_manager.get_many(
+        metadata = get_instance(menuai).statistics_meta_manager.get_many(
             session, statistic_ids=statistic_ids
         )
         if not metadata:
@@ -2055,7 +2055,7 @@ def _get_last_statistics(
 
         # Return statistics combined with metadata
         return _sorted_statistics_to_dict(
-            hass,
+            menuai,
             stats,
             statistic_ids,
             metadata,
@@ -2067,7 +2067,7 @@ def _get_last_statistics(
 
 
 def get_last_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     number_of_stats: int,
     statistic_id: str,
     convert_units: bool,
@@ -2075,12 +2075,12 @@ def get_last_statistics(
 ) -> dict[str, list[StatisticsRow]]:
     """Return the last number_of_stats statistics for a statistic_id."""
     return _get_last_statistics(
-        hass, number_of_stats, statistic_id, convert_units, Statistics, types
+        menuai, number_of_stats, statistic_id, convert_units, Statistics, types
     )
 
 
 def get_last_short_term_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     number_of_stats: int,
     statistic_id: str,
     convert_units: bool,
@@ -2088,7 +2088,7 @@ def get_last_short_term_statistics(
 ) -> dict[str, list[StatisticsRow]]:
     """Return the last number_of_stats short term statistics for a statistic_id."""
     return _get_last_statistics(
-        hass, number_of_stats, statistic_id, convert_units, StatisticsShortTerm, types
+        menuai, number_of_stats, statistic_id, convert_units, StatisticsShortTerm, types
     )
 
 
@@ -2117,7 +2117,7 @@ def _latest_short_term_statistics_by_ids_stmt(
 
 
 def get_latest_short_term_statistics_with_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     statistic_ids: set[str],
     types: set[Literal["last_reset", "max", "mean", "min", "state", "sum"]],
@@ -2126,7 +2126,7 @@ def get_latest_short_term_statistics_with_session(
     """Return the latest short term statistics for a list of statistic_ids with a session."""
     # Fetch metadata for the given statistic_ids
     if not metadata:
-        metadata = get_instance(hass).statistics_meta_manager.get_many(
+        metadata = get_instance(menuai).statistics_meta_manager.get_many(
             session, statistic_ids=statistic_ids
         )
     if not metadata:
@@ -2134,7 +2134,7 @@ def get_latest_short_term_statistics_with_session(
     metadata_ids = set(
         _extract_metadata_and_discard_impossible_columns(metadata, types)
     )
-    run_cache = get_short_term_statistics_run_cache(hass)
+    run_cache = get_short_term_statistics_run_cache(menuai)
     # Try to find the latest short term statistics ids for the metadata_ids
     # from the run cache first if we have it. If the run cache references
     # a non-existent id because of a purge, we will detect it missing in the
@@ -2168,7 +2168,7 @@ def get_latest_short_term_statistics_with_session(
 
     # Return statistics combined with metadata
     return _sorted_statistics_to_dict(
-        hass,
+        menuai,
         stats,
         statistic_ids,
         metadata,
@@ -2370,7 +2370,7 @@ def _build_converted_stats(
 
 
 def _sorted_statistics_to_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     stats: Sequence[Row[Any]],
     statistic_ids: set[str] | None,
     _metadata: dict[str, tuple[int, StatisticMetaData]],
@@ -2423,7 +2423,7 @@ def _sorted_statistics_to_dict(
         statistic_id = metadata_by_id["statistic_id"]
         if convert_units:
             state_unit = unit = metadata_by_id["unit_of_measurement"]
-            if state := hass.states.get(statistic_id):
+            if state := menuai.states.get(statistic_id):
                 state_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
             convert = _get_statistic_to_display_unit_converter(
                 unit, state_unit, units, allow_none=False
@@ -2453,25 +2453,25 @@ def _sorted_statistics_to_dict(
     return result
 
 
-def validate_statistics(hass: HomeAssistant) -> dict[str, list[ValidationIssue]]:
+def validate_statistics(menuai: menuai) -> dict[str, list[ValidationIssue]]:
     """Validate statistics."""
     platform_validation: dict[str, list[ValidationIssue]] = {}
-    for platform in hass.data[DATA_RECORDER].recorder_platforms.values():
+    for platform in menuai.data[DATA_RECORDER].recorder_platforms.values():
         if platform_validate_statistics := getattr(
             platform, INTEGRATION_PLATFORM_VALIDATE_STATISTICS, None
         ):
-            platform_validation.update(platform_validate_statistics(hass))
+            platform_validation.update(platform_validate_statistics(menuai))
     return platform_validation
 
 
-def update_statistics_issues(hass: HomeAssistant) -> None:
+def update_statistics_issues(menuai: menuai) -> None:
     """Update statistics issues."""
-    with session_scope(hass=hass, read_only=True) as session:
-        for platform in hass.data[DATA_RECORDER].recorder_platforms.values():
+    with session_scope(menuai=menuai, read_only=True) as session:
+        for platform in menuai.data[DATA_RECORDER].recorder_platforms.values():
             if platform_update_statistics_issues := getattr(
                 platform, INTEGRATION_PLATFORM_UPDATE_STATISTICS_ISSUES, None
             ):
-                platform_update_statistics_issues(hass, session)
+                platform_update_statistics_issues(menuai, session)
 
 
 def _statistics_exists(
@@ -2492,7 +2492,7 @@ def _statistics_exists(
 
 @callback
 def _async_import_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     metadata: StatisticMetaData,
     statistics: Iterable[StatisticData],
 ) -> None:
@@ -2500,11 +2500,11 @@ def _async_import_statistics(
     for statistic in statistics:
         start = statistic["start"]
         if start.tzinfo is None or start.tzinfo.utcoffset(start) is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Naive timestamp: no or invalid timezone info provided"
             )
         if start.minute != 0 or start.second != 0 or start.microsecond != 0:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Invalid timestamp: timestamps must be from the top of the hour (minutes and seconds = 0)"
             )
 
@@ -2516,16 +2516,16 @@ def _async_import_statistics(
                 last_reset.tzinfo is None
                 or last_reset.tzinfo.utcoffset(last_reset) is None
             ):
-                raise HomeAssistantError("Naive timestamp")
+                raise menuaiError("Naive timestamp")
             statistic["last_reset"] = dt_util.as_utc(last_reset)
 
     # Insert job in recorder's queue
-    get_instance(hass).async_import_statistics(metadata, statistics, Statistics)
+    get_instance(menuai).async_import_statistics(metadata, statistics, Statistics)
 
 
 @callback
 def async_import_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     metadata: StatisticMetaData,
     statistics: Iterable[StatisticData],
 ) -> None:
@@ -2534,18 +2534,18 @@ def async_import_statistics(
     This inserts an import_statistics job in the recorder's queue.
     """
     if not valid_entity_id(metadata["statistic_id"]):
-        raise HomeAssistantError("Invalid statistic_id")
+        raise menuaiError("Invalid statistic_id")
 
     # The source must not be empty and must be aligned with the statistic_id
     if not metadata["source"] or metadata["source"] != DOMAIN:
-        raise HomeAssistantError("Invalid source")
+        raise menuaiError("Invalid source")
 
-    _async_import_statistics(hass, metadata, statistics)
+    _async_import_statistics(menuai, metadata, statistics)
 
 
 @callback
 def async_add_external_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     metadata: StatisticMetaData,
     statistics: Iterable[StatisticData],
 ) -> None:
@@ -2555,14 +2555,14 @@ def async_add_external_statistics(
     """
     # The statistic_id has same limitations as an entity_id, but with a ':' as separator
     if not valid_statistic_id(metadata["statistic_id"]):
-        raise HomeAssistantError("Invalid statistic_id")
+        raise menuaiError("Invalid statistic_id")
 
     # The source must not be empty and must be aligned with the statistic_id
     domain, _object_id = split_statistic_id(metadata["statistic_id"])
     if not metadata["source"] or metadata["source"] != domain:
-        raise HomeAssistantError("Invalid source")
+        raise menuaiError("Invalid source")
 
-    _async_import_statistics(hass, metadata, statistics)
+    _async_import_statistics(menuai, metadata, statistics)
 
 
 def _import_statistics_with_session(
@@ -2592,7 +2592,7 @@ def _import_statistics_with_session(
 
     # We just inserted new short term statistics, so we need to update the
     # ShortTermStatisticsRunCache with the latest id for the metadata_id
-    run_cache = get_short_term_statistics_run_cache(instance.hass)
+    run_cache = get_short_term_statistics_run_cache(instance.menuai)
     cache_latest_short_term_statistic_id_for_metadata_id(
         run_cache, session, metadata_id
     )
@@ -2602,7 +2602,7 @@ def _import_statistics_with_session(
 
 @singleton(DATA_SHORT_TERM_STATISTICS_RUN_CACHE)
 def get_short_term_statistics_run_cache(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> ShortTermStatisticsRunCache:
     """Get the short term statistics run cache."""
     return ShortTermStatisticsRunCache()
@@ -2788,7 +2788,7 @@ def change_statistics_unit(
 
 @callback
 def async_change_statistics_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     statistic_id: str,
     *,
     new_unit_of_measurement: str,
@@ -2796,11 +2796,11 @@ def async_change_statistics_unit(
 ) -> None:
     """Change statistics unit for a statistic_id."""
     if not can_convert_units(old_unit_of_measurement, new_unit_of_measurement):
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Can't convert {old_unit_of_measurement} to {new_unit_of_measurement}"
         )
 
-    get_instance(hass).async_change_statistics_unit(
+    get_instance(menuai).async_change_statistics_unit(
         statistic_id,
         new_unit_of_measurement=new_unit_of_measurement,
         old_unit_of_measurement=old_unit_of_measurement,

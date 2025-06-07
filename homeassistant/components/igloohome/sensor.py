@@ -6,9 +6,9 @@ import logging
 from aiohttp import ClientError
 from igloohome_api import Api as IgloohomeApi, ApiException, GetDeviceInfoResponse
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import IgloohomeConfigEntry
 from .entity import IgloohomeBaseEntity
@@ -20,7 +20,7 @@ SCAN_INTERVAL = timedelta(hours=1)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IgloohomeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -4,7 +4,7 @@ Components use create_stream with a stream source (e.g. an rtsp url) to create
 a new Stream object. Stream manages:
   - Background work to fetch and decode a stream
   - Desired output formats
-  - Home Assistant URLs for viewing a stream
+  - MenuAI URLs for viewing a stream
   - Access tokens for URLs for viewing a stream
 
 A Stream consists of a background worker, and one or more output formats each
@@ -30,13 +30,13 @@ from typing import TYPE_CHECKING, Any, Final, cast
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, EVENT_LOGGING_CHANGED
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import SetupPhases, async_pause_setup
-from homeassistant.util.async_ import create_eager_task
+from menuai.const import EVENT_menuai_STOP, EVENT_LOGGING_CHANGED
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.setup import SetupPhases, async_pause_setup
+from menuai.util.async_ import create_eager_task
 
 from .const import (
     ATTR_ENDPOINTS,
@@ -77,7 +77,7 @@ from .exceptions import StreamOpenClientError, StreamWorkerError
 from .hls import HlsStreamOutput, async_setup_hls
 
 if TYPE_CHECKING:
-    from homeassistant.components.camera import DynamicStreamSettings
+    from menuai.components.camera import DynamicStreamSettings
 
 __all__ = [
     "ATTR_SETTINGS",
@@ -101,19 +101,19 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_check_stream_client_error(
-    hass: HomeAssistant, source: str, pyav_options: dict[str, str] | None = None
+    menuai: menuai, source: str, pyav_options: dict[str, str] | None = None
 ) -> None:
     """Check if a stream can be successfully opened.
 
     Raise StreamOpenClientError if an http client error is encountered.
     """
-    await hass.loop.run_in_executor(
-        None, _check_stream_client_error, hass, source, pyav_options
+    await menuai.loop.run_in_executor(
+        None, _check_stream_client_error, menuai, source, pyav_options
     )
 
 
 def _check_stream_client_error(
-    hass: HomeAssistant, source: str, options: dict[str, str] | None = None
+    menuai: menuai, source: str, options: dict[str, str] | None = None
 ) -> None:
     """Check if a stream can be successfully opened.
 
@@ -121,7 +121,7 @@ def _check_stream_client_error(
     """
     from .worker import try_open_stream  # pylint: disable=import-outside-toplevel
 
-    pyav_options, _ = _convert_stream_options(hass, source, options or {})
+    pyav_options, _ = _convert_stream_options(menuai, source, options or {})
     try:
         try_open_stream(source, pyav_options).close()
     except StreamWorkerError as err:
@@ -142,20 +142,20 @@ def redact_credentials(url: str) -> str:
 
 
 def _convert_stream_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     stream_source: str,
     stream_options: Mapping[str, str | bool | float],
 ) -> tuple[dict[str, str], StreamSettings]:
     """Convert options from stream options into PyAV options and stream settings."""
-    if DOMAIN not in hass.data:
-        raise HomeAssistantError("Stream integration is not set up.")
+    if DOMAIN not in menuai.data:
+        raise menuaiError("Stream integration is not set up.")
 
-    stream_settings = copy.copy(hass.data[DOMAIN][ATTR_SETTINGS])
+    stream_settings = copy.copy(menuai.data[DOMAIN][ATTR_SETTINGS])
     pyav_options: dict[str, str] = {}
     try:
         STREAM_OPTIONS_SCHEMA(stream_options)
     except vol.Invalid as exc:
-        raise HomeAssistantError(f"Invalid stream options: {exc}") from exc
+        raise menuaiError(f"Invalid stream options: {exc}") from exc
 
     if extra_wait_time := stream_options.get(CONF_EXTRA_PART_WAIT_TIME):
         stream_settings.hls_part_timeout += extra_wait_time
@@ -178,7 +178,7 @@ def _convert_stream_options(
 
 
 def create_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     stream_source: str,
     options: Mapping[str, str | bool | float],
     dynamic_stream_settings: DynamicStreamSettings,
@@ -192,23 +192,23 @@ def create_stream(
     The stream_label is a string used as an additional message in logging.
     """
 
-    if DOMAIN not in hass.config.components:
-        raise HomeAssistantError("Stream integration is not set up.")
+    if DOMAIN not in menuai.config.components:
+        raise menuaiError("Stream integration is not set up.")
 
     # Convert extra stream options into PyAV options and stream settings
     pyav_options, stream_settings = _convert_stream_options(
-        hass, stream_source, options
+        menuai, stream_source, options
     )
 
     stream = Stream(
-        hass,
+        menuai,
         stream_source,
         pyav_options=pyav_options,
         stream_settings=stream_settings,
         dynamic_stream_settings=dynamic_stream_settings,
         stream_label=stream_label,
     )
-    hass.data[DOMAIN][ATTR_STREAMS].append(stream)
+    menuai.data[DOMAIN][ATTR_STREAMS].append(stream)
     return stream
 
 
@@ -239,7 +239,7 @@ def set_pyav_logging(enable: bool) -> None:
     av.logging.set_level(av.logging.VERBOSE if enable else av.logging.FATAL)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up stream."""
     debug_enabled = _LOGGER.isEnabledFor(logging.DEBUG)
 
@@ -254,7 +254,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         set_pyav_logging(new_debug_enabled)
 
     # Only pass through PyAV log messages if stream logging is above DEBUG
-    cancel_logging_listener = hass.bus.async_listen(
+    cancel_logging_listener = menuai.bus.async_listen(
         EVENT_LOGGING_CHANGED, update_pyav_logging
     )
     # libav.mp4 and libav.swscaler have a few unimportant messages that are logged
@@ -263,21 +263,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         logging.getLogger(logging_namespace).setLevel(logging.ERROR)
 
     # This will load av so we run it in the executor
-    with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PACKAGES):
-        await hass.async_add_executor_job(set_pyav_logging, debug_enabled)
+    with async_pause_setup(menuai, SetupPhases.WAIT_IMPORT_PACKAGES):
+        await menuai.async_add_executor_job(set_pyav_logging, debug_enabled)
 
     # Keep import here so that we can import stream integration without installing reqs
     # pylint: disable-next=import-outside-toplevel
     from .recorder import async_setup_recorder
 
-    hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][ATTR_ENDPOINTS] = {}
-    hass.data[DOMAIN][ATTR_STREAMS] = []
+    menuai.data[DOMAIN] = {}
+    menuai.data[DOMAIN][ATTR_ENDPOINTS] = {}
+    menuai.data[DOMAIN][ATTR_STREAMS] = []
     conf = DOMAIN_SCHEMA(config.get(DOMAIN, {}))
     if conf[CONF_LL_HLS]:
         assert isinstance(conf[CONF_SEGMENT_DURATION], float)
         assert isinstance(conf[CONF_PART_DURATION], float)
-        hass.data[DOMAIN][ATTR_SETTINGS] = StreamSettings(
+        menuai.data[DOMAIN][ATTR_SETTINGS] = StreamSettings(
             ll_hls=True,
             min_segment_duration=conf[CONF_SEGMENT_DURATION]
             - SEGMENT_DURATION_ADJUSTER,
@@ -286,28 +286,28 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             hls_part_timeout=2 * conf[CONF_PART_DURATION],
         )
     else:
-        hass.data[DOMAIN][ATTR_SETTINGS] = STREAM_SETTINGS_NON_LL_HLS
+        menuai.data[DOMAIN][ATTR_SETTINGS] = STREAM_SETTINGS_NON_LL_HLS
 
     # Setup HLS
-    hls_endpoint = async_setup_hls(hass)
-    hass.data[DOMAIN][ATTR_ENDPOINTS][HLS_PROVIDER] = hls_endpoint
+    hls_endpoint = async_setup_hls(menuai)
+    menuai.data[DOMAIN][ATTR_ENDPOINTS][HLS_PROVIDER] = hls_endpoint
 
     # Setup Recorder
-    async_setup_recorder(hass)
+    async_setup_recorder(menuai)
 
     async def shutdown(event: Event) -> None:
         """Stop all stream workers."""
-        for stream in hass.data[DOMAIN][ATTR_STREAMS]:
+        for stream in menuai.data[DOMAIN][ATTR_STREAMS]:
             stream.dynamic_stream_settings.preload_stream = False
         if awaitables := [
             create_eager_task(stream.stop())
-            for stream in hass.data[DOMAIN][ATTR_STREAMS]
+            for stream in menuai.data[DOMAIN][ATTR_STREAMS]
         ]:
             await asyncio.wait(awaitables)
         _LOGGER.debug("Stopped stream workers")
         cancel_logging_listener()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, shutdown)
 
     return True
 
@@ -317,7 +317,7 @@ class Stream:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         source: str,
         pyav_options: dict[str, str],
         stream_settings: StreamSettings,
@@ -325,7 +325,7 @@ class Stream:
         stream_label: str | None = None,
     ) -> None:
         """Initialize a stream."""
-        self.hass = hass
+        self.menuai = menuai
         self.source = source
         self.pyav_options = pyav_options
         self._stream_settings = stream_settings
@@ -338,7 +338,7 @@ class Stream:
         self._outputs: dict[str, StreamOutput] = {}
         self._fast_restart_once = False
         self._keyframe_converter = KeyFrameConverter(
-            hass, stream_settings, dynamic_stream_settings
+            menuai, stream_settings, dynamic_stream_settings
         )
         self._available: bool = True
         self._update_callback: Callable[[], None] | None = None
@@ -355,7 +355,7 @@ class Stream:
             raise ValueError(f"Stream is not configured for format '{fmt}'")
         if not self.access_token:
             self.access_token = secrets.token_hex()
-        endpoint_fmt: str = self.hass.data[DOMAIN][ATTR_ENDPOINTS][fmt]
+        endpoint_fmt: str = self.menuai.data[DOMAIN][ATTR_ENDPOINTS][fmt]
         return endpoint_fmt.format(self.access_token)
 
     def outputs(self) -> Mapping[str, StreamOutput]:
@@ -379,8 +379,8 @@ class Stream:
                 self.check_idle()
 
             provider = PROVIDERS[fmt](
-                self.hass,
-                IdleTimer(self.hass, timeout, idle_callback),
+                self.menuai,
+                IdleTimer(self.menuai, timeout, idle_callback),
                 self._stream_settings,
                 self.dynamic_stream_settings,
             )
@@ -455,7 +455,7 @@ class Stream:
         # Call with call_soon_threadsafe since we know _async_update_state is always
         # all callback function instead of using add_job which would have to work
         # it out each time
-        self.hass.loop.call_soon_threadsafe(self._async_update_state, available)
+        self.menuai.loop.call_soon_threadsafe(self._async_update_state, available)
 
     def _run_worker(self) -> None:
         """Handle consuming streams and restart keepalive streams."""
@@ -463,7 +463,7 @@ class Stream:
         # pylint: disable-next=import-outside-toplevel
         from .worker import StreamState, stream_worker
 
-        stream_state = StreamState(self.hass, self.outputs, self._diagnostics)
+        stream_state = StreamState(self.menuai, self.outputs, self._diagnostics)
         wait_timeout = 0
         while not self._thread_quit.wait(timeout=wait_timeout):
             start_time = time.time()
@@ -525,7 +525,7 @@ class Stream:
             for provider in self.outputs().values():
                 await self.remove_provider(provider)
 
-        self.hass.create_task(worker_finished())
+        self.menuai.create_task(worker_finished())
 
     async def stop(self) -> None:
         """Remove outputs and access token."""
@@ -544,7 +544,7 @@ class Stream:
             if self._thread is None:
                 return
             self._thread_quit.set()
-            await self.hass.async_add_executor_job(self._thread.join)
+            await self.menuai.async_add_executor_job(self._thread.join)
             self._thread = None
             self._logger.debug(
                 "Stopped stream: %s", redact_credentials(str(self.source))
@@ -560,13 +560,13 @@ class Stream:
         from .recorder import RecorderOutput
 
         # Check for file access
-        if not self.hass.config.is_allowed_path(video_path):
-            raise HomeAssistantError(f"Can't write {video_path}, no access to path!")
+        if not self.menuai.config.is_allowed_path(video_path):
+            raise menuaiError(f"Can't write {video_path}, no access to path!")
 
         # Add recorder
         if recorder := self.outputs().get(RECORDER_PROVIDER):
             assert isinstance(recorder, RecorderOutput)
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Stream already recording to {recorder.video_path}!"
             )
         recorder = cast(
@@ -598,7 +598,7 @@ class Stream:
 
         Calls async_get_image from KeyFrameConverter. async_get_image should only be
         called directly from the main loop and not from an executor thread as it uses
-        hass.add_executor_job underneath the hood.
+        menuai.add_executor_job underneath the hood.
         """
 
         self.add_provider(HLS_PROVIDER)

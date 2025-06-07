@@ -18,11 +18,11 @@ from pytrafikverket import (
     UnknownError,
 )
 
-from homeassistant.const import CONF_API_KEY, CONF_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.const import CONF_API_KEY, CONF_ID
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -44,16 +44,16 @@ class CameraData:
 class TVDataUpdateCoordinator(DataUpdateCoordinator[CameraData]):
     """A Trafikverket Data Update Coordinator."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: TVCameraConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: TVCameraConfigEntry) -> None:
         """Initialize the Trafikverket coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=TIME_BETWEEN_UPDATES,
         )
-        self.session = async_get_clientsession(hass)
+        self.session = async_get_clientsession(menuai)
         self._camera_api = TrafikverketCamera(
             self.session, config_entry.data[CONF_API_KEY]
         )

@@ -8,14 +8,14 @@ from hatasmota.switch import TasmotaSwitchTriggerConfig
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.tasmota import _LOGGER
-from homeassistant.components.tasmota.const import DEFAULT_PREFIX, DOMAIN
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.trigger import async_initialize_triggers
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.tasmota import _LOGGER
+from menuai.components.tasmota.const import DEFAULT_PREFIX, DOMAIN
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr
+from menuai.helpers.trigger import async_initialize_triggers
+from menuai.setup import async_setup_component
 
 from .test_common import DEFAULT_CONFIG, remove_device
 
@@ -29,7 +29,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 async def test_get_triggers_btn(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -42,8 +42,8 @@ async def test_get_triggers_btn(
     config["so"]["73"] = 1
     mac = config["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -69,13 +69,13 @@ async def test_get_triggers_btn(
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_get_triggers_swc(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -85,8 +85,8 @@ async def test_get_triggers_swc(
     config["swc"][0] = 0
     mac = config["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -103,13 +103,13 @@ async def test_get_triggers_swc(
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_get_unknown_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -120,15 +120,15 @@ async def test_get_unknown_triggers(
     config["swc"][0] = -1
     mac = config["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -151,13 +151,13 @@ async def test_get_unknown_triggers(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == []
 
 
 async def test_get_non_existing_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -168,21 +168,21 @@ async def test_get_non_existing_triggers(
     config1["swc"][0] = -1
     mac = config1["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == []
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discover_bad_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -198,15 +198,15 @@ async def test_discover_bad_triggers(
         return_value=[object()],
     ):
         async_fire_mqtt_message(
-            hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config)
+            menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == []
 
@@ -234,21 +234,21 @@ async def test_discover_bad_triggers(
         ],
     ):
         async_fire_mqtt_message(
-            hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config)
+            menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == []
 
     # Rediscover without exception
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     expected_triggers = [
         {
@@ -262,13 +262,13 @@ async def test_discover_bad_triggers(
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_update_remove_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -287,8 +287,8 @@ async def test_update_remove_triggers(
     config3 = copy.deepcopy(DEFAULT_CONFIG)
     config3["swc"][0] = -1
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -318,33 +318,33 @@ async def test_update_remove_triggers(
     expected_triggers2[1]["type"] = "button_double_press"
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     for expected in expected_triggers1:
         assert expected in triggers
 
     # Update trigger
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
+    await menuai.async_block_till_done()
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     for expected in expected_triggers2:
         assert expected in triggers
 
     # Remove trigger
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config3))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config3))
+    await menuai.async_block_till_done()
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == []
 
 
 async def test_if_fires_on_mqtt_message_btn(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock: MqttMockHAClient,
@@ -358,14 +358,14 @@ async def test_if_fires_on_mqtt_message_btn(
     config["so"]["73"] = 1
     mac = config["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -403,23 +403,23 @@ async def test_if_fires_on_mqtt_message_btn(
 
     # Fake button 1 single press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Button1":{"Action":"SINGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Button1":{"Action":"SINGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "short_press_1"
 
     # Fake button 3 single press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Button3":{"Action":"SINGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Button3":{"Action":"SINGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "short_press_3"
 
 
 async def test_if_fires_on_mqtt_message_swc(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock: MqttMockHAClient,
@@ -434,14 +434,14 @@ async def test_if_fires_on_mqtt_message_swc(
     config["swn"][2] = "custom_switch"
     mac = config["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -493,31 +493,31 @@ async def test_if_fires_on_mqtt_message_swc(
 
     # Fake switch 1 short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "short_press_1"
 
     # Fake switch 2 short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch2":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch2":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "short_press_2"
 
     # Fake switch 3 long press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"custom_switch":{"Action":"HOLD"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"custom_switch":{"Action":"HOLD"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
     assert service_calls[2].data["some"] == "long_press_3"
 
 
 async def test_if_fires_on_mqtt_message_late_discover(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock: MqttMockHAClient,
@@ -535,15 +535,15 @@ async def test_if_fires_on_mqtt_message_late_discover(
     config2["swc"][3] = 9
     config2["swn"][3] = "custom_switch"
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -579,28 +579,28 @@ async def test_if_fires_on_mqtt_message_late_discover(
         },
     )
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
+    await menuai.async_block_till_done()
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "short_press"
 
     # Fake long press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"custom_switch":{"Action":"HOLD"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"custom_switch":{"Action":"HOLD"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "double_press"
 
 
 async def test_if_fires_on_mqtt_message_after_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock: MqttMockHAClient,
@@ -615,15 +615,15 @@ async def test_if_fires_on_mqtt_message_after_update(
     config2["tp"][1] = "status"
     mac = config1["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -647,46 +647,46 @@ async def test_if_fires_on_mqtt_message_after_update(
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Update the trigger with different topic
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
+    await menuai.async_block_till_done()
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/status/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/status/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
     # Update the trigger with same topic
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
+    await menuai.async_block_till_done()
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/status/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/status/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
 
 
 async def test_no_resubscribe_same_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -699,15 +699,15 @@ async def test_no_resubscribe_same_topic(
 
     mqtt_mock.async_subscribe.reset_mock()
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -731,13 +731,13 @@ async def test_no_resubscribe_same_topic(
 
     call_count = mqtt_mock.async_subscribe.call_count
     assert call_count == 1
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
     assert mqtt_mock.async_subscribe.call_count == call_count
 
 
 async def test_not_fires_on_mqtt_message_after_remove_by_mqtt(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock: MqttMockHAClient,
@@ -751,15 +751,15 @@ async def test_not_fires_on_mqtt_message_after_remove_by_mqtt(
 
     mqtt_mock.async_subscribe.reset_mock()
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -783,44 +783,44 @@ async def test_not_fires_on_mqtt_message_after_remove_by_mqtt(
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Remove the trigger
     config["swc"][0] = -1
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Rediscover the trigger
     config["swc"][0] = 0
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
 
 async def test_not_fires_on_mqtt_message_after_remove_from_registry(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
 ) -> None:
     """Test triggers not firing after removal."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     # Discover a device with device trigger
     config = copy.deepcopy(DEFAULT_CONFIG)
     config["swc"][0] = 0
@@ -828,15 +828,15 @@ async def test_not_fires_on_mqtt_message_after_remove_from_registry(
 
     mqtt_mock.async_subscribe.reset_mock()
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -860,24 +860,24 @@ async def test_not_fires_on_mqtt_message_after_remove_from_registry(
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Remove the device
-    await remove_device(hass, hass_ws_client, device_entry.id)
-    await hass.async_block_till_done()
+    await remove_device(menuai, menuai_ws_client, device_entry.id)
+    await menuai.async_block_till_done()
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_attach_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -890,8 +890,8 @@ async def test_attach_remove(
 
     mqtt_mock.async_subscribe.reset_mock()
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -903,7 +903,7 @@ async def test_attach_remove(
         service_calls.append(trigger["trigger"]["description"])
 
     remove = await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -922,26 +922,26 @@ async def test_attach_remove(
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0] == "event 'tasmota_event'"
 
     # Remove the trigger
     remove()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify the triggers are no longer active
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_attach_remove_late(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -956,8 +956,8 @@ async def test_attach_remove_late(
     config2 = copy.deepcopy(DEFAULT_CONFIG)
     config2["swc"][0] = 0
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -969,7 +969,7 @@ async def test_attach_remove_late(
         service_calls.append(trigger["trigger"]["description"])
 
     remove = await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -988,36 +988,36 @@ async def test_attach_remove_late(
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
+    await menuai.async_block_till_done()
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0] == "event 'tasmota_event'"
 
     # Remove the trigger
     remove()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify the triggers are no longer active
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_attach_remove_late2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -1032,8 +1032,8 @@ async def test_attach_remove_late2(
     config2 = copy.deepcopy(DEFAULT_CONFIG)
     config2["swc"][0] = 0
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -1045,7 +1045,7 @@ async def test_attach_remove_late2(
         service_calls.append(trigger["trigger"]["description"])
 
     remove = await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -1064,21 +1064,21 @@ async def test_attach_remove_late2(
 
     # Remove the trigger
     remove()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     # Verify the triggers is not active
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
 
 async def test_attach_remove_unknown1(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -1089,15 +1089,15 @@ async def test_attach_remove_unknown1(
     config1["swc"][0] = -1
     mac = config1["mac"]
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     remove = await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -1116,18 +1116,18 @@ async def test_attach_remove_unknown1(
 
     # Remove the trigger
     remove()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_attach_unknown_remove_device_from_registry(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
 ) -> None:
     """Test attach and removal of device with unknown trigger."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     # Discover a device without device triggers
     config1 = copy.deepcopy(DEFAULT_CONFIG)
     config1["swc"][0] = -1
@@ -1138,19 +1138,19 @@ async def test_attach_unknown_remove_device_from_registry(
     config2["swc"][0] = 0
 
     # Discovery a device with device triggers to load Tasmota device trigger integration
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config2))
+    await menuai.async_block_till_done()
 
     # Forget the trigger
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config1))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
     )
 
     await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -1168,12 +1168,12 @@ async def test_attach_unknown_remove_device_from_registry(
     )
 
     # Remove the device
-    await remove_device(hass, hass_ws_client, device_entry.id)
-    await hass.async_block_till_done()
+    await remove_device(menuai, menuai_ws_client, device_entry.id)
+    await menuai.async_block_till_done()
 
 
 async def test_attach_remove_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -1186,8 +1186,8 @@ async def test_attach_remove_config_entry(
 
     mqtt_mock.async_subscribe.reset_mock()
 
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -1199,7 +1199,7 @@ async def test_attach_remove_config_entry(
         service_calls.append(trigger["trigger"]["description"])
 
     await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -1218,20 +1218,20 @@ async def test_attach_remove_config_entry(
 
     # Fake short press.
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0] == "event 'tasmota_event'"
 
     # Remove the Tasmota config entry
-    config_entries = hass.config_entries.async_entries("tasmota")
-    await hass.config_entries.async_remove(config_entries[0].entry_id)
-    await hass.async_block_till_done()
+    config_entries = menuai.config_entries.async_entries("tasmota")
+    await menuai.config_entries.async_remove(config_entries[0].entry_id)
+    await menuai.async_block_till_done()
 
     # Verify the triggers are no longer active
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"TOGGLE"}}'
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1

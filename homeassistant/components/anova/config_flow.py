@@ -7,9 +7,9 @@ import logging
 from anova_wifi import AnovaApi, InvalidLogin
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -29,7 +29,7 @@ class AnovaConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             api = AnovaApi(
-                async_get_clientsession(self.hass),
+                async_get_clientsession(self.menuai),
                 user_input[CONF_USERNAME],
                 user_input[CONF_PASSWORD],
             )

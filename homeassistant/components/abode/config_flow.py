@@ -15,8 +15,8 @@ from jaraco.abode.helpers.errors import MFA_CODE_REQUIRED
 from requests.exceptions import ConnectTimeout, HTTPError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import CONF_POLLING, DOMAIN, LOGGER
 
@@ -48,7 +48,7 @@ class AbodeFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 Abode, self._username, self._password, True, False, False
             )
 
@@ -79,7 +79,7 @@ class AbodeFlowHandler(ConfigFlow, domain=DOMAIN):
         try:
             # Create instance to access login method for passing MFA code
             abode = Abode(auto_login=False, get_devices=False, get_automations=False)
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 abode.login, self._username, self._password, self._mfa_code
             )
 

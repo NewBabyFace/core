@@ -6,8 +6,8 @@ components. Instead call the service directly.
 
 from typing import Any
 
-from homeassistant.components.switch import DOMAIN, SwitchDeviceClass, SwitchEntity
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN, SwitchDeviceClass, SwitchEntity
+from menuai.const import (
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
     SERVICE_TURN_OFF,
@@ -15,34 +15,34 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.loader import bind_hass
+from menuai.core import menuai
+from menuai.loader import bind_menuai
 
 
-@bind_hass
-def turn_on(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def turn_on(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Turn all or specified switch on."""
-    hass.add_job(async_turn_on, hass, entity_id)
+    menuai.add_job(async_turn_on, menuai, entity_id)
 
 
-async def async_turn_on(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+async def async_turn_on(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Turn all or specified switch on."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else None
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
 
 
-@bind_hass
-def turn_off(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def turn_off(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Turn all or specified switch off."""
-    hass.add_job(async_turn_off, hass, entity_id)
+    menuai.add_job(async_turn_off, menuai, entity_id)
 
 
 async def async_turn_off(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Turn all or specified switch off."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else None
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
 
 
 class MockSwitch(SwitchEntity):

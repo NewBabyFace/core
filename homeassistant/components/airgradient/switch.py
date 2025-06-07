@@ -7,15 +7,15 @@ from typing import Any
 from airgradient import AirGradientClient, Config
 from airgradient.models import ConfigurationControl
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AirGradientConfigEntry
 from .const import DOMAIN
@@ -43,7 +43,7 @@ POST_DATA_TO_AIRGRADIENT = AirGradientSwitchEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirGradientConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -69,7 +69,7 @@ async def async_setup_entry(
             is not ConfigurationControl.LOCAL
             and added_entities
         ):
-            entity_registry = er.async_get(hass)
+            entity_registry = er.async_get(menuai)
             unique_id = f"{coordinator.serial_number}-{POST_DATA_TO_AIRGRADIENT.key}"
             if entity_id := entity_registry.async_get_entity_id(
                 SWITCH_DOMAIN, DOMAIN, unique_id

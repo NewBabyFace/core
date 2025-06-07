@@ -2,36 +2,36 @@
 
 from typing import Any
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     ATTR_SOURCE_TYPE,
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     SourceType,
     TrackerEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_GPS_ACCURACY,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up OwnTracks based off an entry."""
     # Restore previously loaded devices
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     dev_ids = {
         identifier[1]
         for device in dev_reg.devices.get_devices_for_config_entry_id(entry.entry_id)
@@ -40,22 +40,22 @@ async def async_setup_entry(
 
     entities = []
     for dev_id in dev_ids:
-        entity = hass.data[DOMAIN]["devices"][dev_id] = OwnTracksEntity(dev_id)
+        entity = menuai.data[DOMAIN]["devices"][dev_id] = OwnTracksEntity(dev_id)
         entities.append(entity)
 
     @callback
     def _receive_data(dev_id, **data):
         """Receive set location."""
-        entity = hass.data[DOMAIN]["devices"].get(dev_id)
+        entity = menuai.data[DOMAIN]["devices"].get(dev_id)
 
         if entity is not None:
             entity.update_data(data)
             return
 
-        entity = hass.data[DOMAIN]["devices"][dev_id] = OwnTracksEntity(dev_id, data)
+        entity = menuai.data[DOMAIN]["devices"][dev_id] = OwnTracksEntity(dev_id, data)
         async_add_entities([entity])
 
-    hass.data[DOMAIN]["context"].set_async_see(_receive_data)
+    menuai.data[DOMAIN]["context"].set_async_see(_receive_data)
 
     async_add_entities(entities)
 
@@ -128,9 +128,9 @@ class OwnTracksEntity(TrackerEntity, RestoreEntity):
             device_info["name"] = self._data["host_name"]
         return device_info
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to MenuAI."""
+        await super().async_added_to_menuai()
 
         # Don't restore if we got set up with data.
         if self._data:
@@ -152,5 +152,5 @@ class OwnTracksEntity(TrackerEntity, RestoreEntity):
     def update_data(self, data):
         """Mark the device as seen."""
         self._data = data
-        if self.hass:
+        if self.menuai:
             self.async_write_ha_state()

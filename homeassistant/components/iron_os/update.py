@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_INSTALLED_VERSION,
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import IRON_OS_KEY, IronOSConfigEntry, IronOSLiveDataCoordinator
 from .coordinator import IronOSFirmwareUpdateCoordinator
@@ -26,7 +26,7 @@ UPDATE_DESCRIPTION = UpdateEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IronOSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -35,7 +35,7 @@ async def async_setup_entry(
     coordinator = entry.runtime_data.live_data
 
     async_add_entities(
-        [IronOSUpdate(coordinator, hass.data[IRON_OS_KEY], UPDATE_DESCRIPTION)]
+        [IronOSUpdate(coordinator, menuai.data[IRON_OS_KEY], UPDATE_DESCRIPTION)]
     )
 
 
@@ -83,15 +83,15 @@ class IronOSUpdate(IronOSBaseEntity, UpdateEntity, RestoreEntity):
 
         return self.firmware_update.data.body
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass.
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai.
 
         Register extra update listener for the firmware update coordinator.
         """
         if state := await self.async_get_last_state():
             self._attr_installed_version = state.attributes.get(ATTR_INSTALLED_VERSION)
 
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.firmware_update.async_add_listener(self._handle_coordinator_update)
         )

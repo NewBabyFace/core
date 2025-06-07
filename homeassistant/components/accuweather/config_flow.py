@@ -10,10 +10,10 @@ from aiohttp import ClientError
 from aiohttp.client_exceptions import ClientConnectorError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -30,7 +30,7 @@ class AccuWeatherFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            websession = async_get_clientsession(self.hass)
+            websession = async_get_clientsession(self.menuai)
             try:
                 async with timeout(10):
                     accuweather = AccuWeather(
@@ -61,13 +61,13 @@ class AccuWeatherFlowHandler(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_API_KEY): str,
                     vol.Optional(
-                        CONF_LATITUDE, default=self.hass.config.latitude
+                        CONF_LATITUDE, default=self.menuai.config.latitude
                     ): cv.latitude,
                     vol.Optional(
-                        CONF_LONGITUDE, default=self.hass.config.longitude
+                        CONF_LONGITUDE, default=self.menuai.config.longitude
                     ): cv.longitude,
                     vol.Optional(
-                        CONF_NAME, default=self.hass.config.location_name
+                        CONF_NAME, default=self.menuai.config.location_name
                     ): str,
                 }
             ),

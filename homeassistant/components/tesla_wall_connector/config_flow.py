@@ -9,24 +9,24 @@ from tesla_wall_connector import WallConnector
 from tesla_wall_connector.exceptions import WallConnectorError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN, WALLCONNECTOR_DEVICE_NAME, WALLCONNECTOR_SERIAL_NUMBER
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
     wall_connector = WallConnector(
-        host=data[CONF_HOST], session=async_get_clientsession(hass)
+        host=data[CONF_HOST], session=async_get_clientsession(menuai)
     )
 
     version = await wall_connector.async_get_version()
@@ -58,7 +58,7 @@ class TeslaWallConnectorConfigFlow(ConfigFlow, domain=DOMAIN):
 
         try:
             wall_connector = WallConnector(
-                host=self.ip_address, session=async_get_clientsession(self.hass)
+                host=self.ip_address, session=async_get_clientsession(self.menuai)
             )
             version = await wall_connector.async_get_version()
         except WallConnectorError as ex:
@@ -98,7 +98,7 @@ class TeslaWallConnectorConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except WallConnectorError:
             errors["base"] = "cannot_connect"
         except Exception:

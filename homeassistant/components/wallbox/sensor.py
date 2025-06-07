@@ -1,4 +1,4 @@
-"""Home Assistant component for accessing the Wallbox Portal API. The sensor component creates multiple sensors regarding wallbox performance."""
+"""MenuAI component for accessing the Wallbox Portal API. The sensor component creates multiple sensors regarding wallbox performance."""
 
 from __future__ import annotations
 
@@ -6,23 +6,23 @@ from dataclasses import dataclass
 import logging
 from typing import cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PERCENTAGE,
     UnitOfElectricCurrent,
     UnitOfEnergy,
     UnitOfLength,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import (
     CHARGER_ADDED_DISCHARGED_ENERGY_KEY,
@@ -175,12 +175,12 @@ SENSOR_TYPES: dict[str, WallboxSensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create wallbox sensor entities in HASS."""
-    coordinator: WallboxCoordinator = hass.data[DOMAIN][entry.entry_id]
+    """Create wallbox sensor entities in menuai."""
+    coordinator: WallboxCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         WallboxSensor(coordinator, description)

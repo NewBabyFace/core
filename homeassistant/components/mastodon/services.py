@@ -8,9 +8,9 @@ from mastodon import Mastodon
 from mastodon.Mastodon import MastodonAPIError, MediaAttachment
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, ServiceCall, ServiceResponse
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from .const import (
     ATTR_CONFIG_ENTRY_ID,
@@ -49,9 +49,9 @@ SERVICE_POST_SCHEMA = vol.Schema(
 )
 
 
-def async_get_entry(hass: HomeAssistant, config_entry_id: str) -> MastodonConfigEntry:
+def async_get_entry(menuai: menuai, config_entry_id: str) -> MastodonConfigEntry:
     """Get the Mastodon config entry."""
-    if not (entry := hass.config_entries.async_get_entry(config_entry_id)):
+    if not (entry := menuai.config_entries.async_get_entry(config_entry_id)):
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="integration_not_found",
@@ -66,12 +66,12 @@ def async_get_entry(hass: HomeAssistant, config_entry_id: str) -> MastodonConfig
     return cast(MastodonConfigEntry, entry)
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the Mastodon integration."""
 
     async def async_post(call: ServiceCall) -> ServiceResponse:
         """Post a status."""
-        entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
         client = entry.runtime_data.client
 
         status = call.data[ATTR_STATUS]
@@ -86,7 +86,7 @@ def setup_services(hass: HomeAssistant) -> None:
         media_description: str | None = call.data.get(ATTR_MEDIA_DESCRIPTION)
         media_warning: str | None = call.data.get(ATTR_MEDIA_WARNING)
 
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(
                 _post,
                 client=client,
@@ -108,8 +108,8 @@ def setup_services(hass: HomeAssistant) -> None:
 
         media_path = kwargs.get("media_path")
         if media_path:
-            if not hass.config.is_allowed_path(media_path):
-                raise HomeAssistantError(
+            if not menuai.config.is_allowed_path(media_path):
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="not_whitelisted_directory",
                     translation_placeholders={"media": media_path},
@@ -125,7 +125,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 )
 
             except MastodonAPIError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="unable_to_upload_image",
                     translation_placeholders={"media_path": media_path},
@@ -140,11 +140,11 @@ def setup_services(hass: HomeAssistant) -> None:
                 media_ids = media_data.id
             client.status_post(media_ids=media_ids, **kwargs)
         except MastodonAPIError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unable_to_send_message",
             ) from err
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_POST, async_post, schema=SERVICE_POST_SCHEMA
     )

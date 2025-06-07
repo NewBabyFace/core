@@ -7,10 +7,10 @@ from typing import cast
 
 import RFXtrx as rfxtrxmod
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import DeviceTuple
 from .const import ATTR_EVENT, COMMAND_GROUP_LIST, DATA_RFXOBJECT, DOMAIN, SIGNAL_EVENT
@@ -56,13 +56,13 @@ class RfxtrxEntity(RestoreEntity):
         # group events regardless of their group indices.
         (self._group_id, _, _) = device_id.id_string.partition(":")
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore RFXtrx device state (ON/OFF)."""
         if self._event:
             self._apply_event(self._event)
 
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_EVENT, self._handle_event)
+            async_dispatcher_connect(self.menuai, SIGNAL_EVENT, self._handle_event)
         )
 
     @property
@@ -119,5 +119,5 @@ class RfxtrxCommandEntity(RfxtrxEntity):
     async def _async_send[*_Ts](
         self, fun: Callable[[rfxtrxmod.PySerialTransport, *_Ts], None], *args: *_Ts
     ) -> None:
-        rfx_object: rfxtrxmod.Connect = self.hass.data[DOMAIN][DATA_RFXOBJECT]
-        await self.hass.async_add_executor_job(fun, rfx_object.transport, *args)
+        rfx_object: rfxtrxmod.Connect = self.menuai.data[DOMAIN][DATA_RFXOBJECT]
+        await self.menuai.async_add_executor_job(fun, rfx_object.transport, *args)

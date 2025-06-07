@@ -8,11 +8,11 @@ from typing import Any
 from pyobihai import PyObihai
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .connectivity import validate_auth
 from .const import DEFAULT_PASSWORD, DEFAULT_USERNAME, DOMAIN
@@ -33,12 +33,12 @@ DATA_SCHEMA = vol.Schema(
 
 
 async def async_validate_creds(
-    hass: HomeAssistant, user_input: dict[str, Any]
+    menuai: menuai, user_input: dict[str, Any]
 ) -> PyObihai | None:
     """Manage Obihai options."""
 
     if user_input[CONF_USERNAME] and user_input[CONF_PASSWORD]:
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             validate_auth,
             user_input[CONF_HOST],
             user_input[CONF_USERNAME],
@@ -66,15 +66,15 @@ class ObihaiFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                ip = await self.hass.async_add_executor_job(
+                ip = await self.menuai.async_add_executor_job(
                     gethostbyname, user_input[CONF_HOST]
                 )
             except gaierror:
                 errors["base"] = "cannot_connect"
 
             if ip:
-                if pyobihai := await async_validate_creds(self.hass, user_input):
-                    device_mac = await self.hass.async_add_executor_job(
+                if pyobihai := await async_validate_creds(self.menuai, user_input):
+                    device_mac = await self.menuai.async_add_executor_job(
                         pyobihai.get_device_mac
                     )
                     await self.async_set_unique_id(format_mac(device_mac))
@@ -115,7 +115,7 @@ class ObihaiFlowHandler(ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: DEFAULT_PASSWORD,
                 CONF_USERNAME: DEFAULT_USERNAME,
             }
-            if await async_validate_creds(self.hass, credentials):
+            if await async_validate_creds(self.menuai, credentials):
                 self.discovery_schema = self.add_suggested_values_to_schema(
                     DATA_SCHEMA, credentials
                 )

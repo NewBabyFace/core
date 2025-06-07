@@ -13,15 +13,15 @@ from aiohue.util import normalize_bridge_id
 import slugify as unicode_slug
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_API_KEY, CONF_API_VERSION, CONF_HOST
-from homeassistant.core import callback
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_API_KEY, CONF_API_VERSION, CONF_HOST
+from menuai.core import callback
+from menuai.helpers import (
     aiohttp_client,
     config_validation as cv,
     device_registry as dr,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .bridge import HueConfigEntry
 from .const import (
@@ -37,7 +37,7 @@ from .errors import CannotConnect
 LOGGER = logging.getLogger(__name__)
 
 HUE_MANUFACTURERURL = ("http://www.philips.com", "http://www.philips-hue.com")
-HUE_IGNORED_BRIDGE_NAMES = ["Home Assistant Bridge", "Espalexa"]
+HUE_IGNORED_BRIDGE_NAMES = ["MenuAI Bridge", "Espalexa"]
 HUE_MANUAL_BRIDGE_ID = "manual"
 
 
@@ -74,7 +74,7 @@ class HueFlowHandler(ConfigFlow, domain=DOMAIN):
         """Return a DiscoveredHueBridge object."""
         try:
             bridge = await discover_bridge(
-                host, websession=aiohttp_client.async_get_clientsession(self.hass)
+                host, websession=aiohttp_client.async_get_clientsession(self.menuai)
             )
         except aiohttp.ClientError as err:
             LOGGER.warning(
@@ -110,7 +110,7 @@ class HueFlowHandler(ConfigFlow, domain=DOMAIN):
         try:
             async with asyncio.timeout(5):
                 bridges = await discover_nupnp(
-                    websession=aiohttp_client.async_get_clientsession(self.hass)
+                    websession=aiohttp_client.async_get_clientsession(self.menuai)
                 )
         except TimeoutError:
             bridges = []
@@ -171,14 +171,14 @@ class HueFlowHandler(ConfigFlow, domain=DOMAIN):
         assert bridge is not None
         errors = {}
         device_name = unicode_slug.slugify(
-            self.hass.config.location_name, max_length=19
+            self.menuai.config.location_name, max_length=19
         )
 
         try:
             app_key = await create_app_key(
                 bridge.host,
                 f"home-assistant#{device_name}",
-                websession=aiohttp_client.async_get_clientsession(self.hass),
+                websession=aiohttp_client.async_get_clientsession(self.menuai),
             )
         except LinkButtonNotPressed:
             errors["base"] = "register_failed"
@@ -316,7 +316,7 @@ class HueV2OptionsFlowHandler(OptionsFlow):
 
         # create a list of Hue device ID's that the user can select
         # to ignore availability status
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         entries = dr.async_entries_for_config_entry(dev_reg, self.config_entry.entry_id)
         dev_ids = {
             identifier[1]: entry.name

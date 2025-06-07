@@ -1,44 +1,44 @@
-"""Test the Home Assistant Cloud config flow."""
+"""Test the MenuAI Cloud config flow."""
 
 from unittest.mock import patch
 
-from homeassistant.components.cloud.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.cloud.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_config_flow(hass: HomeAssistant) -> None:
+async def test_config_flow(menuai: menuai) -> None:
     """Test create cloud entry."""
 
     with (
         patch(
-            "homeassistant.components.cloud.async_setup", return_value=True
+            "menuai.components.cloud.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.cloud.async_setup_entry",
+            "menuai.components.cloud.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": "system"}
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
-        assert result["title"] == "Home Assistant Cloud"
+        assert result["title"] == "MenuAI Cloud"
         assert result["data"] == {}
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup.mock_calls) == 1
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_multiple_entries(hass: HomeAssistant) -> None:
+async def test_multiple_entries(menuai: menuai) -> None:
     """Test creating multiple cloud entries."""
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": "system"}
     )
     assert result["type"] is FlowResultType.ABORT

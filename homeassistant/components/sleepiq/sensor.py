@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from asyncsleepiq import SleepIQBed, SleepIQSleeper
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorEntity, SensorStateClass
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, PRESSURE, SLEEP_NUMBER
 from .coordinator import SleepIQData, SleepIQDataUpdateCoordinator
@@ -17,12 +17,12 @@ SENSORS = [PRESSURE, SLEEP_NUMBER]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the SleepIQ bed sensors."""
-    data: SleepIQData = hass.data[DOMAIN][entry.entry_id]
+    data: SleepIQData = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         SleepIQSensorEntity(data.data_coordinator, bed, sleeper, sensor_type)
         for bed in data.client.beds.values()

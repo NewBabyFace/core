@@ -5,14 +5,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration, update_property_listeners
 
@@ -29,19 +29,19 @@ NUMBER_ENTITIES = [
 
 @pytest.mark.usefixtures("mock_federwiege")
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Smarla entities."""
     with (
-        patch("homeassistant.components.smarla.PLATFORMS", [Platform.NUMBER]),
+        patch("menuai.components.smarla.PLATFORMS", [Platform.NUMBER]),
     ):
-        assert await setup_integration(hass, mock_config_entry)
+        assert await setup_integration(menuai, mock_config_entry)
 
         await snapshot_platform(
-            hass, entity_registry, snapshot, mock_config_entry.entry_id
+            menuai, entity_registry, snapshot, mock_config_entry.entry_id
         )
 
 
@@ -51,7 +51,7 @@ async def test_entities(
 )
 @pytest.mark.parametrize("entity_info", NUMBER_ENTITIES)
 async def test_number_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_federwiege: MagicMock,
     entity_info: dict[str, str],
@@ -59,7 +59,7 @@ async def test_number_action(
     parameter: int,
 ) -> None:
     """Test Smarla Number set behavior."""
-    assert await setup_integration(hass, mock_config_entry)
+    assert await setup_integration(menuai, mock_config_entry)
 
     mock_number_property = mock_federwiege.get_property(
         entity_info["service"], entity_info["property"]
@@ -68,7 +68,7 @@ async def test_number_action(
     entity_id = entity_info["entity_id"]
 
     # Turn on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         service,
         {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: parameter},
@@ -79,13 +79,13 @@ async def test_number_action(
 
 @pytest.mark.parametrize("entity_info", NUMBER_ENTITIES)
 async def test_number_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_federwiege: MagicMock,
     entity_info: dict[str, str],
 ) -> None:
     """Test Smarla Number callback."""
-    assert await setup_integration(hass, mock_config_entry)
+    assert await setup_integration(menuai, mock_config_entry)
 
     mock_number_property = mock_federwiege.get_property(
         entity_info["service"], entity_info["property"]
@@ -93,11 +93,11 @@ async def test_number_state_update(
 
     entity_id = entity_info["entity_id"]
 
-    assert hass.states.get(entity_id).state == "1"
+    assert menuai.states.get(entity_id).state == "1"
 
     mock_number_property.get.return_value = 100
 
     await update_property_listeners(mock_number_property)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == "100"
+    assert menuai.states.get(entity_id).state == "100"

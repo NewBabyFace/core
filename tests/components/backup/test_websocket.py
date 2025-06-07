@@ -9,7 +9,7 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AddonInfo,
     AgentBackup,
     BackupAgentError,
@@ -18,20 +18,20 @@ from homeassistant.components.backup import (
     Folder,
     store,
 )
-from homeassistant.components.backup.agent import BackupAgentUnreachableError
-from homeassistant.components.backup.const import DATA_MANAGER, DOMAIN
-from homeassistant.components.backup.manager import (
+from menuai.components.backup.agent import BackupAgentUnreachableError
+from menuai.components.backup.const import DATA_MANAGER, DOMAIN
+from menuai.components.backup.manager import (
     AgentBackupStatus,
     CreateBackupEvent,
     CreateBackupState,
     ManagerBackup,
     NewBackup,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.backup import async_initialize_backup
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.backup import async_initialize_backup
+from menuai.setup import async_setup_component
 
 from .common import (
     LOCAL_AGENT_ID,
@@ -53,7 +53,7 @@ BACKUP_CALL = call(
     include_all_addons=False,
     include_database=True,
     include_folders=None,
-    include_homeassistant=True,
+    include_menuai=True,
     password="test-password",
     on_progress=ANY,
 )
@@ -94,8 +94,8 @@ TEST_MANAGER_BACKUP = ManagerBackup(
     failed_agent_ids=[],
     failed_folders=[],
     folders=[Folder.MEDIA, Folder.SHARE],
-    homeassistant_included=True,
-    homeassistant_version="2024.12.0",
+    menuai_included=True,
+    menuai_version="2024.12.0",
     name="Test",
     with_automatic_settings=True,
 )
@@ -116,7 +116,7 @@ def sync_access_token_proxy(
 @pytest.fixture(autouse=True)
 def mock_delay_save() -> Generator[None]:
     """Mock the delay save constant."""
-    with patch("homeassistant.components.backup.store.STORE_DELAY_SAVE", 0):
+    with patch("menuai.components.backup.store.STORE_DELAY_SAVE", 0):
         yield
 
 
@@ -124,7 +124,7 @@ def mock_delay_save() -> Generator[None]:
 def mock_get_backups() -> Generator[AsyncMock]:
     """Mock manager get backups."""
     with patch(
-        "homeassistant.components.backup.BackupManager.async_get_backups"
+        "menuai.components.backup.BackupManager.async_get_backups"
     ) as mock_get_backups:
         yield mock_get_backups
 
@@ -139,22 +139,22 @@ def mock_get_backups() -> Generator[AsyncMock]:
     ],
 )
 async def test_info(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     remote_agents: list[str],
     remote_backups: dict[str, list[AgentBackup]],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting backup info."""
     await setup_backup_integration(
-        hass,
-        with_hassio=False,
+        menuai,
+        with_menuaiio=False,
         backups={LOCAL_AGENT_ID: [TEST_BACKUP_ABC123]} | remote_backups,
         remote_agents=remote_agents,
     )
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/info"})
     assert await client.receive_json() == snapshot
@@ -162,25 +162,25 @@ async def test_info(
 
 @pytest.mark.parametrize(
     "side_effect",
-    [Exception("Oops"), HomeAssistantError("Boom!"), BackupAgentUnreachableError],
+    [Exception("Oops"), menuaiError("Boom!"), BackupAgentUnreachableError],
 )
 async def test_info_with_errors(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     side_effect: Exception,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting backup info with one unavailable agent."""
     mock_agents = await setup_backup_integration(
-        hass,
-        with_hassio=False,
+        menuai,
+        with_menuaiio=False,
         backups={LOCAL_AGENT_ID: [TEST_BACKUP_ABC123]},
         remote_agents=["test.remote"],
     )
     mock_agents["test.remote"].async_list_backups.side_effect = side_effect
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/info"})
     assert await client.receive_json() == snapshot
@@ -203,19 +203,19 @@ async def test_info_with_errors(
     ],
 )
 async def test_details(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     remote_agents: list[str],
     backups: dict[str, list[AgentBackup]],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting backup info."""
     await setup_backup_integration(
-        hass, with_hassio=False, backups=backups, remote_agents=remote_agents
+        menuai, with_menuaiio=False, backups=backups, remote_agents=remote_agents
     )
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     with patch("pathlib.Path.exists", return_value=True):
         await client.send_json_auto_id(
@@ -226,25 +226,25 @@ async def test_details(
 
 @pytest.mark.parametrize(
     "side_effect",
-    [Exception("Oops"), HomeAssistantError("Boom!"), BackupAgentUnreachableError],
+    [Exception("Oops"), menuaiError("Boom!"), BackupAgentUnreachableError],
 )
 async def test_details_with_errors(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     side_effect: Exception,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting backup info with one unavailable agent."""
     mock_agents = await setup_backup_integration(
-        hass,
-        with_hassio=False,
+        menuai,
+        with_menuaiio=False,
         backups={LOCAL_AGENT_ID: [TEST_BACKUP_ABC123]},
         remote_agents=["test.remote"],
     )
     mock_agents["test.remote"].async_get_backup.side_effect = side_effect
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     with patch("pathlib.Path.exists", return_value=True):
         await client.send_json_auto_id(
@@ -254,18 +254,18 @@ async def test_details_with_errors(
 
 
 async def test_details_get_backup_returns_none(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting backup info when the agent returns None from get_backup."""
-    mock_agents = await setup_backup_integration(hass, remote_agents=["test.remote"])
+    mock_agents = await setup_backup_integration(menuai, remote_agents=["test.remote"])
     mock_agents["test.remote"].async_get_backup.return_value = None
     mock_agents["test.remote"].async_get_backup.side_effect = None
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     with patch("pathlib.Path.exists", return_value=True):
         await client.send_json_auto_id(
@@ -295,19 +295,19 @@ async def test_details_get_backup_returns_none(
     ],
 )
 async def test_delete(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     remote_agents: list[str],
     backups: dict[str, list[AgentBackup]],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test deleting a backup file."""
     await setup_backup_integration(
-        hass, with_hassio=False, backups=backups, remote_agents=remote_agents
+        menuai, with_menuaiio=False, backups=backups, remote_agents=remote_agents
     )
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/info"})
     assert await client.receive_json() == snapshot
@@ -343,26 +343,26 @@ async def test_delete(
     ],
 )
 @pytest.mark.parametrize(
-    "side_effect", [None, HomeAssistantError("Boom!"), BackupAgentUnreachableError]
+    "side_effect", [None, menuaiError("Boom!"), BackupAgentUnreachableError]
 )
 async def test_delete_with_errors(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
     side_effect: Exception,
     storage_data: dict[str, Any] | None,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test deleting a backup with one unavailable agent."""
-    hass_storage[DOMAIN] = {
+    menuai_storage[DOMAIN] = {
         "data": storage_data,
         "key": DOMAIN,
         "version": store.STORAGE_VERSION,
         "minor_version": store.STORAGE_VERSION_MINOR,
     }
     mock_agents = await setup_backup_integration(
-        hass,
-        with_hassio=False,
+        menuai,
+        with_menuaiio=False,
         backups={
             LOCAL_AGENT_ID: [TEST_BACKUP_ABC123],
             "test.remote": [TEST_BACKUP_ABC123],
@@ -371,8 +371,8 @@ async def test_delete_with_errors(
     )
     mock_agents["test.remote"].async_delete_backup.side_effect = side_effect
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/delete", "backup_id": "abc123"})
     assert await client.receive_json() == snapshot
@@ -382,17 +382,17 @@ async def test_delete_with_errors(
 
 
 async def test_agent_delete_backup(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test deleting a backup file with a mock agent."""
     mock_agents = await setup_backup_integration(
-        hass, with_hassio=False, remote_agents=["test.remote"]
+        menuai, with_menuaiio=False, remote_agents=["test.remote"]
     )
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id(
         {
@@ -415,18 +415,18 @@ async def test_agent_delete_backup(
 )
 @pytest.mark.usefixtures("mock_backup_generation")
 async def test_generate(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     data: dict[str, Any] | None,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test generating a backup."""
-    await setup_backup_integration(hass, with_hassio=False)
+    await setup_backup_integration(menuai, with_menuaiio=False)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     freezer.move_to("2024-11-13 12:01:00+01:00")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/subscribe_events"})
     assert await client.receive_json() == snapshot
@@ -441,8 +441,8 @@ async def test_generate(
     ("parameters", "expected_error"),
     [
         (
-            {"include_homeassistant": False},
-            "Home Assistant must be included in backup",
+            {"include_menuai": False},
+            "MenuAI must be included in backup",
         ),
         (
             {"include_addons": ["blah"]},
@@ -459,15 +459,15 @@ async def test_generate(
     ],
 )
 async def test_generate_wrong_parameters(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     parameters: dict[str, Any],
     expected_error: str,
 ) -> None:
     """Test generating a backup."""
-    await setup_backup_integration(hass, with_hassio=False)
+    await setup_backup_integration(menuai, with_menuaiio=False)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     default_parameters = {"type": "backup/generate", "agent_ids": ["backup.local"]}
 
@@ -502,22 +502,22 @@ async def test_generate_wrong_parameters(
     ],
 )
 async def test_generate_calls_create(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     params: dict[str, Any],
     expected_extra_call_params: dict[str, Any],
 ) -> None:
     """Test translation of WS parameter to backup/generate to async_initiate_backup."""
-    await setup_backup_integration(hass, with_hassio=False)
+    await setup_backup_integration(menuai, with_menuaiio=False)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     freezer.move_to("2024-11-13 12:01:00+01:00")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_initiate_backup",
+        "menuai.components.backup.manager.BackupManager.async_initiate_backup",
         return_value=NewBackup(backup_job_id="abc123"),
     ) as generate_backup:
         await client.send_json_auto_id({"type": "backup/generate"} | params)
@@ -527,7 +527,7 @@ async def test_generate_calls_create(
         generate_backup.assert_called_once_with(
             **{
                 "include_all_addons": False,
-                "include_homeassistant": True,
+                "include_menuai": True,
                 "include_addons": None,
                 "include_database": True,
                 "include_folders": None,
@@ -567,7 +567,7 @@ async def test_generate_calls_create(
                 "include_all_addons": False,
                 "include_database": True,
                 "include_folders": None,
-                "include_homeassistant": True,
+                "include_menuai": True,
                 "on_progress": ANY,
                 "password": None,
             },
@@ -595,7 +595,7 @@ async def test_generate_calls_create(
                 "include_all_addons": False,
                 "include_database": True,
                 "include_folders": [Folder.MEDIA],
-                "include_homeassistant": True,
+                "include_menuai": True,
                 "on_progress": ANY,
                 "password": "test-password",
             },
@@ -623,7 +623,7 @@ async def test_generate_calls_create(
                 "include_all_addons": False,
                 "include_database": True,
                 "include_folders": None,
-                "include_homeassistant": True,
+                "include_menuai": True,
                 "on_progress": ANY,
                 "password": None,
             },
@@ -633,9 +633,9 @@ async def test_generate_calls_create(
     ],
 )
 async def test_generate_with_default_settings_calls_create(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
     freezer: FrozenDateTimeFactory,
     create_backup: AsyncMock,
     create_backup_settings: dict[str, Any],
@@ -646,11 +646,11 @@ async def test_generate_with_default_settings_calls_create(
     """Test backup/generate_with_automatic_settings calls async_initiate_backup."""
     created_backup: MagicMock = create_backup.return_value[1].result().backup
     created_backup.protected = create_backup_settings["password"] is not None
-    client = await hass_ws_client(hass)
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    client = await menuai_ws_client(menuai)
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to("2024-11-13T12:01:00+01:00")
     mock_agents = await setup_backup_integration(
-        hass, with_hassio=False, remote_agents=["test.remote"]
+        menuai, with_menuaiio=False, remote_agents=["test.remote"]
     )
 
     await client.send_json_auto_id(
@@ -660,19 +660,19 @@ async def test_generate_with_default_settings_calls_create(
     assert result["success"]
 
     freezer.tick()
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["create_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["create_backup"]
         == create_backup_settings
     )
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
         is None
     )
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
         is None
     )
 
@@ -682,20 +682,20 @@ async def test_generate_with_default_settings_calls_create(
     assert result["success"]
     assert result["result"] == {"backup_job_id": "abc123"}
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     create_backup.assert_called_once_with(**expected_call_params)
 
     freezer.tick()
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
         == "2024-11-13T12:01:01+01:00"
     )
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
         == last_completed_automatic_backup
     )
 
@@ -708,22 +708,22 @@ async def test_generate_with_default_settings_calls_create(
     ],
 )
 async def test_restore_local_agent(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     backups: dict[str, list[AgentBackup]],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test calling the restore command."""
-    await setup_backup_integration(hass, with_hassio=False, backups=backups)
-    restart_calls = async_mock_service(hass, "homeassistant", "restart")
+    await setup_backup_integration(menuai, with_menuaiio=False, backups=backups)
+    restart_calls = async_mock_service(menuai, "menuai", "restart")
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     with (
         patch("pathlib.Path.exists", return_value=True),
         patch("pathlib.Path.write_text"),
-        patch("homeassistant.components.backup.manager.validate_password"),
+        patch("menuai.components.backup.manager.validate_password"),
     ):
         await client.send_json_auto_id(
             {
@@ -744,8 +744,8 @@ async def test_restore_local_agent(
     ],
 )
 async def test_restore_remote_agent(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     remote_agents: list[str],
     backups: dict[str, list[AgentBackup]],
     snapshot: SnapshotAssertion,
@@ -753,17 +753,17 @@ async def test_restore_remote_agent(
     """Test calling the restore command."""
 
     await setup_backup_integration(
-        hass, with_hassio=False, backups=backups, remote_agents=remote_agents
+        menuai, with_menuaiio=False, backups=backups, remote_agents=remote_agents
     )
-    restart_calls = async_mock_service(hass, "homeassistant", "restart")
+    restart_calls = async_mock_service(menuai, "menuai", "restart")
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     with (
         patch("pathlib.Path.write_text"),
         patch("pathlib.Path.open"),
-        patch("homeassistant.components.backup.manager.validate_password"),
+        patch("menuai.components.backup.manager.validate_password"),
     ):
         await client.send_json_auto_id(
             {
@@ -777,19 +777,19 @@ async def test_restore_remote_agent(
 
 
 async def test_restore_remote_agent_get_backup_returns_none(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test calling the restore command when the agent returns None from get_backup."""
-    mock_agents = await setup_backup_integration(hass, remote_agents=["test.remote"])
+    mock_agents = await setup_backup_integration(menuai, remote_agents=["test.remote"])
     mock_agents["test.remote"].async_get_backup.return_value = None
     mock_agents["test.remote"].async_get_backup.side_effect = None
-    restart_calls = async_mock_service(hass, "homeassistant", "restart")
+    restart_calls = async_mock_service(menuai, "menuai", "restart")
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id(
         {
@@ -807,24 +807,24 @@ async def test_restore_remote_agent_get_backup_returns_none(
 
 
 async def test_restore_wrong_password(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test calling the restore command."""
     await setup_backup_integration(
-        hass, with_hassio=False, backups={LOCAL_AGENT_ID: [TEST_BACKUP_ABC123]}
+        menuai, with_menuaiio=False, backups={LOCAL_AGENT_ID: [TEST_BACKUP_ABC123]}
     )
-    restart_calls = async_mock_service(hass, "homeassistant", "restart")
+    restart_calls = async_mock_service(menuai, "menuai", "restart")
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     with (
         patch("pathlib.Path.exists", return_value=True),
         patch("pathlib.Path.write_text"),
         patch(
-            "homeassistant.components.backup.manager.validate_password",
+            "menuai.components.backup.manager.validate_password",
             return_value=False,
         ),
     ):
@@ -841,33 +841,33 @@ async def test_restore_wrong_password(
 
 @pytest.mark.parametrize(
     "access_token_fixture_name",
-    ["hass_access_token", "hass_supervisor_access_token"],
+    ["menuai_access_token", "menuai_supervisor_access_token"],
 )
 @pytest.mark.parametrize(
-    ("with_hassio"),
+    ("with_menuaiio"),
     [
-        pytest.param(True, id="with_hassio"),
-        pytest.param(False, id="without_hassio"),
+        pytest.param(True, id="with_menuaiio"),
+        pytest.param(False, id="without_menuaiio"),
     ],
 )
 @pytest.mark.usefixtures("supervisor_client")
 async def test_backup_end(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     sync_access_token_proxy: str,
     *,
     access_token_fixture_name: str,
-    with_hassio: bool,
+    with_menuaiio: bool,
 ) -> None:
     """Test handling of post backup actions from a WS command."""
-    await setup_backup_integration(hass, with_hassio=with_hassio)
+    await setup_backup_integration(menuai, with_menuaiio=with_menuaiio)
 
-    client = await hass_ws_client(hass, sync_access_token_proxy)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai, sync_access_token_proxy)
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_post_backup_actions",
+        "menuai.components.backup.manager.BackupManager.async_post_backup_actions",
     ):
         await client.send_json_auto_id({"type": "backup/end"})
         assert await client.receive_json() == snapshot
@@ -875,33 +875,33 @@ async def test_backup_end(
 
 @pytest.mark.parametrize(
     "access_token_fixture_name",
-    ["hass_access_token", "hass_supervisor_access_token"],
+    ["menuai_access_token", "menuai_supervisor_access_token"],
 )
 @pytest.mark.parametrize(
-    ("with_hassio"),
+    ("with_menuaiio"),
     [
-        pytest.param(True, id="with_hassio"),
-        pytest.param(False, id="without_hassio"),
+        pytest.param(True, id="with_menuaiio"),
+        pytest.param(False, id="without_menuaiio"),
     ],
 )
 @pytest.mark.usefixtures("supervisor_client")
 async def test_backup_start(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     sync_access_token_proxy: str,
     *,
     access_token_fixture_name: str,
-    with_hassio: bool,
+    with_menuaiio: bool,
 ) -> None:
     """Test handling of pre backup actions from a WS command."""
-    await setup_backup_integration(hass, with_hassio=with_hassio)
+    await setup_backup_integration(menuai, with_menuaiio=with_menuaiio)
 
-    client = await hass_ws_client(hass, sync_access_token_proxy)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai, sync_access_token_proxy)
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_pre_backup_actions",
+        "menuai.components.backup.manager.BackupManager.async_pre_backup_actions",
     ):
         await client.send_json_auto_id({"type": "backup/start"})
         assert await client.receive_json() == snapshot
@@ -911,26 +911,26 @@ async def test_backup_start(
     "exception",
     [
         TimeoutError(),
-        HomeAssistantError("Boom"),
+        menuaiError("Boom"),
         Exception("Boom"),
     ],
 )
 @pytest.mark.usefixtures("supervisor_client")
 async def test_backup_end_exception(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
     exception: Exception,
 ) -> None:
     """Test exception handling while running post backup actions from a WS command."""
-    await setup_backup_integration(hass, with_hassio=True)
+    await setup_backup_integration(menuai, with_menuaiio=True)
 
-    client = await hass_ws_client(hass, hass_supervisor_access_token)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai, menuai_supervisor_access_token)
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_post_backup_actions",
+        "menuai.components.backup.manager.BackupManager.async_post_backup_actions",
         side_effect=exception,
     ):
         await client.send_json_auto_id({"type": "backup/end"})
@@ -941,26 +941,26 @@ async def test_backup_end_exception(
     "exception",
     [
         TimeoutError(),
-        HomeAssistantError("Boom"),
+        menuaiError("Boom"),
         Exception("Boom"),
     ],
 )
 @pytest.mark.usefixtures("supervisor_client")
 async def test_backup_start_exception(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
     exception: Exception,
 ) -> None:
     """Test exception handling while running pre backup actions from a WS command."""
-    await setup_backup_integration(hass, with_hassio=True)
+    await setup_backup_integration(menuai, with_menuaiio=True)
 
-    client = await hass_ws_client(hass, hass_supervisor_access_token)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai, menuai_supervisor_access_token)
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_pre_backup_actions",
+        "menuai.components.backup.manager.BackupManager.async_pre_backup_actions",
         side_effect=exception,
     ):
         await client.send_json_auto_id({"type": "backup/start"})
@@ -968,17 +968,17 @@ async def test_backup_start_exception(
 
 
 async def test_agents_info(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test getting backup agents info."""
     await setup_backup_integration(
-        hass, with_hassio=False, remote_agents=["test.remote"]
+        menuai, with_menuaiio=False, remote_agents=["test.remote"]
     )
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/agents/info"})
     assert await client.receive_json() == snapshot
@@ -1224,7 +1224,7 @@ async def test_agents_info(
                         "agents": {},
                         "automatic_backups_configured": True,
                         "create_backup": {
-                            "agent_ids": ["hassio.local", "hassio.share", "test-agent"],
+                            "agent_ids": ["menuaiio.local", "menuaiio.share", "test-agent"],
                             "include_addons": None,
                             "include_all_addons": False,
                             "include_database": False,
@@ -1324,32 +1324,32 @@ async def test_agents_info(
     ],
 )
 @pytest.mark.parametrize(
-    ("with_hassio"),
+    ("with_menuaiio"),
     [
-        pytest.param(True, id="with_hassio"),
-        pytest.param(False, id="without_hassio"),
+        pytest.param(True, id="with_menuaiio"),
+        pytest.param(False, id="without_menuaiio"),
     ],
 )
 @pytest.mark.usefixtures("supervisor_client")
-@patch("homeassistant.components.backup.config.random.randint", Mock(return_value=600))
+@patch("menuai.components.backup.config.random.randint", Mock(return_value=600))
 async def test_config_load_config_info(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
-    hass_storage: dict[str, Any],
-    with_hassio: bool,
+    menuai_storage: dict[str, Any],
+    with_menuaiio: bool,
     storage_data: dict[str, Any],
 ) -> None:
     """Test loading stored backup config and reading it via config/info."""
-    client = await hass_ws_client(hass)
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    client = await menuai_ws_client(menuai)
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to("2024-11-13T12:01:00+01:00")
 
-    hass_storage.update(storage_data)
+    menuai_storage.update(storage_data)
 
-    await setup_backup_integration(hass, with_hassio=with_hassio)
-    await hass.async_block_till_done()
+    await setup_backup_integration(menuai, with_menuaiio=with_menuaiio)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/config/info"})
     assert await client.receive_json() == snapshot
@@ -1509,22 +1509,22 @@ async def test_config_load_config_info(
         ],
     ],
 )
-@patch("homeassistant.components.backup.config.random.randint", Mock(return_value=600))
+@patch("menuai.components.backup.config.random.randint", Mock(return_value=600))
 async def test_config_update(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     commands: list[dict[str, Any]],
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test updating the backup config."""
-    client = await hass_ws_client(hass)
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    client = await menuai_ws_client(menuai)
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to("2024-11-13T12:01:00+01:00")
 
-    await setup_backup_integration(hass)
-    await hass.async_block_till_done()
+    await setup_backup_integration(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "backup/config/info"})
     assert await client.receive_json() == snapshot
@@ -1536,14 +1536,14 @@ async def test_config_update(
 
         await client.send_json_auto_id({"type": "backup/config/info"})
         assert await client.receive_json() == snapshot
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Trigger store write
     freezer.tick(60)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass_storage[DOMAIN] == snapshot
+    assert menuai_storage[DOMAIN] == snapshot
 
 
 @pytest.mark.usefixtures("get_backups")
@@ -1615,16 +1615,16 @@ async def test_config_update(
     ],
 )
 async def test_config_update_errors(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     command: dict[str, Any],
 ) -> None:
     """Test errors when updating the backup config."""
-    await setup_backup_integration(hass)
-    await hass.async_block_till_done()
+    await setup_backup_integration(menuai)
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "backup/config/info"})
     assert await client.receive_json() == snapshot
@@ -1636,7 +1636,7 @@ async def test_config_update_errors(
 
     await client.send_json_auto_id({"type": "backup/config/info"})
     assert await client.receive_json() == snapshot
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -1917,12 +1917,12 @@ async def test_config_update_errors(
         ),
     ],
 )
-@patch("homeassistant.components.backup.config.random.randint", Mock(return_value=600))
+@patch("menuai.components.backup.config.random.randint", Mock(return_value=600))
 async def test_config_schedule_logic(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     create_backup: AsyncMock,
     commands: list[dict[str, Any]],
     last_completed_automatic_backup: str,
@@ -1941,7 +1941,7 @@ async def test_config_schedule_logic(
     created_backup: MagicMock = create_backup.return_value[1].result().backup
     created_backup.protected = True
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     storage_data = {
         "backups": [],
         "config": {
@@ -1967,18 +1967,18 @@ async def test_config_schedule_logic(
             },
         },
     }
-    hass_storage[DOMAIN] = {
+    menuai_storage[DOMAIN] = {
         "data": storage_data,
         "key": DOMAIN,
         "version": store.STORAGE_VERSION,
         "minor_version": store.STORAGE_VERSION_MINOR,
     }
     create_backup.side_effect = create_backup_side_effect
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to("2024-11-11 12:00:00+01:00")
 
-    await setup_backup_integration(hass, remote_agents=["test.test-agent"])
-    await hass.async_block_till_done()
+    await setup_backup_integration(menuai, remote_agents=["test.test-agent"])
+    await menuai.async_block_till_done()
 
     for command in commands:
         await client.send_json_auto_id(command)
@@ -1991,25 +1991,25 @@ async def test_config_schedule_logic(
     assert result["result"]["next_automatic_backup_additional"] == additional_backup
 
     freezer.move_to(time_1)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert create_backup.call_count == backup_calls_1
     assert create_backup.call_args == call_args
-    async_fire_time_changed(hass, fire_all=True)  # flush out storage save
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, fire_all=True)  # flush out storage save
+    await menuai.async_block_till_done()
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
         == attempted_backup_time
     )
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
         == completed_backup_time
     )
 
     freezer.move_to(time_2)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert create_backup.call_count == backup_calls_2
     assert create_backup.call_args == call_args
@@ -2828,12 +2828,12 @@ async def test_config_schedule_logic(
         ),
     ],
 )
-@patch("homeassistant.components.backup.config.BACKUP_START_TIME_JITTER", 0)
+@patch("menuai.components.backup.config.BACKUP_START_TIME_JITTER", 0)
 async def test_config_retention_copies_logic(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     create_backup: AsyncMock,
     get_backups: AsyncMock,
     command: dict[str, Any],
@@ -2851,7 +2851,7 @@ async def test_config_retention_copies_logic(
     created_backup: MagicMock = create_backup.return_value[1].result().backup
     created_backup.protected = True
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     storage_data = {
         "backups": [],
         "config": {
@@ -2877,20 +2877,20 @@ async def test_config_retention_copies_logic(
             },
         },
     }
-    hass_storage[DOMAIN] = {
+    menuai_storage[DOMAIN] = {
         "data": storage_data,
         "key": DOMAIN,
         "version": store.STORAGE_VERSION,
         "minor_version": store.STORAGE_VERSION_MINOR,
     }
     get_backups.return_value = (backups, get_backups_agent_errors)
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to("2024-11-11 12:00:00+01:00")
 
     mock_agents = await setup_backup_integration(
-        hass, remote_agents=["test.test-agent", "test.test-agent2"]
+        menuai, remote_agents=["test.test-agent", "test.test-agent2"]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for agent_id, agent in mock_agents.items():
         agent.async_delete_backup.side_effect = delete_backup_side_effects.get(agent_id)
@@ -2901,22 +2901,22 @@ async def test_config_retention_copies_logic(
     assert result["success"]
 
     freezer.move_to(next_time)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert create_backup.call_count == backup_calls
     assert get_backups.call_count == get_backups_calls
     for agent_id, agent in mock_agents.items():
         agent_delete_calls = delete_calls.get(agent_id, [])
         assert agent.async_delete_backup.call_count == len(agent_delete_calls)
         assert agent.async_delete_backup.call_args_list == agent_delete_calls
-    async_fire_time_changed(hass, fire_all=True)  # flush out storage save
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, fire_all=True)  # flush out storage save
+    await menuai.async_block_till_done()
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
         == backup_time
     )
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
         == backup_time
     )
 
@@ -3111,10 +3111,10 @@ async def test_config_retention_copies_logic(
     ],
 )
 async def test_config_retention_copies_logic_manual_backup(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     create_backup: AsyncMock,
     get_backups: AsyncMock,
     config_command: dict[str, Any],
@@ -3130,7 +3130,7 @@ async def test_config_retention_copies_logic_manual_backup(
     created_backup: MagicMock = create_backup.return_value[1].result().backup
     created_backup.protected = True
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     storage_data = {
         "backups": [],
         "config": {
@@ -3156,20 +3156,20 @@ async def test_config_retention_copies_logic_manual_backup(
             },
         },
     }
-    hass_storage[DOMAIN] = {
+    menuai_storage[DOMAIN] = {
         "data": storage_data,
         "key": DOMAIN,
         "version": store.STORAGE_VERSION,
         "minor_version": store.STORAGE_VERSION_MINOR,
     }
     get_backups.return_value = (backups, get_backups_agent_errors)
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to("2024-11-11 12:00:00+01:00")
 
     mock_agents = await setup_backup_integration(
-        hass, remote_agents=["test.test-agent"]
+        menuai, remote_agents=["test.test-agent"]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id(config_command)
     result = await client.receive_json()
@@ -3181,7 +3181,7 @@ async def test_config_retention_copies_logic_manual_backup(
     assert result["success"]
 
     # Wait for backup creation to complete
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert create_backup.call_count == backup_calls
     assert get_backups.call_count == get_backups_calls
@@ -3189,14 +3189,14 @@ async def test_config_retention_copies_logic_manual_backup(
         agent_delete_calls = delete_calls.get(agent_id, [])
         assert agent.async_delete_backup.call_count == len(agent_delete_calls)
         assert agent.async_delete_backup.call_args_list == agent_delete_calls
-    async_fire_time_changed(hass, fire_all=True)  # flush out storage save
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, fire_all=True)  # flush out storage save
+    await menuai.async_block_till_done()
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_attempted_automatic_backup"]
         == backup_time
     )
     assert (
-        hass_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
+        menuai_storage[DOMAIN]["data"]["config"]["last_completed_automatic_backup"]
         == backup_time
     )
 
@@ -3778,10 +3778,10 @@ async def test_config_retention_copies_logic_manual_backup(
     ],
 )
 async def test_config_retention_days_logic(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     get_backups: AsyncMock,
     stored_retained_days: int | None,
     commands: list[dict[str, Any]],
@@ -3795,7 +3795,7 @@ async def test_config_retention_days_logic(
     delete_calls: dict[str, Any],
 ) -> None:
     """Test config backup retention logic."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     storage_data = {
         "backups": [],
         "config": {
@@ -3821,20 +3821,20 @@ async def test_config_retention_days_logic(
             },
         },
     }
-    hass_storage[DOMAIN] = {
+    menuai_storage[DOMAIN] = {
         "data": storage_data,
         "key": DOMAIN,
         "version": store.STORAGE_VERSION,
         "minor_version": store.STORAGE_VERSION_MINOR,
     }
     get_backups.return_value = (backups, get_backups_agent_errors)
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to(start_time)
 
     mock_agents = await setup_backup_integration(
-        hass, remote_agents=["test.test-agent", "test.test-agent2"]
+        menuai, remote_agents=["test.test-agent", "test.test-agent2"]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for agent_id, agent in mock_agents.items():
         agent.async_delete_backup.side_effect = delete_backup_side_effects.get(agent_id)
@@ -3845,27 +3845,27 @@ async def test_config_retention_days_logic(
         assert result["success"]
 
     freezer.move_to(next_time)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert get_backups.call_count == get_backups_calls
     for agent_id, agent in mock_agents.items():
         agent_delete_calls = delete_calls.get(agent_id, [])
         assert agent.async_delete_backup.call_count == len(agent_delete_calls)
         assert agent.async_delete_backup.call_args_list == agent_delete_calls
-    async_fire_time_changed(hass, fire_all=True)  # flush out storage save
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, fire_all=True)  # flush out storage save
+    await menuai.async_block_till_done()
 
 
 async def test_configured_agents_unavailable_repair(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     issue_registry: ir.IssueRegistry,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test creating and deleting repair issue for configured unavailable agents."""
     issue_id = "automatic_backup_agents_unavailable_test.agent"
-    ws_client = await hass_ws_client(hass)
-    hass_storage.update(
+    ws_client = await menuai_ws_client(menuai)
+    menuai_storage.update(
         {
             "backup": {
                 "data": {
@@ -3900,18 +3900,18 @@ async def test_configured_agents_unavailable_repair(
         }
     )
 
-    await setup_backup_integration(hass)
+    await setup_backup_integration(menuai)
     get_agents_mock = AsyncMock(return_value=[mock_backup_agent("agent")])
     register_listener_mock = Mock()
     await setup_backup_platform(
-        hass,
+        menuai,
         domain="test",
         platform=Mock(
             async_get_backup_agents=get_agents_mock,
             async_register_backup_agents_listener=register_listener_mock,
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     reload_backup_agents = register_listener_mock.call_args[1]["listener"]
 
@@ -3928,7 +3928,7 @@ async def test_configured_agents_unavailable_repair(
 
     get_agents_mock.return_value = []
     reload_backup_agents()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id({"type": "backup/agents/info"})
     resp = await ws_client.receive_json()
@@ -3963,7 +3963,7 @@ async def test_configured_agents_unavailable_repair(
 
     get_agents_mock.return_value = [mock_backup_agent("agent")]
     reload_backup_agents()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id({"type": "backup/agents/info"})
     resp = await ws_client.receive_json()
@@ -4001,7 +4001,7 @@ async def test_configured_agents_unavailable_repair(
 
     get_agents_mock.return_value = []
     reload_backup_agents()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id({"type": "backup/agents/info"})
     resp = await ws_client.receive_json()
@@ -4036,16 +4036,16 @@ async def test_configured_agents_unavailable_repair(
 
 
 async def test_subscribe_event(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test subscribe event."""
-    await setup_backup_integration(hass, with_hassio=False)
+    await setup_backup_integration(menuai, with_menuaiio=False)
 
-    manager = hass.data[DATA_MANAGER]
+    manager = menuai.data[DATA_MANAGER]
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "backup/subscribe_events"})
     assert await client.receive_json() == snapshot
@@ -4058,21 +4058,21 @@ async def test_subscribe_event(
 
 
 async def test_subscribe_event_early(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test subscribe event before backup integration has started."""
-    async_initialize_backup(hass)
-    await setup_backup_integration(hass, with_hassio=False)
+    async_initialize_backup(menuai)
+    await setup_backup_integration(menuai, with_menuaiio=False)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/subscribe_events"})
     assert await client.receive_json() == snapshot
 
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-    manager = hass.data[DATA_MANAGER]
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
+    manager = menuai.data[DATA_MANAGER]
 
     manager.async_on_backup_event(
         CreateBackupEvent(stage=None, state=CreateBackupState.IN_PROGRESS, reason=None)
@@ -4095,17 +4095,17 @@ async def test_subscribe_event_early(
 )
 @pytest.mark.usefixtures("mock_backups")
 async def test_can_decrypt_on_download(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     agent_id: str,
     backup_id: str,
     password: str,
 ) -> None:
     """Test can decrypt on download."""
-    await setup_backup_integration(hass, with_hassio=False)
+    await setup_backup_integration(menuai, with_menuaiio=False)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -4127,20 +4127,20 @@ async def test_can_decrypt_on_download(
 )
 @pytest.mark.usefixtures("mock_backups")
 async def test_can_decrypt_on_download_with_agent_error(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     error: Exception,
 ) -> None:
     """Test can decrypt on download."""
 
     mock_agents = await setup_backup_integration(
-        hass,
-        with_hassio=False,
+        menuai,
+        with_menuaiio=False,
         backups={"test.remote": [TEST_BACKUP_ABC123]},
         remote_agents=["test.remote"],
     )
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     mock_agents["test.remote"].async_download_backup.side_effect = error
     await client.send_json_auto_id(
@@ -4156,18 +4156,18 @@ async def test_can_decrypt_on_download_with_agent_error(
 
 @pytest.mark.usefixtures("mock_backups")
 async def test_can_decrypt_on_download_get_backup_returns_none(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test can decrypt on download when the agent returns None from get_backup."""
 
-    mock_agents = await setup_backup_integration(hass, remote_agents=["test.remote"])
+    mock_agents = await setup_backup_integration(menuai, remote_agents=["test.remote"])
     mock_agents["test.remote"].async_get_backup.return_value = None
     mock_agents["test.remote"].async_get_backup.side_effect = None
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "backup/can_decrypt_on_download",

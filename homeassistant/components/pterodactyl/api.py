@@ -8,7 +8,7 @@ from pydactyl import PterodactylClient
 from pydactyl.exceptions import BadRequestError, PterodactylApiError
 from requests.exceptions import ConnectionError, HTTPError
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,9 +55,9 @@ class PterodactylAPI:
     pterodactyl: PterodactylClient | None
     identifiers: list[str]
 
-    def __init__(self, hass: HomeAssistant, host: str, api_key: str) -> None:
+    def __init__(self, menuai: menuai, host: str, api_key: str) -> None:
         """Initialize the Pterodactyl API."""
-        self.hass = hass
+        self.menuai = menuai
         self.host = host
         self.api_key = api_key
         self.pterodactyl = None
@@ -74,7 +74,7 @@ class PterodactylAPI:
         self.pterodactyl = PterodactylClient(self.host, self.api_key)
 
         try:
-            game_servers = await self.hass.async_add_executor_job(self.get_game_servers)
+            game_servers = await self.menuai.async_add_executor_job(self.get_game_servers)
         except (
             BadRequestError,
             PterodactylApiError,
@@ -108,7 +108,7 @@ class PterodactylAPI:
 
         for identifier in self.identifiers:
             try:
-                server, utilization = await self.hass.async_add_executor_job(
+                server, utilization = await self.menuai.async_add_executor_job(
                     self.get_server_data, identifier
                 )
             except (BadRequestError, PterodactylApiError, ConnectionError) as error:
@@ -144,7 +144,7 @@ class PterodactylAPI:
     ) -> None:
         """Send a command to the Pterodactyl server."""
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.pterodactyl.client.servers.send_power_action,  # type: ignore[union-attr]
                 identifier,
                 command,

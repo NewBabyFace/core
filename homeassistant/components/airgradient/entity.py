@@ -5,10 +5,10 @@ from typing import Any, Concatenate
 
 from airgradient import AirGradientConnectionError, AirGradientError, get_model_name
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import AirGradientCoordinator
@@ -46,14 +46,14 @@ def exception_handler[_EntityT: AirGradientEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except AirGradientConnectionError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
                 translation_placeholders={"error": str(error)},
             ) from error
 
         except AirGradientError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unknown_error",
                 translation_placeholders={"error": str(error)},

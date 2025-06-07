@@ -4,48 +4,48 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
-from homeassistant.components.voip import DOMAIN
-from homeassistant.components.voip.devices import VoIPDevice
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components.repairs import DOMAIN as REPAIRS_DOMAIN
+from menuai.components.voip import DOMAIN
+from menuai.components.voip.devices import VoIPDevice
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_call_in_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     voip_device: VoIPDevice,
 ) -> None:
     """Test call in progress."""
-    state = hass.states.get("binary_sensor.192_168_1_210_call_in_progress")
+    state = menuai.states.get("binary_sensor.192_168_1_210_call_in_progress")
     assert state is not None
     assert state.state == "off"
 
     voip_device.set_is_active(True)
 
-    state = hass.states.get("binary_sensor.192_168_1_210_call_in_progress")
+    state = menuai.states.get("binary_sensor.192_168_1_210_call_in_progress")
     assert state.state == "on"
 
     voip_device.set_is_active(False)
 
-    state = hass.states.get("binary_sensor.192_168_1_210_call_in_progress")
+    state = menuai.states.get("binary_sensor.192_168_1_210_call_in_progress")
     assert state.state == "off"
 
 
 @pytest.mark.usefixtures("voip_device")
 async def test_assist_in_progress_disabled_by_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test assist in progress binary sensor is added disabled."""
 
-    assert not hass.states.get("binary_sensor.192_168_1_210_call_in_progress")
+    assert not menuai.states.get("binary_sensor.192_168_1_210_call_in_progress")
     entity_entry = entity_registry.async_get(
         "binary_sensor.192_168_1_210_call_in_progress"
     )
@@ -56,7 +56,7 @@ async def test_assist_in_progress_disabled_by_default(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_assist_in_progress_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     issue_registry: ir.IssueRegistry,
     voip_device: VoIPDevice,
@@ -65,7 +65,7 @@ async def test_assist_in_progress_issue(
 
     call_in_progress_entity_id = "binary_sensor.192_168_1_210_call_in_progress"
 
-    state = hass.states.get(call_in_progress_entity_id)
+    state = menuai.states.get(call_in_progress_entity_id)
     assert state is not None
 
     entity_entry = entity_registry.async_get(call_in_progress_entity_id)
@@ -79,7 +79,7 @@ async def test_assist_in_progress_issue(
         call_in_progress_entity_id,
         disabled_by=er.RegistryEntryDisabler.USER,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     issue = issue_registry.async_get_issue(
         DOMAIN, f"assist_in_progress_deprecated_{entity_entry.id}"
     )
@@ -88,8 +88,8 @@ async def test_assist_in_progress_issue(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_assist_in_progress_repair_flow(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     entity_registry: er.EntityRegistry,
     issue_registry: ir.IssueRegistry,
     voip_device: VoIPDevice,
@@ -98,7 +98,7 @@ async def test_assist_in_progress_repair_flow(
 
     call_in_progress_entity_id = "binary_sensor.192_168_1_210_call_in_progress"
 
-    state = hass.states.get(call_in_progress_entity_id)
+    state = menuai.states.get(call_in_progress_entity_id)
     assert state is not None
 
     entity_entry = entity_registry.async_get(call_in_progress_entity_id)
@@ -115,11 +115,11 @@ async def test_assist_in_progress_repair_flow(
     assert issue.translation_key == "assist_in_progress_deprecated"
     assert issue.translation_placeholders == {"integration_name": "VoIP"}
 
-    assert await async_setup_component(hass, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
-    await hass.async_block_till_done()
-    await hass.async_start()
+    assert await async_setup_component(menuai, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
+    await menuai.async_block_till_done()
+    await menuai.async_start()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",

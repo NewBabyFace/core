@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from greeneye import Monitors
@@ -23,7 +23,7 @@ CONF_TIME_UNIT = "time_unit"
 CONF_VOLTAGE_SENSORS = "voltage"
 
 DOMAIN = "greeneye_monitor"
-DATA_GREENEYE_MONITOR: HassKey[Monitors] = HassKey(DOMAIN)
+DATA_GREENEYE_MONITOR: menuaiKey[Monitors] = menuaiKey(DOMAIN)
 
 SENSOR_TYPE_CURRENT = "current_sensor"
 SENSOR_TYPE_PULSE_COUNTER = "pulse_counter"

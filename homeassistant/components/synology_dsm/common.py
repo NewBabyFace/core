@@ -26,8 +26,8 @@ from synology_dsm.exceptions import (
     SynologyDSMRequestException,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -35,10 +35,10 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_BACKUP_PATH,
@@ -59,9 +59,9 @@ class SynoApi:
 
     dsm: SynologyDSM
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Initialize the API wrapper class."""
-        self._hass = hass
+        self._menuai = menuai
         self._entry = entry
         if entry.data.get(CONF_SSL):
             self.config_url = f"https://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}"
@@ -108,7 +108,7 @@ class SynoApi:
         if self._login_future:
             return await self._login_future
 
-        self._login_future = self._hass.loop.create_future()
+        self._login_future = self._menuai.loop.create_future()
         try:
             await self.dsm.login()
             self._login_future.set_result(None)
@@ -126,7 +126,7 @@ class SynoApi:
 
     async def async_setup(self) -> None:
         """Start interacting with the NAS."""
-        session = async_get_clientsession(self._hass, self._entry.data[CONF_VERIFY_SSL])
+        session = async_get_clientsession(self._menuai, self._entry.data[CONF_VERIFY_SSL])
         self.dsm = SynologyDSM(
             session,
             self._entry.data[CONF_HOST],
@@ -190,7 +190,7 @@ class SynoApi:
 
             if shares and not self._entry.options.get(CONF_BACKUP_PATH):
                 ir.async_create_issue(
-                    self._hass,
+                    self._menuai,
                     DOMAIN,
                     f"{ISSUE_MISSING_BACKUP_SETUP}_{self._entry.unique_id}",
                     data={"entry_id": self._entry.entry_id},
@@ -408,7 +408,7 @@ class SynoApi:
             await self._syno_api_executer(self.system.shutdown)
 
     async def async_unload(self) -> None:
-        """Stop interacting with the NAS and prepare for removal from hass."""
+        """Stop interacting with the NAS and prepare for removal from menuai."""
         # ignore API errors during logout
         with suppress(SynologyDSMException):
             await self._syno_api_executer(self.dsm.logout)

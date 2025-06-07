@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import date, datetime
 import logging
 
-from homeassistant.core import callback
-from homeassistant.util import dt as dt_util
+from menuai.core import callback
+from menuai.util import dt as dt_util
 
 from . import SensorDeviceClass
 

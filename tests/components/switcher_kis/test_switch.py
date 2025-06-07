@@ -7,8 +7,8 @@ from aioswitcher.api.messages import SwitcherBaseResponse
 from aioswitcher.device import DeviceState, ShutterChildLock
 import pytest
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -16,9 +16,9 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util import slugify
 
 from . import init_integration
 from .consts import (
@@ -39,102 +39,102 @@ ENTITY_ID3_2 = f"{SWITCH_DOMAIN}.{slugify(DEVICE3.name)}_child_lock_2"
 
 @pytest.mark.parametrize("mock_bridge", [[DUMMY_WATER_HEATER_DEVICE]], indirect=True)
 async def test_switch(
-    hass: HomeAssistant, mock_bridge, mock_api, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_bridge, mock_api, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test the switch."""
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
     device = DUMMY_WATER_HEATER_DEVICE
     entity_id = f"{SWITCH_DOMAIN}.{slugify(device.name)}"
 
     # Test initial state - on
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
     # Test state change on --> off
     monkeypatch.setattr(device, "device_state", DeviceState.OFF)
     mock_bridge.mock_callbacks([DUMMY_WATER_HEATER_DEVICE])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Test turning on
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_device",
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_device",
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
         assert mock_api.call_count == 2
         mock_control_device.assert_called_once_with(Command.ON)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_ON
 
     # Test turning off
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_device"
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_device"
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
         assert mock_api.call_count == 4
         mock_control_device.assert_called_once_with(Command.OFF)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize("mock_bridge", [[DUMMY_WATER_HEATER_DEVICE]], indirect=True)
 async def test_switch_ignore_previous_async_state(
-    hass: HomeAssistant, mock_bridge, mock_api
+    menuai: menuai, mock_bridge, mock_api
 ) -> None:
     """Test switch ignores previous async state."""
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
     device = DUMMY_WATER_HEATER_DEVICE
     entity_id = f"{SWITCH_DOMAIN}.{slugify(device.name)}"
 
     # Test initial state - on
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
     # Test turning off
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_device"
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_device"
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
     # Push old state and makge sure it is ignored
     mock_bridge.mock_callbacks([DUMMY_WATER_HEATER_DEVICE])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_api.call_count == 2
     mock_control_device.assert_called_once_with(Command.OFF)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Verify new state is not ignored
     mock_bridge.mock_callbacks([DUMMY_WATER_HEATER_DEVICE])
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
 
 @pytest.mark.parametrize("mock_bridge", [[DUMMY_PLUG_DEVICE]], indirect=True)
 async def test_switch_control_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bridge,
     mock_api,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test switch control fail."""
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
     device = DUMMY_PLUG_DEVICE
@@ -143,18 +143,18 @@ async def test_switch_control_fail(
     # Test initial state - off
     monkeypatch.setattr(device, "device_state", DeviceState.OFF)
     mock_bridge.mock_callbacks([DUMMY_PLUG_DEVICE])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Test exception during turn on
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_device",
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_device",
         side_effect=RuntimeError("fake error"),
     ) as mock_control_device:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 SWITCH_DOMAIN,
                 SERVICE_TURN_ON,
                 {ATTR_ENTITY_ID: entity_id},
@@ -163,23 +163,23 @@ async def test_switch_control_fail(
 
         assert mock_api.call_count == 2
         mock_control_device.assert_called_once_with(Command.ON)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_UNAVAILABLE
 
     # Make device available again
     mock_bridge.mock_callbacks([DUMMY_PLUG_DEVICE])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Test error response during turn on
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_device",
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_device",
         return_value=SwitcherBaseResponse(None),
     ) as mock_control_device:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 SWITCH_DOMAIN,
                 SERVICE_TURN_ON,
                 {ATTR_ENTITY_ID: entity_id},
@@ -188,7 +188,7 @@ async def test_switch_control_fail(
 
         assert mock_api.call_count == 4
         mock_control_device.assert_called_once_with(Command.ON)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_UNAVAILABLE
 
 
@@ -228,7 +228,7 @@ async def test_switch_control_fail(
 )
 @pytest.mark.parametrize("mock_bridge", [[DEVICE, DEVICE2, DEVICE3]], indirect=True)
 async def test_child_lock_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bridge,
     mock_api,
     monkeypatch: pytest.MonkeyPatch,
@@ -238,83 +238,83 @@ async def test_child_lock_switch(
     child_lock_state: list[ShutterChildLock],
 ) -> None:
     """Test the switch."""
-    await init_integration(hass, USERNAME, TOKEN)
+    await init_integration(menuai, USERNAME, TOKEN)
     assert mock_bridge
 
     # Test initial state - on
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
     # Test state change on --> off
     monkeypatch.setattr(device, "child_lock", child_lock_state)
     mock_bridge.mock_callbacks([device])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Test turning on child lock
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock",
+        "menuai.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock",
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
         assert mock_api.call_count == 2
         mock_control_device.assert_called_once_with(ShutterChildLock.ON, cover_id)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_ON
 
     # Test turning off
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock"
+        "menuai.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock"
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
         assert mock_api.call_count == 4
         mock_control_device.assert_called_once_with(ShutterChildLock.OFF, cover_id)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize("mock_bridge", [[DEVICE]], indirect=True)
 async def test_child_lock_switch_ignore_previous_async_state(
-    hass: HomeAssistant, mock_bridge, mock_api
+    menuai: menuai, mock_bridge, mock_api
 ) -> None:
     """Test child lock switch ignores previous async state."""
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
     entity_id = f"{SWITCH_DOMAIN}.{slugify(DEVICE.name)}_child_lock"
 
     # Test initial state - on
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
     # Test turning off
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock"
+        "menuai.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock"
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
     # Push old state and makge sure it is ignored
     mock_bridge.mock_callbacks([DEVICE])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_api.call_count == 2
     mock_control_device.assert_called_once_with(ShutterChildLock.OFF, 0)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Verify new state is not ignored
     mock_bridge.mock_callbacks([DEVICE])
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
 
@@ -354,7 +354,7 @@ async def test_child_lock_switch_ignore_previous_async_state(
 )
 @pytest.mark.parametrize("mock_bridge", [[DEVICE, DEVICE2, DEVICE3]], indirect=True)
 async def test_child_lock_control_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bridge,
     mock_api,
     monkeypatch: pytest.MonkeyPatch,
@@ -364,24 +364,24 @@ async def test_child_lock_control_fail(
     child_lock_state: list[ShutterChildLock],
 ) -> None:
     """Test switch control fail."""
-    await init_integration(hass, USERNAME, TOKEN)
+    await init_integration(menuai, USERNAME, TOKEN)
     assert mock_bridge
 
     # Test initial state - off
     monkeypatch.setattr(device, "child_lock", child_lock_state)
     mock_bridge.mock_callbacks([device])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Test exception during turn on
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock",
+        "menuai.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock",
         side_effect=RuntimeError("fake error"),
     ) as mock_control_device:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 SWITCH_DOMAIN,
                 SERVICE_TURN_ON,
                 {ATTR_ENTITY_ID: entity_id},
@@ -390,23 +390,23 @@ async def test_child_lock_control_fail(
 
         assert mock_api.call_count == 2
         mock_control_device.assert_called_once_with(ShutterChildLock.ON, cover_id)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_UNAVAILABLE
 
     # Make device available again
     mock_bridge.mock_callbacks([device])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
     # Test error response during turn on
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock",
+        "menuai.components.switcher_kis.entity.SwitcherApi.set_shutter_child_lock",
         return_value=SwitcherBaseResponse(None),
     ) as mock_control_device:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 SWITCH_DOMAIN,
                 SERVICE_TURN_ON,
                 {ATTR_ENTITY_ID: entity_id},
@@ -415,5 +415,5 @@ async def test_child_lock_control_fail(
 
         assert mock_api.call_count == 4
         mock_control_device.assert_called_once_with(ShutterChildLock.ON, cover_id)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_UNAVAILABLE

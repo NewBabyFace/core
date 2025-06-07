@@ -7,9 +7,9 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import CONF_STATE_CLASS, SensorDeviceClass
-from homeassistant.components.sensor.helpers import async_parse_date_datetime
-from homeassistant.const import (
+from menuai.components.sensor import CONF_STATE_CLASS, SensorDeviceClass
+from menuai.components.sensor.helpers import async_parse_date_datetime
+from menuai.const import (
     CONF_ATTRIBUTE,
     CONF_DEVICE_CLASS,
     CONF_ICON,
@@ -18,15 +18,15 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.template import _SENTINEL, Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.helpers.template import _SENTINEL, Template
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
     TEMPLATE_SENSOR_BASE_SCHEMA,
@@ -34,8 +34,8 @@ from homeassistant.helpers.trigger_template_entity import (
     ManualTriggerSensorEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import ScrapeConfigEntry
 from .const import CONF_INDEX, CONF_SELECT, DOMAIN
@@ -55,7 +55,7 @@ TRIGGER_ENTITY_OPTIONS = (
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -79,7 +79,7 @@ async def async_setup_platform(
 
         entities.append(
             ScrapeSensor(
-                hass,
+                menuai,
                 coordinator,
                 trigger_entity_config,
                 sensor_config[CONF_SELECT],
@@ -94,7 +94,7 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ScrapeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -112,7 +112,7 @@ async def async_setup_entry(
         value_string: str | None = sensor_config.get(CONF_VALUE_TEMPLATE)
 
         value_template: ValueTemplate | None = (
-            ValueTemplate(value_string, hass) if value_string is not None else None
+            ValueTemplate(value_string, menuai) if value_string is not None else None
         )
 
         trigger_entity_config: dict[str, str | Template | None] = {CONF_NAME: name}
@@ -120,13 +120,13 @@ async def async_setup_entry(
             if key not in sensor_config:
                 continue
             if key == CONF_AVAILABILITY:
-                trigger_entity_config[key] = Template(sensor_config[key], hass)
+                trigger_entity_config[key] = Template(sensor_config[key], menuai)
                 continue
             trigger_entity_config[key] = sensor_config[key]
 
         entities.append(
             ScrapeSensor(
-                hass,
+                menuai,
                 coordinator,
                 trigger_entity_config,
                 sensor_config[CONF_SELECT],
@@ -145,7 +145,7 @@ class ScrapeSensor(CoordinatorEntity[ScrapeCoordinator], ManualTriggerSensorEnti
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: ScrapeCoordinator,
         trigger_entity_config: ConfigType,
         select: str,
@@ -156,7 +156,7 @@ class ScrapeSensor(CoordinatorEntity[ScrapeCoordinator], ManualTriggerSensorEnti
     ) -> None:
         """Initialize a web scrape sensor."""
         CoordinatorEntity.__init__(self, coordinator)
-        ManualTriggerSensorEntity.__init__(self, hass, trigger_entity_config)
+        ManualTriggerSensorEntity.__init__(self, menuai, trigger_entity_config)
         self._select = select
         self._attr = attr
         self._index = index
@@ -196,9 +196,9 @@ class ScrapeSensor(CoordinatorEntity[ScrapeCoordinator], ManualTriggerSensorEnti
         _LOGGER.debug("Parsed value: %s", value)
         return value
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Ensure the data from the initial update is reflected in the state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._async_update_from_rest_data()
         self.async_write_ha_state()
 

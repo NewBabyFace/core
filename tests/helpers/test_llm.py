@@ -7,13 +7,13 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import calendar, todo
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.components.intent import async_register_timer_handler
-from homeassistant.components.script.config import ScriptConfig
-from homeassistant.core import Context, HomeAssistant, State, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.components import calendar, todo
+from menuai.components.menuai.exposed_entities import async_expose_entity
+from menuai.components.intent import async_register_timer_handler
+from menuai.components.script.config import ScriptConfig
+from menuai.core import Context, menuai, State, SupportsResponse
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     area_registry as ar,
     config_validation as cv,
     device_registry as dr,
@@ -23,9 +23,9 @@ from homeassistant.helpers import (
     llm,
     selector,
 )
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonObjectType
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonObjectType
 
 from tests.common import MockConfigEntry, async_mock_service
 
@@ -55,54 +55,54 @@ class MyAPI(llm.API):
 
 
 async def test_get_api_no_existing(
-    hass: HomeAssistant, llm_context: llm.LLMContext
+    menuai: menuai, llm_context: llm.LLMContext
 ) -> None:
     """Test getting an llm api where no config exists."""
-    with pytest.raises(HomeAssistantError):
-        await llm.async_get_api(hass, "non-existing", llm_context)
+    with pytest.raises(menuaiError):
+        await llm.async_get_api(menuai, "non-existing", llm_context)
 
 
-async def test_register_api(hass: HomeAssistant, llm_context: llm.LLMContext) -> None:
+async def test_register_api(menuai: menuai, llm_context: llm.LLMContext) -> None:
     """Test registering an llm api."""
 
-    api = MyAPI(hass=hass, id="test", name="Test")
-    llm.async_register_api(hass, api)
+    api = MyAPI(menuai=menuai, id="test", name="Test")
+    llm.async_register_api(menuai, api)
 
-    instance = await llm.async_get_api(hass, "test", llm_context)
+    instance = await llm.async_get_api(menuai, "test", llm_context)
     assert instance.api is api
-    assert api in llm.async_get_apis(hass)
+    assert api in llm.async_get_apis(menuai)
 
-    with pytest.raises(HomeAssistantError):
-        llm.async_register_api(hass, api)
+    with pytest.raises(menuaiError):
+        llm.async_register_api(menuai, api)
 
 
-async def test_unregister_api(hass: HomeAssistant, llm_context: llm.LLMContext) -> None:
+async def test_unregister_api(menuai: menuai, llm_context: llm.LLMContext) -> None:
     """Test unregistering an llm api."""
 
-    unreg = llm.async_register_api(hass, MyAPI(hass=hass, id="test", name="Test"))
-    assert await llm.async_get_api(hass, "test", llm_context)
+    unreg = llm.async_register_api(menuai, MyAPI(menuai=menuai, id="test", name="Test"))
+    assert await llm.async_get_api(menuai, "test", llm_context)
     unreg()
-    with pytest.raises(HomeAssistantError):
-        assert await llm.async_get_api(hass, "test", llm_context)
+    with pytest.raises(menuaiError):
+        assert await llm.async_get_api(menuai, "test", llm_context)
 
 
-async def test_reregister_api(hass: HomeAssistant, llm_context: llm.LLMContext) -> None:
+async def test_reregister_api(menuai: menuai, llm_context: llm.LLMContext) -> None:
     """Test unregistering an llm api then re-registering with the same id."""
 
-    unreg = llm.async_register_api(hass, MyAPI(hass=hass, id="test", name="Test"))
-    assert await llm.async_get_api(hass, "test", llm_context)
+    unreg = llm.async_register_api(menuai, MyAPI(menuai=menuai, id="test", name="Test"))
+    assert await llm.async_get_api(menuai, "test", llm_context)
     unreg()
-    llm.async_register_api(hass, MyAPI(hass=hass, id="test", name="Test"))
-    assert await llm.async_get_api(hass, "test", llm_context)
+    llm.async_register_api(menuai, MyAPI(menuai=menuai, id="test", name="Test"))
+    assert await llm.async_get_api(menuai, "test", llm_context)
 
 
 async def test_unregister_twice(
-    hass: HomeAssistant, llm_context: llm.LLMContext
+    menuai: menuai, llm_context: llm.LLMContext
 ) -> None:
     """Test unregistering an llm api twice."""
 
-    unreg = llm.async_register_api(hass, MyAPI(hass=hass, id="test", name="Test"))
-    assert await llm.async_get_api(hass, "test", llm_context)
+    unreg = llm.async_register_api(menuai, MyAPI(menuai=menuai, id="test", name="Test"))
+    assert await llm.async_get_api(menuai, "test", llm_context)
     unreg()
 
     # Unregistering twice is a bug that should not happen
@@ -110,45 +110,45 @@ async def test_unregister_twice(
         unreg()
 
 
-async def test_multiple_apis(hass: HomeAssistant, llm_context: llm.LLMContext) -> None:
+async def test_multiple_apis(menuai: menuai, llm_context: llm.LLMContext) -> None:
     """Test registering multiple APIs."""
 
-    unreg1 = llm.async_register_api(hass, MyAPI(hass=hass, id="test-1", name="Test 1"))
-    llm.async_register_api(hass, MyAPI(hass=hass, id="test-2", name="Test 2"))
+    unreg1 = llm.async_register_api(menuai, MyAPI(menuai=menuai, id="test-1", name="Test 1"))
+    llm.async_register_api(menuai, MyAPI(menuai=menuai, id="test-2", name="Test 2"))
 
     # Verify both Apis are registered
-    assert await llm.async_get_api(hass, "test-1", llm_context)
-    assert await llm.async_get_api(hass, "test-2", llm_context)
+    assert await llm.async_get_api(menuai, "test-1", llm_context)
+    assert await llm.async_get_api(menuai, "test-2", llm_context)
 
     # Unregister and verify only one is left
     unreg1()
 
-    with pytest.raises(HomeAssistantError):
-        assert await llm.async_get_api(hass, "test-1", llm_context)
+    with pytest.raises(menuaiError):
+        assert await llm.async_get_api(menuai, "test-1", llm_context)
 
-    assert await llm.async_get_api(hass, "test-2", llm_context)
+    assert await llm.async_get_api(menuai, "test-2", llm_context)
 
 
 async def test_call_tool_no_existing(
-    hass: HomeAssistant, llm_context: llm.LLMContext
+    menuai: menuai, llm_context: llm.LLMContext
 ) -> None:
     """Test calling an llm tool where no config exists."""
-    instance = await llm.async_get_api(hass, "assist", llm_context)
-    with pytest.raises(HomeAssistantError):
+    instance = await llm.async_get_api(menuai, "assist", llm_context)
+    with pytest.raises(menuaiError):
         await instance.async_call_tool(
             llm.ToolInput("test_tool", {}),
         )
 
 
 async def test_assist_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     area_registry: ar.AreaRegistry,
     floor_registry: fr.FloorRegistry,
 ) -> None:
     """Test Assist API."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
 
     entity_registry.async_get_or_create(
         "light",
@@ -156,7 +156,7 @@ async def test_assist_api(
         "mock-id-kitchen",
         original_name="Kitchen",
         suggested_object_id="kitchen",
-    ).write_unavailable_state(hass)
+    ).write_unavailable_state(menuai)
 
     test_context = Context()
     llm_context = llm.LLMContext(
@@ -181,26 +181,26 @@ async def test_assist_api(
 
     intent_handler = MyIntentHandler()
 
-    intent.async_register(hass, intent_handler)
+    intent.async_register(menuai, intent_handler)
 
-    assert len(llm.async_get_apis(hass)) == 1
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    assert len(llm.async_get_apis(menuai)) == 1
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert [tool.name for tool in api.tools] == ["GetLiveContext"]
 
     # Match all
     intent_handler.platforms = None
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert [tool.name for tool in api.tools] == ["test_intent", "GetLiveContext"]
 
     # Match specific domain
     intent_handler.platforms = {"light"}
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert len(api.tools) == 2
     tool = api.tools[0]
     assert tool.name == "test_intent"
-    assert tool.description == "Execute Home Assistant test_intent intent"
+    assert tool.description == "Execute MenuAI test_intent intent"
     assert tool.parameters == vol.Schema(
         {
             vol.Optional("area"): cv.string,
@@ -225,12 +225,12 @@ async def test_assist_api(
     )
 
     with patch(
-        "homeassistant.helpers.intent.async_handle", return_value=intent_response
+        "menuai.helpers.intent.async_handle", return_value=intent_response
     ) as mock_intent_handle:
         response = await api.async_call_tool(tool_input)
 
     mock_intent_handle.assert_awaited_once_with(
-        hass=hass,
+        menuai=menuai,
         platform="test_platform",
         intent_type="test_intent",
         slots={
@@ -269,7 +269,7 @@ async def test_assist_api(
 
     # Call with a device/area/floor
     entry = MockConfigEntry(title=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -282,12 +282,12 @@ async def test_assist_api(
     llm_context.device_id = device.id
 
     with patch(
-        "homeassistant.helpers.intent.async_handle", return_value=intent_response
+        "menuai.helpers.intent.async_handle", return_value=intent_response
     ) as mock_intent_handle:
         response = await api.async_call_tool(tool_input)
 
     mock_intent_handle.assert_awaited_once_with(
-        hass=hass,
+        menuai=menuai,
         platform="test_platform",
         intent_type="test_intent",
         slots={
@@ -328,59 +328,59 @@ async def test_assist_api(
 
 
 async def test_assist_api_get_timer_tools(
-    hass: HomeAssistant, llm_context: llm.LLMContext
+    menuai: menuai, llm_context: llm.LLMContext
 ) -> None:
     """Test getting timer tools with Assist API."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
+    api = await llm.async_get_api(menuai, "assist", llm_context)
 
-    assert "HassStartTimer" not in [tool.name for tool in api.tools]
+    assert "menuaiStartTimer" not in [tool.name for tool in api.tools]
 
     llm_context.device_id = "test_device"
 
-    async_register_timer_handler(hass, "test_device", lambda *args: None)
+    async_register_timer_handler(menuai, "test_device", lambda *args: None)
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
-    assert "HassStartTimer" in [tool.name for tool in api.tools]
+    api = await llm.async_get_api(menuai, "assist", llm_context)
+    assert "menuaiStartTimer" in [tool.name for tool in api.tools]
 
 
 async def test_assist_api_tools(
-    hass: HomeAssistant, llm_context: llm.LLMContext
+    menuai: menuai, llm_context: llm.LLMContext
 ) -> None:
     """Test getting timer tools with Assist API."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
 
     llm_context.device_id = "test_device"
 
-    async_register_timer_handler(hass, "test_device", lambda *args: None)
+    async_register_timer_handler(menuai, "test_device", lambda *args: None)
 
     class MyIntentHandler(intent.IntentHandler):
         intent_type = "Super crazy intent with unique nåme"
         description = "my intent handler"
 
-    intent.async_register(hass, MyIntentHandler())
+    intent.async_register(menuai, MyIntentHandler())
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert [tool.name for tool in api.tools] == [
-        "HassTurnOn",
-        "HassTurnOff",
-        "HassSetPosition",
-        "HassStartTimer",
-        "HassCancelTimer",
-        "HassCancelAllTimers",
-        "HassIncreaseTimer",
-        "HassDecreaseTimer",
-        "HassPauseTimer",
-        "HassUnpauseTimer",
-        "HassTimerStatus",
+        "menuaiTurnOn",
+        "menuaiTurnOff",
+        "menuaiSetPosition",
+        "menuaiStartTimer",
+        "menuaiCancelTimer",
+        "menuaiCancelAllTimers",
+        "menuaiIncreaseTimer",
+        "menuaiDecreaseTimer",
+        "menuaiPauseTimer",
+        "menuaiUnpauseTimer",
+        "menuaiTimerStatus",
         "Super_crazy_intent_with_unique_name",
     ]
 
 
 async def test_assist_api_description(
-    hass: HomeAssistant, llm_context: llm.LLMContext
+    menuai: menuai, llm_context: llm.LLMContext
 ) -> None:
     """Test intent description with Assist API."""
 
@@ -388,10 +388,10 @@ async def test_assist_api_description(
         intent_type = "test_intent"
         description = "my intent handler"
 
-    intent.async_register(hass, MyIntentHandler())
+    intent.async_register(menuai, MyIntentHandler())
 
-    assert len(llm.async_get_apis(hass)) == 1
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    assert len(llm.async_get_apis(menuai)) == 1
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert len(api.tools) == 1
     tool = api.tools[0]
     assert tool.name == "test_intent"
@@ -399,15 +399,15 @@ async def test_assist_api_description(
 
 
 async def test_assist_api_prompt(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     area_registry: ar.AreaRegistry,
     floor_registry: fr.FloorRegistry,
 ) -> None:
     """Test prompt for the assist API."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
     context = Context()
     llm_context = llm.LLMContext(
         platform="test_platform",
@@ -417,17 +417,17 @@ async def test_assist_api_prompt(
         assistant="conversation",
         device_id=None,
     )
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert api.api_prompt == (
         "Only if the user wants to control a device, tell them to expose entities to their "
-        "voice assistant in Home Assistant."
+        "voice assistant in MenuAI."
     )
 
     # Expose entities
 
     # Create a script with a unique ID
     assert await async_setup_component(
-        hass,
+        menuai,
         "script",
         {
             "script": {
@@ -446,11 +446,11 @@ async def test_assist_api_prompt(
             }
         },
     )
-    async_expose_entity(hass, "conversation", "script.test_script", True)
-    async_expose_entity(hass, "conversation", "script.script_with_no_fields", True)
+    async_expose_entity(menuai, "conversation", "script.test_script", True)
+    async_expose_entity(menuai, "conversation", "script.script_with_no_fields", True)
 
     entry = MockConfigEntry(title=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={("test", "1234")},
@@ -473,12 +473,12 @@ async def test_assist_api_prompt(
         suggested_object_id="living_room",
         device_id=device.id,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         entry1.entity_id,
         "on",
         {"friendly_name": "Kitchen", "temperature": Decimal("0.9"), "humidity": 65},
     )
-    hass.states.async_set(entry2.entity_id, "on", {"friendly_name": "Living Room"})
+    menuai.states.async_set(entry2.entity_id, "on", {"friendly_name": "Living Room"})
 
     def create_entity(
         device: dr.DeviceEntry, write_state=True, aliases: set[str] | None = None
@@ -495,7 +495,7 @@ async def test_assist_api_prompt(
         if aliases:
             entity_registry.async_update_entity(entity.entity_id, aliases=aliases)
         if write_state:
-            entity.write_unavailable_state(hass)
+            entity.write_unavailable_state(menuai)
 
     create_entity(
         device_registry.async_get_or_create(
@@ -662,8 +662,8 @@ async def test_assist_api_prompt(
   areas: Test Area 2
 """
     first_part_prompt = (
-        "When controlling Home Assistant always call the intent tools. "
-        "Use HassTurnOn to lock and HassTurnOff to unlock a lock. "
+        "When controlling MenuAI always call the intent tools. "
+        "Use menuaiTurnOn to lock and menuaiTurnOff to unlock a lock. "
         "When controlling a device, prefer passing just name and domain. "
         "When controlling an area, prefer passing just area name and domain."
     )
@@ -685,7 +685,7 @@ If the user asks about the CURRENT state, value, or mode (e.g., "Is the lock loc
     3.  Use the tool's response** to answer the user accurately (e.g., "The temperature outside is [value from tool].").
 For general knowledge questions not about the home: Answer truthfully from internal knowledge.
 """
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert api.api_prompt == (
         f"""{first_part_prompt}
 {area_prompt}
@@ -709,7 +709,7 @@ For general knowledge questions not about the home: Answer truthfully from inter
         "You are in area Test Area and all generic commands like 'turn on the lights' "
         "should target this area."
     )
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert api.api_prompt == (
         f"""{first_part_prompt}
 {area_prompt}
@@ -725,7 +725,7 @@ For general knowledge questions not about the home: Answer truthfully from inter
         "You are in area Test Area (floor 2) and all generic commands like 'turn on the lights' "
         "should target this area."
     )
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert api.api_prompt == (
         f"""{first_part_prompt}
 {area_prompt}
@@ -735,9 +735,9 @@ For general knowledge questions not about the home: Answer truthfully from inter
     )
 
     # Register device for timers
-    async_register_timer_handler(hass, device.id, lambda *args: None)
+    async_register_timer_handler(menuai, device.id, lambda *args: None)
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     # The no_timer_prompt is gone
     assert api.api_prompt == (
         f"""{first_part_prompt}
@@ -748,14 +748,14 @@ For general knowledge questions not about the home: Answer truthfully from inter
 
 
 async def test_script_tool(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     area_registry: ar.AreaRegistry,
     floor_registry: fr.FloorRegistry,
 ) -> None:
     """Test ScriptTool for the assist API."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "intent", {})
     context = Context()
     llm_context = llm.LLMContext(
         platform="test_platform",
@@ -768,7 +768,7 @@ async def test_script_tool(
 
     # Create a script with a unique ID
     assert await async_setup_component(
-        hass,
+        menuai,
         "script",
         {
             "script": {
@@ -798,8 +798,8 @@ async def test_script_tool(
             }
         },
     )
-    async_expose_entity(hass, "conversation", "script.test_script", True)
-    async_expose_entity(hass, "conversation", "script.script_with_no_fields", True)
+    async_expose_entity(menuai, "conversation", "script.test_script", True)
+    async_expose_entity(menuai, "conversation", "script.script_with_no_fields", True)
 
     entity_registry.async_update_entity(
         "script.test_script", name="script name", aliases={"script alias"}
@@ -808,9 +808,9 @@ async def test_script_tool(
     area = area_registry.async_create("Living room")
     floor = floor_registry.async_create("2")
 
-    assert llm.ACTION_PARAMETERS_CACHE not in hass.data
+    assert llm.ACTION_PARAMETERS_CACHE not in menuai.data
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
 
     tools = [tool for tool in api.tools if isinstance(tool, llm.ScriptTool)]
     assert len(tools) == 2
@@ -832,7 +832,7 @@ async def test_script_tool(
     }
     assert tool.parameters.schema == schema
 
-    assert hass.data[llm.ACTION_PARAMETERS_CACHE]["script"] == {
+    assert menuai.data[llm.ACTION_PARAMETERS_CACHE]["script"] == {
         "test_script": (
             "This is a test script. Aliases: ['script name', 'script alias']",
             vol.Schema(schema),
@@ -854,8 +854,8 @@ async def test_script_tool(
     )
 
     with patch(
-        "homeassistant.core.ServiceRegistry.async_call",
-        side_effect=hass.services.async_call,
+        "menuai.core.ServiceRegistry.async_call",
+        side_effect=menuai.services.async_call,
     ) as mock_service_call:
         response = await api.async_call_tool(tool_input)
 
@@ -886,8 +886,8 @@ async def test_script_tool(
     )
 
     with patch(
-        "homeassistant.core.ServiceRegistry.async_call",
-        side_effect=hass.services.async_call,
+        "menuai.core.ServiceRegistry.async_call",
+        side_effect=menuai.services.async_call,
     ) as mock_service_call:
         response = await api.async_call_tool(tool_input)
 
@@ -924,14 +924,14 @@ async def test_script_tool(
     }
 
     with patch(
-        "homeassistant.helpers.entity_component.EntityComponent.async_prepare_reload",
+        "menuai.helpers.entity_component.EntityComponent.async_prepare_reload",
         return_value=config,
     ):
-        await hass.services.async_call("script", "reload", blocking=True)
+        await menuai.services.async_call("script", "reload", blocking=True)
 
-    assert hass.data[llm.ACTION_PARAMETERS_CACHE]["script"] == {}
+    assert menuai.data[llm.ACTION_PARAMETERS_CACHE]["script"] == {}
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
 
     tools = [tool for tool in api.tools if isinstance(tool, llm.ScriptTool)]
     assert len(tools) == 2
@@ -945,7 +945,7 @@ async def test_script_tool(
     schema = {vol.Required("beer", description="Number of beers"): cv.string}
     assert tool.parameters.schema == schema
 
-    assert hass.data[llm.ACTION_PARAMETERS_CACHE]["script"] == {
+    assert menuai.data[llm.ACTION_PARAMETERS_CACHE]["script"] == {
         "test_script": (
             "This is a new test script. Aliases: ['script name', 'script alias']",
             vol.Schema(schema),
@@ -954,9 +954,9 @@ async def test_script_tool(
     }
 
 
-async def test_script_tool_name(hass: HomeAssistant) -> None:
+async def test_script_tool_name(menuai: menuai) -> None:
     """Test that script tool name is not started with a digit."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
     context = Context()
     llm_context = llm.LLMContext(
         platform="test_platform",
@@ -969,7 +969,7 @@ async def test_script_tool_name(hass: HomeAssistant) -> None:
 
     # Create a script with a unique ID
     assert await async_setup_component(
-        hass,
+        menuai,
         "script",
         {
             "script": {
@@ -983,9 +983,9 @@ async def test_script_tool_name(hass: HomeAssistant) -> None:
             }
         },
     )
-    async_expose_entity(hass, "conversation", "script.123456", True)
+    async_expose_entity(menuai, "conversation", "script.123456", True)
 
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
 
     tools = [tool for tool in api.tools if isinstance(tool, llm.ScriptTool)]
     assert len(tools) == 1
@@ -995,10 +995,10 @@ async def test_script_tool_name(hass: HomeAssistant) -> None:
 
 
 async def test_selector_serializer(
-    hass: HomeAssistant, llm_context: llm.LLMContext
+    menuai: menuai, llm_context: llm.LLMContext
 ) -> None:
     """Test serialization of Selectors in Open API format."""
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     selector_serializer = api.custom_serializer
 
     assert selector_serializer(selector.ActionSelector()) == {"type": "string"}
@@ -1230,13 +1230,13 @@ async def test_selector_serializer(
     }
 
 
-async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
+async def test_calendar_get_events_tool(menuai: menuai) -> None:
     """Test the calendar get events tool."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    menuai.states.async_set(
         "calendar.test_calendar", "on", {"friendly_name": "Mock Calendar Name"}
     )
-    async_expose_entity(hass, "conversation", "calendar.test_calendar", True)
+    async_expose_entity(menuai, "conversation", "calendar.test_calendar", True)
     context = Context()
     llm_context = llm.LLMContext(
         platform="test_platform",
@@ -1246,7 +1246,7 @@ async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
         assistant="conversation",
         device_id=None,
     )
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     tool = next(
         (tool for tool in api.tools if tool.name == "calendar_get_events"), None
     )
@@ -1254,7 +1254,7 @@ async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
     assert tool.parameters.schema["calendar"].container == ["Mock Calendar Name"]
 
     calls = async_mock_service(
-        hass,
+        menuai,
         domain=calendar.DOMAIN,
         service=calendar.SERVICE_GET_EVENTS,
         schema=calendar.SERVICE_GET_EVENTS_SCHEMA,
@@ -1264,7 +1264,7 @@ async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
                     {
                         "start": "2025-09-17",
                         "end": "2025-09-18",
-                        "summary": "Home Assistant 12th birthday",
+                        "summary": "MenuAI 12th birthday",
                         "description": "",
                     },
                     {
@@ -1287,7 +1287,7 @@ async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
         },
     )
     now = dt_util.now()
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         response = await api.async_call_tool(tool_input)
 
     assert len(calls) == 1
@@ -1306,7 +1306,7 @@ async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
             {
                 "start": "2025-09-17",
                 "end": "2025-09-18",
-                "summary": "Home Assistant 12th birthday",
+                "summary": "MenuAI 12th birthday",
                 "description": "",
                 "all_day": True,
             },
@@ -1320,7 +1320,7 @@ async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
     }
 
     tool_input.tool_args["range"] = "week"
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         response = await api.async_call_tool(tool_input)
 
     assert len(calls) == 2
@@ -1332,14 +1332,14 @@ async def test_calendar_get_events_tool(hass: HomeAssistant) -> None:
     }
 
 
-async def test_todo_get_items_tool(hass: HomeAssistant) -> None:
+async def test_todo_get_items_tool(menuai: menuai) -> None:
     """Test the todo get items tool."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "todo", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "todo", {})
+    menuai.states.async_set(
         "todo.test_list", "0", {"friendly_name": "Mock Todo List Name"}
     )
-    async_expose_entity(hass, "conversation", "todo.test_list", True)
+    async_expose_entity(menuai, "conversation", "todo.test_list", True)
     context = Context()
     llm_context = llm.LLMContext(
         platform="test_platform",
@@ -1349,13 +1349,13 @@ async def test_todo_get_items_tool(hass: HomeAssistant) -> None:
         assistant="conversation",
         device_id=None,
     )
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     tool = next((tool for tool in api.tools if tool.name == "todo_get_items"), None)
     assert tool is not None
     assert tool.parameters.schema["todo_list"].container == ["Mock Todo List Name"]
 
     calls = async_mock_service(
-        hass,
+        menuai,
         domain=todo.DOMAIN,
         service=todo.TodoServices.GET_ITEMS,
         schema=cv.make_entity_service_schema(todo.TODO_SERVICE_GET_ITEMS_SCHEMA),
@@ -1381,7 +1381,7 @@ async def test_todo_get_items_tool(hass: HomeAssistant) -> None:
 
     # Test without status filter (defaults to needs_action)
     result = await tool.async_call(
-        hass,
+        menuai,
         llm.ToolInput("todo_get_items", {"todo_list": "Mock Todo List Name"}),
         llm_context,
     )
@@ -1413,7 +1413,7 @@ async def test_todo_get_items_tool(hass: HomeAssistant) -> None:
     # We don't assert on the response since it is fixed above.
     calls.clear()
     result = await tool.async_call(
-        hass,
+        menuai,
         llm.ToolInput(
             "todo_get_items",
             {"todo_list": "Mock Todo List Name", "status": "completed"},
@@ -1430,7 +1430,7 @@ async def test_todo_get_items_tool(hass: HomeAssistant) -> None:
     # We don't assert on the response since it is fixed above.
     calls.clear()
     result = await tool.async_call(
-        hass,
+        menuai,
         llm.ToolInput(
             "todo_get_items",
             {"todo_list": "Mock Todo List Name", "status": "all"},
@@ -1444,9 +1444,9 @@ async def test_todo_get_items_tool(hass: HomeAssistant) -> None:
     }
 
 
-async def test_no_tools_exposed(hass: HomeAssistant) -> None:
+async def test_no_tools_exposed(menuai: menuai) -> None:
     """Test that tools are not exposed when no entities are exposed."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
     context = Context()
     llm_context = llm.LLMContext(
         platform="test_platform",
@@ -1456,11 +1456,11 @@ async def test_no_tools_exposed(hass: HomeAssistant) -> None:
         assistant="conversation",
         device_id=None,
     )
-    api = await llm.async_get_api(hass, "assist", llm_context)
+    api = await llm.async_get_api(menuai, "assist", llm_context)
     assert api.tools == []
 
 
-async def test_merged_api(hass: HomeAssistant, llm_context: llm.LLMContext) -> None:
+async def test_merged_api(menuai: menuai, llm_context: llm.LLMContext) -> None:
     """Test an API instance that merges multiple llm apis."""
 
     class MyTool(llm.Tool):
@@ -1469,21 +1469,21 @@ async def test_merged_api(hass: HomeAssistant, llm_context: llm.LLMContext) -> N
             self.description = description
 
         async def async_call(
-            self, hass: HomeAssistant, tool_input: llm.ToolInput, _: llm.LLMContext
+            self, menuai: menuai, tool_input: llm.ToolInput, _: llm.LLMContext
         ) -> JsonObjectType:
             return {"result": {tool_input.tool_name: tool_input.tool_args}}
 
-    api1 = MyAPI(hass=hass, id="api-1", name="API 1")
+    api1 = MyAPI(menuai=menuai, id="api-1", name="API 1")
     api1.prompt = "This is prompt 1"
     api1.tools = [MyTool(name="Tool_1", description="Description 1")]
-    llm.async_register_api(hass, api1)
+    llm.async_register_api(menuai, api1)
 
-    api2 = MyAPI(hass=hass, id="api-2", name="API 2")
+    api2 = MyAPI(menuai=menuai, id="api-2", name="API 2")
     api2.prompt = "This is prompt 2"
     api2.tools = [MyTool(name="Tool_2", description="Description 2")]
-    llm.async_register_api(hass, api2)
+    llm.async_register_api(menuai, api2)
 
-    instance = await llm.async_get_api(hass, ["api-1", "api-2"], llm_context)
+    instance = await llm.async_get_api(menuai, ["api-1", "api-2"], llm_context)
     assert instance.api.id == "api-1|api-2"
 
     assert (

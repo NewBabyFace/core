@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 from qbusmqttapi.discovery import QbusMqttDevice
 from qbusmqttapi.factory import QbusMqttMessageFactory, QbusMqttTopicFactory
 
-from homeassistant.components.mqtt import client as mqtt
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ID
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
+from menuai.components.mqtt import client as mqtt
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ID
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
 
 from .const import CONF_SERIAL_NUMBER, DOMAIN
 from .coordinator import QbusConfigCoordinator
@@ -98,7 +98,7 @@ class QbusFlowHandler(ConfigFlow, domain=DOMAIN):
         if gateway_state is not None and gateway_state.online is True:
             _LOGGER.debug("Requesting config")
             await mqtt.async_publish(
-                self.hass, self._topic_factory.get_get_config_topic(), b""
+                self.menuai, self._topic_factory.get_get_config_topic(), b""
             )
 
         # Abort to wait for config topic
@@ -111,12 +111,12 @@ class QbusFlowHandler(ConfigFlow, domain=DOMAIN):
         qbus_config = self._message_factory.parse_discovery(discovery_info.payload)
 
         if qbus_config is not None:
-            QbusConfigCoordinator.get_or_create(self.hass).store_config(qbus_config)
+            QbusConfigCoordinator.get_or_create(self.menuai).store_config(qbus_config)
 
             _LOGGER.debug("Requesting device states")
             device_ids = [x.id for x in qbus_config.devices]
             request = self._message_factory.create_state_request(device_ids)
-            await mqtt.async_publish(self.hass, request.topic, request.payload)
+            await mqtt.async_publish(self.menuai, request.topic, request.payload)
 
         # Abort to wait for device topic
         return self.async_abort(reason="discovery_in_progress")
@@ -126,7 +126,7 @@ class QbusFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         _LOGGER.debug("Discovering device")
         qbus_config = await QbusConfigCoordinator.get_or_create(
-            self.hass
+            self.menuai
         ).async_get_or_request_config()
 
         if qbus_config is None:

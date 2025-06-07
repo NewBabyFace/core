@@ -9,11 +9,11 @@ from requests.exceptions import HTTPError
 from requests.models import Response
 from todoist_api_python.models import Collaborator, Due, Label, Project, Section, Task
 
-from homeassistant.components.todoist import DOMAIN
-from homeassistant.const import CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.todoist import DOMAIN
+from menuai.const import CONF_TOKEN, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -28,7 +28,7 @@ TODAY = dt_util.now().strftime("%Y-%m-%d")
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.todoist.async_setup_entry", return_value=True
+        "menuai.components.todoist.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -156,18 +156,18 @@ def platforms() -> list[Platform]:
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     platforms: list[Platform],
     api: AsyncMock,
     todoist_config_entry: MockConfigEntry | None,
 ) -> None:
     """Mock setup of the todoist integration."""
     if todoist_config_entry is not None:
-        todoist_config_entry.add_to_hass(hass)
+        todoist_config_entry.add_to_menuai(menuai)
     with (
-        patch("homeassistant.components.todoist.TodoistAPIAsync", return_value=api),
-        patch("homeassistant.components.todoist.PLATFORMS", platforms),
+        patch("menuai.components.todoist.TodoistAPIAsync", return_value=api),
+        patch("menuai.components.todoist.PLATFORMS", platforms),
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield

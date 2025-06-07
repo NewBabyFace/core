@@ -14,9 +14,9 @@ from laundrify_aio.exceptions import (
 )
 from voluptuous import Required, Schema
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CODE
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_CODE
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -49,7 +49,7 @@ class LaundrifyConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             access_token = await LaundrifyAPI.exchange_auth_code(user_input[CONF_CODE])
 
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             api_client = LaundrifyAPI(access_token, session)
 
             account_id = await api_client.get_account_id()

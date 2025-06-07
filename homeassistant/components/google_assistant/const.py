@@ -1,6 +1,6 @@
 """Constants for Google Assistant."""
 
-from homeassistant.components import (
+from menuai.components import (
     alarm_control_panel,
     binary_sensor,
     button,

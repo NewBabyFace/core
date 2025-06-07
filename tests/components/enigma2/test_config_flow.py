@@ -7,11 +7,11 @@ from aiohttp.client_exceptions import ClientError
 from openwebif.error import InvalidAuthError
 import pytest
 
-from homeassistant.components.enigma2.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.enigma2.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import TEST_FULL, TEST_REQUIRED
 
@@ -19,9 +19,9 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-async def user_flow(hass: HomeAssistant) -> str:
+async def user_flow(menuai: menuai) -> str:
     """Return a user-initiated flow after filling in host info."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
@@ -34,14 +34,14 @@ async def user_flow(hass: HomeAssistant) -> str:
     ("test_config"),
     [(TEST_FULL), (TEST_REQUIRED)],
 )
-async def test_form_user(hass: HomeAssistant, test_config: dict[str, Any]) -> None:
+async def test_form_user(menuai: menuai, test_config: dict[str, Any]) -> None:
     """Test a successful user initiated flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], test_config
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -58,7 +58,7 @@ async def test_form_user(hass: HomeAssistant, test_config: dict[str, Any]) -> No
     ],
 )
 async def test_form_user_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     openwebif_device_mock: AsyncMock,
     side_effect: Exception,
     error_value: str,
@@ -66,18 +66,18 @@ async def test_form_user_errors(
     """Test we handle errors."""
 
     openwebif_device_mock.get_about.side_effect = side_effect
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_FULL
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == SOURCE_USER
@@ -85,7 +85,7 @@ async def test_form_user_errors(
 
     openwebif_device_mock.get_about.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         TEST_FULL,
     )
@@ -98,18 +98,18 @@ async def test_form_user_errors(
 
 @pytest.mark.usefixtures("openwebif_device_mock")
 async def test_duplicate_host(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that a duplicate host aborts the config flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"], TEST_FULL
     )
     assert result2["type"] is FlowResultType.ABORT
@@ -117,28 +117,28 @@ async def test_duplicate_host(
 
 
 @pytest.mark.usefixtures("openwebif_device_mock")
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test the form options."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=TEST_FULL, options={}, entry_id="1")
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"source_bouquet": "Favourites (TV)"}
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options == {"source_bouquet": "Favourites (TV)"}
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED

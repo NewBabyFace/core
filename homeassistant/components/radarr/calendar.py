@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.core import menuai, callback
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import CalendarUpdateCoordinator, RadarrConfigEntry, RadarrEvent
 from .entity import RadarrEntity
@@ -19,7 +19,7 @@ CALENDAR_TYPE = EntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RadarrConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -45,9 +45,9 @@ class RadarrCalendarEntity(RadarrEntity, CalendarEntity):
             description=self.coordinator.event.description,
         )
 
-    # pylint: disable-next=hass-return-type
+    # pylint: disable-next=menuai-return-type
     async def async_get_events(  # type: ignore[override]
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[RadarrEvent]:
         """Get all events in a specific time frame."""
         return await self.coordinator.async_get_events(start_date, end_date)

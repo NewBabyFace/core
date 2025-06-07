@@ -11,12 +11,12 @@ from bleak.backends.scanner import AdvertisementData
 from habluetooth.wrappers import HaBleakClientWrapper, HaBleakScannerWrapper
 import pytest
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BaseHaRemoteScanner,
     BaseHaScanner,
     HaBluetoothConnector,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import (
     FakeScannerMixin,
@@ -30,20 +30,20 @@ from . import (
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_wrapped_bleak_scanner(hass: HomeAssistant) -> None:
+async def test_wrapped_bleak_scanner(menuai: menuai) -> None:
     """Test wrapped bleak scanner dispatches calls as expected."""
     scanner = HaBleakScannerWrapper()
     switchbot_device = generate_ble_device("44:44:33:11:23:45", "wohand")
     switchbot_adv = generate_advertisement_data(
         local_name="wohand", service_uuids=[], manufacturer_data={1: b"\x01"}
     )
-    inject_advertisement(hass, switchbot_device, switchbot_adv)
+    inject_advertisement(menuai, switchbot_device, switchbot_adv)
     assert scanner.discovered_devices == [switchbot_device]
     assert await scanner.discover() == [switchbot_device]
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_wrapped_bleak_client_raises_device_missing(hass: HomeAssistant) -> None:
+async def test_wrapped_bleak_client_raises_device_missing(menuai: menuai) -> None:
     """Test wrapped bleak client dispatches calls as expected."""
     switchbot_device = generate_ble_device("44:44:33:11:23:45", "wohand")
     client = HaBleakClientWrapper(switchbot_device)
@@ -57,7 +57,7 @@ async def test_wrapped_bleak_client_raises_device_missing(hass: HomeAssistant) -
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_wrapped_bleak_client_set_disconnected_callback_before_connected(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test wrapped bleak client can set a disconnected callback before connected."""
     switchbot_device = generate_ble_device("44:44:33:11:23:45", "wohand")
@@ -66,7 +66,7 @@ async def test_wrapped_bleak_client_set_disconnected_callback_before_connected(
 
 
 @pytest.mark.usefixtures("enable_bluetooth", "one_adapter")
-async def test_wrapped_bleak_client_local_adapter_only(hass: HomeAssistant) -> None:
+async def test_wrapped_bleak_client_local_adapter_only(menuai: menuai) -> None:
     """Test wrapped bleak client with only a local adapter."""
     manager = _get_manager()
 
@@ -111,7 +111,7 @@ async def test_wrapped_bleak_client_local_adapter_only(hass: HomeAssistant) -> N
     scanner.connectable = True
     cancel = manager.async_register_scanner(scanner)
     inject_advertisement_with_source(
-        hass, switchbot_device, switchbot_adv, "00:00:00:00:00:01"
+        menuai, switchbot_device, switchbot_adv, "00:00:00:00:00:01"
     )
 
     client = HaBleakClientWrapper(switchbot_device)
@@ -133,7 +133,7 @@ async def test_wrapped_bleak_client_local_adapter_only(hass: HomeAssistant) -> N
 
 @pytest.mark.usefixtures("enable_bluetooth", "one_adapter")
 async def test_wrapped_bleak_client_set_disconnected_callback_after_connected(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test wrapped bleak client can set a disconnected callback after connected."""
     manager = _get_manager()
@@ -197,10 +197,10 @@ async def test_wrapped_bleak_client_set_disconnected_callback_after_connected(
     )
     cancel = manager.async_register_scanner(scanner)
     inject_advertisement_with_source(
-        hass, switchbot_device, switchbot_adv, "00:00:00:00:00:01"
+        menuai, switchbot_device, switchbot_adv, "00:00:00:00:00:01"
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_proxy_device_has_connection_slot,
         switchbot_proxy_device_adv_has_connection_slot,
         "esp32_has_connection_slot",
@@ -224,7 +224,7 @@ async def test_wrapped_bleak_client_set_disconnected_callback_after_connected(
 
 @pytest.mark.usefixtures("enable_bluetooth", "one_adapter")
 async def test_ble_device_with_proxy_client_out_of_connections_no_scanners(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we switch to the next available proxy when one runs out of connections with no scanners."""
     manager = _get_manager()
@@ -243,7 +243,7 @@ async def test_ble_device_with_proxy_client_out_of_connections_no_scanners(
     )
 
     inject_advertisement_with_source(
-        hass, switchbot_proxy_device_no_connection_slot, switchbot_adv, "esp32"
+        menuai, switchbot_proxy_device_no_connection_slot, switchbot_adv, "esp32"
     )
 
     assert manager.async_discovered_devices(True) == [
@@ -263,7 +263,7 @@ async def test_ble_device_with_proxy_client_out_of_connections_no_scanners(
 
 @pytest.mark.usefixtures("enable_bluetooth", "one_adapter")
 async def test_ble_device_with_proxy_client_out_of_connections(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test handling all scanners are out of connection slots."""
     manager = _get_manager()
@@ -309,7 +309,7 @@ async def test_ble_device_with_proxy_client_out_of_connections(
     scanner = FakeScanner("esp32", "esp32", connector, True)
     cancel = manager.async_register_scanner(scanner)
     inject_advertisement_with_source(
-        hass, switchbot_proxy_device_no_connection_slot, switchbot_adv, "esp32"
+        menuai, switchbot_proxy_device_no_connection_slot, switchbot_adv, "esp32"
     )
 
     assert manager.async_discovered_devices(True) == [
@@ -329,7 +329,7 @@ async def test_ble_device_with_proxy_client_out_of_connections(
 
 
 @pytest.mark.usefixtures("enable_bluetooth", "one_adapter")
-async def test_ble_device_with_proxy_clear_cache(hass: HomeAssistant) -> None:
+async def test_ble_device_with_proxy_clear_cache(menuai: menuai) -> None:
     """Test we can clear cache on the proxy."""
     manager = _get_manager()
 
@@ -374,7 +374,7 @@ async def test_ble_device_with_proxy_clear_cache(hass: HomeAssistant) -> None:
     scanner = FakeScanner("esp32", "esp32", connector, True)
     cancel = manager.async_register_scanner(scanner)
     inject_advertisement_with_source(
-        hass, switchbot_proxy_device_with_connection_slot, switchbot_adv, "esp32"
+        menuai, switchbot_proxy_device_with_connection_slot, switchbot_adv, "esp32"
     )
 
     assert manager.async_discovered_devices(True) == [
@@ -391,7 +391,7 @@ async def test_ble_device_with_proxy_clear_cache(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("enable_bluetooth", "one_adapter")
 async def test_ble_device_with_proxy_client_out_of_connections_uses_best_available(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we switch to the next available proxy when one runs out of connections."""
     manager = _get_manager()
@@ -435,16 +435,16 @@ async def test_ble_device_with_proxy_client_out_of_connections_uses_best_availab
     )
 
     inject_advertisement_with_source(
-        hass, switchbot_device, switchbot_adv, "00:00:00:00:00:01"
+        menuai, switchbot_device, switchbot_adv, "00:00:00:00:00:01"
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_proxy_device_has_connection_slot,
         switchbot_proxy_device_adv_has_connection_slot,
         "esp32_has_connection_slot",
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_proxy_device_no_connection_slot,
         switchbot_proxy_device_adv_no_connection_slot,
         "esp32_no_connection_slot",
@@ -499,7 +499,7 @@ async def test_ble_device_with_proxy_client_out_of_connections_uses_best_availab
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_ble_device_with_proxy_client_out_of_connections_uses_best_available_macos(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we switch to the next available proxy when one runs out of connections on MacOS."""
     manager = _get_manager()
@@ -548,16 +548,16 @@ async def test_ble_device_with_proxy_client_out_of_connections_uses_best_availab
     )
 
     inject_advertisement_with_source(
-        hass, switchbot_device, switchbot_device_adv, "00:00:00:00:00:01"
+        menuai, switchbot_device, switchbot_device_adv, "00:00:00:00:00:01"
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_proxy_device_has_connection_slot,
         switchbot_proxy_device_has_connection_slot_adv,
         "esp32_has_connection_slot",
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_proxy_device_no_connection_slot,
         switchbot_proxy_device_no_connection_slot_adv,
         "esp32_no_connection_slot",

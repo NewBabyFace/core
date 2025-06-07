@@ -2,14 +2,14 @@
 
 import logging
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_VOLTAGE,
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     UnitOfElectricPotential,
 )
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
 

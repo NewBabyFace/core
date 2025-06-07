@@ -6,18 +6,18 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components import sensor
-from homeassistant.components.foobot import sensor as foobot
-from homeassistant.const import (
+from menuai.components import sensor
+from menuai.components.foobot import sensor as foobot
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.setup import async_setup_component
 
 from tests.common import async_load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -30,19 +30,19 @@ VALID_CONFIG = {
 
 
 async def test_default_setup(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test the default setup."""
     aioclient_mock.get(
         re.compile("api.foobot.io/v2/owner/.*"),
-        text=await async_load_fixture(hass, "devices.json", "foobot"),
+        text=await async_load_fixture(menuai, "devices.json", "foobot"),
     )
     aioclient_mock.get(
         re.compile("api.foobot.io/v2/device/.*"),
-        text=await async_load_fixture(hass, "data.json", "foobot"),
+        text=await async_load_fixture(menuai, "data.json", "foobot"),
     )
-    assert await async_setup_component(hass, sensor.DOMAIN, {"sensor": VALID_CONFIG})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, sensor.DOMAIN, {"sensor": VALID_CONFIG})
+    await menuai.async_block_till_done()
 
     metrics = {
         "co2": ["1232.0", CONCENTRATION_PARTS_PER_MILLION],
@@ -54,24 +54,24 @@ async def test_default_setup(
     }
 
     for name, value in metrics.items():
-        state = hass.states.get(f"sensor.foobot_happybot_{name}")
+        state = menuai.states.get(f"sensor.foobot_happybot_{name}")
         assert state.state == value[0]
         assert state.attributes.get("unit_of_measurement") == value[1]
 
 
 async def test_setup_timeout_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Expected failures caused by a timeout in API response."""
     fake_async_add_entities = MagicMock()
 
     aioclient_mock.get(re.compile("api.foobot.io/v2/owner/.*"), exc=TimeoutError())
     with pytest.raises(PlatformNotReady):
-        await foobot.async_setup_platform(hass, VALID_CONFIG, fake_async_add_entities)
+        await foobot.async_setup_platform(menuai, VALID_CONFIG, fake_async_add_entities)
 
 
 async def test_setup_permanent_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Expected failures caused by permanent errors in API response."""
     fake_async_add_entities = MagicMock()
@@ -80,13 +80,13 @@ async def test_setup_permanent_error(
     for error in errors:
         aioclient_mock.get(re.compile("api.foobot.io/v2/owner/.*"), status=error)
         result = await foobot.async_setup_platform(
-            hass, VALID_CONFIG, fake_async_add_entities
+            menuai, VALID_CONFIG, fake_async_add_entities
         )
         assert result is None
 
 
 async def test_setup_temporary_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Expected failures caused by temporary errors in API response."""
     fake_async_add_entities = MagicMock()
@@ -96,5 +96,5 @@ async def test_setup_temporary_error(
         aioclient_mock.get(re.compile("api.foobot.io/v2/owner/.*"), status=error)
         with pytest.raises(PlatformNotReady):
             await foobot.async_setup_platform(
-                hass, VALID_CONFIG, fake_async_add_entities
+                menuai, VALID_CONFIG, fake_async_add_entities
             )

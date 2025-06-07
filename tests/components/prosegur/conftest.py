@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pyprosegur.installation import Camera
 import pytest
 
-from homeassistant.components.prosegur import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.prosegur import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -57,10 +57,10 @@ def mock_install() -> AsyncMock:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_install: AsyncMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_install: AsyncMock
 ) -> MockConfigEntry:
     """Set up the Prosegur integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -68,7 +68,7 @@ async def init_integration(
         ),
         patch("pyprosegur.auth.Auth.login"),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         return mock_config_entry

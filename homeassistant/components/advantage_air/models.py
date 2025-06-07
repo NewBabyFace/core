@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from advantage_air import advantage_air
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 
 @dataclass

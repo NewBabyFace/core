@@ -5,9 +5,9 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers import storage
-from homeassistant.helpers.registry import SAVE_DELAY, SAVE_DELAY_LONG, BaseRegistry
+from menuai.core import CoreState, menuai
+from menuai.helpers import storage
+from menuai.helpers.registry import SAVE_DELAY, SAVE_DELAY_LONG, BaseRegistry
 
 from tests.common import async_fire_time_changed
 
@@ -15,10 +15,10 @@ from tests.common import async_fire_time_changed
 class SampleRegistry(BaseRegistry):
     """Class to hold a registry of X."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the registry."""
-        self.hass = hass
-        self._store = storage.Store(hass, 1, "test")
+        self.menuai = menuai
+        self._store = storage.Store(menuai, 1, "test")
         self.save_calls = 0
 
     def _data_to_save(self) -> dict[str, Any]:
@@ -37,10 +37,10 @@ class SampleRegistry(BaseRegistry):
     ],
 )
 async def test_async_schedule_save(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     long_delay_state: CoreState,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test saving the registry.
 
@@ -49,23 +49,23 @@ async def test_async_schedule_save(
     Storage will always save at final write if there is a
     write pending so we should not schedule a save in that case.
     """
-    registry = SampleRegistry(hass)
-    hass.set_state(long_delay_state)
+    registry = SampleRegistry(menuai)
+    menuai.set_state(long_delay_state)
 
     registry.async_schedule_save()
     freezer.tick(SAVE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert registry.save_calls == 0
 
     freezer.tick(SAVE_DELAY_LONG)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert registry.save_calls == 1
 
-    hass.set_state(CoreState.running)
+    menuai.set_state(CoreState.running)
     registry.async_schedule_save()
     freezer.tick(SAVE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert registry.save_calls == 2

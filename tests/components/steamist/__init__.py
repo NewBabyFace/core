@@ -8,13 +8,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from aiosteamist import Steamist, SteamistStatus
 from discovery30303 import AIODiscovery30303, Device30303
 
-from homeassistant.components import steamist
-from homeassistant.components.steamist.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components import steamist
+from menuai.components.steamist.const import DOMAIN
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import CONF_HOST, CONF_MODEL, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -62,18 +62,18 @@ DEFAULT_ENTRY_DATA = {
 
 
 async def _async_setup_entry_with_status(
-    hass: HomeAssistant, status: SteamistStatus
+    menuai: menuai, status: SteamistStatus
 ) -> tuple[Steamist, ConfigEntry]:
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: "127.0.0.1"},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     client = _mocked_steamist()
     client.async_get_status = AsyncMock(return_value=status)
     with _patch_status(status, client):
-        await async_setup_component(hass, steamist.DOMAIN, {steamist.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, steamist.DOMAIN, {steamist.DOMAIN: {}})
+        await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
     return client, config_entry
 
@@ -93,7 +93,7 @@ def _patch_status(status: SteamistStatus, client: Steamist | None = None):
 
     @contextmanager
     def _patcher():
-        with patch("homeassistant.components.steamist.Steamist", return_value=client):
+        with patch("menuai.components.steamist.Steamist", return_value=client):
             yield
 
     return _patcher()
@@ -110,7 +110,7 @@ def _patch_discovery(device=None, no_device=False):
     @contextmanager
     def _patcher():
         with patch(
-            "homeassistant.components.steamist.discovery.AIODiscovery30303",
+            "menuai.components.steamist.discovery.AIODiscovery30303",
             return_value=mock_aio_discovery,
         ):
             yield

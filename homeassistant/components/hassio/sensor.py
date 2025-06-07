@@ -1,17 +1,17 @@
-"""Sensor platform for Hass.io addons."""
+"""Sensor platform for menuai.io addons."""
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ADDONS_COORDINATOR,
@@ -26,11 +26,11 @@ from .const import (
     DATA_KEY_SUPERVISOR,
 )
 from .entity import (
-    HassioAddonEntity,
-    HassioCoreEntity,
-    HassioHostEntity,
-    HassioOSEntity,
-    HassioSupervisorEntity,
+    menuaiioAddonEntity,
+    menuaiioCoreEntity,
+    menuaiioHostEntity,
+    menuaiioOSEntity,
+    menuaiioSupervisorEntity,
 )
 
 COMMON_ENTITY_DESCRIPTIONS = (
@@ -109,17 +109,17 @@ HOST_ENTITY_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Sensor set up for Hass.io config entry."""
-    coordinator = hass.data[ADDONS_COORDINATOR]
+    """Sensor set up for menuai.io config entry."""
+    coordinator = menuai.data[ADDONS_COORDINATOR]
 
     entities: list[
-        HassioOSSensor | HassioAddonSensor | CoreSensor | SupervisorSensor | HostSensor
+        menuaiioOSSensor | menuaiioAddonSensor | CoreSensor | SupervisorSensor | HostSensor
     ] = [
-        HassioAddonSensor(
+        menuaiioAddonSensor(
             addon=addon,
             coordinator=coordinator,
             entity_description=entity_description,
@@ -152,9 +152,9 @@ async def async_setup_entry(
         for entity_description in HOST_ENTITY_DESCRIPTIONS
     )
 
-    if coordinator.is_hass_os:
+    if coordinator.is_menuai_os:
         entities.extend(
-            HassioOSSensor(
+            menuaiioOSSensor(
                 coordinator=coordinator,
                 entity_description=entity_description,
             )
@@ -164,8 +164,8 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class HassioAddonSensor(HassioAddonEntity, SensorEntity):
-    """Sensor to track a Hass.io add-on attribute."""
+class menuaiioAddonSensor(menuaiioAddonEntity, SensorEntity):
+    """Sensor to track a menuai.io add-on attribute."""
 
     @property
     def native_value(self) -> str:
@@ -175,8 +175,8 @@ class HassioAddonSensor(HassioAddonEntity, SensorEntity):
         ]
 
 
-class HassioOSSensor(HassioOSEntity, SensorEntity):
-    """Sensor to track a Hass.io add-on attribute."""
+class menuaiioOSSensor(menuaiioOSEntity, SensorEntity):
+    """Sensor to track a menuai.io add-on attribute."""
 
     @property
     def native_value(self) -> str:
@@ -184,7 +184,7 @@ class HassioOSSensor(HassioOSEntity, SensorEntity):
         return self.coordinator.data[DATA_KEY_OS][self.entity_description.key]
 
 
-class CoreSensor(HassioCoreEntity, SensorEntity):
+class CoreSensor(menuaiioCoreEntity, SensorEntity):
     """Sensor to track a core attribute."""
 
     @property
@@ -193,7 +193,7 @@ class CoreSensor(HassioCoreEntity, SensorEntity):
         return self.coordinator.data[DATA_KEY_CORE][self.entity_description.key]
 
 
-class SupervisorSensor(HassioSupervisorEntity, SensorEntity):
+class SupervisorSensor(menuaiioSupervisorEntity, SensorEntity):
     """Sensor to track a supervisor attribute."""
 
     @property
@@ -202,7 +202,7 @@ class SupervisorSensor(HassioSupervisorEntity, SensorEntity):
         return self.coordinator.data[DATA_KEY_SUPERVISOR][self.entity_description.key]
 
 
-class HostSensor(HassioHostEntity, SensorEntity):
+class HostSensor(menuaiioHostEntity, SensorEntity):
     """Sensor to track a host attribute."""
 
     @property

@@ -13,7 +13,7 @@ from .const import EMPTY_SEARCH_RESPONSE, TEST_FETCH_RESPONSE_TEXT_PLAIN
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.imap.async_setup_entry", return_value=True
+        "menuai.components.imap.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -66,7 +66,7 @@ async def mock_imap_protocol(
     """Mock the aioimaplib IMAP protocol handler."""
 
     with patch(
-        "homeassistant.components.imap.coordinator.IMAP4_SSL", autospec=True
+        "menuai.components.imap.coordinator.IMAP4_SSL", autospec=True
     ) as imap_mock:
         imap_mock = imap_mock.return_value
 

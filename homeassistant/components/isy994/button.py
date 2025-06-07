@@ -14,18 +14,18 @@ from pyisy.helpers import EventListener, NodeProperty
 from pyisy.networking import NetworkCommand
 from pyisy.nodes import Node
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.const import EntityCategory, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.const import EntityCategory, Platform
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_NETWORK, DOMAIN
 from .models import IsyConfigEntry
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -112,7 +112,7 @@ class ISYNodeButtonEntity(ButtonEntity):
         """Return entity availability."""
         return self._node_enabled
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node change events."""
         # No status for NetworkResources or ISY Query buttons
         if not hasattr(self._node, "status_events") or not hasattr(self._node, "isy"):

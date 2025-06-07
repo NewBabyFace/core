@@ -2,10 +2,10 @@
 
 from http import HTTPStatus
 
-from homeassistant.components.directv.const import CONF_RECEIVER_ID, DOMAIN
-from homeassistant.const import CONF_HOST, CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.components.directv.const import CONF_RECEIVER_ID, DOMAIN
+from menuai.const import CONF_HOST, CONTENT_TYPE_JSON
+from menuai.core import menuai
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -26,7 +26,7 @@ MOCK_USER_INPUT = {CONF_HOST: HOST}
 
 
 def mock_connection(aioclient_mock: AiohttpClientMocker) -> None:
-    """Mock the DirecTV connection for Home Assistant."""
+    """Mock the DirecTV connection for MenuAI."""
     aioclient_mock.get(
         f"http://{HOST}:8080/info/getVersion",
         text=load_fixture("directv/info-get-version.json"),
@@ -102,12 +102,12 @@ def mock_connection(aioclient_mock: AiohttpClientMocker) -> None:
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     skip_entry_setup: bool = False,
     setup_error: bool = False,
 ) -> MockConfigEntry:
-    """Set up the DirecTV integration in Home Assistant."""
+    """Set up the DirecTV integration in MenuAI."""
     if setup_error:
         aioclient_mock.get(
             f"http://{HOST}:8080/info/getVersion",
@@ -122,10 +122,10 @@ async def setup_integration(
         data={CONF_HOST: HOST, CONF_RECEIVER_ID: RECEIVER_ID},
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     if not skip_entry_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

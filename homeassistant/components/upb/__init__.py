@@ -4,9 +4,9 @@ import logging
 
 import upb_lib
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_COMMAND, CONF_FILE_PATH, CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_COMMAND, CONF_FILE_PATH, CONF_HOST, Platform
+from menuai.core import menuai
 
 from .const import (
     ATTR_ADDRESS,
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.LIGHT, Platform.SCENE]
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up a new config_entry for UPB PIM."""
 
     url = config_entry.data[CONF_HOST]
@@ -29,10 +29,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     upb = upb_lib.UpbPim({"url": url, "UPStartExportFile": file})
     await upb.load_upstart_file()
     await upb.async_connect()
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][config_entry.entry_id] = {"upb": upb}
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][config_entry.entry_id] = {"upb": upb}
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     def _element_changed(element, changeset):
         if (change := changeset.get("last_change")) is None:
@@ -40,7 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         if change.get("command") is None:
             return
 
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             EVENT_UPB_SCENE_CHANGED,
             {
                 ATTR_COMMAND: change["command"],
@@ -57,19 +57,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload the config_entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
     if unload_ok:
-        upb = hass.data[DOMAIN][config_entry.entry_id]["upb"]
+        upb = menuai.data[DOMAIN][config_entry.entry_id]["upb"]
         upb.disconnect()
-        hass.data[DOMAIN].pop(config_entry.entry_id)
+        menuai.data[DOMAIN].pop(config_entry.entry_id)
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate entry."""
 
     _LOGGER.debug("Migrating from version %s", entry.version)
@@ -78,7 +78,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # 1 -> 2: Unique ID from integer to string
         if entry.minor_version == 1:
             minor_version = 2
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry, unique_id=str(entry.unique_id), minor_version=minor_version
             )
 

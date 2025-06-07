@@ -5,18 +5,18 @@ from unittest.mock import AsyncMock
 
 from pyHomee.model import HomeeAttribute, HomeeNode
 
-from homeassistant.components.homee.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.homee.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
 
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Set up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 def build_mock_node(file: str) -> AsyncMock:
@@ -52,9 +52,9 @@ def build_mock_node(file: str) -> AsyncMock:
 
 
 async def async_update_attribute_value(
-    hass: HomeAssistant, attribute: AsyncMock, value: float
+    menuai: menuai, attribute: AsyncMock, value: float
 ) -> None:
-    """Set the current_value of an attribute and notify hass."""
+    """Set the current_value of an attribute and notify menuai."""
     attribute.current_value = value
     attribute.add_on_changed_listener.call_args_list[0][0][0](attribute)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

@@ -6,9 +6,9 @@ import logging
 import lupupy
 from lupupy.exceptions import LupusecException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up this integration using UI."""
 
     host = entry.data[CONF_HOST]
@@ -33,7 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     password = entry.data[CONF_PASSWORD]
 
     try:
-        lupusec_system = await hass.async_add_executor_job(
+        lupusec_system = await menuai.async_add_executor_job(
             lupupy.Lupusec, username, password, host
         )
     except LupusecException:
@@ -43,8 +43,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to connect to Lupusec device at %s", host)
         return False
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = lupusec_system
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = lupusec_system
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True

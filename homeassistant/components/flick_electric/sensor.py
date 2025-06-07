@@ -5,11 +5,11 @@ from decimal import Decimal
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import CURRENCY_CENT, UnitOfEnergy
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.sensor import SensorEntity
+from menuai.const import CURRENCY_CENT, UnitOfEnergy
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_COMPONENTS, ATTR_END_AT, ATTR_START_AT
 from .coordinator import FlickConfigEntry, FlickElectricDataCoordinator
@@ -19,7 +19,7 @@ SCAN_INTERVAL = timedelta(minutes=5)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FlickConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

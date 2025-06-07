@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 from aiosolaredge import SolarEdge
 from stringcase import snakecase
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai, callback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     DETAILS_UPDATE_DELAY,
@@ -32,7 +32,7 @@ class SolarEdgeDataService(ABC):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SolarEdgeConfigEntry,
         api: SolarEdge,
         site_id: str,
@@ -44,14 +44,14 @@ class SolarEdgeDataService(ABC):
         self.data: dict[str, Any] = {}
         self.attributes: dict[str, Any] = {}
 
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
 
     @callback
     def async_setup(self) -> None:
         """Coordinator creation."""
         self.coordinator = DataUpdateCoordinator(
-            self.hass,
+            self.menuai,
             LOGGER,
             config_entry=self.config_entry,
             name=str(self),
@@ -187,13 +187,13 @@ class SolarEdgeEnergyDetailsService(SolarEdgeDataService):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SolarEdgeConfigEntry,
         api: SolarEdge,
         site_id: str,
     ) -> None:
         """Initialize the power flow data service."""
-        super().__init__(hass, config_entry, api, site_id)
+        super().__init__(menuai, config_entry, api, site_id)
 
         self.unit = None
 
@@ -253,13 +253,13 @@ class SolarEdgePowerFlowDataService(SolarEdgeDataService):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SolarEdgeConfigEntry,
         api: SolarEdge,
         site_id: str,
     ) -> None:
         """Initialize the power flow data service."""
-        super().__init__(hass, config_entry, api, site_id)
+        super().__init__(menuai, config_entry, api, site_id)
 
         self.unit = None
 

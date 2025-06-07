@@ -4,8 +4,8 @@ from datetime import datetime
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -88,13 +88,13 @@ grid_entity_ids = {
 
 
 async def test_sensors_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test if all sensors are created."""
     await init_integration(
-        hass,
+        menuai,
         config_entry,
         "sensor",
         charge_point,
@@ -110,13 +110,13 @@ async def test_sensors_created(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the underlying sensors."""
     await init_integration(
-        hass, config_entry, "sensor", charge_point, charge_point_status, grid
+        menuai, config_entry, "sensor", charge_point, charge_point_status, grid
     )
 
     for entity_id, key in charge_point_entity_ids.items():
@@ -124,7 +124,7 @@ async def test_sensors(
         assert entry
         assert entry.unique_id == f"{key}_101"
 
-        state = hass.states.get(f"sensor.101_{entity_id}")
+        state = menuai.states.get(f"sensor.101_{entity_id}")
         assert state is not None
 
         value = charge_point_status[key]
@@ -135,19 +135,19 @@ async def test_sensors(
         assert entry
         assert entry.unique_id == key
 
-        state = hass.states.get(f"sensor.{entity_id}")
+        state = menuai.states.get(f"sensor.{entity_id}")
         assert state is not None
         assert state.state == str(grid[key])
 
 
 async def test_timestamp_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the underlying sensors."""
     await init_integration(
-        hass, config_entry, "sensor", status=charge_point_status_timestamps
+        menuai, config_entry, "sensor", status=charge_point_status_timestamps
     )
 
     for entity_id, key in charge_point_timestamp_entity_ids.items():
@@ -155,7 +155,7 @@ async def test_timestamp_sensors(
         assert entry
         assert entry.unique_id == f"{key}_101"
 
-        state = hass.states.get(f"sensor.101_{entity_id}")
+        state = menuai.states.get(f"sensor.101_{entity_id}")
         assert state is not None
 
         value = charge_point_status_timestamps[key]
@@ -163,11 +163,11 @@ async def test_timestamp_sensors(
 
 
 async def test_sensor_update(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test if the sensors get updated when there is new data."""
     client, _, _ = await init_integration(
-        hass,
+        menuai,
         config_entry,
         "sensor",
         status=charge_point_status | charge_point_status_timestamps,
@@ -185,7 +185,7 @@ async def test_sensor_update(
             },
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.receiver(
         {
@@ -193,25 +193,25 @@ async def test_sensor_update(
             "data": {"grid_avg_current": 20},
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # test data updated
-    state = hass.states.get("sensor.101_average_voltage")
+    state = menuai.states.get("sensor.101_average_voltage")
     assert state is not None
     assert state.state == str(20)
 
     # grid
-    state = hass.states.get("sensor.average_grid_current")
+    state = menuai.states.get("sensor.average_grid_current")
     assert state
     assert state.state == str(20)
 
     # test unavailable
-    state = hass.states.get("sensor.101_energy_usage")
+    state = menuai.states.get("sensor.101_energy_usage")
     assert state
     assert state.state == "unavailable"
 
     # test if timestamp keeps old value
-    state = hass.states.get("sensor.101_started_on")
+    state = menuai.states.get("sensor.101_started_on")
     assert state
     assert (
         datetime.strptime(state.state, "%Y-%m-%dT%H:%M:%S%z")
@@ -230,9 +230,9 @@ async def test_sensor_update(
             },
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.101_started_on")
+    state = menuai.states.get("sensor.101_started_on")
     assert state
     assert (
         datetime.strptime(state.state, "%Y-%m-%dT%H:%M:%S%z")

@@ -2,17 +2,17 @@
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.geo_json_events.const import DOMAIN
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.geo_json_events.const import DOMAIN
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_URL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import URL
 
@@ -22,18 +22,18 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 async def test_duplicate_error_user(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test that errors are shown when duplicates are added."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_URL: URL,
@@ -48,15 +48,15 @@ async def test_duplicate_error_user(
     assert result["reason"] == "already_configured"
 
 
-async def test_step_user(hass: HomeAssistant) -> None:
+async def test_step_user(menuai: menuai) -> None:
     """Test that the user step works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_URL: URL,

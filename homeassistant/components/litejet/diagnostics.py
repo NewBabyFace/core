@@ -4,17 +4,17 @@ from typing import Any
 
 from pylitejet import LiteJet
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import DOMAIN
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for LiteJet config entry."""
-    system: LiteJet = hass.data[DOMAIN]
+    system: LiteJet = menuai.data[DOMAIN]
     return {
         "model": system.model_name,
         "loads": list(system.loads()),

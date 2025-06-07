@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from . import template
 
@@ -23,7 +23,7 @@ class ScriptVariables:
     @callback
     def async_render(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         run_variables: Mapping[str, Any] | None,
         *,
         limited: bool = False,

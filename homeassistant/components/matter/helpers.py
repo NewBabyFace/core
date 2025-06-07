@@ -6,9 +6,9 @@ import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN, ID_TYPE_DEVICE_ID
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .adapter import MatterAdapter
 
 
-class MissingNode(HomeAssistantError):
+class MissingNode(menuaiError):
     """Exception raised when we can't find a node."""
 
 
@@ -32,12 +32,12 @@ class MatterEntryData:
 
 
 @callback
-def get_matter(hass: HomeAssistant) -> MatterAdapter:
+def get_matter(menuai: menuai) -> MatterAdapter:
     """Return MatterAdapter instance."""
     # NOTE: This assumes only one Matter connection/fabric can exist.
     # Shall we support connecting to multiple servers in the client or by
     # config entries? In case of the config entry we need to fix this.
-    matter_entry_data: MatterEntryData = next(iter(hass.data[DOMAIN].values()))
+    matter_entry_data: MatterEntryData = next(iter(menuai.data[DOMAIN].values()))
     return matter_entry_data.adapter
 
 
@@ -73,21 +73,21 @@ def get_device_id(
 
 
 @callback
-def node_from_ha_device_id(hass: HomeAssistant, ha_device_id: str) -> MatterNode | None:
+def node_from_ha_device_id(menuai: menuai, ha_device_id: str) -> MatterNode | None:
     """Get node id from ha device id."""
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     device = dev_reg.async_get(ha_device_id)
     if device is None:
         raise MissingNode(f"Invalid device ID: {ha_device_id}")
-    return get_node_from_device_entry(hass, device)
+    return get_node_from_device_entry(menuai, device)
 
 
 @callback
 def get_node_from_device_entry(
-    hass: HomeAssistant, device: dr.DeviceEntry
+    menuai: menuai, device: dr.DeviceEntry
 ) -> MatterNode | None:
     """Return MatterNode from device entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     device_id_type_prefix = f"{ID_TYPE_DEVICE_ID}_"
     device_id_full = next(
         (

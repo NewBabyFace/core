@@ -12,12 +12,12 @@ from incomfortclient import (
     InvalidHeaterList,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 type InComfortConfigEntry = ConfigEntry[InComfortDataCoordinator]
 
@@ -35,7 +35,7 @@ class InComfortData:
 
 
 async def async_connect_gateway(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_data: dict[str, Any],
 ) -> InComfortData:
     """Validate the configuration."""
@@ -43,7 +43,7 @@ async def async_connect_gateway(
     hostname = credentials.pop(CONF_HOST)
 
     client = InComfortGateway(
-        hostname, **credentials, session=async_get_clientsession(hass)
+        hostname, **credentials, session=async_get_clientsession(menuai)
     )
     heaters = await client.heaters()
 
@@ -57,14 +57,14 @@ class InComfortDataCoordinator(DataUpdateCoordinator[InComfortData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: InComfortConfigEntry,
         incomfort_data: InComfortData,
     ) -> None:
         """Initialize coordinator."""
         self.unique_id = config_entry.unique_id
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="InComfort datacoordinator",

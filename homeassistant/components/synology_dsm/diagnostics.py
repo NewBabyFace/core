@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.camera import diagnostics as camera_diagnostics
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.camera import diagnostics as camera_diagnostics
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from .const import CONF_DEVICE_TOKEN
 from .coordinator import SynologyDSMConfigEntry
@@ -16,7 +16,7 @@ TO_REDACT = {CONF_USERNAME, CONF_PASSWORD, CONF_DEVICE_TOKEN}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: SynologyDSMConfigEntry
+    menuai: menuai, entry: SynologyDSMConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = entry.runtime_data
@@ -99,7 +99,7 @@ async def async_get_config_entry_diagnostics(
                 "resolution": camera.resolution,
             }
         if camera_data := await camera_diagnostics.async_get_config_entry_diagnostics(
-            hass, entry
+            menuai, entry
         ):
             diag_data["surveillance_station"]["camera_diagnostics"] = camera_data
 

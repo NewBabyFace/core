@@ -7,10 +7,10 @@ import logging
 from aiowebdav2.client import Client
 from aiowebdav2.exceptions import UnauthorizedError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError, ConfigEntryNotReady
 
 from .const import CONF_BACKUP_PATH, DATA_BACKUP_AGENT_LISTENERS, DOMAIN
 from .helpers import (
@@ -24,10 +24,10 @@ type WebDavConfigEntry = ConfigEntry[Client]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: WebDavConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: WebDavConfigEntry) -> bool:
     """Set up WebDAV from a config entry."""
     client = async_create_client(
-        hass=hass,
+        menuai=menuai,
         url=entry.data[CONF_URL],
         username=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
@@ -63,13 +63,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: WebDavConfigEntry) -> bo
     entry.runtime_data = client
 
     def async_notify_backup_listeners() -> None:
-        for listener in hass.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
+        for listener in menuai.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
             listener()
 
     entry.async_on_unload(entry.async_on_state_change(async_notify_backup_listeners))
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: WebDavConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: WebDavConfigEntry) -> bool:
     """Unload a WebDAV config entry."""
     return True

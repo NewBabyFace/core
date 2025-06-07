@@ -23,19 +23,19 @@ from androidtv.setup_async import (
     setup as async_androidtv_setup,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_HOST,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.storage import STORAGE_DIR
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.storage import STORAGE_DIR
 
 from .const import (
     CONF_ADB_SERVER_IP,
@@ -93,11 +93,11 @@ def get_androidtv_mac(dev_props: dict[str, Any]) -> str | None:
 
 
 def _setup_androidtv(
-    hass: HomeAssistant, config: Mapping[str, Any]
+    menuai: menuai, config: Mapping[str, Any]
 ) -> tuple[str, PythonRSASigner | None, str]:
     """Generate an ADB key (if needed) and load it."""
     adbkey: str = config.get(
-        CONF_ADBKEY, hass.config.path(STORAGE_DIR, "androidtv_adbkey")
+        CONF_ADBKEY, menuai.config.path(STORAGE_DIR, "androidtv_adbkey")
     )
     if CONF_ADB_SERVER_IP not in config:
         # Use "adb_shell" (Python ADB implementation)
@@ -121,7 +121,7 @@ def _setup_androidtv(
 
 
 async def async_connect_androidtv(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: Mapping[str, Any],
     *,
     state_detection_rules: dict[str, Any] | None = None,
@@ -130,8 +130,8 @@ async def async_connect_androidtv(
     """Connect to Android device."""
     address = f"{config[CONF_HOST]}:{config[CONF_PORT]}"
 
-    adbkey, signer, adb_log = await hass.async_add_executor_job(
-        _setup_androidtv, hass, config
+    adbkey, signer, adb_log = await menuai.async_add_executor_job(
+        _setup_androidtv, menuai, config
     )
 
     aftv = await async_androidtv_setup(
@@ -162,7 +162,7 @@ async def async_connect_androidtv(
     return aftv, None
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
         "Migrating configuration from version %s.%s", entry.version, entry.minor_version
@@ -175,7 +175,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if entry.minor_version < 2:
             new_options = {**new_options, CONF_SCREENCAP_INTERVAL: 0}
 
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry, options=new_options, minor_version=2, version=1
             )
 
@@ -188,7 +188,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AndroidTVConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AndroidTVConfigEntry) -> bool:
     """Set up Android Debug Bridge platform."""
 
     state_det_rules = entry.options.get(CONF_STATE_DETECTION_RULES)
@@ -199,7 +199,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AndroidTVConfigEntry) ->
 
     try:
         aftv, error_message = await async_connect_androidtv(
-            hass, entry.data, state_detection_rules=state_det_rules
+            menuai, entry.data, state_detection_rules=state_det_rules
         )
     except exceptions as exc:
         raise ConfigEntryNotReady(exc) from exc
@@ -212,27 +212,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: AndroidTVConfigEntry) ->
         await aftv.adb_close()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_close_connection)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, async_close_connection)
     )
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     entry.runtime_data = AndroidTVRuntimeData(aftv, entry.options.copy())
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AndroidTVConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AndroidTVConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         aftv = entry.runtime_data.aftv
         await aftv.adb_close()
 
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, entry: AndroidTVConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: AndroidTVConfigEntry) -> None:
     """Update when config_entry options update."""
     reload_opt = False
     old_options = entry.runtime_data.dev_opt
@@ -244,8 +244,8 @@ async def update_listener(hass: HomeAssistant, entry: AndroidTVConfigEntry) -> N
                 break
 
     if reload_opt:
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)
         return
 
     entry.runtime_data.dev_opt = entry.options.copy()
-    async_dispatcher_send(hass, f"{SIGNAL_CONFIG_ENTITY}_{entry.entry_id}")
+    async_dispatcher_send(menuai, f"{SIGNAL_CONFIG_ENTITY}_{entry.entry_id}")

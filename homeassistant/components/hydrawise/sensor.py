@@ -9,15 +9,15 @@ from typing import Any
 
 from pydrawise.schema import ControllerWaterUseSummary
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import UnitOfTime, UnitOfVolume
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.const import UnitOfTime, UnitOfVolume
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .coordinator import HydrawiseConfigEntry
 from .entity import HydrawiseEntity
@@ -127,7 +127,7 @@ FLOW_MEASUREMENT_KEYS = [x.key for x in FLOW_CONTROLLER_SENSORS]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HydrawiseConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

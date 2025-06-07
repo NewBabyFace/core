@@ -4,12 +4,12 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import konnected
-from homeassistant.components.konnected import config_flow
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai import config_entries
+from menuai.components import konnected
+from menuai.components.konnected import config_flow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -30,9 +30,9 @@ async def mock_panel_fixture():
         yield konn_client
 
 
-async def test_flow_works(hass: HomeAssistant, mock_panel) -> None:
+async def test_flow_works(menuai: menuai, mock_panel) -> None:
     """Test config flow ."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -42,7 +42,7 @@ async def test_flow_works(hass: HomeAssistant, mock_panel) -> None:
         "mac": "11:22:33:44:55:66",
         "model": "Konnected",
     }
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"port": 1234, "host": "1.2.3.4"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -54,7 +54,7 @@ async def test_flow_works(hass: HomeAssistant, mock_panel) -> None:
         "port": 1234,
     }
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -67,9 +67,9 @@ async def test_flow_works(hass: HomeAssistant, mock_panel) -> None:
     )
 
 
-async def test_pro_flow_works(hass: HomeAssistant, mock_panel) -> None:
+async def test_pro_flow_works(menuai: menuai, mock_panel) -> None:
     """Test config flow ."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -81,7 +81,7 @@ async def test_pro_flow_works(hass: HomeAssistant, mock_panel) -> None:
         "mac": "11:22:33:44:55:66",
         "model": "Konnected Pro",
     }
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"port": 1234, "host": "1.2.3.4"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -93,7 +93,7 @@ async def test_pro_flow_works(hass: HomeAssistant, mock_panel) -> None:
         "port": 1234,
     }
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -106,7 +106,7 @@ async def test_pro_flow_works(hass: HomeAssistant, mock_panel) -> None:
     )
 
 
-async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
+async def test_ssdp(menuai: menuai, mock_panel) -> None:
     """Test a panel being discovered."""
     mock_panel.get_status.return_value = {
         "mac": "11:22:33:44:55:66",
@@ -114,7 +114,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
     }
 
     # Test success
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -139,7 +139,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
 
     # Test abort if connection failed
     mock_panel.get_status.side_effect = config_flow.CannotConnect
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -158,7 +158,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
 
     # Test abort if invalid data
     mock_panel.get_status.side_effect = KeyError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -173,7 +173,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
     assert result["reason"] == "unknown"
 
     # Test abort if invalid manufacturer
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -191,7 +191,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
     assert result["reason"] == "not_konn_panel"
 
     # Test abort if invalid model
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -213,9 +213,9 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
         domain=config_flow.DOMAIN,
         data={config_flow.CONF_HOST: "1.2.3.4", config_flow.CONF_PORT: 1234},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -233,14 +233,14 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_import_no_host_user_finish(hass: HomeAssistant, mock_panel) -> None:
+async def test_import_no_host_user_finish(menuai: menuai, mock_panel) -> None:
     """Test importing a panel with no host info."""
     mock_panel.get_status.return_value = {
         "mac": "aa:bb:cc:dd:ee:ff",
         "model": "Konnected Pro",
     }
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={
@@ -273,14 +273,14 @@ async def test_import_no_host_user_finish(hass: HomeAssistant, mock_panel) -> No
     assert result["step_id"] == "import_confirm"
     assert result["description_placeholders"]["id"] == "aabbccddeeff"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     # confirm user is prompted to enter host
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"host": "1.1.1.1", "port": 1234}
     )
     assert result["type"] is FlowResultType.FORM
@@ -293,13 +293,13 @@ async def test_import_no_host_user_finish(hass: HomeAssistant, mock_panel) -> No
     }
 
     # final confirmation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> None:
+async def test_import_ssdp_host_user_finish(menuai: menuai, mock_panel) -> None:
     """Test importing a pro panel with no host info which ssdp discovers."""
     mock_panel.get_status.return_value = {
         "chipId": "somechipid",
@@ -307,7 +307,7 @@ async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> 
         "model": "Konnected Pro",
     }
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={
@@ -341,7 +341,7 @@ async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> 
     assert result["description_placeholders"]["id"] == "somechipid"
 
     # discover the panel via ssdp
-    ssdp_result = await hass.config_entries.flow.async_init(
+    ssdp_result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -357,7 +357,7 @@ async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> 
     assert ssdp_result["type"] is FlowResultType.ABORT
     assert ssdp_result["reason"] == "already_in_progress"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.FORM
@@ -370,25 +370,25 @@ async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> 
     }
 
     # final confirmation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_ssdp_already_configured(hass: HomeAssistant, mock_panel) -> None:
+async def test_ssdp_already_configured(menuai: menuai, mock_panel) -> None:
     """Test if a discovered panel has already been configured."""
     MockConfigEntry(
         domain="konnected",
         data={"host": "0.0.0.0", "port": 1234},
         unique_id="112233445566",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     mock_panel.get_status.return_value = {
         "mac": "11:22:33:44:55:66",
         "model": "Konnected Pro",
     }
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -405,7 +405,7 @@ async def test_ssdp_already_configured(hass: HomeAssistant, mock_panel) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_ssdp_host_update(hass: HomeAssistant, mock_panel) -> None:
+async def test_ssdp_host_update(menuai: menuai, mock_panel) -> None:
     """Test if a discovered panel has already been configured but changed host."""
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -462,13 +462,13 @@ async def test_ssdp_host_update(hass: HomeAssistant, mock_panel) -> None:
         data=device_config,
         options=device_options,
         unique_id="112233445566",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     mock_panel.get_status.return_value = {
         "mac": "11:22:33:44:55:66",
         "model": "Konnected Pro",
     }
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -484,20 +484,20 @@ async def test_ssdp_host_update(hass: HomeAssistant, mock_panel) -> None:
     assert result["type"] is FlowResultType.ABORT
 
     # confirm the host value was updated, access_token was not
-    entry = hass.config_entries.async_entries(config_flow.DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(config_flow.DOMAIN)[0]
     assert entry.data["host"] == "1.1.1.1"
     assert entry.data["port"] == 1234
     assert entry.data["access_token"] == "11223344556677889900"
 
 
-async def test_import_existing_config(hass: HomeAssistant, mock_panel) -> None:
+async def test_import_existing_config(menuai: menuai, mock_panel) -> None:
     """Test importing a host with an existing config file."""
     mock_panel.get_status.return_value = {
         "mac": "11:22:33:44:55:66",
         "model": "Konnected Pro",
     }
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data=konnected.DEVICE_SCHEMA_YAML(
@@ -542,7 +542,7 @@ async def test_import_existing_config(hass: HomeAssistant, mock_panel) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -609,7 +609,7 @@ async def test_import_existing_config(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_import_existing_config_entry(hass: HomeAssistant, mock_panel) -> None:
+async def test_import_existing_config_entry(menuai: menuai, mock_panel) -> None:
     """Test importing a host that has an existing config entry."""
     MockConfigEntry(
         domain="konnected",
@@ -621,7 +621,7 @@ async def test_import_existing_config_entry(hass: HomeAssistant, mock_panel) -> 
             "extra": "something",
         },
         unique_id="112233445566",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     mock_panel.get_status.return_value = {
         "mac": "11:22:33:44:55:66",
@@ -629,8 +629,8 @@ async def test_import_existing_config_entry(hass: HomeAssistant, mock_panel) -> 
     }
 
     # utilize a global access token this time
-    hass.data[config_flow.DOMAIN] = {"access_token": "SUPERSECRETTOKEN"}
-    result = await hass.config_entries.flow.async_init(
+    menuai.data[config_flow.DOMAIN] = {"access_token": "SUPERSECRETTOKEN"}
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={
@@ -670,8 +670,8 @@ async def test_import_existing_config_entry(hass: HomeAssistant, mock_panel) -> 
     assert result["type"] is FlowResultType.ABORT
 
     # We should have updated the host info but not the access token
-    assert len(hass.config_entries.async_entries("konnected")) == 1
-    assert hass.config_entries.async_entries("konnected")[0].data == {
+    assert len(menuai.config_entries.async_entries("konnected")) == 1
+    assert menuai.config_entries.async_entries("konnected")[0].data == {
         "host": "1.2.3.4",
         "port": 1234,
         "access_token": "ORIGINALTOKEN",
@@ -681,14 +681,14 @@ async def test_import_existing_config_entry(hass: HomeAssistant, mock_panel) -> 
     }
 
 
-async def test_import_pin_config(hass: HomeAssistant, mock_panel) -> None:
+async def test_import_pin_config(menuai: menuai, mock_panel) -> None:
     """Test importing a host with an existing config file that specifies pin configs."""
     mock_panel.get_status.return_value = {
         "mac": "11:22:33:44:55:66",
         "model": "Konnected Pro",
     }
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data=konnected.DEVICE_SCHEMA_YAML(
@@ -722,7 +722,7 @@ async def test_import_pin_config(hass: HomeAssistant, mock_panel) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -778,7 +778,7 @@ async def test_import_pin_config(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
+async def test_option_flow(menuai: menuai, mock_panel) -> None:
     """Test config flow options."""
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -799,15 +799,15 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
         options=device_options,
         unique_id="112233445566",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_io"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "1": "Disabled",
@@ -826,7 +826,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     }
 
     # zone 2
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -836,7 +836,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     }
 
     # zone 6
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"type": "window", "name": "winder", "inverse": True},
     )
@@ -847,7 +847,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     }
 
     # zone 3
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "dht"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -858,7 +858,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     }
 
     # zone 4
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.FORM
@@ -869,7 +869,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     }
 
     # zone out
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "name": "switcher",
@@ -889,7 +889,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     }
 
     # zone out - state 2
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "name": "alarm",
@@ -904,7 +904,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_misc"
     # make sure we enforce url format
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "discovery": False,
@@ -916,7 +916,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_misc"
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "discovery": False,
@@ -964,7 +964,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
+async def test_option_flow_pro(menuai: menuai, mock_panel) -> None:
     """Test config flow options for pro board."""
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -985,15 +985,15 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
         options=device_options,
         unique_id="112233445566",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_io"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "1": "Disabled",
@@ -1008,7 +1008,7 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_io_ext"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "8": "Switchable Output",
@@ -1025,14 +1025,14 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
     assert result["step_id"] == "options_binary"
 
     # zone 2
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_binary"
 
     # zone 6
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"type": "window", "name": "winder", "inverse": True},
     )
@@ -1040,42 +1040,42 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
     assert result["step_id"] == "options_binary"
 
     # zone 10
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_binary"
 
     # zone 11
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "window"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_digital"
 
     # zone 3
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "dht"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_digital"
 
     # zone 7
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "ds18b20", "name": "temper"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_switch"
 
     # zone 4
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_switch"
 
     # zone 8
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "name": "switcher",
@@ -1089,20 +1089,20 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
     assert result["step_id"] == "options_switch"
 
     # zone out1
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_switch"
 
     # zone alarm1
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_misc"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"discovery": False, "blink": True, "override_api_host": False},
     )
@@ -1150,7 +1150,7 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
+async def test_option_flow_import(menuai: menuai, mock_panel) -> None:
     """Test config flow options imported from configuration.yaml."""
     device_options = config_flow.OPTIONS_SCHEMA(
         {
@@ -1198,9 +1198,9 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     entry = MockConfigEntry(
         domain="konnected", data=device_config, unique_id="112233445566"
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -1212,7 +1212,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     assert schema["2"] == "Digital Sensor"
     assert schema["3"] == "Switchable Output"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "1": "Binary Sensor",
@@ -1225,7 +1225,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     schema = result["data_schema"]({})
     assert schema["8"] == "Disabled"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -1237,7 +1237,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     assert schema["type"] == "window"
     assert schema["name"] == "winder"
     assert schema["inverse"] is True
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -1247,7 +1247,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     schema = result["data_schema"]({})
     assert schema["type"] == "ds18b20"
     assert schema["name"] == "temper"
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"type": "dht"},
     )
@@ -1262,7 +1262,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     assert schema["pause"] == 100
     assert schema["repeat"] == 4
     assert schema["more_states"] == "Yes"
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"activation": "high", "more_states": "No"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -1271,7 +1271,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     schema = result["data_schema"]({})
     assert schema["blink"] is True
     assert schema["discovery"] is True
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"discovery": True, "blink": False, "override_api_host": False},
     )
@@ -1302,7 +1302,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     }
 
 
-async def test_option_flow_existing(hass: HomeAssistant, mock_panel) -> None:
+async def test_option_flow_existing(menuai: menuai, mock_panel) -> None:
     """Test config flow options with existing already in place."""
     device_options = config_flow.OPTIONS_SCHEMA(
         {
@@ -1345,9 +1345,9 @@ async def test_option_flow_existing(hass: HomeAssistant, mock_panel) -> None:
         options=device_options,
         unique_id="112233445566",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
     assert result["type"] is FlowResultType.FORM

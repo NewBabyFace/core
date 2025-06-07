@@ -8,12 +8,12 @@ import logging
 from pyhik.hikvision import HikCamera
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_LAST_TRIP_TIME,
     CONF_CUSTOMIZE,
     CONF_DELAY,
@@ -23,15 +23,15 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_SSL,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import track_point_in_utc_time
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import track_point_in_utc_time
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.dt import utcnow
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -108,7 +108,7 @@ def setup_platform(
 
     url = f"{protocol}://{host}"
 
-    data = HikvisionData(hass, url, port, name, username, password)
+    data = HikvisionData(menuai, url, port, name, username, password)
 
     if data.sensors is None:
         _LOGGER.error("Hikvision event stream has no data, unable to set up")
@@ -137,7 +137,7 @@ def setup_platform(
             )
             if not ignore:
                 entities.append(
-                    HikvisionBinarySensor(hass, sensor, channel[1], data, delay)
+                    HikvisionBinarySensor(menuai, sensor, channel[1], data, delay)
                 )
 
     add_entities(entities)
@@ -146,7 +146,7 @@ def setup_platform(
 class HikvisionData:
     """Hikvision device event stream object."""
 
-    def __init__(self, hass, url, port, name, username, password):
+    def __init__(self, menuai, url, port, name, username, password):
         """Initialize the data object."""
         self._url = url
         self._port = port
@@ -160,8 +160,8 @@ class HikvisionData:
         if self._name is None:
             self._name = self.camdata.get_name
 
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self.stop_hik)
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_START, self.start_hik)
+        menuai.bus.listen_once(EVENT_menuai_STOP, self.stop_hik)
+        menuai.bus.listen_once(EVENT_menuai_START, self.start_hik)
 
     def stop_hik(self, event):
         """Shutdown Hikvision subscriptions and subscription thread on exit."""
@@ -201,9 +201,9 @@ class HikvisionBinarySensor(BinarySensorEntity):
 
     _attr_should_poll = False
 
-    def __init__(self, hass, sensor, channel, cam, delay):
+    def __init__(self, menuai, sensor, channel, cam, delay):
         """Initialize the binary_sensor."""
-        self._hass = hass
+        self._menuai = menuai
         self._cam = cam
         self._sensor = sensor
         self._channel = channel
@@ -286,7 +286,7 @@ class HikvisionBinarySensor(BinarySensorEntity):
                 self._timer = None
 
             self._timer = track_point_in_utc_time(
-                self._hass, _delay_update, utcnow() + timedelta(seconds=self._delay)
+                self._menuai, _delay_update, utcnow() + timedelta(seconds=self._delay)
             )
 
         elif self._delay > 0 and self.is_on:

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from aiobafi6 import Device
 
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo, format_mac
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo, format_mac
+from menuai.helpers.entity import Entity, EntityDescription
 
 
 class BAFEntity(Entity):
@@ -40,11 +40,11 @@ class BAFEntity(Entity):
         self._async_update_attrs()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add data updated listener after this object has been initialized."""
         self._device.add_callback(self._async_update_from_device)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove data updated listener after this object has been initialized."""
         self._device.remove_callback(self._async_update_from_device)
 

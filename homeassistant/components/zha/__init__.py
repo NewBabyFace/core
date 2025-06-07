@@ -12,24 +12,24 @@ from zha.zigbee.device import get_device_automation_triggers
 from zigpy.config import CONF_DATABASE, CONF_DEVICE, CONF_DEVICE_PATH
 from zigpy.exceptions import NetworkSettingsInconsistent, TransientConnectionError
 
-from homeassistant.components.homeassistant_hardware.helpers import (
+from menuai.components.menuai_hardware.helpers import (
     async_notify_firmware_info,
     async_register_firmware_info_provider,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_TYPE,
     EVENT_CORE_CONFIG_UPDATE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryError, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
-from . import homeassistant_hardware, repairs, websocket_api
+from . import menuai_hardware, repairs, websocket_api
 from .const import (
     CONF_BAUDRATE,
     CONF_CUSTOM_QUIRKS_PATH,
@@ -109,30 +109,30 @@ CENTICELSIUS = "C-100"
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up ZHA from config."""
     ha_zha_data = HAZHAData(yaml_config=config.get(DOMAIN, {}))
-    hass.data[DATA_ZHA] = ha_zha_data
+    menuai.data[DATA_ZHA] = ha_zha_data
 
-    async_register_firmware_info_provider(hass, DOMAIN, homeassistant_hardware)
+    async_register_firmware_info_provider(menuai, DOMAIN, menuai_hardware)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up ZHA.
 
     Will automatically load components to support devices found on the network.
     """
-    ha_zha_data: HAZHAData = get_zha_data(hass)
+    ha_zha_data: HAZHAData = get_zha_data(menuai)
     ha_zha_data.config_entry = config_entry
-    zha_lib_data: ZHAData = create_zha_config(hass, ha_zha_data)
+    zha_lib_data: ZHAData = create_zha_config(menuai, ha_zha_data)
 
     zha_gateway = await Gateway.async_from_config(zha_lib_data)
 
     # Load and cache device trigger information early
-    device_registry = dr.async_get(hass)
-    radio_mgr = ZhaRadioManager.from_config_entry(hass, config_entry)
+    device_registry = dr.async_get(menuai)
+    radio_mgr = ZhaRadioManager.from_config_entry(menuai, config_entry)
 
     async with radio_mgr.connect_zigpy_app() as app:
         for dev in app.devices.values():
@@ -156,7 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         await zha_gateway.async_initialize()
     except NetworkSettingsInconsistent as exc:
         await warn_on_inconsistent_network_settings(
-            hass,
+            menuai,
             config_entry=config_entry,
             old_state=exc.old_state,
             new_state=exc.new_state,
@@ -176,16 +176,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         ):
             try:
                 # Ignore all exceptions during probing, they shouldn't halt setup
-                if await warn_on_wrong_silabs_firmware(hass, device_path):
+                if await warn_on_wrong_silabs_firmware(menuai, device_path):
                     raise ConfigEntryError("Incorrect firmware installed") from exc
             except AlreadyRunningEZSP as ezsp_exc:
                 raise ConfigEntryNotReady from ezsp_exc
 
         raise ConfigEntryNotReady from exc
 
-    repairs.async_delete_blocking_issues(hass)
+    repairs.async_delete_blocking_issues(menuai)
 
-    ha_zha_data.gateway_proxy = ZHAGatewayProxy(hass, config_entry, zha_gateway)
+    ha_zha_data.gateway_proxy = ZHAGatewayProxy(menuai, config_entry, zha_gateway)
 
     manufacturer = zha_gateway.state.node_info.manufacturer
     model = zha_gateway.state.node_info.model
@@ -204,7 +204,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         sw_version=zha_gateway.state.node_info.version,
     )
 
-    websocket_api.async_load_api(hass)
+    websocket_api.async_load_api(menuai)
 
     async def async_shutdown(_: Event) -> None:
         """Handle shutdown tasks."""
@@ -212,34 +212,34 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         await ha_zha_data.gateway_proxy.shutdown()
 
     config_entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, async_shutdown)
     )
 
     @callback
     def update_config(event: Event) -> None:
         """Handle Core config update."""
-        zha_gateway.config.local_timezone = ZoneInfo(hass.config.time_zone)
+        zha_gateway.config.local_timezone = ZoneInfo(menuai.config.time_zone)
 
     config_entry.async_on_unload(
-        hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, update_config)
+        menuai.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, update_config)
     )
 
-    if fw_info := homeassistant_hardware.get_firmware_info(hass, config_entry):
+    if fw_info := menuai_hardware.get_firmware_info(menuai, config_entry):
         await async_notify_firmware_info(
-            hass,
+            menuai,
             DOMAIN,
             firmware_info=fw_info,
         )
 
     await ha_zha_data.gateway_proxy.async_initialize_devices_and_entities()
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-    async_dispatcher_send(hass, SIGNAL_ADD_ENTITIES)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    async_dispatcher_send(menuai, SIGNAL_ADD_ENTITIES)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload ZHA config entry."""
-    ha_zha_data = get_zha_data(hass)
+    ha_zha_data = get_zha_data(menuai)
     ha_zha_data.config_entry = None
 
     if ha_zha_data.gateway_proxy is not None:
@@ -254,12 +254,12 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         for platform in PLATFORMS:
             del ha_zha_data.platforms[platform]
 
-    websocket_api.async_unload_api(hass)
+    websocket_api.async_unload_api(menuai)
 
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
@@ -269,11 +269,11 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             CONF_DEVICE: {CONF_DEVICE_PATH: config_entry.data[CONF_USB_PATH]},
         }
 
-        baudrate = get_zha_data(hass).yaml_config.get(CONF_BAUDRATE)
+        baudrate = get_zha_data(menuai).yaml_config.get(CONF_BAUDRATE)
         if data[CONF_RADIO_TYPE] != RadioType.deconz and baudrate in BAUD_RATES:
             data[CONF_DEVICE][CONF_BAUDRATE] = baudrate
 
-        hass.config_entries.async_update_entry(config_entry, data=data, version=2)
+        menuai.config_entries.async_update_entry(config_entry, data=data, version=2)
 
     if config_entry.version == 2:
         data = {**config_entry.data}
@@ -281,7 +281,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if data[CONF_RADIO_TYPE] == "ti_cc":
             data[CONF_RADIO_TYPE] = "znp"
 
-        hass.config_entries.async_update_entry(config_entry, data=data, version=3)
+        menuai.config_entries.async_update_entry(config_entry, data=data, version=3)
 
     if config_entry.version == 3:
         data = {**config_entry.data}
@@ -298,7 +298,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if not data[CONF_DEVICE].get(CONF_FLOW_CONTROL):
             data[CONF_DEVICE][CONF_FLOW_CONTROL] = None
 
-        hass.config_entries.async_update_entry(config_entry, data=data, version=4)
+        menuai.config_entries.async_update_entry(config_entry, data=data, version=4)
 
     _LOGGER.info("Migration to version %s successful", config_entry.version)
     return True

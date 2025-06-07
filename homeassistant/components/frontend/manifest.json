@@ -1,6 +1,6 @@
 {
   "domain": "frontend",
-  "name": "Home Assistant Frontend",
+  "name": "MenuAI Frontend",
   "codeowners": ["@home-assistant/frontend"],
   "dependencies": [
     "api",

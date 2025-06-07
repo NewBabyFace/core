@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 
 from async_upnp_client.exceptions import UpnpCommunicationError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 from .device import Device
@@ -26,7 +26,7 @@ class UpnpDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: UpnpConfigEntry,
         device: Device,
         device_entry: DeviceEntry,
@@ -38,7 +38,7 @@ class UpnpDataUpdateCoordinator(
         self._features_by_entity_id: defaultdict[str, set[str]] = defaultdict(set)
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=device.name,

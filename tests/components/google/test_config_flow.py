@@ -20,24 +20,24 @@ from oauth2client.client import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.application_credentials import (
+from menuai import config_entries
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.google.const import (
+from menuai.components.google.const import (
     CONF_CALENDAR_ACCESS,
     CONF_CREDENTIAL_TYPE,
     DOMAIN,
     CredentialType,
     FeatureAccess,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .conftest import CLIENT_ID, CLIENT_SECRET, EMAIL_ADDRESS, AsyncYieldFixture
 
@@ -57,9 +57,9 @@ async def request_setup(current_request_with_host: None) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_app_creds(hass: HomeAssistant) -> None:
+async def setup_app_creds(menuai: menuai) -> None:
     """Fixture to setup application credentials component."""
-    await async_setup_component(hass, "application_credentials", {})
+    await async_setup_component(menuai, "application_credentials", {})
 
 
 @pytest.fixture
@@ -74,7 +74,7 @@ async def mock_code_flow(
 ) -> AsyncYieldFixture[Mock]:
     """Fixture for initiating OAuth flow."""
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
+        "menuai.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
     ) as mock_flow:
         mock_flow.return_value = DeviceFlowInfo.FromResponse(
             {
@@ -92,7 +92,7 @@ async def mock_code_flow(
 async def mock_exchange(creds: OAuth2Credentials) -> AsyncYieldFixture[Mock]:
     """Fixture for mocking out the exchange for credentials."""
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step2_exchange",
+        "menuai.components.google.api.OAuth2WebServerFlow.step2_exchange",
         return_value=creds,
     ) as mock:
         yield mock
@@ -132,24 +132,24 @@ async def primary_calendar(
     )
 
 
-async def fire_alarm(hass: HomeAssistant, point_in_time: datetime.datetime) -> None:
+async def fire_alarm(menuai: menuai, point_in_time: datetime.datetime) -> None:
     """Fire an alarm and wait for callbacks to run."""
     with freeze_time(point_in_time):
-        async_fire_time_changed(hass, point_in_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, point_in_time)
+        await menuai.async_block_till_done()
 
 
 async def test_full_flow_application_creds(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     mock_exchange: Mock,
 ) -> None:
     """Test successful creds setup."""
     await async_import_client_credential(
-        hass, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET), "imported-cred"
+        menuai, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET), "imported-cred"
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.SHOW_PROGRESS
@@ -158,13 +158,13 @@ async def test_full_flow_application_creds(
     assert "url" in result["description_placeholders"]
 
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
         # Run one tick to invoke the credential exchange check
         now = utcnow()
-        await fire_alarm(hass, now + CODE_CHECK_ALARM_TIMEDELTA)
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(
+        await fire_alarm(menuai, now + CODE_CHECK_ALARM_TIMEDELTA)
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(
             flow_id=result["flow_id"]
         )
 
@@ -194,24 +194,24 @@ async def test_full_flow_application_creds(
     assert result.get("options") == {"calendar_access": "read_write"}
 
     assert len(mock_setup.mock_calls) == 1
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
 
 async def test_code_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
 ) -> None:
     """Test server error setting up the oauth flow."""
     await async_import_client_credential(
-        hass, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET), "imported-cred"
+        menuai, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET), "imported-cred"
     )
 
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
+        "menuai.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
         side_effect=OAuth2DeviceCodeError("Test Failure"),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result.get("type") is FlowResultType.ABORT
@@ -219,19 +219,19 @@ async def test_code_error(
 
 
 async def test_timeout_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
 ) -> None:
     """Test timeout error setting up the oauth flow."""
     await async_import_client_credential(
-        hass, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET), "imported-cred"
+        menuai, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET), "imported-cred"
     )
 
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
+        "menuai.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
         side_effect=TimeoutError(),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result.get("type") is FlowResultType.ABORT
@@ -240,17 +240,17 @@ async def test_timeout_error(
 
 @pytest.mark.parametrize("code_expiration_delta", [datetime.timedelta(seconds=50)])
 async def test_expired_after_exchange(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
 ) -> None:
     """Test credential exchange expires."""
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.SHOW_PROGRESS
@@ -260,32 +260,32 @@ async def test_expired_after_exchange(
 
     # Fail first attempt then advance clock past exchange timeout
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step2_exchange",
+        "menuai.components.google.api.OAuth2WebServerFlow.step2_exchange",
         side_effect=FlowExchangeError(),
     ):
         now = utcnow()
-        await fire_alarm(hass, now + datetime.timedelta(seconds=65))
-        await hass.async_block_till_done()
+        await fire_alarm(menuai, now + datetime.timedelta(seconds=65))
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(flow_id=result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(flow_id=result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "code_expired"
 
 
 async def test_exchange_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     mock_exchange: Mock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test an error while exchanging the code for credentials."""
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.SHOW_PROGRESS
@@ -297,30 +297,30 @@ async def test_exchange_error(
     step2_exchange_called = asyncio.Event()
 
     def step2_exchange(*args, **kwargs):
-        hass.loop.call_soon_threadsafe(step2_exchange_called.set)
+        menuai.loop.call_soon_threadsafe(step2_exchange_called.set)
         raise FlowExchangeError
 
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step2_exchange",
+        "menuai.components.google.api.OAuth2WebServerFlow.step2_exchange",
         side_effect=step2_exchange,
     ):
         freezer.tick(CODE_CHECK_ALARM_TIMEDELTA)
-        async_fire_time_changed(hass, utcnow())
+        async_fire_time_changed(menuai, utcnow())
         await step2_exchange_called.wait()
 
     # Status has not updated, will retry
-    result = await hass.config_entries.flow.async_configure(flow_id=result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(flow_id=result["flow_id"])
     assert result.get("type") is FlowResultType.SHOW_PROGRESS
     assert result.get("step_id") == "auth"
 
     # Run another tick, which attempts credential exchange again
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
         freezer.tick(CODE_CHECK_ALARM_TIMEDELTA)
-        async_fire_time_changed(hass, utcnow())
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(
+        async_fire_time_changed(menuai, utcnow())
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(
             flow_id=result["flow_id"]
         )
 
@@ -343,35 +343,35 @@ async def test_exchange_error(
     }
 
     assert len(mock_setup.mock_calls) == 1
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
 
 async def test_duplicate_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     mock_exchange: Mock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test that the same account cannot be setup twice."""
     await async_import_client_credential(
-        hass, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET)
+        menuai, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET)
     )
 
     # Load a config entry
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert len(mock_setup.mock_calls) == 1
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
     # Start a new config flow using the same credential
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.SHOW_PROGRESS
@@ -381,39 +381,39 @@ async def test_duplicate_config_entries(
 
     # Run one tick to invoke the credential exchange check
     now = utcnow()
-    await fire_alarm(hass, now + CODE_CHECK_ALARM_TIMEDELTA)
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(flow_id=result["flow_id"])
+    await fire_alarm(menuai, now + CODE_CHECK_ALARM_TIMEDELTA)
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(flow_id=result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "already_configured"
 
 
 @pytest.mark.parametrize("primary_calendar_email", ["another-email@example.com"])
 async def test_multiple_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     mock_exchange: Mock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test that multiple config entries can be set at once."""
     await async_import_client_credential(
-        hass, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET)
+        menuai, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET)
     )
 
     # Load a config entry
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert len(mock_setup.mock_calls) == 1
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
     # Start a new config flow
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.SHOW_PROGRESS
@@ -422,28 +422,28 @@ async def test_multiple_config_entries(
     assert "url" in result["description_placeholders"]
 
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
         # Run one tick to invoke the credential exchange check
         now = utcnow()
-        await fire_alarm(hass, now + CODE_CHECK_ALARM_TIMEDELTA)
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(
+        await fire_alarm(menuai, now + CODE_CHECK_ALARM_TIMEDELTA)
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(
             flow_id=result["flow_id"]
         )
     assert result.get("type") is FlowResultType.CREATE_ENTRY
     assert result.get("title") == "another-email@example.com"
     assert len(mock_setup.mock_calls) == 1
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
 
 
 async def test_missing_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test can't configure when no authentication source is available."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.ABORT
@@ -451,16 +451,16 @@ async def test_missing_configuration(
 
 
 async def test_wrong_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test can't use the wrong type of authentication."""
 
     # Google calendar flow currently only supports device auth
     config_entry_oauth2_flow.async_register_implementation(
-        hass,
+        menuai,
         DOMAIN,
         config_entry_oauth2_flow.LocalOAuth2Implementation(
-            hass,
+            menuai,
             DOMAIN,
             CLIENT_ID,
             CLIENT_SECRET,
@@ -469,7 +469,7 @@ async def test_wrong_configuration(
         ),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.ABORT
@@ -493,7 +493,7 @@ async def test_wrong_configuration(
     ],
 )
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     mock_exchange: Mock,
     options: dict[str, Any] | None,
@@ -507,21 +507,21 @@ async def test_reauth_flow(
         },
         options=options,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id=result["flow_id"],
         user_input={},
     )
@@ -531,20 +531,20 @@ async def test_reauth_flow(
     assert "url" in result["description_placeholders"]
 
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
         # Run one tick to invoke the credential exchange check
         now = utcnow()
-        await fire_alarm(hass, now + CODE_CHECK_ALARM_TIMEDELTA)
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(
+        await fire_alarm(menuai, now + CODE_CHECK_ALARM_TIMEDELTA)
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(
             flow_id=result["flow_id"]
         )
 
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "reauth_successful"
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     data = entries[0].data
     assert "token" in data
@@ -575,19 +575,19 @@ async def test_reauth_flow(
     ],
 )
 async def test_calendar_lookup_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     mock_exchange: Mock,
     reason: str,
 ) -> None:
     """Test successful config flow and title fetch fails gracefully."""
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.SHOW_PROGRESS
@@ -595,12 +595,12 @@ async def test_calendar_lookup_failure(
     assert "description_placeholders" in result
     assert "url" in result["description_placeholders"]
 
-    with patch("homeassistant.components.google.async_setup_entry", return_value=True):
+    with patch("menuai.components.google.async_setup_entry", return_value=True):
         # Run one tick to invoke the credential exchange check
         now = utcnow()
-        await fire_alarm(hass, now + CODE_CHECK_ALARM_TIMEDELTA)
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(
+        await fire_alarm(menuai, now + CODE_CHECK_ALARM_TIMEDELTA)
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(
             flow_id=result["flow_id"]
         )
 
@@ -609,28 +609,28 @@ async def test_calendar_lookup_failure(
 
 
 async def test_options_flow_triggers_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload of a ConfigEntry."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
         mock_setup.assert_called_once()
 
     assert config_entry.state is ConfigEntryState.LOADED
     assert config_entry.options == {}  # Default is read_write
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     data_schema = result["data_schema"].schema
     assert set(data_schema) == {"calendar_access"}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "calendar_access": "read_only",
@@ -641,26 +641,26 @@ async def test_options_flow_triggers_reauth(
 
 
 async def test_options_flow_no_changes(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload of a ConfigEntry."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
         mock_setup.assert_called_once()
 
     assert config_entry.state is ConfigEntryState.LOADED
     assert config_entry.options == {}  # Default is read_write
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "calendar_access": "read_write",
@@ -672,30 +672,30 @@ async def test_options_flow_no_changes(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_web_auth_compatibility(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test that we can callback to web auth tokens."""
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
 
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
+        "menuai.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
         side_effect=OAuth2DeviceCodeError(
             "Invalid response 401. Error: invalid_client"
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -710,7 +710,7 @@ async def test_web_auth_compatibility(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -727,9 +727,9 @@ async def test_web_auth_compatibility(
     )
 
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.CREATE_ENTRY
     token = result.get("data", {}).get("token", {})
     del token["expires_at"]
@@ -740,7 +740,7 @@ async def test_web_auth_compatibility(
         "type": "Bearer",
         "scope": "https://www.googleapis.com/auth/calendar",
     }
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
 
@@ -752,11 +752,11 @@ async def test_web_auth_compatibility(
     ],
 )
 async def test_web_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_code_flow: Mock,
     mock_exchange: Mock,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     entry_data: dict[str, Any],
 ) -> None:
     """Test reauth of an existing config entry with a web credential."""
@@ -768,31 +768,31 @@ async def test_web_reauth_flow(
             "token": {"access_token": "OLD_ACCESS_TOKEN"},
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     await async_import_client_credential(
-        hass, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET)
+        menuai, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET)
     )
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with patch(
-        "homeassistant.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
+        "menuai.components.google.api.OAuth2WebServerFlow.step1_get_device_and_user_codes",
         side_effect=OAuth2DeviceCodeError(
             "Invalid response 401. Error: invalid_client"
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id=result["flow_id"],
             user_input={},
         )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -807,7 +807,7 @@ async def test_web_reauth_flow(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -824,13 +824,13 @@ async def test_web_reauth_flow(
     )
 
     with patch(
-        "homeassistant.components.google.async_setup_entry", return_value=True
+        "menuai.components.google.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     data = dict(entries[0].data)
     data["token"].pop("expires_at")

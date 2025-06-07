@@ -21,9 +21,9 @@ from aioairzone_cloud.const import (
     RAW_WEBSERVERS,
 )
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from .coordinator import AirzoneCloudConfigEntry
 
@@ -135,7 +135,7 @@ def redact_all(
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: AirzoneCloudConfigEntry
+    menuai: menuai, config_entry: AirzoneCloudConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = config_entry.runtime_data

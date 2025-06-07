@@ -6,11 +6,11 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from ibm_watson import TextToSpeechV1
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
 )
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_engine(hass, config, discovery_info=None):
+def get_engine(menuai, config, discovery_info=None):
     """Set up IBM Watson TTS component."""
 
     authenticator = IAMAuthenticator(config[CONF_APIKEY])

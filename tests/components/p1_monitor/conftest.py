@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from p1monitor import Phases, Settings, SmartMeter, WaterMeter
 import pytest
 
-from homeassistant.components.p1_monitor.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.p1_monitor.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -29,7 +29,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_p1monitor():
     """Return a mocked P1 Monitor client."""
     with patch(
-        "homeassistant.components.p1_monitor.coordinator.P1Monitor"
+        "menuai.components.p1_monitor.coordinator.P1Monitor"
     ) as p1monitor_mock:
         client = p1monitor_mock.return_value
         client.smartmeter = AsyncMock(
@@ -57,12 +57,12 @@ def mock_p1monitor():
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_p1monitor: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_p1monitor: MagicMock
 ) -> MockConfigEntry:
     """Set up the P1 Monitor integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

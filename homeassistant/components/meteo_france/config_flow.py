@@ -9,9 +9,9 @@ from meteofrance_api.client import MeteoFranceClient
 from meteofrance_api.model import Place
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import callback
+from menuai.config_entries import SOURCE_IMPORT, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import callback
 
 from .const import CONF_CITY, DOMAIN
 
@@ -61,7 +61,7 @@ class MeteoFranceFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if not latitude:
             client = MeteoFranceClient()
-            self.places = await self.hass.async_add_executor_job(
+            self.places = await self.menuai.async_add_executor_job(
                 client.search_places, city
             )
             _LOGGER.debug("Places search result: %s", self.places)

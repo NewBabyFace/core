@@ -23,9 +23,9 @@ from pymodbus.pdu import ExceptionResponse
 import pytest
 import voluptuous as vol
 
-from homeassistant import config as hass_config
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.modbus.const import (
+from menuai import config as menuai_config
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.modbus.const import (
     ATTR_ADDRESS,
     ATTR_HUB,
     ATTR_SLAVE,
@@ -73,7 +73,7 @@ from homeassistant.components.modbus.const import (
     UDP,
     DataType,
 )
-from homeassistant.components.modbus.validators import (
+from menuai.components.modbus.validators import (
     check_config,
     duplicate_fan_mode_validator,
     duplicate_swing_mode_validator,
@@ -82,8 +82,8 @@ from homeassistant.components.modbus.validators import (
     register_int_list_validator,
     struct_validator,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     ATTR_STATE,
     CONF_ADDRESS,
     CONF_BINARY_SENSORS,
@@ -99,15 +99,15 @@ from homeassistant.const import (
     CONF_STRUCTURE,
     CONF_TIMEOUT,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     SERVICE_RELOAD,
     STATE_ON,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .conftest import (
     TEST_ENTITY_NAME,
@@ -123,15 +123,15 @@ from tests.common import async_fire_time_changed, get_fixture_path
 
 @pytest.fixture(name="mock_modbus_with_pymodbus")
 async def mock_modbus_with_pymodbus_fixture(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, do_config, mock_pymodbus
+    menuai: menuai, caplog: pytest.LogCaptureFixture, do_config, mock_pymodbus
 ):
     """Load integration modbus using mocked pymodbus."""
     caplog.clear()
     caplog.set_level(logging.ERROR)
     config = {DOMAIN: do_config}
-    assert await async_setup_component(hass, DOMAIN, config) is True
-    await hass.async_block_till_done()
-    assert DOMAIN in hass.config.components
+    assert await async_setup_component(menuai, DOMAIN, config) is True
+    await menuai.async_block_till_done()
+    assert DOMAIN in menuai.config.components
     assert caplog.text == ""
     return mock_pymodbus
 
@@ -413,9 +413,9 @@ async def test_exception_struct_validator(do_config) -> None:
         ],
     ],
 )
-async def test_check_config(hass: HomeAssistant, do_config) -> None:
+async def test_check_config(menuai: menuai, do_config) -> None:
     """Test duplicate modbus validator."""
-    check_config(hass, do_config)
+    check_config(menuai, do_config)
     assert len(do_config) == 1
 
 
@@ -445,9 +445,9 @@ async def test_check_config(hass: HomeAssistant, do_config) -> None:
         ],
     ],
 )
-async def test_check_config_sensor(hass: HomeAssistant, do_config) -> None:
+async def test_check_config_sensor(menuai: menuai, do_config) -> None:
     """Test duplicate entity validator."""
-    check_config(hass, do_config)
+    check_config(menuai, do_config)
     assert len(do_config[0][CONF_SENSORS]) == 1
 
 
@@ -477,9 +477,9 @@ async def test_check_config_sensor(hass: HomeAssistant, do_config) -> None:
         ],
     ],
 )
-async def test_check_config_climate(hass: HomeAssistant, do_config) -> None:
+async def test_check_config_climate(menuai: menuai, do_config) -> None:
     """Test duplicate entity validator."""
-    check_config(hass, do_config)
+    check_config(menuai, do_config)
     assert len(do_config[0][CONF_CLIMATES]) == 1
 
 
@@ -549,9 +549,9 @@ async def test_duplicate_swing_mode_validator(do_config) -> None:
         ],
     ],
 )
-async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
+async def test_no_duplicate_names(menuai: menuai, do_config) -> None:
     """Test duplicate entity validator."""
-    check_config(hass, do_config)
+    check_config(menuai, do_config)
     assert len(do_config[0][CONF_SENSORS]) == 1
     assert len(do_config[0][CONF_BINARY_SENSORS]) == 1
 
@@ -753,7 +753,7 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
     ],
 )
 async def test_config_modbus(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_modbus_with_pymodbus
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mock_modbus_with_pymodbus
 ) -> None:
     """Run configuration test for modbus."""
 
@@ -830,7 +830,7 @@ SERVICE = "service"
     ],
 )
 async def test_pb_service_write(
-    hass: HomeAssistant,
+    menuai: menuai,
     do_write,
     do_return,
     do_slave,
@@ -863,7 +863,7 @@ async def test_pb_service_write(
     caplog.clear()
     caplog.set_level(logging.DEBUG)
     func_name[do_write[FUNC]].return_value = do_return[VALUE]
-    await hass.services.async_call(DOMAIN, do_write[SERVICE], data, blocking=True)
+    await menuai.services.async_call(DOMAIN, do_write[SERVICE], data, blocking=True)
     assert func_name[do_write[FUNC]].called
     assert func_name[do_write[FUNC]].call_args.args == (data[ATTR_ADDRESS],)
     assert func_name[do_write[FUNC]].call_args.kwargs == {
@@ -877,7 +877,7 @@ async def test_pb_service_write(
 
 @pytest.fixture(name="mock_modbus_read_pymodbus")
 async def mock_modbus_read_pymodbus_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     do_group,
     do_type,
     do_scan_interval,
@@ -912,13 +912,13 @@ async def mock_modbus_read_pymodbus_fixture(
             }
         ],
     }
-    assert await async_setup_component(hass, DOMAIN, config) is True
-    await hass.async_block_till_done()
-    assert DOMAIN in hass.config.components
+    assert await async_setup_component(menuai, DOMAIN, config) is True
+    await menuai.async_block_till_done()
+    assert DOMAIN in menuai.config.components
     assert caplog.text == ""
     freezer.tick(timedelta(seconds=DEFAULT_SCAN_INTERVAL + 60))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     return mock_pymodbus
 
 
@@ -945,7 +945,7 @@ async def mock_modbus_read_pymodbus_fixture(
     ],
 )
 async def test_pb_read(
-    hass: HomeAssistant,
+    menuai: menuai,
     do_domain,
     do_expect_state,
     do_expect_value,
@@ -956,8 +956,8 @@ async def test_pb_read(
 
     # Check state
     entity_id = f"{do_domain}.{TEST_ENTITY_NAME}".replace(" ", "_")
-    state = hass.states.get(entity_id).state
-    assert hass.states.get(entity_id).state
+    state = menuai.states.get(entity_id).state
+    assert menuai.states.get(entity_id).state
 
     # this if is needed to avoid explode the
     if do_domain == SENSOR_DOMAIN:
@@ -968,7 +968,7 @@ async def test_pb_read(
 
 
 async def test_pymodbus_constructor_fail(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Run test for failing pymodbus constructor."""
     config = {
@@ -988,12 +988,12 @@ async def test_pymodbus_constructor_fail(
         ]
     }
     with mock.patch(
-        "homeassistant.components.modbus.modbus.AsyncModbusTcpClient", autospec=True
+        "menuai.components.modbus.modbus.AsyncModbusTcpClient", autospec=True
     ) as mock_pb:
         caplog.set_level(logging.ERROR)
         mock_pb.side_effect = ModbusException("test no class")
-        assert await async_setup_component(hass, DOMAIN, config) is False
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config) is False
+        await menuai.async_block_till_done()
         message = f"Pymodbus: {TEST_MODBUS_NAME}: Modbus Error: test"
         assert caplog.messages[0].startswith(message)
         assert caplog.records[0].levelname == "ERROR"
@@ -1001,7 +1001,7 @@ async def test_pymodbus_constructor_fail(
 
 
 async def test_pymodbus_close_fail(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_pymodbus
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mock_pymodbus
 ) -> None:
     """Run test for failing pymodbus close."""
     config = {
@@ -1022,13 +1022,13 @@ async def test_pymodbus_close_fail(
     caplog.set_level(logging.ERROR)
     mock_pymodbus.connect.return_value = True
     mock_pymodbus.close.side_effect = ModbusException("close fail")
-    assert await async_setup_component(hass, DOMAIN, config) is True
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config) is True
+    await menuai.async_block_till_done()
     # Close() is called as part of teardown
 
 
 async def test_pymodbus_connect_fail(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_pymodbus
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mock_pymodbus
 ) -> None:
     """Run test for failing pymodbus constructor."""
     config = {
@@ -1050,11 +1050,11 @@ async def test_pymodbus_connect_fail(
     caplog.set_level(logging.WARNING)
     ExceptionMessage = "test connect exception"
     mock_pymodbus.connect.side_effect = ModbusException(ExceptionMessage)
-    assert await async_setup_component(hass, DOMAIN, config) is True
+    assert await async_setup_component(menuai, DOMAIN, config) is True
 
 
 async def test_delay(
-    hass: HomeAssistant, mock_pymodbus, freezer: FrozenDateTimeFactory
+    menuai: menuai, mock_pymodbus, freezer: FrozenDateTimeFactory
 ) -> None:
     """Run test for startup delay."""
 
@@ -1085,9 +1085,9 @@ async def test_delay(
     }
     mock_pymodbus.read_coils.return_value = ReadResult([0x01])
     start_time = dt_util.utcnow()
-    assert await async_setup_component(hass, DOMAIN, config) is True
-    await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == STATE_UNKNOWN
+    assert await async_setup_component(menuai, DOMAIN, config) is True
+    await menuai.async_block_till_done()
+    assert menuai.states.get(entity_id).state == STATE_UNKNOWN
 
     time_sensor_active = start_time + timedelta(seconds=2)
     time_after_delay = start_time + timedelta(seconds=(set_delay))
@@ -1100,13 +1100,13 @@ async def test_delay(
         # we use 999999 microseconds to simulate the real world.
         freezer.tick(timedelta(seconds=1, microseconds=999999))
         now = dt_util.utcnow()
-        async_fire_time_changed(hass, now)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, now)
+        await menuai.async_block_till_done()
         if now > time_sensor_active:
             if now <= time_after_delay:
-                assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+                assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE
             elif now > time_after_scan:
-                assert hass.states.get(entity_id).state == STATE_ON
+                assert menuai.states.get(entity_id).state == STATE_ON
 
 
 @pytest.mark.parametrize(
@@ -1128,29 +1128,29 @@ async def test_delay(
     ],
 )
 async def test_shutdown(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_pymodbus,
     mock_modbus_with_pymodbus,
 ) -> None:
     """Run test for shutdown."""
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_pymodbus.close.called
     assert caplog.text == ""
 
 
 @pytest.mark.parametrize("do_config", [{}])
-async def test_write_no_client(hass: HomeAssistant, mock_modbus) -> None:
+async def test_write_no_client(menuai: menuai, mock_modbus) -> None:
     """Run test for service stop and write without client."""
 
     await mock_modbus.reset()
     data = {
         ATTR_HUB: TEST_MODBUS_NAME,
     }
-    await hass.services.async_call(DOMAIN, SERVICE_STOP, data, blocking=True)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_STOP, data, blocking=True)
+    await menuai.async_block_till_done()
     assert mock_modbus.close.called
 
     data = {
@@ -1159,12 +1159,12 @@ async def test_write_no_client(hass: HomeAssistant, mock_modbus) -> None:
         ATTR_ADDRESS: 16,
         ATTR_STATE: True,
     }
-    await hass.services.async_call(DOMAIN, SERVICE_WRITE_COIL, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_WRITE_COIL, data, blocking=True)
 
 
 @pytest.mark.parametrize("do_config", [{}])
 async def test_integration_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_modbus,
 ) -> None:
@@ -1173,60 +1173,60 @@ async def test_integration_reload(
     caplog.set_level(logging.DEBUG)
     caplog.clear()
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=10))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=10))
+    await menuai.async_block_till_done()
 
     yaml_path = get_fixture_path("configuration.yaml", DOMAIN)
-    with mock.patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with mock.patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert "Modbus reloading" in caplog.text
-    state_sensor_1 = hass.states.get("sensor.dummy")
-    state_sensor_2 = hass.states.get("sensor.dummy_2")
+    state_sensor_1 = menuai.states.get("sensor.dummy")
+    state_sensor_2 = menuai.states.get("sensor.dummy_2")
     assert state_sensor_1
     assert not state_sensor_2
 
     caplog.clear()
     yaml_path = get_fixture_path("configuration_2.yaml", DOMAIN)
-    with mock.patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with mock.patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert "Modbus reloading" in caplog.text
-    state_sensor_1 = hass.states.get("sensor.dummy")
-    state_sensor_2 = hass.states.get("sensor.dummy_2")
+    state_sensor_1 = menuai.states.get("sensor.dummy")
+    state_sensor_2 = menuai.states.get("sensor.dummy_2")
     assert state_sensor_1
     assert state_sensor_2
 
     caplog.clear()
     yaml_path = get_fixture_path("configuration_empty.yaml", DOMAIN)
-    with mock.patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with mock.patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert "Modbus not present anymore" in caplog.text
-    state_sensor_1 = hass.states.get("sensor.dummy")
-    state_sensor_2 = hass.states.get("sensor.dummy_2")
+    state_sensor_1 = menuai.states.get("sensor.dummy")
+    state_sensor_2 = menuai.states.get("sensor.dummy_2")
     assert not state_sensor_1
     assert not state_sensor_2
 
 
 @pytest.mark.parametrize("do_config", [{}])
 async def test_integration_reload_failed(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_modbus
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mock_modbus
 ) -> None:
     """Run test for integration connect failure on reload."""
     caplog.set_level(logging.DEBUG)
@@ -1234,11 +1234,11 @@ async def test_integration_reload_failed(
 
     yaml_path = get_fixture_path("configuration.yaml", "modbus")
     with (
-        mock.patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path),
+        mock.patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path),
         mock.patch.object(mock_modbus, "connect", side_effect=ModbusException("error")),
     ):
-        await hass.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
-        await hass.async_block_till_done()
+        await menuai.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
+        await menuai.async_block_till_done()
 
     assert "Modbus reloading" in caplog.text
     assert "connect failed, retry in pymodbus" in caplog.text
@@ -1246,22 +1246,22 @@ async def test_integration_reload_failed(
 
 @pytest.mark.parametrize("do_config", [{}])
 async def test_integration_setup_failed(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_modbus
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mock_modbus
 ) -> None:
     """Run test for integration setup on reload."""
     with mock.patch.object(
-        hass_config,
+        menuai_config,
         "YAML_CONFIG_FILE",
         get_fixture_path("configuration.yaml", "modbus"),
     ):
-        hass.data[DOMAIN][TEST_MODBUS_NAME].async_setup = mock.AsyncMock(
+        menuai.data[DOMAIN][TEST_MODBUS_NAME].async_setup = mock.AsyncMock(
             return_value=False
         )
-        await hass.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
-        await hass.async_block_till_done()
+        await menuai.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
+        await menuai.async_block_till_done()
 
 
-async def test_no_entities(hass: HomeAssistant) -> None:
+async def test_no_entities(menuai: menuai) -> None:
     """Run test for failing pymodbus constructor."""
     config = {
         DOMAIN: [
@@ -1273,7 +1273,7 @@ async def test_no_entities(hass: HomeAssistant) -> None:
             }
         ]
     }
-    assert await async_setup_component(hass, DOMAIN, config) is False
+    assert await async_setup_component(menuai, DOMAIN, config) is False
 
 
 @pytest.mark.parametrize(
@@ -1317,7 +1317,7 @@ async def test_no_entities(hass: HomeAssistant) -> None:
     ],
 )
 async def test_check_default_slave(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_modbus,
     do_config,
     mock_do_cycle,

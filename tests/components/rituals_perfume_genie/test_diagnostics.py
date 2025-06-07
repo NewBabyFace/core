@@ -2,7 +2,7 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import init_integration, mock_config_entry, mock_diffuser
 
@@ -11,16 +11,16 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
     config_entry = mock_config_entry(unique_id="number_test")
     diffuser = mock_diffuser(hublot="lot123", perfume_amount=2)
-    await init_integration(hass, config_entry, [diffuser])
+    await init_integration(menuai, config_entry, [diffuser])
 
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         == snapshot
     )

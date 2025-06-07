@@ -1,6 +1,6 @@
 """All constants related to the shopping list component."""
 
-from homeassistant.const import EVENT_SHOPPING_LIST_UPDATED  # noqa: F401
+from menuai.const import EVENT_SHOPPING_LIST_UPDATED  # noqa: F401
 
 DOMAIN = "shopping_list"
 

@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.NEW_DOMAIN.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.NEW_DOMAIN.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -16,22 +16,22 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 @pytest.mark.parametrize("platform", ["sensor"])
 async def test_config_flow(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, platform
+    menuai: menuai, mock_setup_entry: AsyncMock, platform
 ) -> None:
     """Test the config flow."""
     input_sensor_entity_id = "sensor.input"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"name": "My NEW_DOMAIN", "entity_id": input_sensor_entity_id},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "My NEW_DOMAIN"
@@ -42,7 +42,7 @@ async def test_config_flow(
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "entity_id": input_sensor_entity_id,
@@ -63,7 +63,7 @@ def get_suggested(schema, key):
 
 
 @pytest.mark.parametrize("platform", ["sensor"])
-async def test_options(hass: HomeAssistant, platform) -> None:
+async def test_options(menuai: menuai, platform) -> None:
     """Test reconfiguring."""
     input_sensor_1_entity_id = "sensor.input1"
     input_sensor_2_entity_id = "sensor.input2"
@@ -78,17 +78,17 @@ async def test_options(hass: HomeAssistant, platform) -> None:
         },
         title="My NEW_DOMAIN",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     schema = result["data_schema"].schema
     assert get_suggested(schema, "entity_id") == input_sensor_1_entity_id
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "entity_id": input_sensor_2_entity_id,
@@ -107,11 +107,11 @@ async def test_options(hass: HomeAssistant, platform) -> None:
     assert config_entry.title == "My NEW_DOMAIN"
 
     # Check config entry is reloaded with new options
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check the entity was updated, no new entity was created
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     # TODO Check the state of the entity has changed as expected
-    state = hass.states.get(f"{platform}.my_NEW_DOMAIN")
+    state = menuai.states.get(f"{platform}.my_NEW_DOMAIN")
     assert state.attributes == {}

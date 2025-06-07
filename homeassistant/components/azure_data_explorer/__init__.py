@@ -12,16 +12,16 @@ import logging
 from azure.kusto.data.exceptions import KustoAuthenticationError, KustoServiceError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import MATCH_ALL
-from homeassistant.core import Event, HomeAssistant, State
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.entityfilter import FILTER_SCHEMA, EntityFilter
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.json import ExtendedJSONEncoder
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.dt import utcnow
-from homeassistant.util.hass_dict import HassKey
+from menuai.config_entries import ConfigEntry
+from menuai.const import MATCH_ALL
+from menuai.core import Event, menuai, State
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.entityfilter import FILTER_SCHEMA, EntityFilter
+from menuai.helpers.event import async_call_later
+from menuai.helpers.json import ExtendedJSONEncoder
+from menuai.helpers.typing import ConfigType
+from menuai.util.dt import utcnow
+from menuai.util.menuai_dict import menuaiKey
 
 from .client import AzureDataExplorerClient
 from .const import (
@@ -45,7 +45,7 @@ CONFIG_SCHEMA = vol.Schema(
     },
     extra=vol.ALLOW_EXTRA,
 )
-DATA_COMPONENT: HassKey[EntityFilter] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityFilter] = menuaiKey(DOMAIN)
 
 
 # fixtures for both init and config flow tests
@@ -57,23 +57,23 @@ class FilterTest:
     expect_called: bool
 
 
-async def async_setup(hass: HomeAssistant, yaml_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, yaml_config: ConfigType) -> bool:
     """Activate ADX component from yaml.
 
-    Adds an empty filter to hass data.
-    Tries to get a filter from yaml, if present set to hass data.
+    Adds an empty filter to menuai data.
+    Tries to get a filter from yaml, if present set to menuai data.
     """
     if DOMAIN in yaml_config:
-        hass.data[DATA_COMPONENT] = yaml_config[DOMAIN].pop(CONF_FILTER)
+        menuai.data[DATA_COMPONENT] = yaml_config[DOMAIN].pop(CONF_FILTER)
     else:
-        hass.data[DATA_COMPONENT] = FILTER_SCHEMA({})
+        menuai.data[DATA_COMPONENT] = FILTER_SCHEMA({})
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Do the setup based on the config entry and the filter from yaml."""
-    adx = AzureDataExplorer(hass, entry)
+    adx = AzureDataExplorer(menuai, entry)
     try:
         await adx.test_connection()
     except KustoServiceError as exp:
@@ -88,7 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     return True
 
@@ -98,14 +98,14 @@ class AzureDataExplorer:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the listener."""
 
-        self.hass = hass
+        self.menuai = menuai
         self._entry = entry
-        self._entities_filter = hass.data[DATA_COMPONENT]
+        self._entities_filter = menuai.data[DATA_COMPONENT]
 
         self._client = AzureDataExplorerClient(entry.data)
 
@@ -125,7 +125,7 @@ class AzureDataExplorer:
         schedules the first send.
         """
 
-        self._listener_remover = self.hass.bus.async_listen(
+        self._listener_remover = self.menuai.bus.async_listen(
             MATCH_ALL, self.async_listen
         )
         self._schedule_next_send()
@@ -141,7 +141,7 @@ class AzureDataExplorer:
 
     async def test_connection(self) -> None:
         """Test the connection to the Azure Data Explorer service."""
-        await self.hass.async_add_executor_job(self._client.test_connection)
+        await self.menuai.async_add_executor_job(self._client.test_connection)
 
     def _schedule_next_send(self) -> None:
         """Schedule the next send."""
@@ -149,7 +149,7 @@ class AzureDataExplorer:
             if self._next_send_remover:
                 self._next_send_remover()
             self._next_send_remover = async_call_later(
-                self.hass, self._send_interval, self.async_send
+                self.menuai, self._send_interval, self.async_send
             )
 
     async def async_listen(self, event: Event) -> None:
@@ -178,7 +178,7 @@ class AzureDataExplorer:
             event_string = "".join(adx_events)
 
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self._client.ingest_data, event_string
                 )
 

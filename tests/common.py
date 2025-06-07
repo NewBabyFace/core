@@ -35,44 +35,44 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant import auth, bootstrap, config_entries, loader
-from homeassistant.auth import (
+from menuai import auth, bootstrap, config_entries, loader
+from menuai.auth import (
     auth_store,
     models as auth_models,
     permissions as auth_permissions,
     providers as auth_providers,
 )
-from homeassistant.auth.permissions import system_policies
-from homeassistant.components import device_automation, persistent_notification as pn
-from homeassistant.components.device_automation import (
+from menuai.auth.permissions import system_policies
+from menuai.components import device_automation, persistent_notification as pn
+from menuai.components.device_automation import (
     _async_get_device_automation_capabilities as async_get_device_automation_capabilities,
 )
-from homeassistant.components.logger import (
+from menuai.components.logger import (
     DOMAIN as LOGGER_DOMAIN,
     SERVICE_SET_LEVEL,
     _clear_logger_overwrites,
 )
-from homeassistant.config import IntegrationConfigInfo, async_process_component_config
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config import IntegrationConfigInfo, async_process_component_config
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     DEVICE_DEFAULT_NAME,
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import (
+from menuai.core import (
     CoreState,
     Event,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     ServiceResponse,
     State,
     SupportsResponse,
     callback,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     area_registry as ar,
     category_registry as cr,
     device_registry as dr,
@@ -88,25 +88,25 @@ from homeassistant.helpers import (
     storage,
     translation,
 )
-from homeassistant.helpers.dispatcher import (
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.json import JSONEncoder, _orjson_default_encoder, json_dumps
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, ulid as ulid_util, uuid as uuid_util
-from homeassistant.util.async_ import (
+from menuai.helpers.json import JSONEncoder, _orjson_default_encoder, json_dumps
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, ulid as ulid_util, uuid as uuid_util
+from menuai.util.async_ import (
     _SHUTDOWN_RUN_CALLBACK_THREADSAFE,
     get_scheduled_timer_handles,
     run_callback_threadsafe,
 )
-from homeassistant.util.event_type import EventType
-from homeassistant.util.json import (
+from menuai.util.event_type import EventType
+from menuai.util.json import (
     JsonArrayType,
     JsonObjectType,
     JsonValueType,
@@ -114,8 +114,8 @@ from homeassistant.util.json import (
     json_loads_array,
     json_loads_object,
 )
-from homeassistant.util.signal_type import SignalType
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.util.signal_type import SignalType
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .testing_config.custom_components.test_constant_deprecation import (
     import_deprecated_constant,
@@ -141,13 +141,13 @@ class QualityScaleStatus(StrEnum):
 
 
 async def async_get_device_automations(
-    hass: HomeAssistant,
+    menuai: menuai,
     automation_type: device_automation.DeviceAutomationType,
     device_id: str,
 ) -> Any:
     """Get a device automation for a single device id."""
     automations = await device_automation.async_get_device_automations(
-        hass, automation_type, [device_id]
+        menuai, automation_type, [device_id]
     )
     return automations.get(device_id)
 
@@ -155,15 +155,15 @@ async def async_get_device_automations(
 def threadsafe_callback_factory(func):
     """Create threadsafe functions out of callbacks.
 
-    Callback needs to have `hass` as first argument.
+    Callback needs to have `menuai` as first argument.
     """
 
     @ft.wraps(func)
     def threadsafe(*args, **kwargs):
         """Call func threadsafe."""
-        hass = args[0]
+        menuai = args[0]
         return run_callback_threadsafe(
-            hass.loop, ft.partial(func, *args, **kwargs)
+            menuai.loop, ft.partial(func, *args, **kwargs)
         ).result()
 
     return threadsafe
@@ -172,15 +172,15 @@ def threadsafe_callback_factory(func):
 def threadsafe_coroutine_factory(func):
     """Create threadsafe functions out of coroutine.
 
-    Callback needs to have `hass` as first argument.
+    Callback needs to have `menuai` as first argument.
     """
 
     @ft.wraps(func)
     def threadsafe(*args, **kwargs):
         """Call func threadsafe."""
-        hass = args[0]
+        menuai = args[0]
         return asyncio.run_coroutine_threadsafe(
-            func(*args, **kwargs), hass.loop
+            func(*args, **kwargs), menuai.loop
         ).result()
 
     return threadsafe
@@ -214,17 +214,17 @@ async def async_test_home_assistant(
     load_registries: bool = True,
     config_dir: str | None = None,
     initial_state: CoreState = CoreState.running,
-) -> AsyncGenerator[HomeAssistant]:
-    """Return a Home Assistant object pointing at test config dir."""
-    hass = HomeAssistant(config_dir or get_test_config_dir())
-    store = auth_store.AuthStore(hass)
-    hass.auth = auth.AuthManager(hass, store, {}, {})
-    ensure_auth_manager_loaded(hass.auth)
-    INSTANCES.append(hass)
+) -> AsyncGenerator[menuai]:
+    """Return a MenuAI object pointing at test config dir."""
+    menuai = menuai(config_dir or get_test_config_dir())
+    store = auth_store.AuthStore(menuai)
+    menuai.auth = auth.AuthManager(menuai, store, {}, {})
+    ensure_auth_manager_loaded(menuai.auth)
+    INSTANCES.append(menuai)
 
-    orig_async_add_job = hass.async_add_job
-    orig_async_add_executor_job = hass.async_add_executor_job
-    orig_async_create_task_internal = hass.async_create_task_internal
+    orig_async_add_job = menuai.async_add_job
+    orig_async_add_executor_job = menuai.async_add_executor_job
+    orig_async_create_task_internal = menuai.async_create_task_internal
     orig_tz = dt_util.get_default_time_zone()
 
     def async_add_job(target, *args, eager_start: bool = False):
@@ -262,107 +262,107 @@ async def async_test_home_assistant(
 
         return orig_async_create_task_internal(coroutine, name, eager_start)
 
-    hass.async_add_job = async_add_job
-    hass.async_add_executor_job = async_add_executor_job
-    hass.async_create_task_internal = async_create_task_internal
+    menuai.async_add_job = async_add_job
+    menuai.async_add_executor_job = async_add_executor_job
+    menuai.async_create_task_internal = async_create_task_internal
 
-    hass.data[loader.DATA_CUSTOM_COMPONENTS] = {}
+    menuai.data[loader.DATA_CUSTOM_COMPONENTS] = {}
 
-    hass.config.location_name = "test home"
-    hass.config.latitude = 32.87336
-    hass.config.longitude = -117.22743
-    hass.config.elevation = 0
-    await hass.config.async_set_time_zone("US/Pacific")
-    hass.config.units = METRIC_SYSTEM
-    hass.config.media_dirs = {"local": get_test_config_dir("media")}
-    hass.config.skip_pip = True
-    hass.config.skip_pip_packages = []
+    menuai.config.location_name = "test home"
+    menuai.config.latitude = 32.87336
+    menuai.config.longitude = -117.22743
+    menuai.config.elevation = 0
+    await menuai.config.async_set_time_zone("US/Pacific")
+    menuai.config.units = METRIC_SYSTEM
+    menuai.config.media_dirs = {"local": get_test_config_dir("media")}
+    menuai.config.skip_pip = True
+    menuai.config.skip_pip_packages = []
 
-    hass.config_entries = config_entries.ConfigEntries(
-        hass,
+    menuai.config_entries = config_entries.ConfigEntries(
+        menuai,
         {
             "_": (
-                "Not empty or else some bad checks for hass config in discovery.py"
+                "Not empty or else some bad checks for menuai config in discovery.py"
                 " breaks"
             )
         },
     )
-    hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP,
-        hass.config_entries._async_shutdown,
+    menuai.bus.async_listen_once(
+        EVENT_menuai_STOP,
+        menuai.config_entries._async_shutdown,
     )
 
     # Load the registries
-    entity.async_setup(hass)
-    loader.async_setup(hass)
+    entity.async_setup(menuai)
+    loader.async_setup(menuai)
 
-    # setup translation cache instead of calling translation.async_setup(hass)
-    hass.data[translation.TRANSLATION_FLATTEN_CACHE] = translation._TranslationCache(
-        hass
+    # setup translation cache instead of calling translation.async_setup(menuai)
+    menuai.data[translation.TRANSLATION_FLATTEN_CACHE] = translation._TranslationCache(
+        menuai
     )
     if load_registries:
         with (
             patch.object(StoreWithoutWriteLoad, "async_load", return_value=None),
             patch(
-                "homeassistant.helpers.area_registry.AreaRegistryStore",
+                "menuai.helpers.area_registry.AreaRegistryStore",
                 StoreWithoutWriteLoad,
             ),
             patch(
-                "homeassistant.helpers.device_registry.DeviceRegistryStore",
+                "menuai.helpers.device_registry.DeviceRegistryStore",
                 StoreWithoutWriteLoad,
             ),
             patch(
-                "homeassistant.helpers.entity_registry.EntityRegistryStore",
+                "menuai.helpers.entity_registry.EntityRegistryStore",
                 StoreWithoutWriteLoad,
             ),
             patch(
-                "homeassistant.helpers.storage.Store",  # Floor & label registry are different
+                "menuai.helpers.storage.Store",  # Floor & label registry are different
                 StoreWithoutWriteLoad,
             ),
             patch(
-                "homeassistant.helpers.issue_registry.IssueRegistryStore",
+                "menuai.helpers.issue_registry.IssueRegistryStore",
                 StoreWithoutWriteLoad,
             ),
             patch(
-                "homeassistant.helpers.restore_state.RestoreStateData.async_setup_dump",
+                "menuai.helpers.restore_state.RestoreStateData.async_setup_dump",
                 return_value=None,
             ),
             patch(
-                "homeassistant.helpers.restore_state.start.async_at_start",
+                "menuai.helpers.restore_state.start.async_at_start",
             ),
         ):
-            await ar.async_load(hass)
-            await cr.async_load(hass)
-            await dr.async_load(hass)
-            await er.async_load(hass)
-            await fr.async_load(hass)
-            await ir.async_load(hass)
-            await lr.async_load(hass)
-            await rs.async_load(hass)
-        hass.data[bootstrap.DATA_REGISTRIES_LOADED] = None
+            await ar.async_load(menuai)
+            await cr.async_load(menuai)
+            await dr.async_load(menuai)
+            await er.async_load(menuai)
+            await fr.async_load(menuai)
+            await ir.async_load(menuai)
+            await lr.async_load(menuai)
+            await rs.async_load(menuai)
+        menuai.data[bootstrap.DATA_REGISTRIES_LOADED] = None
 
-    hass.set_state(initial_state)
+    menuai.set_state(initial_state)
 
     @callback
     def clear_instance(event):
         """Clear global instance."""
         # Give aiohttp one loop iteration to close
-        hass.loop.call_soon(INSTANCES.remove, hass)
+        menuai.loop.call_soon(INSTANCES.remove, menuai)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, clear_instance)
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, clear_instance)
 
     try:
-        yield hass
+        yield menuai
     finally:
-        # Restore timezone, it is set when creating the hass object
+        # Restore timezone, it is set when creating the menuai object
         dt_util.set_default_time_zone(orig_tz)
-        # Remove loop shutdown indicator to not interfere with additional hass objects
+        # Remove loop shutdown indicator to not interfere with additional menuai objects
         with suppress(AttributeError):
-            delattr(hass.loop, _SHUTDOWN_RUN_CALLBACK_THREADSAFE)
+            delattr(menuai.loop, _SHUTDOWN_RUN_CALLBACK_THREADSAFE)
 
 
 def async_mock_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     service: str,
     schema: vol.Schema | None = None,
@@ -387,7 +387,7 @@ def async_mock_service(
         else:
             supports_response = SupportsResponse.NONE
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain,
         service,
         mock_service_log,
@@ -402,7 +402,7 @@ mock_service = threadsafe_callback_factory(async_mock_service)
 
 
 @callback
-def async_mock_intent(hass: HomeAssistant, intent_typ: str) -> list[intent.Intent]:
+def async_mock_intent(menuai: menuai, intent_typ: str) -> list[intent.Intent]:
     """Set up a fake intent handler."""
     intents: list[intent.Intent] = []
 
@@ -416,7 +416,7 @@ def async_mock_intent(hass: HomeAssistant, intent_typ: str) -> list[intent.Inten
             intents.append(intent_obj)
             return intent_obj.create_response()
 
-    intent.async_register(hass, MockIntentHandler())
+    intent.async_register(menuai, MockIntentHandler())
 
     return intents
 
@@ -442,7 +442,7 @@ class MockMqttReasonCode:
 
 @callback
 def async_fire_mqtt_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     topic: str,
     payload: bytes | str,
     qos: int = 0,
@@ -456,7 +456,7 @@ def async_fire_mqtt_message(
     from paho.mqtt.client import MQTTMessage
 
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.components.mqtt import MqttData
+    from menuai.components.mqtt import MqttData
 
     if isinstance(payload, str):
         payload = payload.encode("utf-8")
@@ -467,7 +467,7 @@ def async_fire_mqtt_message(
     msg.retain = retain
     msg.timestamp = time.monotonic()
 
-    mqtt_data: MqttData = hass.data["mqtt"]
+    mqtt_data: MqttData = menuai.data["mqtt"]
     assert mqtt_data.client
     mqtt_data.client._async_mqtt_on_message(Mock(), None, msg)
 
@@ -477,7 +477,7 @@ fire_mqtt_message = threadsafe_callback_factory(async_fire_mqtt_message)
 
 @callback
 def async_fire_time_changed_exact(
-    hass: HomeAssistant, datetime_: datetime | None = None, fire_all: bool = False
+    menuai: menuai, datetime_: datetime | None = None, fire_all: bool = False
 ) -> None:
     """Fire a time changed event at an exact microsecond.
 
@@ -491,12 +491,12 @@ def async_fire_time_changed_exact(
     else:
         utc_datetime = dt_util.as_utc(datetime_)
 
-    _async_fire_time_changed(hass, utc_datetime, fire_all)
+    _async_fire_time_changed(menuai, utc_datetime, fire_all)
 
 
 @callback
 def async_fire_time_changed(
-    hass: HomeAssistant, datetime_: datetime | None = None, fire_all: bool = False
+    menuai: menuai, datetime_: datetime | None = None, fire_all: bool = False
 ) -> None:
     """Fire a time changed event.
 
@@ -518,7 +518,7 @@ def async_fire_time_changed(
     # added to events scheduled by update_coordinator and async_track_time_interval
     utc_datetime += timedelta(microseconds=event.RANDOM_MICROSECOND_MAX)
 
-    _async_fire_time_changed(hass, utc_datetime, fire_all)
+    _async_fire_time_changed(menuai, utc_datetime, fire_all)
 
 
 _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
@@ -526,26 +526,26 @@ _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
 @callback
 def _async_fire_time_changed(
-    hass: HomeAssistant, utc_datetime: datetime | None, fire_all: bool
+    menuai: menuai, utc_datetime: datetime | None, fire_all: bool
 ) -> None:
     timestamp = utc_datetime.timestamp()
-    for task in list(get_scheduled_timer_handles(hass.loop)):
+    for task in list(get_scheduled_timer_handles(menuai.loop)):
         if not isinstance(task, asyncio.TimerHandle):
             continue
         if task.cancelled():
             continue
 
         mock_seconds_into_future = timestamp - time.time()
-        future_seconds = task.when() - (hass.loop.time() + _MONOTONIC_RESOLUTION)
+        future_seconds = task.when() - (menuai.loop.time() + _MONOTONIC_RESOLUTION)
 
         if fire_all or mock_seconds_into_future >= future_seconds:
             with (
                 patch(
-                    "homeassistant.helpers.event.time_tracker_utcnow",
+                    "menuai.helpers.event.time_tracker_utcnow",
                     return_value=utc_datetime,
                 ),
                 patch(
-                    "homeassistant.helpers.event.time_tracker_timestamp",
+                    "menuai.helpers.event.time_tracker_timestamp",
                     return_value=timestamp,
                 ),
             ):
@@ -576,10 +576,10 @@ def load_fixture(filename: str, integration: str | None = None) -> str:
 
 
 async def async_load_fixture(
-    hass: HomeAssistant, filename: str, integration: str | None = None
+    menuai: menuai, filename: str, integration: str | None = None
 ) -> str:
     """Load a fixture."""
-    return await hass.async_add_executor_job(load_fixture, filename, integration)
+    return await menuai.async_add_executor_job(load_fixture, filename, integration)
 
 
 def load_json_value_fixture(
@@ -597,10 +597,10 @@ def load_json_array_fixture(
 
 
 async def async_load_json_array_fixture(
-    hass: HomeAssistant, filename: str, integration: str | None = None
+    menuai: menuai, filename: str, integration: str | None = None
 ) -> JsonArrayType:
     """Load a JSON object from a fixture."""
-    return json_loads_array(await async_load_fixture(hass, filename, integration))
+    return json_loads_array(await async_load_fixture(menuai, filename, integration))
 
 
 def load_json_object_fixture(
@@ -611,10 +611,10 @@ def load_json_object_fixture(
 
 
 async def async_load_json_object_fixture(
-    hass: HomeAssistant, filename: str, integration: str | None = None
+    menuai: menuai, filename: str, integration: str | None = None
 ) -> JsonObjectType:
     """Load a JSON object from a fixture."""
-    return json_loads_object(await async_load_fixture(hass, filename, integration))
+    return json_loads_object(await async_load_fixture(menuai, filename, integration))
 
 
 def json_round_trip(obj: Any) -> Any:
@@ -623,7 +623,7 @@ def json_round_trip(obj: Any) -> Any:
 
 
 def mock_state_change_event(
-    hass: HomeAssistant, new_state: State, old_state: State | None = None
+    menuai: menuai, new_state: State, old_state: State | None = None
 ) -> None:
     """Mock state change event."""
     event_data = {
@@ -631,34 +631,34 @@ def mock_state_change_event(
         "new_state": new_state,
         "old_state": old_state,
     }
-    hass.bus.fire(EVENT_STATE_CHANGED, event_data, context=new_state.context)
+    menuai.bus.fire(EVENT_STATE_CHANGED, event_data, context=new_state.context)
 
 
 @callback
-def mock_component(hass: HomeAssistant, component: str) -> None:
+def mock_component(menuai: menuai, component: str) -> None:
     """Mock a component is setup."""
-    if component in hass.config.components:
+    if component in menuai.config.components:
         raise AssertionError(f"Integration {component} is already setup")
 
-    hass.config.components.add(component)
+    menuai.config.components.add(component)
 
 
 def mock_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entries: dict[str, er.RegistryEntry] | None = None,
 ) -> er.EntityRegistry:
     """Mock the Entity Registry.
 
     This should only be used if you need to mock/re-stage a clean mocked
-    entity registry in your current hass object. It can be useful to,
+    entity registry in your current menuai object. It can be useful to,
     for example, pre-load the registry with items.
 
-    This mock will thus replace the existing registry in the running hass.
+    This mock will thus replace the existing registry in the running menuai.
 
     If you just need to access the existing registry, use the `entity_registry`
     fixture instead.
     """
-    registry = er.EntityRegistry(hass)
+    registry = er.EntityRegistry(menuai)
     if mock_entries is None:
         mock_entries = {}
     registry.deleted_entities = {}
@@ -667,7 +667,7 @@ def mock_registry(
     for key, entry in mock_entries.items():
         registry.entities[key] = entry
 
-    hass.data[er.DATA_REGISTRY] = registry
+    menuai.data[er.DATA_REGISTRY] = registry
     er.async_get.cache_clear()
     return registry
 
@@ -702,45 +702,45 @@ class RegistryEntryWithDefaults(er.RegistryEntry):
 
 
 def mock_area_registry(
-    hass: HomeAssistant, mock_entries: dict[str, ar.AreaEntry] | None = None
+    menuai: menuai, mock_entries: dict[str, ar.AreaEntry] | None = None
 ) -> ar.AreaRegistry:
     """Mock the Area Registry.
 
     This should only be used if you need to mock/re-stage a clean mocked
-    area registry in your current hass object. It can be useful to,
+    area registry in your current menuai object. It can be useful to,
     for example, pre-load the registry with items.
 
-    This mock will thus replace the existing registry in the running hass.
+    This mock will thus replace the existing registry in the running menuai.
 
     If you just need to access the existing registry, use the `area_registry`
     fixture instead.
     """
-    registry = ar.AreaRegistry(hass)
+    registry = ar.AreaRegistry(menuai)
     registry.areas = ar.AreaRegistryItems()
     for key, entry in mock_entries.items():
         registry.areas[key] = entry
 
-    hass.data[ar.DATA_REGISTRY] = registry
+    menuai.data[ar.DATA_REGISTRY] = registry
     ar.async_get.cache_clear()
     return registry
 
 
 def mock_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entries: dict[str, dr.DeviceEntry] | None = None,
 ) -> dr.DeviceRegistry:
     """Mock the Device Registry.
 
     This should only be used if you need to mock/re-stage a clean mocked
-    device registry in your current hass object. It can be useful to,
+    device registry in your current menuai object. It can be useful to,
     for example, pre-load the registry with items.
 
-    This mock will thus replace the existing registry in the running hass.
+    This mock will thus replace the existing registry in the running menuai.
 
     If you just need to access the existing registry, use the `device_registry`
     fixture instead.
     """
-    registry = dr.DeviceRegistry(hass)
+    registry = dr.DeviceRegistry(menuai)
     registry.devices = dr.ActiveDeviceRegistryItems()
     registry._device_data = registry.devices.data
     if mock_entries is None:
@@ -749,13 +749,13 @@ def mock_device_registry(
         registry.devices[key] = entry
     registry.deleted_devices = dr.DeviceRegistryItems()
 
-    hass.data[dr.DATA_REGISTRY] = registry
+    menuai.data[dr.DATA_REGISTRY] = registry
     dr.async_get.cache_clear()
     return registry
 
 
 class MockGroup(auth_models.Group):
-    """Mock a group in Home Assistant."""
+    """Mock a group in MenuAI."""
 
     def __init__(self, id: str | None = None, name: str | None = "Mock Group") -> None:
         """Mock a group."""
@@ -765,19 +765,19 @@ class MockGroup(auth_models.Group):
 
         super().__init__(**kwargs)
 
-    def add_to_hass(self, hass: HomeAssistant) -> MockGroup:
-        """Test helper to add entry to hass."""
-        return self.add_to_auth_manager(hass.auth)
+    def add_to_menuai(self, menuai: menuai) -> MockGroup:
+        """Test helper to add entry to menuai."""
+        return self.add_to_auth_manager(menuai.auth)
 
     def add_to_auth_manager(self, auth_mgr: auth.AuthManager) -> MockGroup:
-        """Test helper to add entry to hass."""
+        """Test helper to add entry to menuai."""
         ensure_auth_manager_loaded(auth_mgr)
         auth_mgr._store._groups[self.id] = self
         return self
 
 
 class MockUser(auth_models.User):
-    """Mock a user in Home Assistant."""
+    """Mock a user in MenuAI."""
 
     def __init__(
         self,
@@ -801,12 +801,12 @@ class MockUser(auth_models.User):
             kwargs["id"] = id
         super().__init__(**kwargs)
 
-    def add_to_hass(self, hass: HomeAssistant) -> MockUser:
-        """Test helper to add entry to hass."""
-        return self.add_to_auth_manager(hass.auth)
+    def add_to_menuai(self, menuai: menuai) -> MockUser:
+        """Test helper to add entry to menuai."""
+        return self.add_to_auth_manager(menuai.auth)
 
     def add_to_auth_manager(self, auth_mgr: auth.AuthManager) -> MockUser:
-        """Test helper to add entry to hass."""
+        """Test helper to add entry to menuai."""
         ensure_auth_manager_loaded(auth_mgr)
         auth_mgr._store._users[self.id] = self
         return self
@@ -817,15 +817,15 @@ class MockUser(auth_models.User):
 
 
 async def register_auth_provider(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> auth_providers.AuthProvider:
     """Register an auth provider."""
     provider = await auth_providers.auth_provider_from_config(
-        hass, hass.auth._store, config
+        menuai, menuai.auth._store, config
     )
     assert provider is not None, "Invalid config specified"
     key = (provider.type, provider.id)
-    providers = hass.auth._providers
+    providers = menuai.auth._providers
 
     if key in providers:
         raise ValueError("Provider already registered")
@@ -850,38 +850,38 @@ class MockModule:
         domain: str | None = None,
         *,
         dependencies: list[str] | None = None,
-        setup: Callable[[HomeAssistant, ConfigType], bool] | None = None,
+        setup: Callable[[menuai, ConfigType], bool] | None = None,
         requirements: list[str] | None = None,
         config_schema: vol.Schema | None = None,
         platform_schema: vol.Schema | None = None,
         platform_schema_base: vol.Schema | None = None,
-        async_setup: Callable[[HomeAssistant, ConfigType], Coroutine[Any, Any, bool]]
+        async_setup: Callable[[menuai, ConfigType], Coroutine[Any, Any, bool]]
         | None = None,
         async_setup_entry: Callable[
-            [HomeAssistant, ConfigEntry], Coroutine[Any, Any, bool]
+            [menuai, ConfigEntry], Coroutine[Any, Any, bool]
         ]
         | None = None,
         async_unload_entry: Callable[
-            [HomeAssistant, ConfigEntry], Coroutine[Any, Any, bool]
+            [menuai, ConfigEntry], Coroutine[Any, Any, bool]
         ]
         | None = None,
         async_migrate_entry: Callable[
-            [HomeAssistant, ConfigEntry], Coroutine[Any, Any, bool]
+            [menuai, ConfigEntry], Coroutine[Any, Any, bool]
         ]
         | None = None,
         async_remove_entry: Callable[
-            [HomeAssistant, ConfigEntry], Coroutine[Any, Any, None]
+            [menuai, ConfigEntry], Coroutine[Any, Any, None]
         ]
         | None = None,
         partial_manifest: dict[str, Any] | None = None,
         async_remove_config_entry_device: Callable[
-            [HomeAssistant, ConfigEntry, dr.DeviceEntry], Coroutine[Any, Any, bool]
+            [menuai, ConfigEntry, dr.DeviceEntry], Coroutine[Any, Any, bool]
         ]
         | None = None,
     ) -> None:
         """Initialize the mock module."""
-        self.__name__ = f"homeassistant.components.{domain}"
-        self.__file__ = f"homeassistant/components/{domain}"
+        self.__name__ = f"menuai.components.{domain}"
+        self.__file__ = f"menuai/components/{domain}"
         self.DOMAIN = domain
         self.DEPENDENCIES = dependencies or []
         self.REQUIREMENTS = requirements or []
@@ -934,26 +934,26 @@ class MockModule:
 class MockPlatform:
     """Provide a fake platform."""
 
-    __name__ = "homeassistant.components.light.bla"
-    __file__ = "homeassistant/components/blah/light"
+    __name__ = "menuai.components.light.bla"
+    __file__ = "menuai/components/blah/light"
 
     def __init__(
         self,
         *,
         setup_platform: Callable[
-            [HomeAssistant, ConfigType, AddEntitiesCallback, DiscoveryInfoType | None],
+            [menuai, ConfigType, AddEntitiesCallback, DiscoveryInfoType | None],
             None,
         ]
         | None = None,
         dependencies: list[str] | None = None,
         platform_schema: vol.Schema | None = None,
         async_setup_platform: Callable[
-            [HomeAssistant, ConfigType, AddEntitiesCallback, DiscoveryInfoType | None],
+            [menuai, ConfigType, AddEntitiesCallback, DiscoveryInfoType | None],
             Coroutine[Any, Any, None],
         ]
         | None = None,
         async_setup_entry: Callable[
-            [HomeAssistant, ConfigEntry, AddEntitiesCallback], Coroutine[Any, Any, None]
+            [menuai, ConfigEntry, AddEntitiesCallback], Coroutine[Any, Any, None]
         ]
         | None = None,
         scan_interval: timedelta | None = None,
@@ -987,7 +987,7 @@ class MockEntityPlatform(entity_platform.EntityPlatform):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger=None,
         domain="test_domain",
         platform_name="test_platform",
@@ -997,14 +997,14 @@ class MockEntityPlatform(entity_platform.EntityPlatform):
     ) -> None:
         """Initialize a mock entity platform."""
         if logger is None:
-            logger = logging.getLogger("homeassistant.helpers.entity_platform")
+            logger = logging.getLogger("menuai.helpers.entity_platform")
 
         # Otherwise the constructor will blow up.
         if isinstance(platform, Mock) and isinstance(platform.PARALLEL_UPDATES, Mock):
             platform.PARALLEL_UPDATES = 0
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             domain=domain,
             platform_name=platform_name,
@@ -1017,7 +1017,7 @@ class MockEntityPlatform(entity_platform.EntityPlatform):
         def _async_on_stop(_: Event) -> None:
             self.async_shutdown()
 
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_on_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_on_stop)
 
 
 class MockToggleEntity(entity.ToggleEntity):
@@ -1117,9 +1117,9 @@ class MockConfigEntry(config_entries.ConfigEntry):
         if reason is not None:
             object.__setattr__(self, "reason", reason)
 
-    def add_to_hass(self, hass: HomeAssistant) -> None:
-        """Test helper to add entry to hass."""
-        hass.config_entries._entries[self.entry_id] = self
+    def add_to_menuai(self, menuai: menuai) -> None:
+        """Test helper to add entry to menuai."""
+        menuai.config_entries._entries[self.entry_id] = self
 
     def add_to_manager(self, manager: config_entries.ConfigEntries) -> None:
         """Test helper to add entry to entry manager."""
@@ -1127,7 +1127,7 @@ class MockConfigEntry(config_entries.ConfigEntry):
 
     def mock_state(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         state: config_entries.ConfigEntryState,
         reason: str | None = None,
     ) -> None:
@@ -1144,31 +1144,31 @@ class MockConfigEntry(config_entries.ConfigEntry):
         and is only intended for backwards compatibility with existing
         tests.
         """
-        self._async_set_state(hass, state, reason)
+        self._async_set_state(menuai, state, reason)
 
     async def start_reauth_flow(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         context: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
         """Start a reauthentication flow."""
-        if self.entry_id not in hass.config_entries._entries:
-            raise ValueError("Config entry must be added to hass to start reauth flow")
-        return await start_reauth_flow(hass, self, context, data)
+        if self.entry_id not in menuai.config_entries._entries:
+            raise ValueError("Config entry must be added to menuai to start reauth flow")
+        return await start_reauth_flow(menuai, self, context, data)
 
     async def start_reconfigure_flow(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         show_advanced_options: bool = False,
     ) -> ConfigFlowResult:
         """Start a reconfiguration flow."""
-        if self.entry_id not in hass.config_entries._entries:
+        if self.entry_id not in menuai.config_entries._entries:
             raise ValueError(
-                "Config entry must be added to hass to start reconfiguration flow"
+                "Config entry must be added to menuai to start reconfiguration flow"
             )
-        return await hass.config_entries.flow.async_init(
+        return await menuai.config_entries.flow.async_init(
             self.domain,
             context={
                 "source": config_entries.SOURCE_RECONFIGURE,
@@ -1179,18 +1179,18 @@ class MockConfigEntry(config_entries.ConfigEntry):
 
     async def start_subentry_reconfigure_flow(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         subentry_flow_type: str,
         subentry_id: str,
         *,
         show_advanced_options: bool = False,
     ) -> ConfigFlowResult:
         """Start a subentry reconfiguration flow."""
-        if self.entry_id not in hass.config_entries._entries:
+        if self.entry_id not in menuai.config_entries._entries:
             raise ValueError(
-                "Config entry must be added to hass to start reconfiguration flow"
+                "Config entry must be added to menuai to start reconfiguration flow"
             )
-        return await hass.config_entries.subentries.async_init(
+        return await menuai.config_entries.subentries.async_init(
             (self.entry_id, subentry_flow_type),
             context={
                 "source": config_entries.SOURCE_RECONFIGURE,
@@ -1201,7 +1201,7 @@ class MockConfigEntry(config_entries.ConfigEntry):
 
 
 async def start_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     context: dict[str, Any] | None = None,
     data: dict[str, Any] | None = None,
@@ -1210,7 +1210,7 @@ async def start_reauth_flow(
 
     This helper method should be aligned with `ConfigEntry._async_init_reauth`.
     """
-    return await hass.config_entries.flow.async_init(
+    return await menuai.config_entries.flow.async_init(
         entry.domain,
         context={
             "source": config_entries.SOURCE_REAUTH,
@@ -1248,8 +1248,8 @@ def patch_yaml_files(files_dict, endswith=True):
                 setattr(res, "name", fname)
                 return res
 
-        # Fallback for hass.components (i.e. services.yaml)
-        if "homeassistant/components" in fname:
+        # Fallback for menuai.components (i.e. services.yaml)
+        if "menuai/components" in fname:
             _LOGGER.debug("patch_yaml_files using real file: %s", fname)
             return open(fname, encoding="utf-8")
 
@@ -1269,13 +1269,13 @@ def assert_setup_component(count, domain=None):
 
     Use as a context manager around setup.setup_component
         with assert_setup_component(0) as result_config:
-            setup_component(hass, domain, start_config)
+            setup_component(menuai, domain, start_config)
             # using result_config is optional
     """
     config = {}
 
     async def mock_psc(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_input: ConfigType,
         integration: loader.Integration,
         component: loader.ComponentProtocol | None = None,
@@ -1283,7 +1283,7 @@ def assert_setup_component(count, domain=None):
         """Mock the prepare_setup_component to capture config."""
         domain_input = integration.domain
         integration_config_info = await async_process_component_config(
-            hass, config_input, integration, component
+            menuai, config_input, integration, component
         )
         res = integration_config_info.config
         config[domain_input] = None if res is None else res.get(domain_input)
@@ -1296,7 +1296,7 @@ def assert_setup_component(count, domain=None):
         return integration_config_info
 
     assert isinstance(config, dict)
-    with patch("homeassistant.config.async_process_component_config", mock_psc):
+    with patch("menuai.config.async_process_component_config", mock_psc):
         yield config
 
     if domain is None:
@@ -1312,10 +1312,10 @@ def assert_setup_component(count, domain=None):
     )
 
 
-def mock_restore_cache(hass: HomeAssistant, states: Sequence[State]) -> None:
+def mock_restore_cache(menuai: menuai, states: Sequence[State]) -> None:
     """Mock the DATA_RESTORE_CACHE."""
     key = rs.DATA_RESTORE_STATE
-    data = rs.RestoreStateData(hass)
+    data = rs.RestoreStateData(menuai)
     now = dt_util.utcnow()
 
     last_states = {}
@@ -1335,15 +1335,15 @@ def mock_restore_cache(hass: HomeAssistant, states: Sequence[State]) -> None:
     assert len(data.last_states) == len(states), f"Duplicate entity_id? {states}"
 
     rs.async_get.cache_clear()
-    hass.data[key] = data
+    menuai.data[key] = data
 
 
 def mock_restore_cache_with_extra_data(
-    hass: HomeAssistant, states: Sequence[tuple[State, Mapping[str, Any]]]
+    menuai: menuai, states: Sequence[tuple[State, Mapping[str, Any]]]
 ) -> None:
     """Mock the DATA_RESTORE_CACHE."""
     key = rs.DATA_RESTORE_STATE
-    data = rs.RestoreStateData(hass)
+    data = rs.RestoreStateData(menuai)
     now = dt_util.utcnow()
 
     last_states = {}
@@ -1363,27 +1363,27 @@ def mock_restore_cache_with_extra_data(
     assert len(data.last_states) == len(states), f"Duplicate entity_id? {states}"
 
     rs.async_get.cache_clear()
-    hass.data[key] = data
+    menuai.data[key] = data
 
 
 async def async_mock_restore_state_shutdown_restart(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> rs.RestoreStateData:
     """Mock shutting down and saving restore state and restoring."""
-    data = rs.async_get(hass)
+    data = rs.async_get(menuai)
     await data.async_dump_states()
-    await async_mock_load_restore_state_from_storage(hass)
+    await async_mock_load_restore_state_from_storage(menuai)
     return data
 
 
 async def async_mock_load_restore_state_from_storage(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Mock loading restore state from storage.
 
-    hass_storage must already be mocked.
+    menuai_storage must already be mocked.
     """
-    await rs.async_get(hass).async_load()
+    await rs.async_get(menuai).async_load()
 
 
 class MockEntity(entity.Entity):
@@ -1546,17 +1546,17 @@ def mock_storage(data: dict[str, Any] | None = None) -> Generator[dict[str, Any]
 
     with (
         patch(
-            "homeassistant.helpers.storage.Store._async_load",
+            "menuai.helpers.storage.Store._async_load",
             side_effect=mock_async_load,
             autospec=True,
         ),
         patch(
-            "homeassistant.helpers.storage.Store._async_write_data",
+            "menuai.helpers.storage.Store._async_write_data",
             side_effect=mock_write_data,
             autospec=True,
         ),
         patch(
-            "homeassistant.helpers.storage.Store.async_remove",
+            "menuai.helpers.storage.Store.async_remove",
             side_effect=mock_remove,
             autospec=True,
         ),
@@ -1574,9 +1574,9 @@ async def flush_store(store: storage.Store) -> None:
     await store._async_handle_write_data()
 
 
-async def get_system_health_info(hass: HomeAssistant, domain: str) -> dict[str, Any]:
+async def get_system_health_info(menuai: menuai, domain: str) -> dict[str, Any]:
     """Get system health info."""
-    return await hass.data["system_health"][domain].info_callback(hass)
+    return await menuai.data["system_health"][domain].info_callback(menuai)
 
 
 @contextmanager
@@ -1592,14 +1592,14 @@ def mock_config_flow(domain: str, config_flow: type[ConfigFlow]) -> Iterator[Non
 
 
 def mock_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     module: MockModule,
     built_in: bool = True,
     top_level_files: set[str] | None = None,
 ) -> loader.Integration:
     """Mock an integration."""
     integration = loader.Integration(
-        hass,
+        menuai,
         f"{loader.PACKAGE_BUILTIN}.{module.DOMAIN}"
         if built_in
         else f"{loader.PACKAGE_CUSTOM_COMPONENTS}.{module.DOMAIN}",
@@ -1617,17 +1617,17 @@ def mock_integration(
     integration._import_platform = mock_import_platform
 
     _LOGGER.info("Adding mock integration: %s", module.DOMAIN)
-    integration_cache = hass.data[loader.DATA_INTEGRATIONS]
+    integration_cache = menuai.data[loader.DATA_INTEGRATIONS]
     integration_cache[module.DOMAIN] = integration
 
-    module_cache = hass.data[loader.DATA_COMPONENTS]
+    module_cache = menuai.data[loader.DATA_COMPONENTS]
     module_cache[module.DOMAIN] = module
 
     return integration
 
 
 def mock_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform_path: str,
     module: Mock | MockPlatform | None = None,
     built_in=True,
@@ -1637,11 +1637,11 @@ def mock_platform(
     platform_path is in form hue.config_flow.
     """
     domain, _, platform_name = platform_path.partition(".")
-    integration_cache = hass.data[loader.DATA_INTEGRATIONS]
-    module_cache = hass.data[loader.DATA_COMPONENTS]
+    integration_cache = menuai.data[loader.DATA_INTEGRATIONS]
+    module_cache = menuai.data[loader.DATA_COMPONENTS]
 
     if domain not in integration_cache:
-        mock_integration(hass, MockModule(domain), built_in=built_in)
+        mock_integration(menuai, MockModule(domain), built_in=built_in)
 
     integration_cache[domain]._top_level_files.add(f"{platform_name}.py")
     _LOGGER.info("Adding mock integration platform: %s", platform_path)
@@ -1649,7 +1649,7 @@ def mock_platform(
 
 
 def async_capture_events[_DataT: Mapping[str, Any] = dict[str, Any]](
-    hass: HomeAssistant, event_name: EventType[_DataT] | str
+    menuai: menuai, event_name: EventType[_DataT] | str
 ) -> list[Event[_DataT]]:
     """Create a helper that captures events."""
     events: list[Event[_DataT]] = []
@@ -1658,14 +1658,14 @@ def async_capture_events[_DataT: Mapping[str, Any] = dict[str, Any]](
     def capture_events(event: Event[_DataT]) -> None:
         events.append(event)
 
-    hass.bus.async_listen(event_name, capture_events)
+    menuai.bus.async_listen(event_name, capture_events)
 
     return events
 
 
 @callback
 def async_mock_signal[*_Ts](
-    hass: HomeAssistant, signal: SignalType[*_Ts] | str
+    menuai: menuai, signal: SignalType[*_Ts] | str
 ) -> list[tuple[*_Ts]]:
     """Catch all dispatches to a signal."""
     calls: list[tuple[*_Ts]] = []
@@ -1675,7 +1675,7 @@ def async_mock_signal[*_Ts](
         """Mock service call."""
         calls.append(args)
 
-    async_dispatcher_connect(hass, signal, mock_signal_handler)
+    async_dispatcher_connect(menuai, signal, mock_signal_handler)
 
     return calls
 
@@ -1728,16 +1728,16 @@ def raise_contains_mocks(val: Any) -> None:
 
 @callback
 def async_get_persistent_notifications(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, pn.Notification]:
     """Get the current persistent notifications."""
-    return pn._async_get_or_create_notifications(hass)
+    return pn._async_get_or_create_notifications(menuai)
 
 
-def async_mock_cloud_connection_status(hass: HomeAssistant, connected: bool) -> None:
+def async_mock_cloud_connection_status(menuai: menuai, connected: bool) -> None:
     """Mock a signal the cloud disconnected."""
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.components.cloud import (
+    from menuai.components.cloud import (
         SIGNAL_CLOUD_CONNECTION_STATE,
         CloudConnectionState,
     )
@@ -1746,7 +1746,7 @@ def async_mock_cloud_connection_status(hass: HomeAssistant, connected: bool) -> 
         state = CloudConnectionState.CLOUD_CONNECTED
     else:
         state = CloudConnectionState.CLOUD_DISCONNECTED
-    async_dispatcher_send(hass, SIGNAL_CLOUD_CONNECTION_STATE, state)
+    async_dispatcher_send(menuai, SIGNAL_CLOUD_CONNECTION_STATE, state)
 
 
 @asynccontextmanager
@@ -1754,21 +1754,21 @@ async def async_call_logger_set_level(
     logger: str,
     level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "FATAL", "CRITICAL"],
     *,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> AsyncGenerator[None]:
     """Context manager to reset loggers after logger.set_level call."""
-    assert LOGGER_DOMAIN in hass.data, "'logger' integration not setup"
+    assert LOGGER_DOMAIN in menuai.data, "'logger' integration not setup"
     with caplog.at_level(logging.NOTSET, logger):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOGGER_DOMAIN,
             SERVICE_SET_LEVEL,
             {logger: level},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         yield
-        _clear_logger_overwrites(hass)
+        _clear_logger_overwrites(menuai)
 
 
 def import_and_test_deprecated_constant_enum(
@@ -1891,7 +1891,7 @@ def extract_stack_to_frame(extract_stack: list[Mock]) -> FrameType:
 
 
 def setup_test_component_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     entities: Iterable[Entity],
     from_config_entry: bool = False,
@@ -1900,7 +1900,7 @@ def setup_test_component_platform(
     """Mock a test component platform for tests."""
 
     async def _async_setup_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         async_add_entities: AddEntitiesCallback,
         discovery_info: DiscoveryInfoType | None = None,
@@ -1916,7 +1916,7 @@ def setup_test_component_platform(
     if from_config_entry:
 
         async def _async_setup_entry(
-            hass: HomeAssistant,
+            menuai: menuai,
             entry: ConfigEntry,
             async_add_entities: AddConfigEntryEntitiesCallback,
         ) -> None:
@@ -1926,12 +1926,12 @@ def setup_test_component_platform(
         platform.async_setup_entry = _async_setup_entry
         platform.async_setup_platform = None
 
-    mock_platform(hass, f"test.{domain}", platform, built_in=built_in)
+    mock_platform(menuai, f"test.{domain}", platform, built_in=built_in)
     return platform
 
 
 async def snapshot_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     config_entry_id: str,
@@ -1945,7 +1945,7 @@ async def snapshot_platform(
     for entity_entry in entity_entries:
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
         assert entity_entry.disabled_by is None, "Please enable all entities."
-        state = hass.states.get(entity_entry.entity_id)
+        state = menuai.states.get(entity_entry.entity_id)
         assert state, f"State not found for {entity_entry.entity_id}"
         assert state == snapshot(name=f"{entity_entry.entity_id}-state")
 
@@ -1954,7 +1954,7 @@ async def snapshot_platform(
 def get_quality_scale(integration: str) -> dict[str, QualityScaleStatus]:
     """Load quality scale for integration."""
     quality_scale_file = pathlib.Path(
-        f"homeassistant/components/{integration}/quality_scale.yaml"
+        f"menuai/components/{integration}/quality_scale.yaml"
     )
     if not quality_scale_file.exists():
         return {}
@@ -1983,10 +1983,10 @@ def get_schema_suggested_value(schema: vol.Schema, key: str) -> Any | None:
 
 
 def get_sensor_display_state(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, entity_id: str
+    menuai: menuai, entity_registry: er.EntityRegistry, entity_id: str
 ) -> str:
     """Return the state rounded for presentation."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     value = state.state
 

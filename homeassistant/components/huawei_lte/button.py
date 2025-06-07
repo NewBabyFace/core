@@ -6,15 +6,15 @@ import logging
 
 from huawei_lte_api.enums.device import ControlModeEnum
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_platform
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_platform
 
 from .const import DOMAIN
 from .entity import HuaweiLteBaseEntityWithDevice
@@ -23,12 +23,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: entity_platform.AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Huawei LTE buttons."""
-    router = hass.data[DOMAIN].routers[config_entry.entry_id]
+    router = menuai.data[DOMAIN].routers[config_entry.entry_id]
     buttons = [
         ClearTrafficStatisticsButton(router),
         RestartButton(router),

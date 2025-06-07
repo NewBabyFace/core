@@ -11,27 +11,27 @@ from typing import Any, NamedTuple, cast
 import RFXtrx as rfxtrxmod
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DEVICE_ID,
     CONF_DEVICE,
     CONF_DEVICE_ID,
     CONF_DEVICES,
     CONF_HOST,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.device_registry import EventDeviceRegistryUpdatedData
-from homeassistant.helpers.dispatcher import (
+from menuai.core import Event, menuai, ServiceCall, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.device_registry import EventDeviceRegistryUpdatedData
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     ATTR_EVENT,
@@ -84,27 +84,27 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the RFXtrx component."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
-    await async_setup_internal(hass, entry)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await async_setup_internal(menuai, entry)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload RFXtrx component."""
-    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if not await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
 
-    hass.services.async_remove(DOMAIN, SERVICE_SEND)
+    menuai.services.async_remove(DOMAIN, SERVICE_SEND)
 
-    rfx_object = hass.data[DOMAIN][DATA_RFXOBJECT]
-    await hass.async_add_executor_job(rfx_object.close_connection)
+    rfx_object = menuai.data[DOMAIN][DATA_RFXOBJECT]
+    await menuai.async_add_executor_job(rfx_object.close_connection)
 
-    hass.data.pop(DOMAIN)
+    menuai.data.pop(DOMAIN)
 
     return True
 
@@ -158,7 +158,7 @@ def _get_device_lookup(
     return lookup
 
 
-async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_setup_internal(menuai: menuai, entry: ConfigEntry) -> None:
     """Set up the RFXtrx component."""
     config = entry.data
 
@@ -166,7 +166,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
     devices = _get_device_lookup(config[CONF_DEVICES])
     pt2262_devices: set[str] = set()
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     # Declare the Handle event
     @callback
@@ -175,8 +175,8 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
         if isinstance(event, rfxtrxmod.ConnectionLost):
             _LOGGER.warning("Connection was lost, triggering reload")
-            hass.async_create_task(
-                hass.config_entries.async_reload(entry.entry_id),
+            menuai.async_create_task(
+                menuai.config_entries.async_reload(entry.entry_id),
                 f"config entry reload {entry.title} {entry.domain} {entry.entry_id}",
             )
             return
@@ -215,10 +215,10 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
             event_data[ATTR_DEVICE_ID] = device_entry.id
 
         # Callback to HA registered components.
-        async_dispatcher_send(hass, SIGNAL_EVENT, event, device_id)
+        async_dispatcher_send(menuai, SIGNAL_EVENT, event, device_id)
 
         # Signal event to any other listeners
-        hass.bus.async_fire(EVENT_RFXTRX_EVENT, event_data)
+        menuai.bus.async_fire(EVENT_RFXTRX_EVENT, event_data)
 
     @callback
     def _add_device(event: rfxtrxmod.RFXtrxEvent, device_id: DeviceTuple) -> None:
@@ -238,7 +238,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
         data[CONF_DEVICES] = copy.deepcopy(entry.data[CONF_DEVICES])
         event_code = binascii.hexlify(event.data).decode("ASCII")
         data[CONF_DEVICES][event_code] = config
-        hass.config_entries.async_update_entry(entry=entry, data=data)
+        menuai.config_entries.async_update_entry(entry=entry, data=data)
         devices[device_id] = config
 
     @callback
@@ -251,7 +251,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
                 if tuple(entity_info.get(CONF_DEVICE_ID)) != device_id
             },
         }
-        hass.config_entries.async_update_entry(entry=entry, data=data)
+        menuai.config_entries.async_update_entry(entry=entry, data=data)
         devices.pop(device_id)
 
     @callback
@@ -266,14 +266,14 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
             _remove_device(device_id)
 
     # Initialize library
-    rfx_object = await hass.async_add_executor_job(
-        _create_rfx, config, lambda event: hass.add_job(async_handle_receive, event)
+    rfx_object = await menuai.async_add_executor_job(
+        _create_rfx, config, lambda event: menuai.add_job(async_handle_receive, event)
     )
 
-    hass.data[DOMAIN][DATA_RFXOBJECT] = rfx_object
+    menuai.data[DOMAIN][DATA_RFXOBJECT] = rfx_object
 
     entry.async_on_unload(
-        hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, _updated_device)
+        menuai.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, _updated_device)
     )
 
     def _shutdown_rfxtrx(event: Event) -> None:
@@ -281,18 +281,18 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
         rfx_object.close_connection()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown_rfxtrx)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _shutdown_rfxtrx)
     )
 
     def send(call: ServiceCall) -> None:
         event = call.data[ATTR_EVENT]
         rfx_object.transport.send(event)
 
-    hass.services.async_register(DOMAIN, SERVICE_SEND, send, schema=SERVICE_SEND_SCHEMA)
+    menuai.services.async_register(DOMAIN, SERVICE_SEND, send, schema=SERVICE_SEND_SCHEMA)
 
 
 async def async_setup_platform_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
     supported: Callable[[rfxtrxmod.RFXtrxEvent], bool],
@@ -345,7 +345,7 @@ async def async_setup_platform_entry(
             async_add_entities(constructor(event, event, device_id, {}))
 
         config_entry.async_on_unload(
-            async_dispatcher_connect(hass, SIGNAL_EVENT, _update)
+            async_dispatcher_connect(menuai, SIGNAL_EVENT, _update)
         )
 
 
@@ -457,7 +457,7 @@ def get_device_tuple_from_identifiers(
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove config entry from a device.
 

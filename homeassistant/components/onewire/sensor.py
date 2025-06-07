@@ -11,23 +11,23 @@ from typing import Any
 
 from pyownet import protocol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     LIGHT_LUX,
     PERCENTAGE,
     UnitOfElectricPotential,
     UnitOfPressure,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import (
     DEVICE_KEYS_0_3,
@@ -385,7 +385,7 @@ def get_sensor_types(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OneWireConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -399,7 +399,7 @@ async def async_setup_entry(
             return
         # note: we have to go through the executor as SENSOR platform
         # makes extra calls to the hub during device listing
-        entities = await hass.async_add_executor_job(
+        entities = await menuai.async_add_executor_job(
             get_entities, hub, devices, config_entry.options
         )
         async_add_entities(entities, True)
@@ -407,7 +407,7 @@ async def async_setup_entry(
     hub = config_entry.runtime_data
     await _add_entities(hub, hub.devices)
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SIGNAL_NEW_DEVICE_CONNECTED, _add_entities)
+        async_dispatcher_connect(menuai, SIGNAL_NEW_DEVICE_CONNECTED, _add_entities)
     )
 
 

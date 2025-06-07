@@ -1,3 +1,3 @@
-"""Constants for the Home Assistant Green integration."""
+"""Constants for the MenuAI Green integration."""
 
-DOMAIN = "homeassistant_green"
+DOMAIN = "menuai_green"

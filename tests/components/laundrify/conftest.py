@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, patch
 from laundrify_aio import LaundrifyAPI, LaundrifyDevice
 import pytest
 
-from homeassistant.components.laundrify import DOMAIN
-from homeassistant.components.laundrify.const import MANUFACTURER
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.laundrify import DOMAIN
+from menuai.components.laundrify.const import MANUFACTURER
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
 
 from .const import VALID_ACCESS_TOKEN, VALID_ACCOUNT_ID
 
@@ -34,23 +34,23 @@ def laundrify_sensor_fixture() -> LaundrifyDevice:
 
 @pytest.fixture(name="laundrify_config_entry")
 async def laundrify_setup_config_entry(
-    hass: HomeAssistant, access_token: str = VALID_ACCESS_TOKEN
+    menuai: menuai, access_token: str = VALID_ACCESS_TOKEN
 ) -> MockConfigEntry:
-    """Create laundrify entry in Home Assistant."""
+    """Create laundrify entry in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=VALID_ACCOUNT_ID,
         data={CONF_ACCESS_TOKEN: access_token},
         minor_version=2,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     return entry
 
 
 @pytest.fixture(name="laundrify_api_mock", autouse=True)
-def laundrify_api_fixture(hass_client: ClientSessionGenerator):
+def laundrify_api_fixture(menuai_client: ClientSessionGenerator):
     """Mock valid laundrify API responses."""
     with (
         patch(
@@ -73,4 +73,4 @@ def laundrify_api_fixture(hass_client: ClientSessionGenerator):
             ],
         ),
     ):
-        yield LaundrifyAPI(VALID_ACCESS_TOKEN, hass_client)
+        yield LaundrifyAPI(VALID_ACCESS_TOKEN, menuai_client)

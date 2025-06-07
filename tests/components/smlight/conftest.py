@@ -8,10 +8,10 @@ from pysmlight.sse import sseClient
 from pysmlight.web import CmdWrapper, Firmware, Info, Sensors
 import pytest
 
-from homeassistant.components.smlight import PLATFORMS
-from homeassistant.components.smlight.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.smlight import PLATFORMS
+from menuai.components.smlight.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
 
 from tests.common import (
     MockConfigEntry,
@@ -61,7 +61,7 @@ def platforms() -> list[Platform]:
 @pytest.fixture(autouse=True)
 async def mock_patch_platforms(platforms: list[str]) -> AsyncGenerator[None]:
     """Fixture to set up platforms for tests."""
-    with patch(f"homeassistant.components.{DOMAIN}.PLATFORMS", platforms):
+    with patch(f"menuai.components.{DOMAIN}.PLATFORMS", platforms):
         yield
 
 
@@ -69,7 +69,7 @@ async def mock_patch_platforms(platforms: list[str]) -> AsyncGenerator[None]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.smlight.async_setup_entry", return_value=True
+        "menuai.components.smlight.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -78,8 +78,8 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_smlight_client(request: pytest.FixtureRequest) -> Generator[MagicMock]:
     """Mock the SMLIGHT API client."""
     with (
-        patch("homeassistant.components.smlight.Api2", autospec=True) as smlight_mock,
-        patch("homeassistant.components.smlight.config_flow.Api2", new=smlight_mock),
+        patch("menuai.components.smlight.Api2", autospec=True) as smlight_mock,
+        patch("menuai.components.smlight.config_flow.Api2", new=smlight_mock),
     ):
         api = smlight_mock.return_value
         api.host = MOCK_HOST
@@ -123,13 +123,13 @@ def mock_smlight_client(request: pytest.FixtureRequest) -> Generator[MagicMock]:
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> MockConfigEntry:
     """Set up the integration."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

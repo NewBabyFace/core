@@ -11,8 +11,8 @@ from anthropic import (
 from httpx import URL, Request, Response
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -47,7 +47,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_init_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
     side_effect,
@@ -58,6 +58,6 @@ async def test_init_error(
         "anthropic.resources.models.AsyncModels.retrieve",
         side_effect=side_effect,
     ):
-        assert await async_setup_component(hass, "anthropic", {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "anthropic", {})
+        await menuai.async_block_till_done()
         assert error in caplog.text

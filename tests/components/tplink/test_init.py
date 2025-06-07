@@ -20,16 +20,16 @@ from kasa import (
 from kasa.iot import IotStrip
 import pytest
 
-from homeassistant.components import tplink
-from homeassistant.components.tplink.const import (
+from menuai.components import tplink
+from menuai.components.tplink.const import (
     CONF_AES_KEYS,
     CONF_CONNECTION_PARAMETERS,
     CONF_CREDENTIALS_HASH,
     CONF_DEVICE_CONFIG,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import (
     CONF_ALIAS,
     CONF_AUTHENTICATION,
     CONF_HOST,
@@ -40,10 +40,10 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     _mocked_device,
@@ -77,69 +77,69 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_configuring_tplink_causes_discovery(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test that specifying empty config does discovery."""
     with (
-        patch("homeassistant.components.tplink.Discover.discover") as discover,
-        patch("homeassistant.components.tplink.Discover.discover_single"),
-        patch("homeassistant.components.tplink.Device.connect"),
+        patch("menuai.components.tplink.Discover.discover") as discover,
+        patch("menuai.components.tplink.Discover.discover_single"),
+        patch("menuai.components.tplink.Device.connect"),
     ):
         discover.return_value = {MagicMock(): MagicMock()}
-        await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_setup_component(menuai, tplink.DOMAIN, {tplink.DOMAIN: {}})
+        await menuai.async_block_till_done(wait_background_tasks=True)
         # call_count will differ based on number of broadcast addresses
         call_count = len(discover.mock_calls)
         assert discover.mock_calls
 
         freezer.tick(tplink.DISCOVERY_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert len(discover.mock_calls) == call_count * 2
 
         freezer.tick(tplink.DISCOVERY_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert len(discover.mock_calls) == call_count * 3
 
 
-async def test_config_entry_reload(hass: HomeAssistant) -> None:
+async def test_config_entry_reload(menuai: menuai) -> None:
     """Test that a config entry can be reloaded."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     with _patch_discovery(), _patch_single_discovery(), _patch_connect():
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.LOADED
-        await hass.config_entries.async_unload(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_config_entry_retry(hass: HomeAssistant) -> None:
+async def test_config_entry_retry(menuai: menuai) -> None:
     """Test that a config entry can be retried."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     with (
         _patch_discovery(no_device=True),
         _patch_single_discovery(no_device=True),
         _patch_connect(no_device=True),
     ):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_dimmer_switch_unique_id_fix_original_entity_still_exists(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test no migration happens if the original entity id still exists."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=MAC_ADDRESS)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     dimmer = _mocked_device(alias="My dimmer", modules=[Module.Light])
     rollout_unique_id = MAC_ADDRESS.replace(":", "").upper()
     original_unique_id = tplink.legacy_device_id(dimmer)
@@ -163,8 +163,8 @@ async def test_dimmer_switch_unique_id_fix_original_entity_still_exists(
         _patch_single_discovery(device=dimmer),
         _patch_connect(device=dimmer),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     migrated_dimmer_entity_reg = entity_registry.async_get_or_create(
         config_entry=config_entry,
@@ -178,17 +178,17 @@ async def test_dimmer_switch_unique_id_fix_original_entity_still_exists(
 
 
 async def test_config_entry_wrong_mac_Address(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test config entry enters setup retry when mac address mismatches."""
     mismatched_mac = f"{MAC_ADDRESS[:-1]}0"
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=mismatched_mac
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     with _patch_discovery(), _patch_single_discovery(), _patch_connect():
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.SETUP_RETRY
 
     assert (
@@ -198,7 +198,7 @@ async def test_config_entry_wrong_mac_Address(
 
 
 async def test_config_entry_device_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_discovery: AsyncMock,
     mock_connect: AsyncMock,
 ) -> None:
@@ -209,14 +209,14 @@ async def test_config_entry_device_config(
         data={**CREATE_ENTRY_DATA_KLAP},
         unique_id=MAC_ADDRESS,
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
 
 async def test_config_entry_with_stored_credentials(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_discovery: AsyncMock,
     mock_connect: AsyncMock,
 ) -> None:
@@ -233,17 +233,17 @@ async def test_config_entry_with_stored_credentials(
         CONF_PASSWORD: stored_credentials.password,
     }
 
-    hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = auth
-    mock_config_entry.add_to_hass(hass)
+    menuai.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = auth
+    mock_config_entry.add_to_menuai(menuai)
     with (
         patch(
-            "homeassistant.components.tplink.async_create_clientsession",
+            "menuai.components.tplink.async_create_clientsession",
             return_value="Foo",
         ),
         override_side_effect(mock_discovery["discover"], lambda *_, **__: {}),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.LOADED
     config = DeviceConfig.from_dict(DEVICE_CONFIG_KLAP.to_dict())
     config.http_client = "Foo"
@@ -253,7 +253,7 @@ async def test_config_entry_with_stored_credentials(
 
 
 async def test_config_entry_conn_params_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_discovery: AsyncMock,
     mock_connect: AsyncMock,
     caplog: pytest.LogCaptureFixture,
@@ -267,9 +267,9 @@ async def test_config_entry_conn_params_invalid(
         data={**entry_data},
         unique_id=MAC_ADDRESS,
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
     assert (
@@ -287,7 +287,7 @@ async def test_config_entry_conn_params_invalid(
     ids=["invalid-auth", "unknown-error"],
 )
 async def test_config_entry_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_discovery: AsyncMock,
     mock_connect: AsyncMock,
     error_type,
@@ -302,40 +302,40 @@ async def test_config_entry_errors(
         data={**CREATE_ENTRY_DATA_KLAP},
         unique_id=MAC_ADDRESS,
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is entry_state
     assert (
-        any(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+        any(mock_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
         == reauth_flows
     )
 
 
-async def test_plug_auth_fails(hass: HomeAssistant) -> None:
+async def test_plug_auth_fails(menuai: menuai) -> None:
     """Test a smart plug auth failure."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device = _mocked_device(alias="my_plug", features=["state"])
     with _patch_discovery(device=device), _patch_connect(device=device):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "switch.my_plug"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     device.update = AsyncMock(side_effect=AuthenticationError)
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=30))
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
 
     assert (
         len(
-            hass.config_entries.flow.async_progress_by_handler(
+            menuai.config_entries.flow.async_progress_by_handler(
                 DOMAIN, match_context={"source": SOURCE_REAUTH}
             )
         )
@@ -344,7 +344,7 @@ async def test_plug_auth_fails(hass: HomeAssistant) -> None:
 
 
 async def test_update_attrs_fails_in_init(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -352,7 +352,7 @@ async def test_update_attrs_fails_in_init(
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     features = [
         _mocked_feature("brightness", value=50),
         _mocked_feature("hsv", value=(10, 30, 5)),
@@ -366,19 +366,19 @@ async def test_update_attrs_fails_in_init(
     type(light_module).color_temp = p
     light.__str__ = lambda _: "MockLight"
     with _patch_discovery(device=light), _patch_connect(device=light):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "light.my_light"
     entity = entity_registry.async_get(entity_id)
     assert entity
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
     assert f"Unable to read data for MockLight {entity_id}:" in caplog.text
 
 
 async def test_update_attrs_fails_on_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
@@ -387,7 +387,7 @@ async def test_update_attrs_fails_on_update(
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     features = [
         _mocked_feature("brightness", value=50),
         _mocked_feature("hsv", value=(10, 30, 5)),
@@ -399,38 +399,38 @@ async def test_update_attrs_fails_on_update(
     light_module = light.modules[Module.Light]
 
     with _patch_discovery(device=light), _patch_connect(device=light):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "light.my_light"
     entity = entity_registry.async_get(entity_id)
     assert entity
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
     p = PropertyMock(side_effect=KasaException)
     type(light_module).color_temp = p
     light.__str__ = lambda _: "MockLight"
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     entity = entity_registry.async_get(entity_id)
     assert entity
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
     assert f"Unable to read data for MockLight {entity_id}:" in caplog.text
     # Check only logs once
     caplog.clear()
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     entity = entity_registry.async_get(entity_id)
     assert entity
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
     assert f"Unable to read data for MockLight {entity_id}:" not in caplog.text
 
 
 async def test_feature_no_category(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -438,15 +438,15 @@ async def test_feature_no_category(
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     dev = _mocked_device(
         alias="my_plug",
         features=["led"],
     )
     dev.features["led"].category = Feature.Category.Unset
     with _patch_discovery(device=dev), _patch_connect(device=dev):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "switch.my_plug_led"
     entity = entity_registry.async_get(entity_id)
@@ -491,7 +491,7 @@ async def test_feature_no_category(
     ],
 )
 async def test_unlink_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
     device_id,
@@ -508,7 +508,7 @@ async def test_unlink_devices(
         version=1,
         minor_version=2,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Generate list of test identifiers
     test_identifiers = [
@@ -545,9 +545,9 @@ async def test_unlink_devices(
     }
     assert device_entries[0].identifiers == set(test_identifiers)
 
-    with patch("homeassistant.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 3):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 3):
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
 
@@ -562,7 +562,7 @@ async def test_unlink_devices(
 
 
 async def test_move_credentials_hash(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test credentials hash moved to parent.
@@ -586,19 +586,19 @@ async def test_move_credentials_hash(
         minor_version=3,
     )
     assert entry.data[CONF_DEVICE_CONFIG][CONF_CREDENTIALS_HASH] == "theHash"
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     async def _connect(config):
         config.credentials_hash = "theNewHash"
         return _mocked_device(device_config=config, credentials_hash="theNewHash")
 
     with (
-        patch("homeassistant.components.tplink.Device.connect", new=_connect),
-        patch("homeassistant.components.tplink.PLATFORMS", []),
-        patch("homeassistant.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 4),
+        patch("menuai.components.tplink.Device.connect", new=_connect),
+        patch("menuai.components.tplink.PLATFORMS", []),
+        patch("menuai.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 4),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.minor_version == 4
     assert entry.state is ConfigEntryState.LOADED
@@ -610,7 +610,7 @@ async def test_move_credentials_hash(
 
 
 async def test_move_credentials_hash_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test credentials hash moved to parent.
 
@@ -635,15 +635,15 @@ async def test_move_credentials_hash_auth_error(
 
     with (
         patch(
-            "homeassistant.components.tplink.Device.connect",
+            "menuai.components.tplink.Device.connect",
             side_effect=AuthenticationError,
         ),
-        patch("homeassistant.components.tplink.PLATFORMS", []),
-        patch("homeassistant.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 4),
+        patch("menuai.components.tplink.PLATFORMS", []),
+        patch("menuai.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 4),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.minor_version == 4
     assert entry.state is ConfigEntryState.SETUP_ERROR
@@ -653,7 +653,7 @@ async def test_move_credentials_hash_auth_error(
 
 
 async def test_move_credentials_hash_other_error(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test credentials hash moved to parent.
 
@@ -678,14 +678,14 @@ async def test_move_credentials_hash_other_error(
 
     with (
         patch(
-            "homeassistant.components.tplink.Device.connect", side_effect=KasaException
+            "menuai.components.tplink.Device.connect", side_effect=KasaException
         ),
-        patch("homeassistant.components.tplink.PLATFORMS", []),
-        patch("homeassistant.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 4),
+        patch("menuai.components.tplink.PLATFORMS", []),
+        patch("menuai.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 4),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.minor_version == 4
     assert entry.state is ConfigEntryState.SETUP_RETRY
@@ -695,7 +695,7 @@ async def test_move_credentials_hash_other_error(
 
 
 async def test_credentials_hash(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test credentials_hash used to call connect."""
     entry_data = {
@@ -715,12 +715,12 @@ async def test_credentials_hash(
         return _mocked_device(device_config=config, credentials_hash="theHash")
 
     with (
-        patch("homeassistant.components.tplink.PLATFORMS", []),
-        patch("homeassistant.components.tplink.Device.connect", new=_connect),
+        patch("menuai.components.tplink.PLATFORMS", []),
+        patch("menuai.components.tplink.Device.connect", new=_connect),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert CONF_CREDENTIALS_HASH in entry.data
@@ -728,7 +728,7 @@ async def test_credentials_hash(
 
 
 async def test_credentials_hash_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test credentials_hash is deleted after an auth failure."""
     entry_data = {
@@ -744,19 +744,19 @@ async def test_credentials_hash_auth_error(
     )
 
     with (
-        patch("homeassistant.components.tplink.PLATFORMS", []),
+        patch("menuai.components.tplink.PLATFORMS", []),
         patch(
-            "homeassistant.components.tplink.async_create_clientsession",
+            "menuai.components.tplink.async_create_clientsession",
             return_value="Foo",
         ),
         patch(
-            "homeassistant.components.tplink.Device.connect",
+            "menuai.components.tplink.Device.connect",
             side_effect=AuthenticationError,
         ) as connect_mock,
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     expected_config = DeviceConfig.from_dict(
         {**DEVICE_CONFIG_DICT_KLAP, "credentials_hash": "theHash"}
@@ -780,7 +780,7 @@ async def test_credentials_hash_auth_error(
     ],
 )
 async def test_migrate_remove_device_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connect: AsyncMock,
     caplog: pytest.LogCaptureFixture,
     device_config: DeviceConfig,
@@ -817,7 +817,7 @@ async def test_migrate_remove_device_config(
         version=1,
         minor_version=4,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     async def _connect(config):
         config.credentials_hash = credentials_hash
@@ -825,16 +825,16 @@ async def test_migrate_remove_device_config(
         return _mocked_device(device_config=config, credentials_hash=credentials_hash)
 
     with (
-        patch("homeassistant.components.tplink.Device.connect", new=_connect),
-        patch("homeassistant.components.tplink.PLATFORMS", []),
+        patch("menuai.components.tplink.Device.connect", new=_connect),
+        patch("menuai.components.tplink.PLATFORMS", []),
         patch(
-            "homeassistant.components.tplink.async_create_clientsession",
+            "menuai.components.tplink.async_create_clientsession",
             return_value="Foo",
         ),
-        patch("homeassistant.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 5),
+        patch("menuai.components.tplink.CONF_CONFIG_ENTRY_MINOR_VERSION", 5),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.minor_version == 5
     assert entry.state is ConfigEntryState.LOADED
@@ -866,7 +866,7 @@ async def test_migrate_remove_device_config(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_automatic_feature_device_addition_and_removal(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_connect: AsyncMock,
     mock_discovery: AsyncMock,
@@ -900,13 +900,13 @@ async def test_automatic_feature_device_addition_and_removal(
     )
 
     with override_side_effect(mock_connect["connect"], lambda *_, **__: mock_device):
-        mock_config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     for child_id in (1, 2):
         entity_id = f"{platform}.child_{child_id}_{translated_name}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -925,10 +925,10 @@ async def test_automatic_feature_device_addition_and_removal(
     # Remove one of the devices
     mock_device.children = [children["child1"]]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     entity_id = f"{platform}.child_2_{translated_name}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
     assert entity_registry.async_get(entity_id) is None
 
@@ -940,11 +940,11 @@ async def test_automatic_feature_device_addition_and_removal(
         children["child2"],
     ]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     for child_id in (1, 2):
         entity_id = f"{platform}.child_{child_id}_{translated_name}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -958,11 +958,11 @@ async def test_automatic_feature_device_addition_and_removal(
     # Add child devices
     mock_device.children = [children["child1"], children["child3"], children["child4"]]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     for child_id in (1, 3, 4):
         entity_id = f"{platform}.child_{child_id}_{translated_name}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -977,11 +977,11 @@ async def test_automatic_feature_device_addition_and_removal(
         children["child4"],
     ]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     for child_id in (1, 2, 3, 4):
         entity_id = f"{platform}.child_{child_id}_{translated_name}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -1022,7 +1022,7 @@ async def test_automatic_feature_device_addition_and_removal(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_automatic_module_device_addition_and_removal(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_camera_config_entry: MockConfigEntry,
     mock_connect: AsyncMock,
     mock_discovery: AsyncMock,
@@ -1063,14 +1063,14 @@ async def test_automatic_module_device_addition_and_removal(
         child.parent = mock_device
 
     with override_side_effect(mock_connect["connect"], lambda *_, **__: mock_device):
-        mock_camera_config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_camera_config_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_camera_config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_camera_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     for child_id in (1, 2):
         sub_id = f"_{translated_name}" if translated_name else ""
         entity_id = f"{platform}.child_{child_id}{sub_id}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -1089,11 +1089,11 @@ async def test_automatic_module_device_addition_and_removal(
     # Remove one of the devices
     mock_device.children = [children["child1"]]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     sub_id = f"_{translated_name}" if translated_name else ""
     entity_id = f"{platform}.child_2{sub_id}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
     assert entity_registry.async_get(entity_id) is None
 
@@ -1105,12 +1105,12 @@ async def test_automatic_module_device_addition_and_removal(
         children["child2"],
     ]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     for child_id in (1, 2):
         sub_id = f"_{translated_name}" if translated_name else ""
         entity_id = f"{platform}.child_{child_id}{sub_id}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -1124,12 +1124,12 @@ async def test_automatic_module_device_addition_and_removal(
     # Add child devices
     mock_device.children = [children["child1"], children["child3"], children["child4"]]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     for child_id in (1, 3, 4):
         sub_id = f"_{translated_name}" if translated_name else ""
         entity_id = f"{platform}.child_{child_id}{sub_id}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -1144,12 +1144,12 @@ async def test_automatic_module_device_addition_and_removal(
         children["child4"],
     ]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     for child_id in (1, 2, 3, 4):
         sub_id = f"_{translated_name}" if translated_name else ""
         entity_id = f"{platform}.child_{child_id}{sub_id}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert entity_registry.async_get(entity_id)
 
@@ -1162,7 +1162,7 @@ async def test_automatic_module_device_addition_and_removal(
 
 
 async def test_automatic_device_addition_does_not_remove_disabled_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_camera_config_entry: MockConfigEntry,
     mock_connect: AsyncMock,
     mock_discovery: AsyncMock,
@@ -1197,20 +1197,20 @@ async def test_automatic_device_addition_does_not_remove_disabled_default(
         child.parent = mock_device
 
     with override_side_effect(mock_connect["connect"], lambda *_, **__: mock_device):
-        mock_camera_config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_camera_config_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_camera_config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_camera_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     def check_entities(entity_id_device):
         entity_id = f"sensor.{entity_id_device}_signal_level"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         reg_ent = entity_registry.async_get(entity_id)
         assert reg_ent
         assert reg_ent.disabled is False
 
         entity_id = f"sensor.{entity_id_device}_ssid"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state is None
         reg_ent = entity_registry.async_get(entity_id)
         assert reg_ent
@@ -1224,7 +1224,7 @@ async def test_automatic_device_addition_does_not_remove_disabled_default(
     # Add child devices
     mock_device.children = [children["child1"], children["child2"], children["child3"]]
     freezer.tick(5)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
     check_entities("hub")
     for child_id in (1, 2, 3):

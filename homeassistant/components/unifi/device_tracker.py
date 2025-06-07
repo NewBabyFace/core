@@ -18,16 +18,16 @@ from aiounifi.models.device import Device
 from aiounifi.models.event import Event, EventKey
 from propcache.api import cached_property
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     ScannerEntity,
     ScannerEntityDescription,
 )
-from homeassistant.core import Event as core_Event, HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import Event as core_Event, menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import UnifiConfigEntry
 from .const import DOMAIN
@@ -192,13 +192,13 @@ ENTITY_DESCRIPTIONS: tuple[UnifiTrackerEntityDescription, ...] = (
 
 
 @callback
-def async_update_unique_id(hass: HomeAssistant, config_entry: UnifiConfigEntry) -> None:
+def async_update_unique_id(menuai: menuai, config_entry: UnifiConfigEntry) -> None:
     """Normalize client unique ID to have a prefix rather than suffix.
 
     Introduced with release 2023.12.
     """
     hub = config_entry.runtime_data
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     @callback
     def update_unique_id(obj_id: str) -> None:
@@ -218,12 +218,12 @@ def async_update_unique_id(hass: HomeAssistant, config_entry: UnifiConfigEntry) 
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: UnifiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device tracker for UniFi Network integration."""
-    async_update_unique_id(hass, config_entry)
+    async_update_unique_id(menuai, config_entry)
     config_entry.runtime_data.entity_loader.register_platform(
         async_add_entities, UnifiScannerEntity, ENTITY_DESCRIPTIONS
     )
@@ -337,20 +337,20 @@ class UnifiScannerEntity(UnifiEntity[HandlerT, ApiItemT], ScannerEntity):
             + self.entity_description.heartbeat_timedelta_fn(hub, obj_id),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{self.hub.signal_heartbeat_missed}_{self.unique_id}",
                 self._make_disconnected,
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect object when removed."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self.hub.remove_heartbeat(self.unique_id)
 
     @property

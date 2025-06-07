@@ -87,20 +87,20 @@ from unittest.mock import call, patch
 
 import pytest
 
-from homeassistant.components import light, mqtt
-from homeassistant.components.mqtt.light.schema_basic import (
+from menuai.components import light, mqtt
+from menuai.components.mqtt.light.schema_basic import (
     MQTT_LIGHT_ATTRIBUTES_BLOCKED,
 )
-from homeassistant.components.mqtt.models import PublishPayloadType
-from homeassistant.const import (
+from menuai.components.mqtt.models import PublishPayloadType
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_SUPPORTED_FEATURES,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.util.json import json_loads
+from menuai.core import menuai, State
+from menuai.util.json import json_loads
 
 from .common import (
     help_custom_config,
@@ -183,7 +183,7 @@ class JsonValidator:
 
 
 @pytest.mark.parametrize(
-    "hass_config", [{mqtt.DOMAIN: {light.DOMAIN: {"schema": "json", "name": "test"}}}]
+    "menuai_config", [{mqtt.DOMAIN: {light.DOMAIN: {"schema": "json", "name": "test"}}}]
 )
 async def test_fail_setup_if_no_command_topic(
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -195,7 +195,7 @@ async def test_fail_setup_if_no_command_topic(
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "error"),
+    ("menuai_config", "error"),
     [
         (
             help_custom_config(
@@ -233,18 +233,18 @@ async def test_fail_setup_if_color_modes_invalid(
     assert error in caplog.text
 
 
-@pytest.mark.parametrize("hass_config", [COLOR_MODES_CONFIG])
+@pytest.mark.parametrize("menuai_config", [COLOR_MODES_CONFIG])
 async def test_turn_on_with_unknown_color_mode_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup and turn with unknown color_mode in optimistic mode."""
     await mqtt_mock_entry()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     # Turn on the light without brightness or color_temp attributes
-    await common.async_turn_on(hass, "light.test")
-    state = hass.states.get("light.test")
+    await common.async_turn_on(menuai, "light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == light.ColorMode.UNKNOWN
     assert state.attributes.get("brightness") is None
     assert state.attributes.get("color_temp_kelvin") is None
@@ -252,9 +252,9 @@ async def test_turn_on_with_unknown_color_mode_optimistic(
 
     # Turn on the light with brightness or color_temp attributes
     await common.async_turn_on(
-        hass, "light.test", brightness=50, color_temp_kelvin=5208
+        menuai, "light.test", brightness=50, color_temp_kelvin=5208
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == light.ColorMode.COLOR_TEMP
     assert state.attributes.get("brightness") == 50
     assert state.attributes.get("color_temp_kelvin") == 5208
@@ -262,7 +262,7 @@ async def test_turn_on_with_unknown_color_mode_optimistic(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         (
             help_custom_config(
@@ -274,20 +274,20 @@ async def test_turn_on_with_unknown_color_mode_optimistic(
     ],
 )
 async def test_controlling_state_with_unknown_color_mode(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup and turn with unknown color_mode in optimistic mode."""
     await mqtt_mock_entry()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     # Send `on` state but omit other attributes
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light",
         '{"state": "ON"}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get(light.ATTR_COLOR_TEMP_KELVIN) is None
     assert state.attributes.get(light.ATTR_BRIGHTNESS) is None
@@ -295,11 +295,11 @@ async def test_controlling_state_with_unknown_color_mode(
 
     # Send complete light state
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light",
         '{"state": "ON", "brightness": 50, "color_mode": "color_temp", "color_temp": 192}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
 
     assert state.attributes.get(light.ATTR_COLOR_TEMP_KELVIN) == 5208
@@ -308,7 +308,7 @@ async def test_controlling_state_with_unknown_color_mode(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -323,12 +323,12 @@ async def test_controlling_state_with_unknown_color_mode(
     ],
 )
 async def test_no_color_brightness_color_temp_if_no_topics(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test for no RGB, brightness, color temp, effector XY."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     expected_features = (
         light.LightEntityFeature.FLASH | light.LightEntityFeature.TRANSITION
@@ -341,9 +341,9 @@ async def test_no_color_brightness_color_temp_if_no_topics(
     assert state.attributes.get("xy_color") is None
     assert state.attributes.get("hs_color") is None
 
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"ON"}')
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"ON"}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") is None
     assert state.attributes.get("brightness") is None
@@ -352,19 +352,19 @@ async def test_no_color_brightness_color_temp_if_no_topics(
     assert state.attributes.get("xy_color") is None
     assert state.attributes.get("hs_color") is None
 
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"OFF"}')
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"OFF"}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state": null}')
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state": null}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -391,7 +391,7 @@ async def test_no_color_brightness_color_temp_if_no_topics(
     ],
 )
 async def test_brightness_only(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test brightness only light.
 
@@ -401,7 +401,7 @@ async def test_brightness_only(
     """
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(light.ATTR_SUPPORTED_COLOR_MODES) == [
         light.ColorMode.BRIGHTNESS
@@ -417,9 +417,9 @@ async def test_brightness_only(
     assert state.attributes.get("xy_color") is None
     assert state.attributes.get("hs_color") is None
 
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"ON", "brightness": 50}')
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"ON", "brightness": 50}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") is None
     assert state.attributes.get("brightness") == 50
@@ -428,14 +428,14 @@ async def test_brightness_only(
     assert state.attributes.get("xy_color") is None
     assert state.attributes.get("hs_color") is None
 
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"OFF"}')
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"OFF"}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -451,12 +451,12 @@ async def test_brightness_only(
     ],
 )
 async def test_color_temp_only(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test a light that only support color_temp as supported color mode."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(light.ATTR_SUPPORTED_COLOR_MODES) == [
         light.ColorMode.COLOR_TEMP
@@ -473,12 +473,12 @@ async def test_color_temp_only(
     assert state.attributes.get("hs_color") is None
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode": "color_temp", "color_temp": 250, "brightness": 50}',
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") == (255, 206, 166)
     assert state.attributes.get("brightness") == 50
@@ -487,14 +487,14 @@ async def test_color_temp_only(
     assert state.attributes.get("xy_color") == (0.42, 0.365)
     assert state.attributes.get("hs_color") == (26.812, 34.87)
 
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"OFF"}')
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"OFF"}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -513,12 +513,12 @@ async def test_color_temp_only(
     ],
 )
 async def test_controlling_state_color_temp_kelvin(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the controlling of the state via topic in Kelvin mode."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     color_modes = [light.ColorMode.COLOR_TEMP, light.ColorMode.HS]
     assert state.attributes.get(light.ATTR_SUPPORTED_COLOR_MODES) == color_modes
@@ -538,7 +538,7 @@ async def test_controlling_state_color_temp_kelvin(
 
     # Turn on the light
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON",'
         '"color":{"h": 44.098, "s": 2.43},'
@@ -548,7 +548,7 @@ async def test_controlling_state_color_temp_kelvin(
         '"effect":"colorloop"}',
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") == (255, 253, 249)
     assert state.attributes.get("brightness") == 255
@@ -559,7 +559,7 @@ async def test_controlling_state_color_temp_kelvin(
 
     # Turn on the light
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON",'
         '"brightness":255,'
@@ -569,7 +569,7 @@ async def test_controlling_state_color_temp_kelvin(
         '"effect":"colorloop"}',
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") == (
         255,
@@ -584,7 +584,7 @@ async def test_controlling_state_color_temp_kelvin(
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "expected_features"),
+    ("menuai_config", "expected_features"),
     [
         (
             {
@@ -669,20 +669,20 @@ async def test_controlling_state_color_temp_kelvin(
     ],
 )
 async def test_flash_and_transition_feature_flags(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     expected_features: light.LightEntityFeature,
 ) -> None:
     """Test for no RGB, brightness, color temp, effector XY."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) is expected_features
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             light.DOMAIN, COLOR_MODES_CONFIG, ({"state_topic": "test_light_rgb"},)
@@ -690,7 +690,7 @@ async def test_flash_and_transition_feature_flags(
     ],
 )
 async def test_controlling_state_via_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -698,7 +698,7 @@ async def test_controlling_state_via_topic(
     supported_color_modes = ["color_temp", "hs", "rgb", "rgbw", "rgbww", "white", "xy"]
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     expected_features = (
         light.LightEntityFeature.EFFECT
@@ -720,7 +720,7 @@ async def test_controlling_state_via_topic(
 
     # Turn on the light, rgbww mode, additional values in the update
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON",'
         '"color_mode":"rgbww",'
@@ -730,7 +730,7 @@ async def test_controlling_state_via_topic(
         '"effect":"colorloop"}',
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") == 255
     assert state.attributes.get("color_mode") == "rgbww"
@@ -743,97 +743,97 @@ async def test_controlling_state_via_topic(
     assert state.attributes.get("xy_color") == (0.571, 0.361)
 
     # Light turned off
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"OFF"}')
-    state = hass.states.get("light.test")
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"OFF"}')
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
     # Light turned on, brightness 100
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"ON", "brightness":100}')
-    state = hass.states.get("light.test")
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"ON", "brightness":100}')
+    state = menuai.states.get("light.test")
     assert state.attributes["brightness"] == 100
 
     # Zero brightness value is ignored
-    async_fire_mqtt_message(hass, "test_light_rgb", '{"state":"ON", "brightness":0}')
-    state = hass.states.get("light.test")
+    async_fire_mqtt_message(menuai, "test_light_rgb", '{"state":"ON", "brightness":0}')
+    state = menuai.states.get("light.test")
     assert state.attributes["brightness"] == 100
 
     # RGB color
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode":"rgb", "color":{"r":64,"g":128,"b":255}}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == "rgb"
     assert state.attributes.get("rgb_color") == (64, 128, 255)
 
     # RGBW color
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode":"rgbw", "color":{"r":64,"g":128,"b":255,"w":32}}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == "rgbw"
     assert state.attributes.get("rgbw_color") == (64, 128, 255, 32)
 
     # XY color
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode":"xy", "color":{"x":0.135,"y":0.235}}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == "xy"
     assert state.attributes.get("xy_color") == (0.135, 0.235)
 
     # HS color
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode":"hs", "color":{"h":180,"s":50}}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == "hs"
     assert state.attributes.get("hs_color") == (180.0, 50.0)
 
     # Color temp
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode":"color_temp", "color_temp":155}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == "color_temp"
     assert state.attributes.get("color_temp_kelvin") == 6451
 
     # White
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode":"white", "brightness":123}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("color_mode") == "white"
     assert state.attributes.get("brightness") == 123
 
     # Effect
     async_fire_mqtt_message(
-        hass, "test_light_rgb", '{"state":"ON", "effect":"other_effect"}'
+        menuai, "test_light_rgb", '{"state":"ON", "effect":"other_effect"}'
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("effect") == "other_effect"
 
     # Invalid color mode
     async_fire_mqtt_message(
-        hass, "test_light_rgb", '{"state":"ON", "color_mode":"col_temp"}'
+        menuai, "test_light_rgb", '{"state":"ON", "color_mode":"col_temp"}'
     )
     assert "Invalid color mode 'col_temp' received" in caplog.text
     caplog.clear()
 
     # Incomplete color
     async_fire_mqtt_message(
-        hass, "test_light_rgb", '{"state":"ON", "color_mode":"rgb"}'
+        menuai, "test_light_rgb", '{"state":"ON", "color_mode":"rgb"}'
     )
     assert (
         "Invalid or incomplete color value '{'state': 'ON', 'color_mode': 'rgb'}' received"
@@ -843,7 +843,7 @@ async def test_controlling_state_via_topic(
 
     # Invalid color
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_mode":"rgb", "color":{"r":64,"g":128,"b":"cow"}}',
     )
@@ -854,7 +854,7 @@ async def test_controlling_state_via_topic(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -879,7 +879,7 @@ async def test_controlling_state_via_topic(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the sending of command in optimistic mode for a light supporting color mode."""
     supported_color_modes = ["color_temp", "hs", "rgb", "rgbw", "rgbww", "white", "xy"]
@@ -894,11 +894,11 @@ async def test_sending_mqtt_commands_and_optimistic(
             "hs_color": [100, 100],
         },
     )
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     expected_features = (
         light.LightEntityFeature.EFFECT
@@ -920,16 +920,16 @@ async def test_sending_mqtt_commands_and_optimistic(
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     # Turn the light on
-    await common.async_turn_on(hass, "light.test")
+    await common.async_turn_on(menuai, "light.test")
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", '{"state":"ON"}', 2, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
 
     # Turn the light on with color temperature
-    await common.async_turn_on(hass, "light.test", color_temp_kelvin=11111)
+    await common.async_turn_on(menuai, "light.test", color_temp_kelvin=11111)
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set",
         JsonValidator('{"state":"ON","color_temp":90}'),
@@ -937,21 +937,21 @@ async def test_sending_mqtt_commands_and_optimistic(
         False,
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
 
     # Turn the light off
-    await common.async_turn_off(hass, "light.test")
+    await common.async_turn_off(menuai, "light.test")
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", '{"state":"OFF"}', 2, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
     # Set hs color
-    await common.async_turn_on(hass, "light.test", brightness=75, hs_color=(359, 78))
-    state = hass.states.get("light.test")
+    await common.async_turn_on(menuai, "light.test", brightness=75, hs_color=(359, 78))
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 75
     assert state.attributes["color_mode"] == "hs"
@@ -971,8 +971,8 @@ async def test_sending_mqtt_commands_and_optimistic(
     mqtt_mock.async_publish.reset_mock()
 
     # Set rgb color
-    await common.async_turn_on(hass, "light.test", rgb_color=(255, 128, 0))
-    state = hass.states.get("light.test")
+    await common.async_turn_on(menuai, "light.test", rgb_color=(255, 128, 0))
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 75
     assert state.attributes["color_mode"] == "rgb"
@@ -990,8 +990,8 @@ async def test_sending_mqtt_commands_and_optimistic(
     mqtt_mock.async_publish.reset_mock()
 
     # Set rgbw color
-    await common.async_turn_on(hass, "light.test", rgbw_color=(255, 128, 0, 123))
-    state = hass.states.get("light.test")
+    await common.async_turn_on(menuai, "light.test", rgbw_color=(255, 128, 0, 123))
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 75
     assert state.attributes["color_mode"] == "rgbw"
@@ -1011,8 +1011,8 @@ async def test_sending_mqtt_commands_and_optimistic(
     mqtt_mock.async_publish.reset_mock()
 
     # Set rgbww color
-    await common.async_turn_on(hass, "light.test", rgbww_color=(255, 128, 0, 45, 32))
-    state = hass.states.get("light.test")
+    await common.async_turn_on(menuai, "light.test", rgbww_color=(255, 128, 0, 45, 32))
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 75
     assert state.attributes["color_mode"] == "rgbww"
@@ -1033,9 +1033,9 @@ async def test_sending_mqtt_commands_and_optimistic(
 
     # Set xy color
     await common.async_turn_on(
-        hass, "light.test", brightness=50, xy_color=(0.123, 0.223)
+        menuai, "light.test", brightness=50, xy_color=(0.123, 0.223)
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 50
     assert state.attributes["color_mode"] == "xy"
@@ -1055,8 +1055,8 @@ async def test_sending_mqtt_commands_and_optimistic(
     mqtt_mock.async_publish.reset_mock()
 
     # Set to white
-    await common.async_turn_on(hass, "light.test", white=75)
-    state = hass.states.get("light.test")
+    await common.async_turn_on(menuai, "light.test", white=75)
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 75
     assert state.attributes["color_mode"] == "white"
@@ -1074,8 +1074,8 @@ async def test_sending_mqtt_commands_and_optimistic(
     mqtt_mock.async_publish.reset_mock()
 
     # Set to white, brightness also present in turn_on
-    await common.async_turn_on(hass, "light.test", brightness=60, white=80)
-    state = hass.states.get("light.test")
+    await common.async_turn_on(menuai, "light.test", brightness=60, white=80)
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 60
     assert state.attributes["color_mode"] == "white"
@@ -1094,7 +1094,7 @@ async def test_sending_mqtt_commands_and_optimistic(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1109,20 +1109,20 @@ async def test_sending_mqtt_commands_and_optimistic(
     ],
 )
 async def test_sending_hs_color(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test light.turn_on with hs color sends hs color parameters."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     mqtt_mock.reset_mock()
     await common.async_turn_on(
-        hass, "light.test", brightness=50, xy_color=(0.123, 0.123)
+        menuai, "light.test", brightness=50, xy_color=(0.123, 0.123)
     )
-    await common.async_turn_on(hass, "light.test", brightness=50, hs_color=(359, 78))
-    await common.async_turn_on(hass, "light.test", rgb_color=(255, 128, 0))
+    await common.async_turn_on(menuai, "light.test", brightness=50, hs_color=(359, 78))
+    await common.async_turn_on(menuai, "light.test", rgb_color=(255, 128, 0))
 
     mqtt_mock.async_publish.assert_has_calls(
         [
@@ -1156,7 +1156,7 @@ async def test_sending_hs_color(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1171,21 +1171,21 @@ async def test_sending_hs_color(
     ],
 )
 async def test_sending_rgb_color_no_brightness(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test light.turn_on with hs color sends rgb color parameters."""
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     await common.async_turn_on(
-        hass, "light.test", brightness=50, xy_color=(0.123, 0.123)
+        menuai, "light.test", brightness=50, xy_color=(0.123, 0.123)
     )
-    await common.async_turn_on(hass, "light.test", brightness=50, hs_color=(359, 78))
+    await common.async_turn_on(menuai, "light.test", brightness=50, hs_color=(359, 78))
     await common.async_turn_on(
-        hass, "light.test", rgb_color=(255, 128, 0), brightness=255
+        menuai, "light.test", rgb_color=(255, 128, 0), brightness=255
     )
 
     mqtt_mock.async_publish.assert_has_calls(
@@ -1214,7 +1214,7 @@ async def test_sending_rgb_color_no_brightness(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1229,26 +1229,26 @@ async def test_sending_rgb_color_no_brightness(
     ],
 )
 async def test_sending_rgb_color_no_brightness2(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test light.turn_on with hs color sends rgb color parameters."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     await common.async_turn_on(
-        hass, "light.test", brightness=50, xy_color=(0.123, 0.123)
+        menuai, "light.test", brightness=50, xy_color=(0.123, 0.123)
     )
-    await common.async_turn_on(hass, "light.test", brightness=50, hs_color=(359, 78))
+    await common.async_turn_on(menuai, "light.test", brightness=50, hs_color=(359, 78))
     await common.async_turn_on(
-        hass, "light.test", rgb_color=(255, 128, 0), brightness=255
-    )
-    await common.async_turn_on(
-        hass, "light.test", rgbw_color=(128, 64, 32, 16), brightness=128
+        menuai, "light.test", rgb_color=(255, 128, 0), brightness=255
     )
     await common.async_turn_on(
-        hass, "light.test", rgbww_color=(128, 64, 32, 16, 8), brightness=64
+        menuai, "light.test", rgbw_color=(128, 64, 32, 16), brightness=128
+    )
+    await common.async_turn_on(
+        menuai, "light.test", rgbww_color=(128, 64, 32, 16, 8), brightness=64
     )
 
     mqtt_mock.async_publish.assert_has_calls(
@@ -1293,7 +1293,7 @@ async def test_sending_rgb_color_no_brightness2(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1309,20 +1309,20 @@ async def test_sending_rgb_color_no_brightness2(
     ],
 )
 async def test_sending_rgb_color_with_brightness(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test light.turn_on with hs color sends rgb color parameters."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     await common.async_turn_on(
-        hass, "light.test", brightness=50, xy_color=(0.123, 0.123)
+        menuai, "light.test", brightness=50, xy_color=(0.123, 0.123)
     )
-    await common.async_turn_on(hass, "light.test", brightness=255, hs_color=(359, 78))
-    await common.async_turn_on(hass, "light.test", brightness=1)
-    await common.async_turn_on(hass, "light.test", rgb_color=(255, 128, 0))
+    await common.async_turn_on(menuai, "light.test", brightness=255, hs_color=(359, 78))
+    await common.async_turn_on(menuai, "light.test", brightness=1)
+    await common.async_turn_on(menuai, "light.test", rgb_color=(255, 128, 0))
 
     mqtt_mock.async_publish.assert_has_calls(
         [
@@ -1361,7 +1361,7 @@ async def test_sending_rgb_color_with_brightness(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1378,21 +1378,21 @@ async def test_sending_rgb_color_with_brightness(
     ],
 )
 async def test_sending_rgb_color_with_scaled_brightness(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test light.turn_on with hs color sends rgb color parameters."""
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     await common.async_turn_on(
-        hass, "light.test", brightness=50, xy_color=(0.123, 0.123)
+        menuai, "light.test", brightness=50, xy_color=(0.123, 0.123)
     )
-    await common.async_turn_on(hass, "light.test", brightness=255, hs_color=(359, 78))
-    await common.async_turn_on(hass, "light.test", brightness=1)
-    await common.async_turn_on(hass, "light.test", rgb_color=(255, 128, 0))
+    await common.async_turn_on(menuai, "light.test", brightness=255, hs_color=(359, 78))
+    await common.async_turn_on(menuai, "light.test", brightness=1)
+    await common.async_turn_on(menuai, "light.test", rgb_color=(255, 128, 0))
 
     mqtt_mock.async_publish.assert_has_calls(
         [
@@ -1431,7 +1431,7 @@ async def test_sending_rgb_color_with_scaled_brightness(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1448,27 +1448,27 @@ async def test_sending_rgb_color_with_scaled_brightness(
     ],
 )
 async def test_sending_scaled_white(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test light.turn_on with scaled white."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
-    await common.async_turn_on(hass, "light.test", brightness=128)
+    await common.async_turn_on(menuai, "light.test", brightness=128)
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state":"ON", "brightness":50}'), 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
-    await common.async_turn_on(hass, "light.test", brightness=255, white=25)
+    await common.async_turn_on(menuai, "light.test", brightness=255, white=25)
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state":"ON", "white":50}'), 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
-    await common.async_turn_on(hass, "light.test", white=25)
+    await common.async_turn_on(menuai, "light.test", white=25)
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state":"ON", "white":5}'), 0, False
     )
@@ -1476,7 +1476,7 @@ async def test_sending_scaled_white(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1491,19 +1491,19 @@ async def test_sending_scaled_white(
     ],
 )
 async def test_sending_xy_color(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test light.turn_on with hs color sends xy color parameters."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
 
     await common.async_turn_on(
-        hass, "light.test", brightness=50, xy_color=(0.123, 0.123)
+        menuai, "light.test", brightness=50, xy_color=(0.123, 0.123)
     )
-    await common.async_turn_on(hass, "light.test", brightness=50, hs_color=(359, 78))
-    await common.async_turn_on(hass, "light.test", rgb_color=(255, 128, 0))
+    await common.async_turn_on(menuai, "light.test", brightness=50, hs_color=(359, 78))
+    await common.async_turn_on(menuai, "light.test", rgb_color=(255, 128, 0))
 
     mqtt_mock.async_publish.assert_has_calls(
         [
@@ -1537,7 +1537,7 @@ async def test_sending_xy_color(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1553,12 +1553,12 @@ async def test_sending_xy_color(
     ],
 )
 async def test_effect(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test for effect being sent when included."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     expected_features = (
         light.LightEntityFeature.EFFECT
@@ -1567,17 +1567,17 @@ async def test_effect(
     )
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) is expected_features
 
-    await common.async_turn_on(hass, "light.test")
+    await common.async_turn_on(menuai, "light.test")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state": "ON"}'), 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("effect") is None
 
-    await common.async_turn_on(hass, "light.test", effect="rainbow")
+    await common.async_turn_on(menuai, "light.test", effect="rainbow")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set",
@@ -1586,11 +1586,11 @@ async def test_effect(
         False,
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("effect") == "rainbow"
 
-    await common.async_turn_on(hass, "light.test", effect="colorloop")
+    await common.async_turn_on(menuai, "light.test", effect="colorloop")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set",
@@ -1599,13 +1599,13 @@ async def test_effect(
         False,
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("effect") == "colorloop"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1622,57 +1622,57 @@ async def test_effect(
     ],
 )
 async def test_flash_short_and_long(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test for flash length being sent when included."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     expected_features = (
         light.LightEntityFeature.FLASH | light.LightEntityFeature.TRANSITION
     )
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) is expected_features
 
-    await common.async_turn_on(hass, "light.test", flash="short")
+    await common.async_turn_on(menuai, "light.test", flash="short")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state": "ON", "flash": 5}'), 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
 
-    await common.async_turn_on(hass, "light.test", flash="long")
+    await common.async_turn_on(menuai, "light.test", flash="long")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state": "ON", "flash": 15}'), 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
 
-    await common.async_turn_off(hass, "light.test", flash="short")
+    await common.async_turn_off(menuai, "light.test", flash="short")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state": "OFF", "flash": 5}'), 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
-    await common.async_turn_off(hass, "light.test", flash="long")
+    await common.async_turn_off(menuai, "light.test", flash="long")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set", JsonValidator('{"state": "OFF", "flash": 15}'), 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1687,18 +1687,18 @@ async def test_flash_short_and_long(
     ],
 )
 async def test_transition(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test for transition time being sent when included."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     expected_features = (
         light.LightEntityFeature.FLASH | light.LightEntityFeature.TRANSITION
     )
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) is expected_features
-    await common.async_turn_on(hass, "light.test", transition=15)
+    await common.async_turn_on(menuai, "light.test", transition=15)
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set",
@@ -1707,10 +1707,10 @@ async def test_transition(
         False,
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
 
-    await common.async_turn_off(hass, "light.test", transition=30)
+    await common.async_turn_off(menuai, "light.test", transition=30)
 
     mqtt_mock.async_publish.assert_called_once_with(
         "test_light_rgb/set",
@@ -1719,12 +1719,12 @@ async def test_transition(
         False,
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1741,53 +1741,53 @@ async def test_transition(
     ],
 )
 async def test_brightness_scale(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test for brightness scaling."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("brightness") is None
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
     # Turn on the light
-    async_fire_mqtt_message(hass, "test_light_bright_scale", '{"state":"ON"}')
+    async_fire_mqtt_message(menuai, "test_light_bright_scale", '{"state":"ON"}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") is None
 
     # Turn on the light with brightness
     async_fire_mqtt_message(
-        hass, "test_light_bright_scale", '{"state":"ON", "brightness": 99}'
+        menuai, "test_light_bright_scale", '{"state":"ON", "brightness": 99}'
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") == 255
 
     # Turn on the light with half brightness
     async_fire_mqtt_message(
-        hass, "test_light_bright_scale", '{"state":"ON", "brightness": 50}'
+        menuai, "test_light_bright_scale", '{"state":"ON", "brightness": 50}'
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") == 129
 
     # Test limmiting max brightness
     async_fire_mqtt_message(
-        hass, "test_light_bright_scale", '{"state":"ON", "brightness": 103}'
+        menuai, "test_light_bright_scale", '{"state":"ON", "brightness": 103}'
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") == 255
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1806,48 +1806,48 @@ async def test_brightness_scale(
     ],
 )
 async def test_white_scale(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test for white scaling."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("brightness") is None
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
     # Turn on the light
-    async_fire_mqtt_message(hass, "test_light_bright_scale", '{"state":"ON"}')
+    async_fire_mqtt_message(menuai, "test_light_bright_scale", '{"state":"ON"}')
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") is None
 
     # Turn on the light with brightness
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_bright_scale",
         '{"state":"ON", "brightness": 99, "color_mode":"hs", "color":{"h":180,"s":50}}',
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") == 255
 
     # Turn on the light with white - white_scale is NOT used
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_bright_scale",
         '{"state":"ON", "color_mode":"white", "brightness": 50}',
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") == 129
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1865,14 +1865,14 @@ async def test_white_scale(
     ],
 )
 async def test_invalid_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that invalid color/brightness/etc. values are ignored."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_UNKNOWN
     color_modes = [light.ColorMode.COLOR_TEMP, light.ColorMode.HS]
     assert state.attributes.get(light.ATTR_SUPPORTED_COLOR_MODES) == color_modes
@@ -1887,7 +1887,7 @@ async def test_invalid_values(
 
     # Turn on the light
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON",'
         '"color":{"r":255,"g":255,"b":255},'
@@ -1897,7 +1897,7 @@ async def test_invalid_values(
         '"effect": "rainbow"}',
     )
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     # Color converttrd from color_temp to rgb
     assert state.attributes.get("rgb_color") == (202, 218, 255)
@@ -1905,75 +1905,75 @@ async def test_invalid_values(
     assert state.attributes.get("color_temp_kelvin") == 10000
     # Empty color value
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color":{}, "color_mode": "rgb"}',
     )
 
     # Color should not have changed
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") == (202, 218, 255)
 
     # Bad HS color values
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color":{"h":"bad","s":"val"}, "color_mode": "hs"}',
     )
 
     # Color should not have changed
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") == (202, 218, 255)
 
     # Bad RGB color values
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color":{"r":"bad","g":"val","b":"test"}, "color_mode": "rgb"}',
     )
 
     # Color should not have changed
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") == (202, 218, 255)
 
     # Bad XY color values
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color":{"x":"bad","y":"val"}, "color_mode": "xy"}',
     )
 
     # Color should not have changed
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("rgb_color") == (202, 218, 255)
 
     # Bad brightness values
     async_fire_mqtt_message(
-        hass, "test_light_rgb", '{"state":"ON", "brightness": "badValue"}'
+        menuai, "test_light_rgb", '{"state":"ON", "brightness": "badValue"}'
     )
 
     # Brightness should not have changed
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("brightness") == 255
 
     # Unset color and set a valid color temperature
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color": null, "color_temp": 100, "color_mode": "color_temp"}',
     )
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("color_temp_kelvin") == 10000
 
     # Bad color temperature
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "test_light_rgb",
         '{"state":"ON", "color_temp": "badValue", "color_mode": "color_temp"}',
     )
@@ -1984,64 +1984,64 @@ async def test_invalid_values(
     )
 
     # Color temperature should not have changed
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.state == STATE_ON
     assert state.attributes.get("color_temp_kelvin") == 10000
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
     await help_test_availability_when_connection_lost(
-        hass, mqtt_mock_entry, light.DOMAIN
+        menuai, mqtt_mock_entry, light.DOMAIN
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     await help_test_default_availability_payload(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     await help_test_custom_availability_payload(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         light.DOMAIN,
         DEFAULT_CONFIG,
@@ -2050,47 +2050,47 @@ async def test_setting_blocked_attribute_via_mqtt_json_message(
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -2115,22 +2115,22 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique id option only creates one light per unique_id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, light.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, light.DOMAIN)
 
 
 async def test_discovery_removal(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered mqtt_json lights."""
     data = '{ "name": "test", "schema": "json", "command_topic": "test_topic" }'
-    await help_test_discovery_removal(hass, mqtt_mock_entry, light.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, light.DOMAIN, data)
 
 
 async def test_discovery_update_light(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered light."""
     config1 = {
@@ -2146,12 +2146,12 @@ async def test_discovery_update_light(
         "command_topic": "test_topic",
     }
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, light.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, light.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_light(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered light."""
     data1 = (
@@ -2161,16 +2161,16 @@ async def test_discovery_update_unchanged_light(
         '  "command_topic": "test_topic" }'
     )
     with patch(
-        "homeassistant.components.mqtt.light.schema_json.MqttLightJson.discovery_update"
+        "menuai.components.mqtt.light.schema_json.MqttLightJson.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, light.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, light.DOMAIN, data1, discovery_update
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer" }'
@@ -2180,15 +2180,15 @@ async def test_discovery_broken(
         '  "state_topic": "test_topic",'
         '  "command_topic": "test_topic" }'
     )
-    await help_test_discovery_broken(hass, mqtt_mock_entry, light.DOMAIN, data1, data2)
+    await help_test_discovery_broken(menuai, mqtt_mock_entry, light.DOMAIN, data1, data2)
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT light device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass,
+        menuai,
         mqtt_mock_entry,
         light.DOMAIN,
         DEFAULT_CONFIG,
@@ -2196,11 +2196,11 @@ async def test_entity_device_info_with_connection(
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT light device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass,
+        menuai,
         mqtt_mock_entry,
         light.DOMAIN,
         DEFAULT_CONFIG,
@@ -2208,11 +2208,11 @@ async def test_entity_device_info_with_identifier(
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass,
+        menuai,
         mqtt_mock_entry,
         light.DOMAIN,
         DEFAULT_CONFIG,
@@ -2220,11 +2220,11 @@ async def test_entity_device_info_update(
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass,
+        menuai,
         mqtt_mock_entry,
         light.DOMAIN,
         DEFAULT_CONFIG,
@@ -2232,29 +2232,29 @@ async def test_entity_device_info_remove(
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, light.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_debug_info_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT debug info."""
     await help_test_entity_debug_info_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         light.DOMAIN,
         DEFAULT_CONFIG,
@@ -2265,7 +2265,7 @@ async def test_entity_debug_info_message(
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "min_kelvin", "max_kelvin"),
+    ("menuai_config", "min_kelvin", "max_kelvin"),
     [
         (
             {
@@ -2330,7 +2330,7 @@ async def test_entity_debug_info_message(
     ],
 )
 async def test_min_max_kelvin(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     min_kelvin: int,
     max_kelvin: int,
@@ -2338,7 +2338,7 @@ async def test_min_max_kelvin(
     """Test setting min_color_temp_kelvin and max_color_temp_kelvin."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("light.test")
+    state = menuai.states.get("light.test")
     assert state.attributes.get("min_color_temp_kelvin") == min_kelvin
     assert state.attributes.get("max_color_temp_kelvin") == max_kelvin
 
@@ -2367,7 +2367,7 @@ async def test_min_max_kelvin(
     ],
 )
 async def test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -2385,7 +2385,7 @@ async def test_publishing_with_custom_encoding(
         config[mqtt.DOMAIN][domain]["effect_list"] = ["random", "color_loop"]
 
     await help_test_publishing_with_custom_encoding(
-        hass,
+        menuai,
         mqtt_mock_entry,
         caplog,
         domain,
@@ -2401,12 +2401,12 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    menuai: menuai, mqtt_client_mock: MqttMockPahoClient
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = light.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
@@ -2422,7 +2422,7 @@ async def test_reloadable(
     ],
 )
 async def test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     value: str,
@@ -2442,7 +2442,7 @@ async def test_encoding_subscribable_topics(
         "rgbww",
     ]
     await help_test_encoding_subscribable_topics(
-        hass,
+        menuai,
         mqtt_mock_entry,
         light.DOMAIN,
         config,
@@ -2456,21 +2456,21 @@ async def test_encoding_subscribable_topics(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = light.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             light.DOMAIN,
@@ -2550,7 +2550,7 @@ async def test_setup_manual_entity_from_yaml(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -2558,4 +2558,4 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)

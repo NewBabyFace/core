@@ -3,19 +3,19 @@
 from collections.abc import Sequence
 from typing import Any
 
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.script import Script, _VarsType
-from homeassistant.helpers.template import TemplateStateFromEntityId
+from menuai.core import Context, menuai, callback
+from menuai.helpers.entity import Entity
+from menuai.helpers.script import Script, _VarsType
+from menuai.helpers.template import TemplateStateFromEntityId
 
 
 class AbstractTemplateEntity(Entity):
     """Actions linked to a template entity."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the entity."""
 
-        self.hass = hass
+        self.menuai = menuai
         self._action_scripts: dict[str, Script] = {}
 
     @property
@@ -38,7 +38,7 @@ class AbstractTemplateEntity(Entity):
         """Add an action script."""
 
         self._action_scripts[script_id] = Script(
-            self.hass,
+            self.menuai,
             config,
             f"{name} {script_id}",
             domain,
@@ -56,7 +56,7 @@ class AbstractTemplateEntity(Entity):
             run_variables = {}
         await script.async_run(
             run_variables={
-                "this": TemplateStateFromEntityId(self.hass, self.entity_id),
+                "this": TemplateStateFromEntityId(self.menuai, self.entity_id),
                 **self._render_script_variables(),
                 **run_variables,
             },

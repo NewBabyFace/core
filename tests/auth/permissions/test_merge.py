@@ -1,6 +1,6 @@
 """Tests for permissions merging."""
 
-from homeassistant.auth.permissions.merge import merge_policies
+from menuai.auth.permissions.merge import merge_policies
 
 
 def test_merging_permissions_true_rules_dict() -> None:

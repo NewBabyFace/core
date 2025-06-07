@@ -10,23 +10,23 @@ from typing import Any
 import httpx
 from pywaze.route_calculator import WazeRouteCalculator
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_NAME,
     CONF_REGION,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
     UnitOfTime,
 )
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.location import find_coordinates
+from menuai.core import CoreState, menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.location import find_coordinates
 
 from . import async_get_travel_times
 from .const import (
@@ -55,7 +55,7 @@ SECONDS_BETWEEN_API_CALLS = 0.5
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -67,7 +67,7 @@ async def async_setup_entry(
 
     data = WazeTravelTimeData(
         region,
-        get_async_client(hass),
+        get_async_client(menuai),
         config_entry,
     )
 
@@ -107,11 +107,11 @@ class WazeTravelTime(SensorEntity):
         self._destination = destination
         self._state = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle when entity is added."""
-        if self.hass.state is not CoreState.running:
-            self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STARTED, self.first_update
+        if self.menuai.state is not CoreState.running:
+            self.menuai.bus.async_listen_once(
+                EVENT_menuai_STARTED, self.first_update
             )
         else:
             await self.first_update()
@@ -146,14 +146,14 @@ class WazeTravelTime(SensorEntity):
     async def async_update(self) -> None:
         """Fetch new state data for the sensor."""
         _LOGGER.debug("Fetching Route for %s", self._attr_name)
-        self._waze_data.origin = find_coordinates(self.hass, self._origin)
-        self._waze_data.destination = find_coordinates(self.hass, self._destination)
-        await self.hass.data[DOMAIN][SEMAPHORE].acquire()
+        self._waze_data.origin = find_coordinates(self.menuai, self._origin)
+        self._waze_data.destination = find_coordinates(self.menuai, self._destination)
+        await self.menuai.data[DOMAIN][SEMAPHORE].acquire()
         try:
             await self._waze_data.async_update()
             await asyncio.sleep(SECONDS_BETWEEN_API_CALLS)
         finally:
-            self.hass.data[DOMAIN][SEMAPHORE].release()
+            self.menuai.data[DOMAIN][SEMAPHORE].release()
 
 
 class WazeTravelTimeData:

@@ -8,11 +8,11 @@ from pyprosegur.auth import Auth
 from pyprosegur.exceptions import ProsegurException
 from pyprosegur.installation import Camera as InstallationCamera, Installation
 
-from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.components.camera import Camera
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -38,12 +38,12 @@ async def async_setup_entry(
     )
 
     _installation = await Installation.retrieve(
-        hass.data[DOMAIN][entry.entry_id], entry.data["contract"]
+        menuai.data[DOMAIN][entry.entry_id], entry.data["contract"]
     )
 
     async_add_entities(
         [
-            ProsegurCamera(_installation, camera, hass.data[DOMAIN][entry.entry_id])
+            ProsegurCamera(_installation, camera, menuai.data[DOMAIN][entry.entry_id])
             for camera in _installation.cameras
         ],
         update_before_add=True,

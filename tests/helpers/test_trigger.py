@@ -5,44 +5,44 @@ from unittest.mock import ANY, AsyncMock, MagicMock, call, patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.core import Context, HomeAssistant, ServiceCall, callback
-from homeassistant.helpers.trigger import (
+from menuai.core import Context, menuai, ServiceCall, callback
+from menuai.helpers.trigger import (
     DATA_PLUGGABLE_ACTIONS,
     PluggableAction,
     _async_get_trigger_platform,
     async_initialize_triggers,
     async_validate_trigger_config,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 
-async def test_bad_trigger_platform(hass: HomeAssistant) -> None:
+async def test_bad_trigger_platform(menuai: menuai) -> None:
     """Test bad trigger platform."""
     with pytest.raises(vol.Invalid) as ex:
-        await async_validate_trigger_config(hass, [{"platform": "not_a_platform"}])
+        await async_validate_trigger_config(menuai, [{"platform": "not_a_platform"}])
     assert "Invalid trigger 'not_a_platform' specified" in str(ex)
 
 
-async def test_trigger_subtype(hass: HomeAssistant) -> None:
+async def test_trigger_subtype(menuai: menuai) -> None:
     """Test trigger subtypes."""
     with patch(
-        "homeassistant.helpers.trigger.async_get_integration",
+        "menuai.helpers.trigger.async_get_integration",
         return_value=MagicMock(async_get_platform=AsyncMock()),
     ) as integration_mock:
-        await _async_get_trigger_platform(hass, {"platform": "test.subtype"})
-        assert integration_mock.call_args == call(hass, "test")
+        await _async_get_trigger_platform(menuai, {"platform": "test.subtype"})
+        assert integration_mock.call_args == call(menuai, "test")
 
 
-async def test_trigger_variables(hass: HomeAssistant) -> None:
+async def test_trigger_variables(menuai: menuai) -> None:
     """Test trigger variables."""
 
 
 async def test_if_fires_on_event(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test the firing of events."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -62,18 +62,18 @@ async def test_if_fires_on_event(
         },
     )
 
-    hass.bus.async_fire("test_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["hello"] == "Paulus + test_event"
 
 
 async def test_if_disabled_trigger_not_firing(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test disabled triggers don't fire."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -95,21 +95,21 @@ async def test_if_disabled_trigger_not_firing(
         },
     )
 
-    hass.bus.async_fire("disabled_trigger_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("disabled_trigger_event")
+    await menuai.async_block_till_done()
     assert not service_calls
 
-    hass.bus.async_fire("enabled_trigger_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("enabled_trigger_event")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_trigger_enabled_templates(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test triggers enabled by template."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -142,30 +142,30 @@ async def test_trigger_enabled_templates(
         },
     )
 
-    hass.bus.async_fire("falsy_template_trigger_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("falsy_template_trigger_event")
+    await menuai.async_block_till_done()
     assert not service_calls
 
-    hass.bus.async_fire("falsy_trigger_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("falsy_trigger_event")
+    await menuai.async_block_till_done()
     assert not service_calls
 
-    hass.bus.async_fire("truthy_template_trigger_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("truthy_template_trigger_event")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
-    hass.bus.async_fire("truthy_trigger_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("truthy_trigger_event")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
 
 async def test_nested_trigger_list(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test triggers within nested list."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -202,35 +202,35 @@ async def test_nested_trigger_list(
         },
     )
 
-    hass.bus.async_fire("trigger_1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("trigger_1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
-    hass.bus.async_fire("trigger_2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("trigger_2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
-    hass.bus.async_fire("trigger_none")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("trigger_none")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
-    hass.bus.async_fire("trigger_3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("trigger_3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
 
-    hass.bus.async_fire("trigger_4")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("trigger_4")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4
 
 
 async def test_trigger_enabled_template_limited(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test triggers enabled invalid template."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -248,20 +248,20 @@ async def test_trigger_enabled_template_limited(
         },
     )
 
-    hass.bus.async_fire("test_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event")
+    await menuai.async_block_till_done()
     assert not service_calls
     assert "Error rendering enabled template" in caplog.text
 
 
 async def test_trigger_alias(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test triggers support aliases."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -280,8 +280,8 @@ async def test_trigger_alias(
         },
     )
 
-    hass.bus.async_fire("trigger_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("trigger_event")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["alias"] == "My event"
     assert (
@@ -291,7 +291,7 @@ async def test_trigger_alias(
 
 
 async def test_async_initialize_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -302,7 +302,7 @@ async def test_async_initialize_triggers(
     action_calls = []
 
     trigger_config = await async_validate_trigger_config(
-        hass,
+        menuai,
         [
             {
                 "platform": "event",
@@ -329,18 +329,18 @@ async def test_async_initialize_triggers(
         action_calls = []
 
         unsub = await async_initialize_triggers(
-            hass,
+            menuai,
             trigger_config,
             action,
             "test",
             "",
             log_cb,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        hass.bus.async_fire("trigger_event")
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("trigger_event")
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(action_calls) == 1
         assert action_calls[0][0]["name"] == "Paulus"
@@ -352,7 +352,7 @@ async def test_async_initialize_triggers(
 
 
 async def test_pluggable_action(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test normal behavior of pluggable actions."""
     update_1 = MagicMock()
@@ -370,13 +370,13 @@ async def test_pluggable_action(
     plug_2 = PluggableAction(update_2)
 
     # Verify plug is inactive without triggers
-    remove_plug_1 = plug_1.async_register(hass, trigger_1)
+    remove_plug_1 = plug_1.async_register(menuai, trigger_1)
     assert not plug_1
     assert not plug_2
 
     # Verify plug remain inactive with non matching trigger
     remove_attach_2 = PluggableAction.async_attach_trigger(
-        hass, trigger_2, action_2, variables_2
+        menuai, trigger_2, action_2, variables_2
     )
     assert not plug_1
     assert not plug_2
@@ -385,7 +385,7 @@ async def test_pluggable_action(
 
     # Verify plug is active, and update when matching trigger attaches
     remove_attach_1 = PluggableAction.async_attach_trigger(
-        hass, trigger_1, action_1, variables_1
+        menuai, trigger_1, action_1, variables_1
     )
     assert plug_1
     assert not plug_2
@@ -399,11 +399,11 @@ async def test_pluggable_action(
     assert not plug_2
 
     # Verify a plug registered to existing trigger is true
-    remove_plug_1 = plug_1.async_register(hass, trigger_1)
+    remove_plug_1 = plug_1.async_register(menuai, trigger_1)
     assert plug_1
     assert not plug_2
 
-    remove_plug_2 = plug_2.async_register(hass, trigger_2)
+    remove_plug_2 = plug_2.async_register(menuai, trigger_2)
     assert plug_1
     assert plug_2
 
@@ -412,8 +412,8 @@ async def test_pluggable_action(
     action_2.assert_not_called()
 
     # Verify action is triggered with correct data
-    await plug_1.async_run(hass, context_1)
-    await plug_2.async_run(hass, context_2)
+    await plug_1.async_run(menuai, context_1)
+    await plug_2.async_run(menuai, context_2)
     action_1.assert_called_with(variables_1, context_1)
     action_2.assert_called_with(variables_2, context_2)
 
@@ -422,9 +422,9 @@ async def test_pluggable_action(
     assert not plug_1
 
     # Verify registry is cleaned when no plugs nor triggers are attached
-    assert hass.data[DATA_PLUGGABLE_ACTIONS]
+    assert menuai.data[DATA_PLUGGABLE_ACTIONS]
     remove_plug_1()
     remove_plug_2()
     remove_attach_2()
-    assert not hass.data[DATA_PLUGGABLE_ACTIONS]
+    assert not menuai.data[DATA_PLUGGABLE_ACTIONS]
     assert not plug_2

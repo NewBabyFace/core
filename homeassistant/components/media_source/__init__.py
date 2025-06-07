@@ -7,23 +7,23 @@ from typing import Any, Protocol
 
 import voluptuous as vol
 
-from homeassistant.components import frontend, websocket_api
-from homeassistant.components.media_player import (
+from menuai.components import frontend, websocket_api
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     CONTENT_AUTH_EXPIRY_TIME,
     BrowseError,
     BrowseMedia,
     async_process_play_media_url,
 )
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.frame import report_usage
-from homeassistant.helpers.integration_platform import (
+from menuai.components.websocket_api import ActiveConnection
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.frame import report_usage
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
-from homeassistant.helpers.typing import UNDEFINED, ConfigType, UndefinedType
-from homeassistant.loader import bind_hass
+from menuai.helpers.typing import UNDEFINED, ConfigType, UndefinedType
+from menuai.loader import bind_menuai
 
 from . import local_source
 from .const import (
@@ -59,7 +59,7 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 class MediaSourceProtocol(Protocol):
     """Define the format of media_source platforms."""
 
-    async def async_get_media_source(self, hass: HomeAssistant) -> MediaSource:
+    async def async_get_media_source(self, menuai: menuai) -> MediaSource:
         """Set up media source."""
 
 
@@ -76,43 +76,43 @@ def generate_media_source_id(domain: str, identifier: str) -> str:
     return uri
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the media_source component."""
-    hass.data[DOMAIN] = {}
-    websocket_api.async_register_command(hass, websocket_browse_media)
-    websocket_api.async_register_command(hass, websocket_resolve_media)
+    menuai.data[DOMAIN] = {}
+    websocket_api.async_register_command(menuai, websocket_browse_media)
+    websocket_api.async_register_command(menuai, websocket_resolve_media)
     frontend.async_register_built_in_panel(
-        hass, "media-browser", "media_browser", "hass:play-box-multiple"
+        menuai, "media-browser", "media_browser", "menuai:play-box-multiple"
     )
-    local_source.async_setup(hass)
+    local_source.async_setup(menuai)
     await async_process_integration_platforms(
-        hass, DOMAIN, _process_media_source_platform
+        menuai, DOMAIN, _process_media_source_platform
     )
     return True
 
 
 async def _process_media_source_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     platform: MediaSourceProtocol,
 ) -> None:
     """Process a media source platform."""
-    hass.data[DOMAIN][domain] = await platform.async_get_media_source(hass)
+    menuai.data[DOMAIN][domain] = await platform.async_get_media_source(menuai)
 
 
 @callback
 def _get_media_item(
-    hass: HomeAssistant, media_content_id: str | None, target_media_player: str | None
+    menuai: menuai, media_content_id: str | None, target_media_player: str | None
 ) -> MediaSourceItem:
     """Return media item."""
     if media_content_id:
-        item = MediaSourceItem.from_uri(hass, media_content_id, target_media_player)
+        item = MediaSourceItem.from_uri(menuai, media_content_id, target_media_player)
     else:
         # We default to our own domain if its only one registered
-        domain = None if len(hass.data[DOMAIN]) > 1 else DOMAIN
-        return MediaSourceItem(hass, domain, "", target_media_player)
+        domain = None if len(menuai.data[DOMAIN]) > 1 else DOMAIN
+        return MediaSourceItem(menuai, domain, "", target_media_player)
 
-    if item.domain is not None and item.domain not in hass.data[DOMAIN]:
+    if item.domain is not None and item.domain not in menuai.data[DOMAIN]:
         raise UnknownMediaSource(
             translation_domain=DOMAIN,
             translation_key="unknown_media_source",
@@ -122,19 +122,19 @@ def _get_media_item(
     return item
 
 
-@bind_hass
+@bind_menuai
 async def async_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_content_id: str | None,
     *,
     content_filter: Callable[[BrowseMedia], bool] | None = None,
 ) -> BrowseMediaSource:
     """Return media player browse media results."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         raise BrowseError("Media Source not loaded")
 
     try:
-        item = await _get_media_item(hass, media_content_id, None).async_browse()
+        item = await _get_media_item(menuai, media_content_id, None).async_browse()
     except ValueError as err:
         raise BrowseError(
             translation_domain=DOMAIN,
@@ -156,14 +156,14 @@ async def async_browse_media(
     return item
 
 
-@bind_hass
+@bind_menuai
 async def async_resolve_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_content_id: str,
     target_media_player: str | None | UndefinedType = UNDEFINED,
 ) -> PlayMedia:
     """Get info to play media."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         raise Unresolvable("Media Source not loaded")
 
     if target_media_player is UNDEFINED:
@@ -174,7 +174,7 @@ async def async_resolve_media(
         target_media_player = None
 
     try:
-        item = _get_media_item(hass, media_content_id, target_media_player)
+        item = _get_media_item(menuai, media_content_id, target_media_player)
     except ValueError as err:
         raise Unresolvable(
             translation_domain=DOMAIN,
@@ -196,11 +196,11 @@ async def async_resolve_media(
 )
 @websocket_api.async_response
 async def websocket_browse_media(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Browse available media."""
     try:
-        media = await async_browse_media(hass, msg.get("media_content_id", ""))
+        media = await async_browse_media(menuai, msg.get("media_content_id", ""))
         connection.send_result(
             msg["id"],
             media.as_dict(),
@@ -218,11 +218,11 @@ async def websocket_browse_media(
 )
 @websocket_api.async_response
 async def websocket_resolve_media(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Resolve media."""
     try:
-        media = await async_resolve_media(hass, msg["media_content_id"], None)
+        media = await async_resolve_media(menuai, msg["media_content_id"], None)
     except Unresolvable as err:
         connection.send_error(msg["id"], "resolve_media_failed", str(err))
         return
@@ -231,7 +231,7 @@ async def websocket_resolve_media(
         msg["id"],
         {
             "url": async_process_play_media_url(
-                hass, media.url, allow_relative_url=True
+                menuai, media.url, allow_relative_url=True
             ),
             "mime_type": media.mime_type,
         },

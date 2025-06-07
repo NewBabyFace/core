@@ -19,33 +19,33 @@ from uuid import uuid4
 
 import certifi
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_PROTOCOL,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     callback,
-    get_hassjob_callable_job_type,
+    get_menuaijob_callable_job_type,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.importlib import async_import_module
-from homeassistant.helpers.start import async_at_started
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.setup import SetupPhases, async_pause_setup
-from homeassistant.util.collection import chunked_or_all
-from homeassistant.util.logging import catch_log_exception, log_exception
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.importlib import async_import_module
+from menuai.helpers.start import async_at_started
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.setup import SetupPhases, async_pause_setup
+from menuai.util.collection import chunked_or_all
+from menuai.util.logging import catch_log_exception, log_exception
 
 from .const import (
     CONF_BIRTH_MESSAGE,
@@ -123,7 +123,7 @@ type SubscribePayloadType = str | bytes | bytearray  # Only bytes if encoding is
 
 
 def publish(
-    hass: HomeAssistant,
+    menuai: menuai,
     topic: str,
     payload: PublishPayloadType,
     qos: int | None = 0,
@@ -131,11 +131,11 @@ def publish(
     encoding: str | None = DEFAULT_ENCODING,
 ) -> None:
     """Publish message to a MQTT topic."""
-    hass.create_task(async_publish(hass, topic, payload, qos, retain, encoding))
+    menuai.create_task(async_publish(menuai, topic, payload, qos, retain, encoding))
 
 
 async def async_publish(
-    hass: HomeAssistant,
+    menuai: menuai,
     topic: str,
     payload: PublishPayloadType,
     qos: int | None = 0,
@@ -143,14 +143,14 @@ async def async_publish(
     encoding: str | None = DEFAULT_ENCODING,
 ) -> None:
     """Publish message to a MQTT topic."""
-    if not mqtt_config_entry_enabled(hass):
-        raise HomeAssistantError(
+    if not mqtt_config_entry_enabled(menuai):
+        raise menuaiError(
             f"Cannot publish to topic '{topic}', MQTT is not enabled",
             translation_key="mqtt_not_setup_cannot_publish",
             translation_domain=DOMAIN,
             translation_placeholders={"topic": topic},
         )
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     outgoing_payload = payload
     if not isinstance(payload, bytes) and payload is not None:
         if not encoding:
@@ -184,9 +184,9 @@ async def async_publish(
     )
 
 
-@bind_hass
+@bind_menuai
 async def async_subscribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     topic: str,
     msg_callback: Callable[[ReceiveMessage], Coroutine[Any, Any, None] | None],
     qos: int = DEFAULT_QOS,
@@ -196,17 +196,17 @@ async def async_subscribe(
 
     Call the return value to unsubscribe.
     """
-    return async_subscribe_internal(hass, topic, msg_callback, qos, encoding)
+    return async_subscribe_internal(menuai, topic, msg_callback, qos, encoding)
 
 
 @callback
 def async_subscribe_internal(
-    hass: HomeAssistant,
+    menuai: menuai,
     topic: str,
     msg_callback: Callable[[ReceiveMessage], Coroutine[Any, Any, None] | None],
     qos: int = DEFAULT_QOS,
     encoding: str | None = DEFAULT_ENCODING,
-    job_type: HassJobType | None = None,
+    job_type: menuaiJobType | None = None,
 ) -> CALLBACK_TYPE:
     """Subscribe to an MQTT topic.
 
@@ -217,17 +217,17 @@ def async_subscribe_internal(
     Call the return value to unsubscribe.
     """
     try:
-        mqtt_data = hass.data[DATA_MQTT]
+        mqtt_data = menuai.data[DATA_MQTT]
     except KeyError as exc:
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Cannot subscribe to topic '{topic}', make sure MQTT is set up correctly",
             translation_key="mqtt_not_setup_cannot_subscribe",
             translation_domain=DOMAIN,
             translation_placeholders={"topic": topic},
         ) from exc
     client = mqtt_data.client
-    if not mqtt_config_entry_enabled(hass):
-        raise HomeAssistantError(
+    if not mqtt_config_entry_enabled(menuai):
+        raise menuaiError(
             f"Cannot subscribe to topic '{topic}', MQTT is not enabled",
             translation_key="mqtt_not_setup_cannot_subscribe",
             translation_domain=DOMAIN,
@@ -236,9 +236,9 @@ def async_subscribe_internal(
     return client.async_subscribe(topic, msg_callback, qos, encoding, job_type)
 
 
-@bind_hass
+@bind_menuai
 def subscribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     topic: str,
     msg_callback: MessageCallbackType,
     qos: int = DEFAULT_QOS,
@@ -246,16 +246,16 @@ def subscribe(
 ) -> Callable[[], None]:
     """Subscribe to an MQTT topic."""
     async_remove = asyncio.run_coroutine_threadsafe(
-        async_subscribe(hass, topic, msg_callback, qos, encoding), hass.loop
+        async_subscribe(menuai, topic, msg_callback, qos, encoding), menuai.loop
     ).result()
 
     def remove() -> None:
         """Remove listener convert."""
         # MQTT messages tend to be high volume,
         # and since they come in via a thread and need to be processed in the event loop,
-        # we want to avoid hass.add_job since most of the time is spent calling
+        # we want to avoid menuai.add_job since most of the time is spent calling
         # inspect to figure out how to run the callback.
-        hass.loop.call_soon_threadsafe(async_remove)
+        menuai.loop.call_soon_threadsafe(async_remove)
 
     return remove
 
@@ -267,7 +267,7 @@ class Subscription:
     topic: str
     is_simple_match: bool
     complex_matcher: Callable[[str], bool] | None
-    job: HassJob[[ReceiveMessage], Coroutine[Any, Any, None] | None]
+    job: menuaiJob[[ReceiveMessage], Coroutine[Any, Any, None] | None]
     qos: int = 0
     encoding: str | None = "utf-8"
 
@@ -375,18 +375,18 @@ class MqttClientSetup:
 
 
 class MQTT:
-    """Home Assistant MQTT client."""
+    """MenuAI MQTT client."""
 
     _mqttc: AsyncMQTTClient
     _last_subscribe: float
     _mqtt_data: MqttData
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, conf: ConfigType
+        self, menuai: menuai, config_entry: ConfigEntry, conf: ConfigType
     ) -> None:
-        """Initialize Home Assistant MQTT client."""
-        self.hass = hass
-        self.loop = hass.loop
+        """Initialize MenuAI MQTT client."""
+        self.menuai = menuai
+        self.loop = menuai.loop
         self.config_entry = config_entry
         self.conf = conf
         self.is_mqttv5 = conf.get(CONF_PROTOCOL, DEFAULT_PROTOCOL) == PROTOCOL_5
@@ -424,14 +424,14 @@ class MQTT:
         self._pending_unsubscribes: set[str] = set()  # topic
         self._cleanup_on_unload.extend(
             (
-                async_at_started(hass, self._async_ha_started),
-                hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, self._async_ha_stop),
+                async_at_started(menuai, self._async_ha_started),
+                menuai.bus.async_listen(EVENT_menuai_STOP, self._async_ha_stop),
             )
         )
         self._socket_buffersize: int | None = None
 
     @callback
-    def _async_ha_started(self, _hass: HomeAssistant) -> None:
+    def _async_ha_started(self, _menuai: menuai) -> None:
         """Handle HA started."""
         self._ha_started.set()
 
@@ -443,7 +443,7 @@ class MQTT:
         self,
         mqtt_data: MqttData,
     ) -> None:
-        """Start Home Assistant MQTT client."""
+        """Start MenuAI MQTT client."""
         self._mqtt_data = mqtt_data
         await self.async_init_client()
 
@@ -478,13 +478,13 @@ class MQTT:
 
     async def async_init_client(self) -> None:
         """Initialize paho client."""
-        with async_pause_setup(self.hass, SetupPhases.WAIT_IMPORT_PACKAGES):
+        with async_pause_setup(self.menuai, SetupPhases.WAIT_IMPORT_PACKAGES):
             await async_import_module(
-                self.hass, "homeassistant.components.mqtt.async_client"
+                self.menuai, "menuai.components.mqtt.async_client"
             )
 
         mqttc_setup = MqttClientSetup(self.conf)
-        await self.hass.async_add_executor_job(mqttc_setup.setup)
+        await self.menuai.async_add_executor_job(mqttc_setup.setup)
         mqttc = mqttc_setup.client
         # on_socket_unregister_write and _async_on_socket_close
         # are only ever called in the event loop
@@ -689,7 +689,7 @@ class MQTT:
         )
         try:
             async with self._connection_lock, self._async_connect_in_executor():
-                result = await self.hass.async_add_executor_job(connect_partial)
+                result = await self.menuai.async_add_executor_job(connect_partial)
         except (OSError, mqtt.WebsocketConnectionError) as err:
             _LOGGER.error("Failed to connect to MQTT server due to exception: %s", err)
             self._async_connection_result(False)
@@ -712,7 +712,7 @@ class MQTT:
             self._async_cancel_reconnect()
         elif self._should_reconnect and not self._reconnect_task:
             self._reconnect_task = self.config_entry.async_create_background_task(
-                self.hass, self._reconnect_loop(), "mqtt reconnect loop"
+                self.menuai, self._reconnect_loop(), "mqtt reconnect loop"
             )
 
     @callback
@@ -731,7 +731,7 @@ class MQTT:
             if not self.connected:
                 try:
                     async with self._connection_lock, self._async_connect_in_executor():
-                        await self.hass.async_add_executor_job(self._mqttc.reconnect)
+                        await self.menuai.async_add_executor_job(self._mqttc.reconnect)
                 except (OSError, mqtt.WebsocketConnectionError) as err:
                     _LOGGER.debug(
                         "Error re-connecting to MQTT server due to exception: %s", err
@@ -743,7 +743,7 @@ class MQTT:
         """Stop the MQTT client.
 
         We only disconnect grafully if disconnect_paho_client is set, but not
-        when Home Assistant is shut down.
+        when MenuAI is shut down.
         """
 
         # stop waiting for any pending subscriptions
@@ -808,7 +808,7 @@ class MQTT:
             else:
                 del self._wildcard_subscriptions[subscription]
         except (KeyError, ValueError) as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="mqtt_not_setup_cannot_unsubscribe_twice",
                 translation_placeholders={"topic": topic},
@@ -854,19 +854,19 @@ class MQTT:
         msg_callback: Callable[[ReceiveMessage], Coroutine[Any, Any, None] | None],
         qos: int,
         encoding: str | None = None,
-        job_type: HassJobType | None = None,
+        job_type: menuaiJobType | None = None,
     ) -> Callable[[], None]:
         """Set up a subscription to a topic with the provided qos."""
         if not isinstance(topic, str):
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="mqtt_topic_not_a_string",
                 translation_placeholders={"topic": topic},
             )
 
         if job_type is None:
-            job_type = get_hassjob_callable_job_type(msg_callback)
-        if job_type is not HassJobType.Callback:
+            job_type = get_menuaijob_callable_job_type(msg_callback)
+        if job_type is not menuaiJobType.Callback:
             # Only wrap the callback with catch_log_exception
             # if it is not a simple callback since we catch
             # exceptions for simple callbacks inline for
@@ -875,7 +875,7 @@ class MQTT:
                 msg_callback, partial(self._exception_message, msg_callback)
             )
 
-        job = HassJob(msg_callback, job_type=job_type)
+        job = menuaiJob(msg_callback, job_type=job_type)
         is_simple_match = not ("+" in topic or "#" in topic)
         matcher = None if is_simple_match else _matcher_for_topic(topic)
 
@@ -994,7 +994,7 @@ class MQTT:
         """Resubscribe to all topics and publish birth message."""
         self._async_queue_resubscribe()
         self._subscribe_debouncer.async_schedule()
-        await self._ha_started.wait()  # Wait for Home Assistant to start
+        await self._ha_started.wait()  # Wait for MenuAI to start
         await self._discovery_cooldown()  # Wait for MQTT discovery to cool down
         # Update subscribe cooldown period to a shorter time
         # and make sure we flush the debouncer
@@ -1030,8 +1030,8 @@ class MQTT:
             # 140: Bad authentication method
             if reason_code.value in (24, 25, 134, 135, 140):
                 self._should_reconnect = False
-                self.hass.async_create_task(self.async_disconnect())
-                self.config_entry.async_start_reauth(self.hass)
+                self.menuai.async_create_task(self.async_disconnect())
+                self.config_entry.async_start_reauth(self.menuai)
             _LOGGER.error(
                 "Unable to connect to the MQTT broker: %s",
                 reason_code.getName(),  # type: ignore[no-untyped-call]
@@ -1040,7 +1040,7 @@ class MQTT:
             return
 
         self.connected = True
-        async_dispatcher_send(self.hass, MQTT_CONNECTION_STATE, True)
+        async_dispatcher_send(self.menuai, MQTT_CONNECTION_STATE, True)
         _LOGGER.debug(
             "Connected to MQTT server %s:%s (%s)",
             self.conf[CONF_BROKER],
@@ -1052,7 +1052,7 @@ class MQTT:
         if birth := self.conf.get(CONF_BIRTH_MESSAGE, DEFAULT_BIRTH):
             birth_message = PublishMessage(**birth)
             self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._async_resubscribe_and_publish_birth_message(birth_message),
                 name="mqtt re-subscribe and birth",
             )
@@ -1168,7 +1168,7 @@ class MQTT:
             else:
                 receive_msg = msg_cache_by_subscription_topic[subscription_topic]
             job = subscription.job
-            if job.job_type is HassJobType.Callback:
+            if job.job_type is menuaiJobType.Callback:
                 # We do not wrap Callback jobs in catch_log_exception since
                 # its expensive and we have to do it 2x for every entity
                 try:
@@ -1178,7 +1178,7 @@ class MQTT:
                         partial(self._exception_message, job.target, receive_msg)
                     )
             else:
-                self.hass.async_run_hass_job(job, receive_msg)
+                self.menuai.async_run_menuai_job(job, receive_msg)
         self._mqtt_data.state_write_requests.process_write_state_requests(msg)
 
     @callback
@@ -1219,7 +1219,7 @@ class MQTT:
         """Get the future for a mid."""
         if future := self._pending_operations.get(mid):
             return future
-        future = self.hass.loop.create_future()
+        future = self.menuai.loop.create_future()
         self._pending_operations[mid] = future
         return future
 
@@ -1253,7 +1253,7 @@ class MQTT:
         # result is set make sure the first connection result is set
         self._async_connection_result(False)
         self.connected = False
-        async_dispatcher_send(self.hass, MQTT_CONNECTION_STATE, False)
+        async_dispatcher_send(self.menuai, MQTT_CONNECTION_STATE, False)
         _LOGGER.log(
             logging.INFO if reason_code == 0 else logging.DEBUG,
             "Disconnected from MQTT server %s:%s (%s)",
@@ -1276,7 +1276,7 @@ class MQTT:
             # pylint: disable-next=import-outside-toplevel
             import paho.mqtt.client as mqtt
 
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="mqtt_broker_error",
                 translation_placeholders={
@@ -1289,7 +1289,7 @@ class MQTT:
         if TYPE_CHECKING:
             assert mid is not None
         future = self._async_get_mid_future(mid)
-        loop = self.hass.loop
+        loop = self.menuai.loop
         timer_handle = loop.call_later(TIMEOUT_ACK, self._async_timeout_mid, future)
         try:
             await future

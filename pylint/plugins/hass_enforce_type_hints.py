@@ -12,7 +12,7 @@ from astroid.exceptions import NameInferenceError
 from pylint.checkers import BaseChecker
 from pylint.lint import PyLinter
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 if TYPE_CHECKING:
     # InferenceResult is available only from astroid >= 2.12.0
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from astroid.typing import InferenceResult
 
 _COMMON_ARGUMENTS: dict[str, list[str]] = {
-    "hass": ["HomeAssistant", "HomeAssistant | None"]
+    "menuai": ["menuai", "menuai | None"]
 }
 _PLATFORMS: set[str] = {platform.value for platform in Platform}
 _KNOWN_GENERIC_TYPES: set[str] = {
@@ -95,7 +95,7 @@ _TYPE_HINT_MATCHERS.update(
 )
 
 
-_MODULE_REGEX: re.Pattern[str] = re.compile(r"^homeassistant\.components\.\w+(\.\w+)?$")
+_MODULE_REGEX: re.Pattern[str] = re.compile(r"^menuai\.components\.\w+(\.\w+)?$")
 
 _METHOD_MATCH: list[TypeHintMatch] = [
     TypeHintMatch(
@@ -125,25 +125,25 @@ _TEST_FIXTURES: dict[str, list[str] | str] = {
     "entity_registry_enabled_by_default": "None",
     "event_loop": "AbstractEventLoop",
     "freezer": "FrozenDateTimeFactory",
-    "hass": "HomeAssistant",
-    "hass_access_token": "str",
-    "hass_admin_credential": "Credentials",
-    "hass_admin_user": "MockUser",
-    "hass_client": "ClientSessionGenerator",
-    "hass_client_no_auth": "ClientSessionGenerator",
-    "hass_config": "ConfigType",
-    "hass_config_yaml": "str",
-    "hass_config_yaml_files": "dict[str, str]",
-    "hass_owner_user": "MockUser",
-    "hass_read_only_access_token": "str",
-    "hass_read_only_user": "MockUser",
-    "hass_storage": "dict[str, Any]",
-    "hass_supervisor_access_token": "str",
-    "hass_supervisor_user": "MockUser",
-    "hass_ws_client": "WebSocketGenerator",
+    "menuai": "menuai",
+    "menuai_access_token": "str",
+    "menuai_admin_credential": "Credentials",
+    "menuai_admin_user": "MockUser",
+    "menuai_client": "ClientSessionGenerator",
+    "menuai_client_no_auth": "ClientSessionGenerator",
+    "menuai_config": "ConfigType",
+    "menuai_config_yaml": "str",
+    "menuai_config_yaml_files": "dict[str, str]",
+    "menuai_owner_user": "MockUser",
+    "menuai_read_only_access_token": "str",
+    "menuai_read_only_user": "MockUser",
+    "menuai_storage": "dict[str, Any]",
+    "menuai_supervisor_access_token": "str",
+    "menuai_supervisor_user": "MockUser",
+    "menuai_ws_client": "WebSocketGenerator",
     "init_tts_cache_dir_side_effect": "Any",
     "issue_registry": "IssueRegistry",
-    "local_auth": "HassAuthProvider",
+    "local_auth": "menuaiAuthProvider",
     "mock_async_zeroconf": "MagicMock",
     "mock_bleak_scanner_start": "MagicMock",
     "mock_bluetooth": "None",
@@ -151,8 +151,8 @@ _TEST_FIXTURES: dict[str, list[str] | str] = {
     "mock_conversation_agent": "MockAgent",
     "mock_device_tracker_conf": "list[Device]",
     "mock_get_source_ip": "_patch",
-    "mock_hass_config": "None",
-    "mock_hass_config_yaml": "None",
+    "mock_menuai_config": "None",
+    "mock_menuai_config_yaml": "None",
     "mock_tts_cache_dir": "Path",
     "mock_tts_get_cache_files": "MagicMock",
     "mock_tts_init_cache_dir": "MagicMock",
@@ -182,7 +182,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="setup",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="bool",
@@ -192,7 +192,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_setup_entry",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
             },
             return_type="bool",
@@ -201,7 +201,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_remove_entry",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
             },
             return_type=None,
@@ -210,7 +210,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_unload_entry",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
             },
             return_type="bool",
@@ -219,7 +219,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_migrate_entry",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
             },
             return_type="bool",
@@ -228,7 +228,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_remove_config_entry_device",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
                 2: "DeviceEntry",
             },
@@ -238,7 +238,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_reset_platform",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "str",
             },
             return_type=None,
@@ -249,7 +249,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="setup_platform",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
                 2: "AddEntitiesCallback",
                 3: "DiscoveryInfoType | None",
@@ -261,7 +261,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_setup_entry",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
                 2: "AddConfigEntryEntitiesCallback",
             },
@@ -273,7 +273,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_auth_implementation",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "str",
                 2: "ClientCredential",
             },
@@ -283,7 +283,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_authorization_server",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
             },
             return_type="AuthorizationServer",
             mandatory=True,
@@ -293,7 +293,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_pre_backup",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
             },
             return_type=None,
             mandatory=True,
@@ -301,7 +301,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_post_backup",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
             },
             return_type=None,
             mandatory=True,
@@ -311,7 +311,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_media_browser_root_object",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "str",
             },
             return_type="list[BrowseMedia]",
@@ -320,7 +320,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_browse_media",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "MediaType | str",
                 2: "str",
                 3: "str",
@@ -331,7 +331,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_play_media",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "str",
                 2: "Chromecast",
                 3: "MediaType | str",
@@ -345,7 +345,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="_async_has_devices",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
             },
             return_type="bool",
             mandatory=True,
@@ -355,7 +355,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_validate_action_config",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="ConfigType",
@@ -364,7 +364,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_call_action_from_config",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
                 2: "TemplateVarsType",
                 3: "Context | None",
@@ -375,7 +375,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_action_capabilities",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="dict[str, Schema]",
@@ -384,7 +384,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_actions",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "str",
             },
             return_type=["list[dict[str, str]]", "list[dict[str, Any]]"],
@@ -395,7 +395,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_validate_condition_config",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="ConfigType",
@@ -404,7 +404,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_condition_from_config",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="ConditionCheckerType",
@@ -413,7 +413,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_condition_capabilities",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="dict[str, Schema]",
@@ -422,7 +422,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_conditions",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "str",
             },
             return_type=["list[dict[str, str]]", "list[dict[str, Any]]"],
@@ -433,7 +433,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="setup_scanner",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
                 2: "SeeCallback",
                 3: "DiscoveryInfoType | None",
@@ -444,7 +444,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_setup_scanner",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
                 2: "AsyncSeeCallback",
                 3: "DiscoveryInfoType | None",
@@ -455,7 +455,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="get_scanner",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type=["DeviceScanner", None],
@@ -467,7 +467,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_validate_condition_config",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="ConfigType",
@@ -476,7 +476,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_attach_trigger",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
                 2: "TriggerActionType",
                 3: "TriggerInfo",
@@ -487,7 +487,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_trigger_capabilities",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
             },
             return_type="dict[str, Schema]",
@@ -496,7 +496,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_triggers",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "str",
             },
             return_type=["list[dict[str, str]]", "list[dict[str, Any]]"],
@@ -507,7 +507,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_config_entry_diagnostics",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
             },
             return_type="Mapping[str, Any]",
@@ -516,7 +516,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="async_get_device_diagnostics",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigEntry",
                 2: "DeviceEntry",
             },
@@ -528,7 +528,7 @@ _FUNCTION_MATCH: dict[str, list[TypeHintMatch]] = {
         TypeHintMatch(
             function_name="get_service",
             arg_types={
-                0: "HomeAssistant",
+                0: "menuai",
                 1: "ConfigType",
                 2: "DiscoveryInfoType | None",
             },
@@ -573,9 +573,9 @@ _CLASS_MATCH: dict[str, list[ClassTypeHintMatch]] = {
                     mandatory=True,
                 ),
                 TypeHintMatch(
-                    function_name="async_step_hassio",
+                    function_name="async_step_menuaiio",
                     arg_types={
-                        1: "HassioServiceInfo",
+                        1: "menuaiioServiceInfo",
                     },
                     return_type="ConfigFlowResult",
                     mandatory=True,
@@ -756,12 +756,12 @@ _ENTITY_MATCH: list[TypeHintMatch] = [
         mandatory=True,
     ),
     TypeHintMatch(
-        function_name="async_added_to_hass",
+        function_name="async_added_to_menuai",
         return_type=None,
         mandatory=True,
     ),
     TypeHintMatch(
-        function_name="async_will_remove_from_hass",
+        function_name="async_will_remove_from_menuai",
         return_type=None,
         mandatory=True,
     ),
@@ -983,7 +983,7 @@ _INHERITANCE_MATCH: dict[str, list[ClassTypeHintMatch]] = {
                 TypeHintMatch(
                     function_name="async_get_events",
                     arg_types={
-                        1: "HomeAssistant",
+                        1: "menuai",
                         2: "datetime",
                         3: "datetime",
                     },
@@ -3192,11 +3192,11 @@ def _is_valid_type(
     ):
         return True
 
-    # Name occurs when a namespace is not used, eg. "HomeAssistant"
+    # Name occurs when a namespace is not used, eg. "menuai"
     if isinstance(node, nodes.Name) and node.name == expected_type:
         return True
 
-    # Attribute occurs when a namespace is used, eg. "core.HomeAssistant"
+    # Attribute occurs when a namespace is used, eg. "core.menuai"
     return isinstance(node, nodes.Attribute) and (
         node.attrname == expected_type or node.as_string() == expected_type
     )
@@ -3280,34 +3280,34 @@ def _has_valid_annotations(
 def _get_module_platform(module_name: str) -> str | None:
     """Return the platform for the module name."""
     if not (module_match := _MODULE_REGEX.match(module_name)):
-        # Ensure `homeassistant.components.<component>`
-        # Or `homeassistant.components.<component>.<platform>`
+        # Ensure `menuai.components.<component>`
+        # Or `menuai.components.<component>.<platform>`
         return None
 
     platform = module_match.groups()[0]
     return platform.lstrip(".") if platform else "__init__"
 
 
-class HassTypeHintChecker(BaseChecker):
+class menuaiTypeHintChecker(BaseChecker):
     """Checker for setup type hints."""
 
-    name = "hass_enforce_type_hints"
+    name = "menuai_enforce_type_hints"
     priority = -1
     msgs = {
         "W7431": (
             "Argument %s should be of type %s in %s",
-            "hass-argument-type",
+            "menuai-argument-type",
             "Used when method argument type is incorrect",
         ),
         "W7432": (
             "Return type should be %s in %s",
-            "hass-return-type",
+            "menuai-return-type",
             "Used when method return type is incorrect",
         ),
         "W7433": (
             "Argument %s is of type %s and could be moved to "
             "`@pytest.mark.usefixtures` decorator in %s",
-            "hass-consider-usefixtures-decorator",
+            "menuai-consider-usefixtures-decorator",
             "Used when an argument type is None and could be a fixture",
         ),
     }
@@ -3445,7 +3445,7 @@ class HassTypeHintChecker(BaseChecker):
                 arg_node, annotation = _get_named_annotation(node, arg_name)
                 if arg_node and not _is_valid_type(expected_type, annotation):
                     self.add_message(
-                        "hass-argument-type",
+                        "menuai-argument-type",
                         node=arg_node,
                         args=(arg_name, expected_type, node.name),
                     )
@@ -3473,7 +3473,7 @@ class HassTypeHintChecker(BaseChecker):
                     continue
                 if not _is_valid_type(expected_type, annotations[key]):
                     self.add_message(
-                        "hass-argument-type",
+                        "menuai-argument-type",
                         node=node.args.args[key],
                         args=(key + 1, expected_type, node.name),
                     )
@@ -3487,7 +3487,7 @@ class HassTypeHintChecker(BaseChecker):
                 arg_node, annotation = _get_named_annotation(node, arg_name)
                 if arg_node and not _is_valid_type(expected_type, annotation):
                     self.add_message(
-                        "hass-argument-type",
+                        "menuai-argument-type",
                         node=arg_node,
                         args=(arg_name, expected_type, node.name),
                     )
@@ -3497,7 +3497,7 @@ class HassTypeHintChecker(BaseChecker):
             match.kwargs_type, node.args.kwargannotation
         ):
             self.add_message(
-                "hass-argument-type",
+                "menuai-argument-type",
                 node=node,
                 args=(node.args.kwarg, match.kwargs_type, node.name),
             )
@@ -3505,7 +3505,7 @@ class HassTypeHintChecker(BaseChecker):
         # Check the return type.
         if not _is_valid_return_type(match, node.returns):
             self.add_message(
-                "hass-return-type",
+                "menuai-return-type",
                 node=node,
                 args=(match.return_type or "None", node.name),
             )
@@ -3514,7 +3514,7 @@ class HassTypeHintChecker(BaseChecker):
         # Check the return type, should always be `None` for test_*** functions.
         if not is_fixture and not _is_valid_type(None, node.returns, True):
             self.add_message(
-                "hass-return-type",
+                "menuai-return-type",
                 node=node,
                 args=("None", node.name),
             )
@@ -3523,13 +3523,13 @@ class HassTypeHintChecker(BaseChecker):
             arg_node, annotation = _get_named_annotation(node, arg_name)
             if arg_node and expected_type == "None" and not is_fixture:
                 self.add_message(
-                    "hass-consider-usefixtures-decorator",
+                    "menuai-consider-usefixtures-decorator",
                     node=arg_node,
                     args=(arg_name, expected_type, node.name),
                 )
             if arg_node and not _is_valid_type(expected_type, annotation):
                 self.add_message(
-                    "hass-argument-type",
+                    "menuai-argument-type",
                     node=arg_node,
                     args=(arg_name, expected_type, node.name),
                 )
@@ -3537,4 +3537,4 @@ class HassTypeHintChecker(BaseChecker):
 
 def register(linter: PyLinter) -> None:
     """Register the checker."""
-    linter.register_checker(HassTypeHintChecker(linter))
+    linter.register_checker(menuaiTypeHintChecker(linter))

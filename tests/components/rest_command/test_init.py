@@ -7,26 +7,26 @@ from unittest.mock import patch
 import aiohttp
 import pytest
 
-from homeassistant.components.rest_command import DOMAIN
-from homeassistant.const import (
+from menuai.components.rest_command import DOMAIN
+from menuai.const import (
     CONTENT_TYPE_JSON,
     CONTENT_TYPE_TEXT_PLAIN,
     SERVICE_RELOAD,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import TEST_URL, ComponentSetup
 
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
-async def test_reload(hass: HomeAssistant, setup_component: ComponentSetup) -> None:
+async def test_reload(menuai: menuai, setup_component: ComponentSetup) -> None:
     """Verify we can reload rest_command integration."""
     await setup_component()
 
-    assert hass.services.has_service(DOMAIN, "get_test")
-    assert not hass.services.has_service(DOMAIN, "new_test")
+    assert menuai.services.has_service(DOMAIN, "get_test")
+    assert not menuai.services.has_service(DOMAIN, "new_test")
 
     new_config = {
         DOMAIN: {
@@ -34,30 +34,30 @@ async def test_reload(hass: HomeAssistant, setup_component: ComponentSetup) -> N
         }
     }
     with patch(
-        "homeassistant.config.load_yaml_config_file",
+        "menuai.config.load_yaml_config_file",
         autospec=True,
         return_value=new_config,
     ):
-        await hass.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
+        await menuai.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
 
-    assert hass.services.has_service(DOMAIN, "new_test")
-    assert not hass.services.has_service(DOMAIN, "get_test")
+    assert menuai.services.has_service(DOMAIN, "new_test")
+    assert not menuai.services.has_service(DOMAIN, "get_test")
 
 
 async def test_setup_tests(
-    hass: HomeAssistant, setup_component: ComponentSetup
+    menuai: menuai, setup_component: ComponentSetup
 ) -> None:
     """Set up test config and test it."""
     await setup_component()
 
-    assert hass.services.has_service(DOMAIN, "get_test")
-    assert hass.services.has_service(DOMAIN, "post_test")
-    assert hass.services.has_service(DOMAIN, "put_test")
-    assert hass.services.has_service(DOMAIN, "delete_test")
+    assert menuai.services.has_service(DOMAIN, "get_test")
+    assert menuai.services.has_service(DOMAIN, "post_test")
+    assert menuai.services.has_service(DOMAIN, "put_test")
+    assert menuai.services.has_service(DOMAIN, "delete_test")
 
 
 async def test_rest_command_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -66,15 +66,15 @@ async def test_rest_command_timeout(
 
     aioclient_mock.get(TEST_URL, exc=TimeoutError())
 
-    with pytest.raises(HomeAssistantError) as exc:
-        await hass.services.async_call(DOMAIN, "get_test", {}, blocking=True)
+    with pytest.raises(menuaiError) as exc:
+        await menuai.services.async_call(DOMAIN, "get_test", {}, blocking=True)
     assert str(exc.value) == 'Timeout when calling resource "https://example.com/"'
 
     assert len(aioclient_mock.mock_calls) == 1
 
 
 async def test_rest_command_aiohttp_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -83,8 +83,8 @@ async def test_rest_command_aiohttp_error(
 
     aioclient_mock.get(TEST_URL, exc=aiohttp.ClientError())
 
-    with pytest.raises(HomeAssistantError) as exc:
-        await hass.services.async_call(DOMAIN, "get_test", {}, blocking=True)
+    with pytest.raises(menuaiError) as exc:
+        await menuai.services.async_call(DOMAIN, "get_test", {}, blocking=True)
 
     assert (
         str(exc.value)
@@ -94,7 +94,7 @@ async def test_rest_command_aiohttp_error(
 
 
 async def test_rest_command_http_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -103,13 +103,13 @@ async def test_rest_command_http_error(
 
     aioclient_mock.get(TEST_URL, status=HTTPStatus.BAD_REQUEST)
 
-    await hass.services.async_call(DOMAIN, "get_test", {}, blocking=True)
+    await menuai.services.async_call(DOMAIN, "get_test", {}, blocking=True)
 
     assert len(aioclient_mock.mock_calls) == 1
 
 
 async def test_rest_command_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -118,13 +118,13 @@ async def test_rest_command_auth(
 
     aioclient_mock.get(TEST_URL, content=b"success")
 
-    await hass.services.async_call(DOMAIN, "auth_test", {}, blocking=True)
+    await menuai.services.async_call(DOMAIN, "auth_test", {}, blocking=True)
 
     assert len(aioclient_mock.mock_calls) == 1
 
 
 async def test_rest_command_form_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -133,7 +133,7 @@ async def test_rest_command_form_data(
 
     aioclient_mock.post(TEST_URL, content=b"success")
 
-    await hass.services.async_call(DOMAIN, "post_test", {}, blocking=True)
+    await menuai.services.async_call(DOMAIN, "post_test", {}, blocking=True)
 
     assert len(aioclient_mock.mock_calls) == 1
     assert aioclient_mock.mock_calls[0][2] == b"test"
@@ -150,7 +150,7 @@ async def test_rest_command_form_data(
     ],
 )
 async def test_rest_command_methods(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
     method: str,
@@ -160,13 +160,13 @@ async def test_rest_command_methods(
 
     aioclient_mock.request(method=method, url=TEST_URL, content=b"success")
 
-    await hass.services.async_call(DOMAIN, f"{method}_test", {}, blocking=True)
+    await menuai.services.async_call(DOMAIN, f"{method}_test", {}, blocking=True)
 
     assert len(aioclient_mock.mock_calls) == 1
 
 
 async def test_rest_command_headers(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -224,9 +224,9 @@ async def test_rest_command_headers(
         "headers_template_test",
         "headers_and_content_type_override_template_test",
     ):
-        await hass.services.async_call(DOMAIN, test_service, {}, blocking=True)
+        await menuai.services.async_call(DOMAIN, test_service, {}, blocking=True)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(aioclient_mock.mock_calls) == 7
 
     # no_headers_test
@@ -272,7 +272,7 @@ async def test_rest_command_headers(
 
 
 async def test_rest_command_get_response_plaintext(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -283,7 +283,7 @@ async def test_rest_command_get_response_plaintext(
         TEST_URL, content=b"success", headers={"content-type": "text/plain"}
     )
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN, "get_test", {}, blocking=True, return_response=True
     )
 
@@ -293,7 +293,7 @@ async def test_rest_command_get_response_plaintext(
 
 
 async def test_rest_command_get_response_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -306,7 +306,7 @@ async def test_rest_command_get_response_json(
         headers={"content-type": "application/json"},
     )
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN, "get_test", {}, blocking=True, return_response=True
     )
 
@@ -317,7 +317,7 @@ async def test_rest_command_get_response_json(
 
 
 async def test_rest_command_get_response_malformed_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -331,12 +331,12 @@ async def test_rest_command_get_response_malformed_json(
     )
 
     # No problem without 'return_response'
-    response = await hass.services.async_call(DOMAIN, "get_test", {}, blocking=True)
+    response = await menuai.services.async_call(DOMAIN, "get_test", {}, blocking=True)
     assert not response
 
     # Throws error when requesting response
-    with pytest.raises(HomeAssistantError) as exc:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc:
+        await menuai.services.async_call(
             DOMAIN, "get_test", {}, blocking=True, return_response=True
         )
     assert (
@@ -346,7 +346,7 @@ async def test_rest_command_get_response_malformed_json(
 
 
 async def test_rest_command_get_response_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -365,12 +365,12 @@ async def test_rest_command_get_response_none(
     )
 
     # No problem without 'return_response'
-    response = await hass.services.async_call(DOMAIN, "get_test", {}, blocking=True)
+    response = await menuai.services.async_call(DOMAIN, "get_test", {}, blocking=True)
     assert not response
 
     # Throws Decode error when requesting response
-    with pytest.raises(HomeAssistantError) as exc:
-        response = await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc:
+        response = await menuai.services.async_call(
             DOMAIN, "get_test", {}, blocking=True, return_response=True
         )
     assert (

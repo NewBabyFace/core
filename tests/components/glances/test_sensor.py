@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.glances.const import DOMAIN
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.glances.const import DOMAIN
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import HA_SENSOR_DATA, MOCK_REFERENCE_DATE, MOCK_USER_INPUT
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_sensor_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
@@ -27,39 +27,39 @@ async def test_sensor_states(
     freezer.move_to(MOCK_REFERENCE_DATE)
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT, entry_id="test")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entries = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
 
     assert entity_entries
     for entity_entry in entity_entries:
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
-        assert hass.states.get(entity_entry.entity_id) == snapshot(
+        assert menuai.states.get(entity_entry.entity_id) == snapshot(
             name=f"{entity_entry.entity_id}-state"
         )
 
 
 async def test_uptime_variation(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, mock_api: AsyncMock
+    menuai: menuai, freezer: FrozenDateTimeFactory, mock_api: AsyncMock
 ) -> None:
     """Test uptime small variation update."""
 
     # Init with reference time
     freezer.move_to(MOCK_REFERENCE_DATE)
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT, entry_id="test")
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    uptime_state = hass.states.get("sensor.0_0_0_0_uptime").state
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    uptime_state = menuai.states.get("sensor.0_0_0_0_uptime").state
 
     # Time change should not change uptime (absolute date)
     freezer.tick(delta=timedelta(seconds=120))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    uptime_state2 = hass.states.get("sensor.0_0_0_0_uptime").state
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    uptime_state2 = menuai.states.get("sensor.0_0_0_0_uptime").state
     assert uptime_state2 == uptime_state
 
     mock_data = HA_SENSOR_DATA.copy()
@@ -69,13 +69,13 @@ async def test_uptime_variation(
     # Server has been restarted so therefore we should have a new state
     freezer.move_to(MOCK_REFERENCE_DATE + timedelta(days=2))
     freezer.tick(delta=timedelta(seconds=120))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.0_0_0_0_uptime").state == "2024-02-15T12:49:52+00:00"
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.0_0_0_0_uptime").state == "2024-02-15T12:49:52+00:00"
 
 
 async def test_sensor_removed(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_api: AsyncMock,
     entity_registry: er.EntityRegistry,
@@ -85,13 +85,13 @@ async def test_sensor_removed(
     # Init with reference time
     freezer.move_to(MOCK_REFERENCE_DATE)
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT, entry_id="test")
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.0_0_0_0_ssl_disk_used").state != STATE_UNAVAILABLE
-    assert hass.states.get("sensor.0_0_0_0_memory_use").state != STATE_UNAVAILABLE
-    assert hass.states.get("sensor.0_0_0_0_uptime").state != STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.0_0_0_0_ssl_disk_used").state != STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.0_0_0_0_memory_use").state != STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.0_0_0_0_uptime").state != STATE_UNAVAILABLE
 
     # Remove some sensors from Glances API data
     mock_data = HA_SENSOR_DATA.copy()
@@ -103,9 +103,9 @@ async def test_sensor_removed(
     # Server stops providing some sensors, so state should switch to Unavailable
     freezer.move_to(MOCK_REFERENCE_DATE + timedelta(minutes=2))
     freezer.tick(delta=timedelta(seconds=120))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.0_0_0_0_ssl_disk_used").state == STATE_UNAVAILABLE
-    assert hass.states.get("sensor.0_0_0_0_memory_use").state == STATE_UNAVAILABLE
-    assert hass.states.get("sensor.0_0_0_0_uptime").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.0_0_0_0_ssl_disk_used").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.0_0_0_0_memory_use").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.0_0_0_0_uptime").state == STATE_UNAVAILABLE

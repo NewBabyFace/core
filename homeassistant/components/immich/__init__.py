@@ -6,7 +6,7 @@ from aioimmich import Immich
 from aioimmich.const import CONNECT_ERRORS
 from aioimmich.exceptions import ImmichUnauthorizedError
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
@@ -14,19 +14,19 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import ImmichConfigEntry, ImmichDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ImmichConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ImmichConfigEntry) -> bool:
     """Set up Immich from a config entry."""
 
-    session = async_get_clientsession(hass, entry.data[CONF_VERIFY_SSL])
+    session = async_get_clientsession(menuai, entry.data[CONF_VERIFY_SSL])
     immich = Immich(
         session,
         entry.data[CONF_API_KEY],
@@ -42,15 +42,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ImmichConfigEntry) -> bo
     except CONNECT_ERRORS as err:
         raise ConfigEntryNotReady from err
 
-    coordinator = ImmichDataUpdateCoordinator(hass, entry, immich, user_info.is_admin)
+    coordinator = ImmichDataUpdateCoordinator(menuai, entry, immich, user_info.is_admin)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ImmichConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ImmichConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

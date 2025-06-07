@@ -1,6 +1,6 @@
 """Const file for the MyBMW integration."""
 
-from homeassistant.const import UnitOfLength, UnitOfVolume
+from menuai.const import UnitOfLength, UnitOfVolume
 
 DOMAIN = "bmw_connected_drive"
 
@@ -18,7 +18,7 @@ CONF_CAPTCHA_URL = (
     "https://bimmer-connected.readthedocs.io/en/stable/captcha/{region}.html"
 )
 
-DATA_HASS_CONFIG = "hass_config"
+DATA_menuai_CONFIG = "menuai_config"
 
 UNIT_MAP = {
     "KILOMETERS": UnitOfLength.KILOMETERS,

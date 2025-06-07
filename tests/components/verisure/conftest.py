@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.verisure.const import CONF_GIID, DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.components.verisure.const import CONF_GIID, DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
 
 from tests.common import MockConfigEntry
 
@@ -32,7 +32,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.verisure.async_setup_entry", return_value=True
+        "menuai.components.verisure.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -41,7 +41,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_verisure_config_flow() -> Generator[MagicMock]:
     """Return a mocked Tailscale client."""
     with patch(
-        "homeassistant.components.verisure.config_flow.Verisure", autospec=True
+        "menuai.components.verisure.config_flow.Verisure", autospec=True
     ) as verisure_mock:
         verisure = verisure_mock.return_value
         verisure.login.return_value = True

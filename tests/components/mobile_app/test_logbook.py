@@ -1,31 +1,31 @@
 """The tests for mobile_app logbook."""
 
-from homeassistant.components.mobile_app.logbook import (
+from menuai.components.mobile_app.logbook import (
     DOMAIN,
     IOS_EVENT_ZONE_ENTERED,
     IOS_EVENT_ZONE_EXITED,
 )
-from homeassistant.const import ATTR_FRIENDLY_NAME, ATTR_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_FRIENDLY_NAME, ATTR_ICON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.components.logbook.common import MockRow, mock_humanify
 
 
-async def test_humanify_ios_events(hass: HomeAssistant) -> None:
+async def test_humanify_ios_events(menuai: menuai) -> None:
     """Test humanifying ios events."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    hass.states.async_set(
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    menuai.states.async_set(
         "zone.bad_place",
         "0",
         {ATTR_FRIENDLY_NAME: "passport control", ATTR_ICON: "mdi:airplane-marker"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     (event1, event2) = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 IOS_EVENT_ZONE_ENTERED,

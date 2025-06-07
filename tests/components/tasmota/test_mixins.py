@@ -7,8 +7,8 @@ from unittest.mock import call
 from hatasmota.const import CONF_MAC
 from hatasmota.utils import config_get_state_online, get_topic_tele_will
 
-from homeassistant.components.tasmota.const import DEFAULT_PREFIX
-from homeassistant.core import HomeAssistant
+from menuai.components.tasmota.const import DEFAULT_PREFIX
+from menuai.core import menuai
 
 from .test_common import DEFAULT_CONFIG
 
@@ -17,7 +17,7 @@ from tests.typing import MqttMockHAClient, MqttMockPahoClient
 
 
 async def test_availability_poll_state_once(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -34,22 +34,22 @@ async def test_availability_poll_state_once(
     poll_topic_switch = "tasmota_49A3BC/cmnd/STATUS"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{config[CONF_MAC]}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock.async_publish.reset_mock()
 
     # Device online, verify poll for state
     async_fire_mqtt_message(
-        hass,
+        menuai,
         get_topic_tele_will(config),
         config_get_state_online(config),
     )
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock.async_publish.assert_has_calls(
         [
             call(poll_topic_relay, poll_payload_relay, 0, False),

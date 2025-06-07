@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from vallox_websocket_api import MetricData
 
-from homeassistant.components.vallox.const import DOMAIN
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai.components.vallox.const import DOMAIN
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -32,13 +32,13 @@ def default_name() -> str:
 
 @pytest.fixture
 def mock_entry(
-    hass: HomeAssistant, default_host: str, default_name: str
+    menuai: menuai, default_host: str, default_name: str
 ) -> MockConfigEntry:
     """Create mocked Vallox config entry fixture."""
-    return create_mock_entry(hass, default_host, default_name)
+    return create_mock_entry(menuai, default_host, default_name)
 
 
-def create_mock_entry(hass: HomeAssistant, host: str, name: str) -> MockConfigEntry:
+def create_mock_entry(menuai: menuai, host: str, name: str) -> MockConfigEntry:
     """Create mocked Vallox config entry."""
     vallox_mock_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -47,38 +47,38 @@ def create_mock_entry(hass: HomeAssistant, host: str, name: str) -> MockConfigEn
             CONF_NAME: name,
         },
     )
-    vallox_mock_entry.add_to_hass(hass)
+    vallox_mock_entry.add_to_menuai(menuai)
 
     return vallox_mock_entry
 
 
 @pytest.fixture
 async def setup_vallox_entry(
-    hass: HomeAssistant, default_host: str, default_name: str
+    menuai: menuai, default_host: str, default_name: str
 ) -> None:
     """Define a fixture to set up Vallox."""
-    await do_setup_vallox_entry(hass, default_host, default_name)
+    await do_setup_vallox_entry(menuai, default_host, default_name)
 
 
-async def do_setup_vallox_entry(hass: HomeAssistant, host: str, name: str) -> None:
+async def do_setup_vallox_entry(menuai: menuai, host: str, name: str) -> None:
     """Set up the Vallox component."""
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             CONF_HOST: host,
             CONF_NAME: name,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def init_reconfigure_flow(
-    hass: HomeAssistant, mock_entry, setup_vallox_entry
+    menuai: menuai, mock_entry, setup_vallox_entry
 ) -> tuple[MockConfigEntry, ConfigFlowResult]:
     """Initialize a config entry and a reconfigure flow for it."""
-    result = await mock_entry.start_reconfigure_flow(hass)
+    result = await mock_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -131,7 +131,7 @@ def default_metrics():
 def fetch_metric_data_mock(default_metrics):
     """Stub the Vallox fetch_metric_data method."""
     with patch(
-        "homeassistant.components.vallox.Vallox.fetch_metric_data",
+        "menuai.components.vallox.Vallox.fetch_metric_data",
         new_callable=AsyncMock,
     ) as mock:
         mock.return_value = MetricData(default_metrics)
@@ -155,19 +155,19 @@ def setup_fetch_metric_data_mock(fetch_metric_data_mock, default_metrics):
 
 def patch_set_profile():
     """Patch the Vallox metrics set values."""
-    return patch("homeassistant.components.vallox.Vallox.set_profile")
+    return patch("menuai.components.vallox.Vallox.set_profile")
 
 
 def patch_set_fan_speed():
     """Patch the Vallox metrics set values."""
-    return patch("homeassistant.components.vallox.Vallox.set_fan_speed")
+    return patch("menuai.components.vallox.Vallox.set_fan_speed")
 
 
 def patch_set_values():
     """Patch the Vallox metrics set values."""
-    return patch("homeassistant.components.vallox.Vallox.set_values")
+    return patch("menuai.components.vallox.Vallox.set_values")
 
 
 def patch_set_filter_change_date():
     """Patch the Vallox metrics set filter change date."""
-    return patch("homeassistant.components.vallox.Vallox.set_filter_change_date")
+    return patch("menuai.components.vallox.Vallox.set_filter_change_date")

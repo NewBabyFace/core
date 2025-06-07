@@ -2,25 +2,25 @@
 
 import pytest
 
-from homeassistant.components import history
-from homeassistant.components.recorder import Recorder
-from homeassistant.const import CONF_DOMAINS, CONF_ENTITIES, CONF_EXCLUDE, CONF_INCLUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import history
+from menuai.components.recorder import Recorder
+from menuai.const import CONF_DOMAINS, CONF_ENTITIES, CONF_EXCLUDE, CONF_INCLUDE
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import RecorderInstanceContextManager
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
 
 
 @pytest.fixture
-async def hass_history(hass: HomeAssistant, recorder_mock: Recorder) -> None:
-    """Home Assistant fixture with history."""
+async def menuai_history(menuai: menuai, recorder_mock: Recorder) -> None:
+    """MenuAI fixture with history."""
     config = history.CONFIG_SCHEMA(
         {
             history.DOMAIN: {
@@ -35,4 +35,4 @@ async def hass_history(hass: HomeAssistant, recorder_mock: Recorder) -> None:
             }
         }
     )
-    assert await async_setup_component(hass, history.DOMAIN, config)
+    assert await async_setup_component(menuai, history.DOMAIN, config)

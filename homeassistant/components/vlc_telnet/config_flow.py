@@ -10,11 +10,11 @@ from aiovlc.client import Client
 from aiovlc.exceptions import AuthError, ConnectError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -47,7 +47,7 @@ async def vlc_connect(vlc: Client) -> None:
     await vlc.disconnect()
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect."""
     vlc = Client(
         password=data[CONF_PASSWORD],
@@ -70,7 +70,7 @@ class VLCTelnetConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for VLC media player Telnet."""
 
     VERSION = 1
-    hassio_discovery: dict[str, Any] | None = None
+    menuaiio_discovery: dict[str, Any] | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -88,7 +88,7 @@ class VLCTelnetConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -119,7 +119,7 @@ class VLCTelnetConfigFlow(ConfigFlow, domain=DOMAIN):
         reauth_entry = self._get_reauth_entry()
         if user_input is not None:
             try:
-                await validate_input(self.hass, {**reauth_entry.data, **user_input})
+                await validate_input(self.menuai, {**reauth_entry.data, **user_input})
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -140,32 +140,32 @@ class VLCTelnetConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
-        """Handle the discovery step via hassio."""
-        await self.async_set_unique_id("hassio")
+        """Handle the discovery step via menuaiio."""
+        await self.async_set_unique_id("menuaiio")
         self._abort_if_unique_id_configured(discovery_info.config)
 
-        self.hassio_discovery = discovery_info.config
+        self.menuaiio_discovery = discovery_info.config
         self.context["title_placeholders"] = {"host": discovery_info.config[CONF_HOST]}
-        return await self.async_step_hassio_confirm()
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm Supervisor discovery."""
-        assert self.hassio_discovery
+        assert self.menuaiio_discovery
         if user_input is None:
             return self.async_show_form(
-                step_id="hassio_confirm",
-                description_placeholders={"addon": self.hassio_discovery["addon"]},
+                step_id="menuaiio_confirm",
+                description_placeholders={"addon": self.menuaiio_discovery["addon"]},
             )
 
-        self.hassio_discovery.pop("addon")
+        self.menuaiio_discovery.pop("addon")
 
         try:
-            info = await validate_input(self.hass, self.hassio_discovery)
+            info = await validate_input(self.menuai, self.menuaiio_discovery)
         except CannotConnect:
             return self.async_abort(reason="cannot_connect")
         except InvalidAuth:
@@ -174,12 +174,12 @@ class VLCTelnetConfigFlow(ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             return self.async_abort(reason="unknown")
 
-        return self.async_create_entry(title=info["title"], data=self.hassio_discovery)
+        return self.async_create_entry(title=info["title"], data=self.menuaiio_discovery)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

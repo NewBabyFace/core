@@ -9,10 +9,10 @@ import threading
 
 import voluptuous as vol
 
-from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import EVENT_menuai_START, EVENT_menuai_STOP
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .minio_helper import MinioEventThread, create_minio_client
 
@@ -81,7 +81,7 @@ BUCKET_KEY_FILE_SCHEMA = BUCKET_KEY_SCHEMA.extend(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up MinioClient and event listeners."""
     conf = config[DOMAIN]
 
@@ -91,11 +91,11 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     secret_key = conf[CONF_SECRET_KEY]
     secure = conf[CONF_SECURE]
 
-    queue_listener = QueueListener(hass)
+    queue_listener = QueueListener(menuai)
     queue = queue_listener.queue
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, queue_listener.start_handler)
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, queue_listener.stop_handler)
+    menuai.bus.listen_once(EVENT_menuai_START, queue_listener.start_handler)
+    menuai.bus.listen_once(EVENT_menuai_STOP, queue_listener.stop_handler)
 
     def _setup_listener(listener_conf):
         bucket = listener_conf[CONF_LISTEN_BUCKET]
@@ -115,8 +115,8 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             events,
         )
 
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_START, minio_listener.start_handler)
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, minio_listener.stop_handler)
+        menuai.bus.listen_once(EVENT_menuai_START, minio_listener.start_handler)
+        menuai.bus.listen_once(EVENT_menuai_STOP, minio_listener.stop_handler)
 
     for listen_conf in conf[CONF_LISTEN]:
         _setup_listener(listen_conf)
@@ -131,7 +131,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         key = service.data[ATTR_KEY]
         file_path = service.data[ATTR_FILE_PATH]
 
-        if not hass.config.is_allowed_path(file_path):
+        if not menuai.config.is_allowed_path(file_path):
             raise ValueError(f"Invalid file_path {file_path}")
 
         minio_client.fput_object(bucket, key, file_path)
@@ -142,7 +142,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         key = service.data[ATTR_KEY]
         file_path = service.data[ATTR_FILE_PATH]
 
-        if not hass.config.is_allowed_path(file_path):
+        if not menuai.config.is_allowed_path(file_path):
             raise ValueError(f"Invalid file_path {file_path}")
 
         minio_client.fget_object(bucket, key, file_path)
@@ -154,9 +154,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         minio_client.remove_object(bucket, key)
 
-    hass.services.register(DOMAIN, "put", put_file, schema=BUCKET_KEY_FILE_SCHEMA)
-    hass.services.register(DOMAIN, "get", get_file, schema=BUCKET_KEY_FILE_SCHEMA)
-    hass.services.register(DOMAIN, "remove", remove_file, schema=BUCKET_KEY_SCHEMA)
+    menuai.services.register(DOMAIN, "put", put_file, schema=BUCKET_KEY_FILE_SCHEMA)
+    menuai.services.register(DOMAIN, "get", get_file, schema=BUCKET_KEY_FILE_SCHEMA)
+    menuai.services.register(DOMAIN, "remove", remove_file, schema=BUCKET_KEY_SCHEMA)
 
     return True
 
@@ -167,16 +167,16 @@ def get_minio_endpoint(host: str, port: int) -> str:
 
 
 class QueueListener(threading.Thread):
-    """Forward events from queue into Home Assistant event bus."""
+    """Forward events from queue into MenuAI event bus."""
 
-    def __init__(self, hass):
+    def __init__(self, menuai):
         """Create queue."""
         super().__init__()
-        self._hass = hass
+        self._menuai = menuai
         self._queue = Queue()
 
     def run(self):
-        """Listen to queue events, and forward them to Home Assistant event bus."""
+        """Listen to queue events, and forward them to MenuAI event bus."""
         _LOGGER.debug("Running QueueListener")
         while True:
             if (event := self._queue.get()) is None:
@@ -190,7 +190,7 @@ class QueueListener(threading.Thread):
                 event[ATTR_BUCKET],
                 event[ATTR_KEY],
             )
-            self._hass.bus.fire(DOMAIN, {"file_name": file_name, **event})
+            self._menuai.bus.fire(DOMAIN, {"file_name": file_name, **event})
 
     @property
     def queue(self):

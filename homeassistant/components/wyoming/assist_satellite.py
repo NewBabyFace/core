@@ -24,18 +24,18 @@ from wyoming.tts import Synthesize, SynthesizeVoice
 from wyoming.vad import VoiceStarted, VoiceStopped
 from wyoming.wake import Detect, Detection
 
-from homeassistant.components import assist_pipeline, ffmpeg, intent, tts
-from homeassistant.components.assist_pipeline import PipelineEvent
-from homeassistant.components.assist_satellite import (
+from menuai.components import assist_pipeline, ffmpeg, intent, tts
+from menuai.components.assist_pipeline import PipelineEvent
+from menuai.components.assist_satellite import (
     AssistSatelliteAnnouncement,
     AssistSatelliteConfiguration,
     AssistSatelliteEntity,
     AssistSatelliteEntityDescription,
     AssistSatelliteEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, SAMPLE_CHANNELS, SAMPLE_WIDTH
 from .data import WyomingService
@@ -64,18 +64,18 @@ _STAGES: dict[PipelineStage, assist_pipeline.PipelineStage] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Wyoming Assist satellite entity."""
-    domain_data: DomainDataItem = hass.data[DOMAIN][config_entry.entry_id]
+    domain_data: DomainDataItem = menuai.data[DOMAIN][config_entry.entry_id]
     assert domain_data.device is not None
 
     async_add_entities(
         [
             WyomingAssistSatellite(
-                hass, domain_data.service, domain_data.device, config_entry
+                menuai, domain_data.service, domain_data.device, config_entry
             )
         ]
     )
@@ -91,7 +91,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         service: WyomingService,
         device: SatelliteDevice,
         config_entry: ConfigEntry,
@@ -128,12 +128,12 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
     @property
     def pipeline_entity_id(self) -> str | None:
         """Return the entity ID of the pipeline to use for the next conversation."""
-        return self.device.get_pipeline_entity_id(self.hass)
+        return self.device.get_pipeline_entity_id(self.menuai)
 
     @property
     def vad_sensitivity_entity_id(self) -> str | None:
         """Return the entity ID of the VAD sensitivity to use for the next conversation."""
-        return self.device.get_vad_sensitivity_entity_id(self.hass)
+        return self.device.get_vad_sensitivity_entity_id(self.menuai)
 
     @property
     def tts_options(self) -> dict[str, Any] | None:
@@ -145,14 +145,14 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
             tts.ATTR_PREFERRED_SAMPLE_BYTES: SAMPLE_WIDTH,
         }
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self.start_satellite()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         self.stop_satellite()
 
     @callback
@@ -179,7 +179,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
             self.device.set_is_active(False)
         elif event.type == assist_pipeline.PipelineEventType.WAKE_WORD_START:
             self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._client.write_event(Detect().event()),
                 f"{self.entity_id} {event.type}",
             )
@@ -192,7 +192,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
                     timestamp=wake_word_output.get("timestamp"),
                 )
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._client.write_event(detection.event()),
                     f"{self.entity_id} {event.type}",
                 )
@@ -202,7 +202,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
 
             if event.data:
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._client.write_event(
                         Transcribe(language=event.data["metadata"]["language"]).event()
                     ),
@@ -212,7 +212,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
             # User started speaking
             if event.data:
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._client.write_event(
                         VoiceStarted(timestamp=event.data["timestamp"]).event()
                     ),
@@ -222,7 +222,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
             # User stopped speaking
             if event.data:
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._client.write_event(
                         VoiceStopped(timestamp=event.data["timestamp"]).event()
                     ),
@@ -234,7 +234,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
                 # Inform client of transript
                 stt_text = event.data["stt_output"]["text"]
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._client.write_event(Transcript(text=stt_text).event()),
                     f"{self.entity_id} {event.type}",
                 )
@@ -243,7 +243,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
             if event.data:
                 # Inform client of text
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._client.write_event(
                         Synthesize(
                             text=event.data["tts_input"],
@@ -260,10 +260,10 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
             if (
                 event.data
                 and (tts_output := event.data["tts_output"])
-                and (stream := tts.async_get_stream(self.hass, tts_output["token"]))
+                and (stream := tts.async_get_stream(self.menuai, tts_output["token"]))
             ):
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._stream_tts(stream),
                     f"{self.entity_id} {event.type}",
                 )
@@ -271,7 +271,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
             # Pipeline error
             if event.data:
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._client.write_event(
                         Error(
                             text=event.data["message"], code=event.data["code"]
@@ -288,7 +288,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
         assert self._client is not None
 
         if self._ffmpeg_manager is None:
-            self._ffmpeg_manager = ffmpeg.get_ffmpeg_manager(self.hass)
+            self._ffmpeg_manager = ffmpeg.get_ffmpeg_manager(self.menuai)
 
         if self._played_event_received is None:
             self._played_event_received = asyncio.Event()
@@ -357,7 +357,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
         self.is_running = True
 
         self.config_entry.async_create_background_task(
-            self.hass, self.run(), "wyoming satellite run"
+            self.menuai, self.run(), "wyoming satellite run"
         )
 
     def stop_satellite(self) -> None:
@@ -381,7 +381,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
         _LOGGER.debug("Running satellite task")
 
         unregister_timer_handler = intent.async_register_timer_handler(
-            self.hass, self.device.device_id, self._handle_timer
+            self.menuai, self.device.device_id, self._handle_timer
         )
 
         try:
@@ -448,7 +448,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
         """Send a pause message to satellite."""
         if self._client is not None:
             self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._client.write_event(PauseSatellite().event()),
                 "pause satellite",
             )
@@ -514,10 +514,10 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
 
         # Read events and check for pipeline end in parallel
         pipeline_ended_task = self.config_entry.async_create_background_task(
-            self.hass, self._pipeline_ended_event.wait(), "satellite pipeline ended"
+            self.menuai, self._pipeline_ended_event.wait(), "satellite pipeline ended"
         )
         client_event_task = self.config_entry.async_create_background_task(
-            self.hass, self._client.read_event(), "satellite event read"
+            self.menuai, self._client.read_event(), "satellite event read"
         )
         pending = {pipeline_ended_task, client_event_task}
 
@@ -529,7 +529,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
                 # Ensure satellite is still connected
                 send_ping = False
                 self.config_entry.async_create_background_task(
-                    self.hass, self._send_delayed_ping(), "ping satellite"
+                    self.menuai, self._send_delayed_ping(), "ping satellite"
                 )
 
             async with asyncio.timeout(_PING_TIMEOUT):
@@ -543,7 +543,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
                     self._pipeline_ended_event.clear()
                     pipeline_ended_task = (
                         self.config_entry.async_create_background_task(
-                            self.hass,
+                            self.menuai,
                             self._pipeline_ended_event.wait(),
                             "satellite pipeline ended",
                         )
@@ -625,7 +625,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
 
                 # Next event
                 client_event_task = self.config_entry.async_create_background_task(
-                    self.hass, self._client.read_event(), "satellite event read"
+                    self.menuai, self._client.read_event(), "satellite event read"
                 )
                 pending.add(client_event_task)
 
@@ -650,7 +650,7 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
         self._is_pipeline_running = True
         self._pipeline_ended_event.clear()
         self.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self.async_accept_pipeline_from_satellite(
                 audio_stream=self._stt_stream(),
                 start_stage=start_stage,
@@ -776,5 +776,5 @@ class WyomingAssistSatellite(WyomingSatelliteEntity, AssistSatelliteEntity):
         if event is not None:
             # Send timer event to satellite
             self.config_entry.async_create_background_task(
-                self.hass, self._client.write_event(event), "wyoming timer event"
+                self.menuai, self._client.write_event(event), "wyoming timer event"
             )

@@ -14,8 +14,8 @@ from aioesphomeapi import (
 )
 import pytest
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_ANNOUNCE,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -33,10 +33,10 @@ from homeassistant.components.media_player import (
     MediaClass,
     MediaType,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from .conftest import MockESPHomeDeviceType, MockGenericDeviceEntryType
 
@@ -45,7 +45,7 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_media_player_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -71,11 +71,11 @@ async def test_media_player_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("media_player.test_mymedia_player")
+    state = menuai.states.get("media_player.test_mymedia_player")
     assert state is not None
     assert state.state == "paused"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {
@@ -89,7 +89,7 @@ async def test_media_player_entity(
     )
     mock_client.media_player_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {
@@ -103,7 +103,7 @@ async def test_media_player_entity(
     )
     mock_client.media_player_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_SET,
         {
@@ -115,7 +115,7 @@ async def test_media_player_entity(
     mock_client.media_player_command.assert_has_calls([call(1, volume=0.5)])
     mock_client.media_player_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PAUSE,
         {
@@ -128,7 +128,7 @@ async def test_media_player_entity(
     )
     mock_client.media_player_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PLAY,
         {
@@ -141,7 +141,7 @@ async def test_media_player_entity(
     )
     mock_client.media_player_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_STOP,
         {
@@ -156,14 +156,14 @@ async def test_media_player_entity(
 
 
 async def test_media_player_entity_with_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
     """Test a generic media_player entity media source."""
-    await async_setup_component(hass, "media_source", {"media_source": {}})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "media_source", {"media_source": {}})
+    await menuai.async_block_till_done()
     esphome_platform_mock = Mock(
         async_get_media_browser_root_object=AsyncMock(
             return_value=[
@@ -190,10 +190,10 @@ async def test_media_player_entity_with_source(
         ),
         async_play_media=AsyncMock(return_value=False),
     )
-    mock_platform(hass, "test.esphome", esphome_platform_mock)
-    await async_setup_component(hass, "test", {"test": {}})
-    await async_setup_component(hass, "media_source", {"media_source": {}})
-    await hass.async_block_till_done()
+    mock_platform(menuai, "test.esphome", esphome_platform_mock)
+    await async_setup_component(menuai, "test", {"test": {}})
+    await async_setup_component(menuai, "media_source", {"media_source": {}})
+    await menuai.async_block_till_done()
 
     entity_info = [
         MediaPlayerInfo(
@@ -216,12 +216,12 @@ async def test_media_player_entity_with_source(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("media_player.test_mymedia_player")
+    state = menuai.states.get("media_player.test_mymedia_player")
     assert state is not None
     assert state.state == "playing"
 
     with pytest.raises(media_source.error.Unresolvable):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -239,13 +239,13 @@ async def test_media_player_entity_with_source(
         mime_type="audio/mp3",
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.media_source.async_resolve_media",
+        "menuai.components.media_source.async_resolve_media",
         return_value=play_media,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -260,7 +260,7 @@ async def test_media_player_entity_with_source(
         [call(1, media_url="http://www.example.com/xy.mp3", announcement=None)]
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -271,7 +271,7 @@ async def test_media_player_entity_with_source(
     response = await client.receive_json()
     assert response["success"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -289,7 +289,7 @@ async def test_media_player_entity_with_source(
 
 
 async def test_media_player_proxy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
@@ -334,12 +334,12 @@ async def test_media_player_proxy(
             )
         ],
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     dev = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mock_device.entry.unique_id)}
     )
     assert dev is not None
-    state = hass.states.get("media_player.test_mymedia_player")
+    state = menuai.states.get("media_player.test_mymedia_player")
     assert state is not None
     assert state.state == "paused"
 
@@ -348,11 +348,11 @@ async def test_media_player_proxy(
 
     with (
         patch(
-            "homeassistant.components.esphome.media_player.async_create_proxy_url",
+            "menuai.components.esphome.media_player.async_create_proxy_url",
             return_value=proxy_url,
         ) as mock_async_create_proxy_url,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -367,7 +367,7 @@ async def test_media_player_proxy(
         mock_async_create_proxy_url.assert_called_once()
         device_id = mock_async_create_proxy_url.call_args[0][1]
         mock_async_create_proxy_url.assert_called_once_with(
-            hass,
+            menuai,
             device_id,
             media_url,
             media_format="flac",
@@ -383,7 +383,7 @@ async def test_media_player_proxy(
         mock_async_create_proxy_url.reset_mock()
 
         # Set announcement flag
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -399,7 +399,7 @@ async def test_media_player_proxy(
         mock_async_create_proxy_url.assert_called_once()
         device_id = mock_async_create_proxy_url.call_args[0][1]
         mock_async_create_proxy_url.assert_called_once_with(
-            hass,
+            menuai,
             device_id,
             media_url,
             media_format="wav",
@@ -413,7 +413,7 @@ async def test_media_player_proxy(
 
         # test with bypass_proxy flag
         mock_async_create_proxy_url.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {

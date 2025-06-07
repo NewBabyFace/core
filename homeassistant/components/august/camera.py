@@ -9,10 +9,10 @@ from yalexs.activity import ActivityType
 from yalexs.doorbell import Doorbell
 from yalexs.util import update_doorbell_image_from_activity
 
-from homeassistant.components.camera import Camera
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AugustConfigEntry, AugustData
 from .const import DEFAULT_NAME, DEFAULT_TIMEOUT
@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AugustConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -31,7 +31,7 @@ async def async_setup_entry(
     # Create an aiohttp session instead of using the default one since the
     # default one is likely to trigger august's WAF if another integration
     # is also using Cloudflare
-    session = aiohttp_client.async_create_clientsession(hass)
+    session = aiohttp_client.async_create_clientsession(menuai)
     async_add_entities(
         AugustCamera(data, doorbell, session, DEFAULT_TIMEOUT)
         for doorbell in data.doorbells

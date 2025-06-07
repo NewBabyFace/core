@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from iaqualink.device import AqualinkDevice
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -34,10 +34,10 @@ class AqualinkEntity[AqualinkDeviceT: AqualinkDevice](Entity):
             name=dev.label,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up a listener when this entity is added to HA."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, DOMAIN, self.async_write_ha_state)
+            async_dispatcher_connect(self.menuai, DOMAIN, self.async_write_ha_state)
         )
 
     @property

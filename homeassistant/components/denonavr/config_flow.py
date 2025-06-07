@@ -10,11 +10,11 @@ import denonavr
 from denonavr.exceptions import AvrNetworkError, AvrTimoutError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_TYPE
-from homeassistant.core import callback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_HOST, CONF_MODEL, CONF_TYPE
+from menuai.core import callback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
     ATTR_UPNP_MODEL_NAME,
@@ -190,7 +190,7 @@ class DenonAvrFlowHandler(ConfigFlow, domain=DOMAIN):
             self.zone3,
             use_telnet=False,
             update_audyssey=False,
-            async_client_getter=lambda: get_async_client(self.hass),
+            async_client_getter=lambda: get_async_client(self.menuai),
         )
 
         try:

@@ -7,7 +7,7 @@ import logging
 from pyhomematic import HMConnection
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     ATTR_NAME,
@@ -21,11 +21,11 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_ADDRESS,
@@ -209,11 +209,11 @@ SCHEMA_SERVICE_PUT_PARAMSET = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Homematic component."""
     conf = config[DOMAIN]
-    hass.data[DATA_CONF] = remotes = {}
-    hass.data[DATA_STORE] = set()
+    menuai.data[DATA_CONF] = remotes = {}
+    menuai.data[DATA_STORE] = set()
 
     # Create hosts-dictionary for pyhomematic
     for rname, rconfig in conf[CONF_INTERFACES].items():
@@ -242,23 +242,23 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         }
 
     # Create server thread
-    bound_system_callback = partial(_system_callback_handler, hass, config)
-    hass.data[DATA_HOMEMATIC] = homematic = HMConnection(
+    bound_system_callback = partial(_system_callback_handler, menuai, config)
+    menuai.data[DATA_HOMEMATIC] = homematic = HMConnection(
         local=config[DOMAIN].get(CONF_LOCAL_IP),
         localport=config[DOMAIN].get(CONF_LOCAL_PORT, DEFAULT_LOCAL_PORT),
         remotes=remotes,
         systemcallback=bound_system_callback,
-        interface_id="homeassistant",
+        interface_id="menuai",
     )
 
     # Start server thread, connect to hosts, initialize to receive events
     homematic.start()
 
-    # Stops server when Home Assistant is shutting down
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, hass.data[DATA_HOMEMATIC].stop)
+    # Stops server when MenuAI is shutting down
+    menuai.bus.listen_once(EVENT_menuai_STOP, menuai.data[DATA_HOMEMATIC].stop)
 
     # Init homematic hubs
-    entity_hubs = [HMHub(hass, homematic, hub_name) for hub_name in conf[CONF_HOSTS]]
+    entity_hubs = [HMHub(menuai, homematic, hub_name) for hub_name in conf[CONF_HOSTS]]
 
     def _hm_service_virtualkey(service: ServiceCall) -> None:
         """Service to handle virtualkey servicecalls."""
@@ -267,7 +267,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         param = service.data.get(ATTR_PARAM)
 
         # Device not found
-        hmdevice = _device_from_servicecall(hass, service)
+        hmdevice = _device_from_servicecall(menuai, service)
         if hmdevice is None:
             _LOGGER.error("%s not found for service virtualkey!", address)
             return
@@ -285,7 +285,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # Call parameter
         hmdevice.actionNodeData(param, True, channel)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_VIRTUALKEY,
         _hm_service_virtualkey,
@@ -312,7 +312,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         for hub in entities:
             hub.hm_set_variable(name, value)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_SET_VARIABLE_VALUE,
         _service_handle_value,
@@ -323,7 +323,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Service to reconnect all HomeMatic hubs."""
         homematic.reconnect()
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_RECONNECT,
         _service_handle_reconnect,
@@ -354,14 +354,14 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 value = str(value)
 
         # Device not found
-        hmdevice = _device_from_servicecall(hass, service)
+        hmdevice = _device_from_servicecall(menuai, service)
         if hmdevice is None:
             _LOGGER.error("%s not found!", address)
             return
 
         hmdevice.setValue(param, value, channel)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_SET_DEVICE_VALUE,
         _service_handle_device,
@@ -377,7 +377,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         homematic.setInstallMode(interface, t=time, mode=mode, address=address)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_SET_INSTALL_MODE,
         _service_handle_install_mode,
@@ -405,7 +405,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
         homematic.putParamset(interface, address, paramset_key, paramset, rx_mode)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_PUT_PARAMSET,
         _service_put_paramset,
@@ -415,7 +415,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-def _system_callback_handler(hass, config, src, *args):
+def _system_callback_handler(menuai, config, src, *args):
     """System callback handler."""
     # New devices available at hub
     if src == "newDevices":
@@ -423,26 +423,26 @@ def _system_callback_handler(hass, config, src, *args):
         interface = interface_id.split("-")[-1]
 
         # Device support active?
-        if not hass.data[DATA_CONF][interface]["connect"]:
+        if not menuai.data[DATA_CONF][interface]["connect"]:
             return
 
         addresses = []
         for dev in dev_descriptions:
             address = dev["ADDRESS"].split(":")[0]
-            if address not in hass.data[DATA_STORE]:
-                hass.data[DATA_STORE].add(address)
+            if address not in menuai.data[DATA_STORE]:
+                menuai.data[DATA_STORE].add(address)
                 addresses.append(address)
 
         # Register EVENTS
         # Search all devices with an EVENTNODE that includes data
-        bound_event_callback = partial(_hm_event_handler, hass, interface)
+        bound_event_callback = partial(_hm_event_handler, menuai, interface)
         for dev in addresses:
-            hmdevice = hass.data[DATA_HOMEMATIC].devices[interface].get(dev)
+            hmdevice = menuai.data[DATA_HOMEMATIC].devices[interface].get(dev)
 
             if hmdevice.EVENTNODE:
                 hmdevice.setEventCallback(callback=bound_event_callback, bequeath=True)
 
-        # Create Home Assistant entities
+        # Create MenuAI entities
         if addresses:
             for component_name, discovery_type in (
                 ("switch", DISCOVER_SWITCHES),
@@ -455,13 +455,13 @@ def _system_callback_handler(hass, config, src, *args):
                 ("binary_sensor", DISCOVER_BATTERY),
             ):
                 # Get all devices of a specific type
-                found_devices = _get_devices(hass, discovery_type, addresses, interface)
+                found_devices = _get_devices(menuai, discovery_type, addresses, interface)
 
                 # When devices of this type are found
-                # they are setup in Home Assistant and a discovery event is fired
+                # they are setup in MenuAI and a discovery event is fired
                 if found_devices:
                     discovery.load_platform(
-                        hass,
+                        menuai,
                         component_name,
                         DOMAIN,
                         {
@@ -475,15 +475,15 @@ def _system_callback_handler(hass, config, src, *args):
     elif src == "error":
         _LOGGER.error("Error: %s", args)
         (interface_id, errorcode, message) = args
-        hass.bus.fire(EVENT_ERROR, {ATTR_ERRORCODE: errorcode, ATTR_MESSAGE: message})
+        menuai.bus.fire(EVENT_ERROR, {ATTR_ERRORCODE: errorcode, ATTR_MESSAGE: message})
 
 
-def _get_devices(hass, discovery_type, keys, interface):
+def _get_devices(menuai, discovery_type, keys, interface):
     """Get the HomeMatic devices for given discovery_type."""
     device_arr = []
 
     for key in keys:
-        device = hass.data[DATA_HOMEMATIC].devices[interface][key]
+        device = menuai.data[DATA_HOMEMATIC].devices[interface][key]
         class_name = device.__class__.__name__
         metadata = {}
 
@@ -575,12 +575,12 @@ def _create_ha_id(name, channel, param, count):
     raise ValueError(f"Unable to create unique id for count:{count} and param:{param}")
 
 
-def _hm_event_handler(hass, interface, device, caller, attribute, value):
+def _hm_event_handler(menuai, interface, device, caller, attribute, value):
     """Handle all pyhomematic device events."""
     try:
         channel = int(device.split(":")[1])
         address = device.split(":")[0]
-        hmdevice = hass.data[DATA_HOMEMATIC].devices[interface].get(address)
+        hmdevice = menuai.data[DATA_HOMEMATIC].devices[interface].get(address)
     except (TypeError, ValueError):
         _LOGGER.error("Event handling channel convert error!")
         return
@@ -593,7 +593,7 @@ def _hm_event_handler(hass, interface, device, caller, attribute, value):
 
     # Keypress event
     if attribute in HM_PRESS_EVENTS:
-        hass.bus.fire(
+        menuai.bus.fire(
             EVENT_KEYPRESS,
             {ATTR_NAME: hmdevice.NAME, ATTR_PARAM: attribute, ATTR_CHANNEL: channel},
         )
@@ -601,13 +601,13 @@ def _hm_event_handler(hass, interface, device, caller, attribute, value):
 
     # Impulse event
     if attribute in HM_IMPULSE_EVENTS:
-        hass.bus.fire(EVENT_IMPULSE, {ATTR_NAME: hmdevice.NAME, ATTR_CHANNEL: channel})
+        menuai.bus.fire(EVENT_IMPULSE, {ATTR_NAME: hmdevice.NAME, ATTR_CHANNEL: channel})
         return
 
     _LOGGER.warning("Event is unknown and not forwarded")
 
 
-def _device_from_servicecall(hass, service):
+def _device_from_servicecall(menuai, service):
     """Extract HomeMatic device from service call."""
     address = service.data.get(ATTR_ADDRESS)
     interface = service.data.get(ATTR_INTERFACE)
@@ -617,9 +617,9 @@ def _device_from_servicecall(hass, service):
         address = "HmIP-RCV-1"
 
     if interface:
-        return hass.data[DATA_HOMEMATIC].devices[interface].get(address)
+        return menuai.data[DATA_HOMEMATIC].devices[interface].get(address)
 
-    for devices in hass.data[DATA_HOMEMATIC].devices.values():
+    for devices in menuai.data[DATA_HOMEMATIC].devices.values():
         if address in devices:
             return devices[address]
     return None

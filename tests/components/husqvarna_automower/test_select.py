@@ -7,9 +7,9 @@ from aioautomower.model import HeadlightModes, MowerAttributes
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.husqvarna_automower.coordinator import SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.husqvarna_automower.coordinator import SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import setup_integration
 from .const import TEST_MOWER_ID
@@ -18,15 +18,15 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_select_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     values: dict[str, MowerAttributes],
 ) -> None:
     """Test states of headlight mode select."""
-    await setup_integration(hass, mock_config_entry)
-    state = hass.states.get("select.test_mower_1_headlight_mode")
+    await setup_integration(menuai, mock_config_entry)
+    state = menuai.states.get("select.test_mower_1_headlight_mode")
     assert state is not None
     assert state.state == "evening_only"
 
@@ -41,9 +41,9 @@ async def test_select_states(
         values[TEST_MOWER_ID].settings.headlight.mode = state
         mock_automower_client.get_status.return_value = values
         freezer.tick(SCAN_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
-        state = hass.states.get("select.test_mower_1_headlight_mode")
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
+        state = menuai.states.get("select.test_mower_1_headlight_mode")
         assert state.state == expected_state
 
 
@@ -57,14 +57,14 @@ async def test_select_states(
     ],
 )
 async def test_select_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test select commands for headlight mode."""
-    await setup_integration(hass, mock_config_entry)
-    await hass.services.async_call(
+    await setup_integration(menuai, mock_config_entry)
+    await menuai.services.async_call(
         domain="select",
         service="select_option",
         service_data={
@@ -79,10 +79,10 @@ async def test_select_commands(
 
     mocked_method.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain="select",
             service="select_option",
             service_data={

@@ -4,7 +4,7 @@ from typing import Final
 
 from uiprotect.data import ModelType, Version
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "unifiprotect"
 # If rate limit for 4.x or later a 429 is returned

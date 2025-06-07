@@ -6,7 +6,7 @@ from typing import TypedDict
 
 from aiosolaredge import SolarEdge
 
-from homeassistant.config_entries import ConfigEntry
+from menuai.config_entries import ConfigEntry
 
 type SolarEdgeConfigEntry = ConfigEntry[SolarEdgeData]
 

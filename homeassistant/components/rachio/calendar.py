@@ -4,16 +4,16 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     CalendarEntity,
     CalendarEntityFeature,
     CalendarEvent,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import (
     KEY_ADDRESS,
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RachioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -119,11 +119,11 @@ class RachioCalendarEntity(
         return event
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
         if not self.coordinator.data:
-            raise HomeAssistantError("No events scheduled")
+            raise menuaiError("No events scheduled")
         schedule = self.coordinator.data
         event_list: list[CalendarEvent] = []
 
@@ -169,7 +169,7 @@ class RachioCalendarEntity(
     ) -> None:
         """Skip an upcoming event on the calendar."""
         program, timestamp = uid.split("/")
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.base_station.create_skip, program, timestamp
         )
         await self.coordinator.async_refresh()

@@ -12,7 +12,7 @@ from aioesphomeapi import (
 )
 import pytest
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -36,8 +36,8 @@ from homeassistant.components.light import (
     STATE_ON,
     ColorMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .conftest import MockGenericDeviceEntryType
 
@@ -45,7 +45,7 @@ LIGHT_COLOR_CAPABILITY_UNKNOWN = 1 << 8  # 256
 
 
 async def test_light_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -70,11 +70,11 @@ async def test_light_on_off(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -87,7 +87,7 @@ async def test_light_on_off(
 
 
 async def test_light_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -112,11 +112,11 @@ async def test_light_brightness(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -127,7 +127,7 @@ async def test_light_brightness(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -145,7 +145,7 @@ async def test_light_brightness(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_TRANSITION: 2},
@@ -156,7 +156,7 @@ async def test_light_brightness(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_FLASH: FLASH_LONG},
@@ -167,7 +167,7 @@ async def test_light_brightness(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_TRANSITION: 2},
@@ -185,7 +185,7 @@ async def test_light_brightness(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_FLASH: FLASH_SHORT},
@@ -205,7 +205,7 @@ async def test_light_brightness(
 
 
 async def test_light_legacy_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -234,14 +234,14 @@ async def test_light_legacy_brightness(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [
         ColorMode.BRIGHTNESS,
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -254,7 +254,7 @@ async def test_light_legacy_brightness(
 
 
 async def test_light_brightness_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -283,7 +283,7 @@ async def test_light_brightness_on_off(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [
@@ -291,7 +291,7 @@ async def test_light_brightness_on_off(
     ]
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.BRIGHTNESS
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -308,7 +308,7 @@ async def test_light_brightness_on_off(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -328,7 +328,7 @@ async def test_light_brightness_on_off(
 
 
 async def test_light_legacy_white_converted_to_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -357,11 +357,11 @@ async def test_light_legacy_white_converted_to_brightness(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -382,7 +382,7 @@ async def test_light_legacy_white_converted_to_brightness(
 
 
 async def test_light_legacy_white_with_rgb(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -417,7 +417,7 @@ async def test_light_legacy_white_with_rgb(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [
@@ -425,7 +425,7 @@ async def test_light_legacy_white_with_rgb(
         ColorMode.WHITE,
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_WHITE: 60},
@@ -446,7 +446,7 @@ async def test_light_legacy_white_with_rgb(
 
 
 async def test_light_brightness_on_off_with_unknown_color_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -480,11 +480,11 @@ async def test_light_brightness_on_off_with_unknown_color_mode(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -501,7 +501,7 @@ async def test_light_brightness_on_off_with_unknown_color_mode(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -521,7 +521,7 @@ async def test_light_brightness_on_off_with_unknown_color_mode(
 
 
 async def test_light_on_and_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -549,11 +549,11 @@ async def test_light_on_and_brightness(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -566,7 +566,7 @@ async def test_light_on_and_brightness(
 
 
 async def test_rgb_color_temp_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -602,11 +602,11 @@ async def test_rgb_color_temp_light(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -623,7 +623,7 @@ async def test_rgb_color_temp_light(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -641,7 +641,7 @@ async def test_rgb_color_temp_light(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_COLOR_TEMP_KELVIN: 2500},
@@ -661,7 +661,7 @@ async def test_rgb_color_temp_light(
 
 
 async def test_light_rgb(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -688,11 +688,11 @@ async def test_light_rgb(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -711,7 +711,7 @@ async def test_light_rgb(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -731,7 +731,7 @@ async def test_light_rgb(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -757,7 +757,7 @@ async def test_light_rgb(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGB_COLOR: (255, 255, 255)},
@@ -780,7 +780,7 @@ async def test_light_rgb(
 
 
 async def test_light_rgbw(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -822,13 +822,13 @@ async def test_light_rgbw(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [ColorMode.RGBW]
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.RGBW
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -848,7 +848,7 @@ async def test_light_rgbw(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -869,7 +869,7 @@ async def test_light_rgbw(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -897,7 +897,7 @@ async def test_light_rgbw(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGB_COLOR: (255, 255, 255)},
@@ -920,7 +920,7 @@ async def test_light_rgbw(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGBW_COLOR: (255, 255, 255, 255)},
@@ -945,7 +945,7 @@ async def test_light_rgbw(
 
 
 async def test_light_rgbww_with_cold_warm_white_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -992,7 +992,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [
@@ -1005,7 +1005,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.RGBWW
     assert state.attributes[ATTR_RGBWW_COLOR] == (255, 255, 255, 255, 255)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1022,7 +1022,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -1040,7 +1040,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1064,7 +1064,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGB_COLOR: (255, 255, 255)},
@@ -1083,7 +1083,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGBW_COLOR: (255, 255, 255, 255)},
@@ -1103,7 +1103,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1127,7 +1127,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_COLOR_TEMP_KELVIN: 2500},
@@ -1147,7 +1147,7 @@ async def test_light_rgbww_with_cold_warm_white_support(
 
 
 async def test_light_rgbww_without_cold_warm_white_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1194,14 +1194,14 @@ async def test_light_rgbww_without_cold_warm_white_support(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [ColorMode.RGBWW]
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.RGBWW
     assert state.attributes[ATTR_RGBWW_COLOR] == (255, 255, 255, 255, 0)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1222,7 +1222,7 @@ async def test_light_rgbww_without_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -1244,7 +1244,7 @@ async def test_light_rgbww_without_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1274,7 +1274,7 @@ async def test_light_rgbww_without_cold_warm_white_support(
 
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGB_COLOR: (255, 255, 255)},
@@ -1299,7 +1299,7 @@ async def test_light_rgbww_without_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGBW_COLOR: (255, 255, 255, 255)},
@@ -1324,7 +1324,7 @@ async def test_light_rgbww_without_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1352,7 +1352,7 @@ async def test_light_rgbww_without_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_COLOR_TEMP_KELVIN: 2500},
@@ -1379,7 +1379,7 @@ async def test_light_rgbww_without_cold_warm_white_support(
 
 
 async def test_light_color_temp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1416,14 +1416,14 @@ async def test_light_color_temp(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     attributes = state.attributes
 
     assert attributes[ATTR_MIN_COLOR_TEMP_KELVIN] == 2700
     assert attributes[ATTR_MAX_COLOR_TEMP_KELVIN] == 6500
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1442,7 +1442,7 @@ async def test_light_color_temp(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1453,7 +1453,7 @@ async def test_light_color_temp(
 
 
 async def test_light_color_temp_no_mireds_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1490,14 +1490,14 @@ async def test_light_color_temp_no_mireds_set(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     attributes = state.attributes
 
     assert attributes[ATTR_MIN_COLOR_TEMP_KELVIN] == 0
     assert attributes[ATTR_MAX_COLOR_TEMP_KELVIN] == 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1516,7 +1516,7 @@ async def test_light_color_temp_no_mireds_set(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_COLOR_TEMP_KELVIN: 6000},
@@ -1536,7 +1536,7 @@ async def test_light_color_temp_no_mireds_set(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1547,7 +1547,7 @@ async def test_light_color_temp_no_mireds_set(
 
 
 async def test_light_color_temp_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1591,7 +1591,7 @@ async def test_light_color_temp_legacy(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     attributes = state.attributes
@@ -1601,7 +1601,7 @@ async def test_light_color_temp_legacy(
 
     assert attributes[ATTR_MIN_COLOR_TEMP_KELVIN] == 2700
     assert attributes[ATTR_MAX_COLOR_TEMP_KELVIN] == 6500
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1620,7 +1620,7 @@ async def test_light_color_temp_legacy(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1631,7 +1631,7 @@ async def test_light_color_temp_legacy(
 
 
 async def test_light_rgb_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1677,14 +1677,14 @@ async def test_light_rgb_legacy(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     attributes = state.attributes
     assert attributes[ATTR_SUPPORTED_COLOR_MODES] == [ColorMode.RGB]
     assert attributes[ATTR_COLOR_MODE] == ColorMode.RGB
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1700,7 +1700,7 @@ async def test_light_rgb_legacy(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1709,7 +1709,7 @@ async def test_light_rgb_legacy(
     mock_client.light_command.assert_has_calls([call(key=1, state=False)])
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_RGB_COLOR: (255, 255, 255)},
@@ -1729,7 +1729,7 @@ async def test_light_rgb_legacy(
 
 
 async def test_light_effects(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1762,12 +1762,12 @@ async def test_light_effects(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_EFFECT_LIST] == ["effect1", "effect2"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_EFFECT: "effect1"},
@@ -1787,7 +1787,7 @@ async def test_light_effects(
 
 
 async def test_only_cold_warm_white_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1830,13 +1830,13 @@ async def test_only_cold_warm_white_support(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [ColorMode.COLOR_TEMP]
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.COLOR_TEMP
     assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},
@@ -1847,7 +1847,7 @@ async def test_only_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_BRIGHTNESS: 127},
@@ -1865,7 +1865,7 @@ async def test_only_cold_warm_white_support(
     )
     mock_client.light_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight", ATTR_COLOR_TEMP_KELVIN: 2500},
@@ -1885,7 +1885,7 @@ async def test_only_cold_warm_white_support(
 
 
 async def test_light_no_color_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -1911,12 +1911,12 @@ async def test_light_no_color_modes(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("light.test_mylight")
+    state = menuai.states.get("light.test_mylight")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [ColorMode.ONOFF]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_mylight"},

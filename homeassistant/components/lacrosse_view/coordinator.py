@@ -8,10 +8,10 @@ from time import time
 
 from lacrosse_view import HTTPError, LaCrosse, Location, LoginError, Sensor
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, SCAN_INTERVAL
 
@@ -25,13 +25,13 @@ class LaCrosseUpdateCoordinator(DataUpdateCoordinator[list[Sensor]]):
     password: str
     name: str
     id: str
-    hass: HomeAssistant
+    menuai: menuai
     devices: list[Sensor] | None = None
     config_entry: ConfigEntry
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
         api: LaCrosse,
     ) -> None:
@@ -40,11 +40,11 @@ class LaCrosseUpdateCoordinator(DataUpdateCoordinator[list[Sensor]]):
         self.last_update = time()
         self.username = entry.data["username"]
         self.password = entry.data["password"]
-        self.hass = hass
+        self.menuai = menuai
         self.name = entry.data["name"]
         self.id = entry.data["id"]
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name="LaCrosse View",
@@ -77,7 +77,7 @@ class LaCrosseUpdateCoordinator(DataUpdateCoordinator[list[Sensor]]):
             for sensor in self.devices:
                 data = await self.api.get_sensor_status(
                     sensor=sensor,
-                    tz=self.hass.config.time_zone,
+                    tz=self.menuai.config.time_zone,
                 )
                 _LOGGER.debug("Got data: %s", data)
 

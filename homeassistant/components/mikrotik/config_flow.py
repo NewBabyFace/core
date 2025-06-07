@@ -7,20 +7,20 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .const import (
     CONF_ARP_PING,
@@ -57,7 +57,7 @@ class MikrotikFlowHandler(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
 
             try:
-                await self.hass.async_add_executor_job(get_api, user_input)
+                await self.menuai.async_add_executor_job(get_api, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except LoginError:
@@ -98,7 +98,7 @@ class MikrotikFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input = {**reauth_entry.data, **user_input}
             try:
-                await self.hass.async_add_executor_job(get_api, user_input)
+                await self.menuai.async_add_executor_job(get_api, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except LoginError:

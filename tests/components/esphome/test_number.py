@@ -12,20 +12,20 @@ from aioesphomeapi import (
 )
 import pytest
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_UNIT_OF_MEASUREMENT, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID, ATTR_UNIT_OF_MEASUREMENT, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_generic_number_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -50,11 +50,11 @@ async def test_generic_number_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("number.test_mynumber")
+    state = menuai.states.get("number.test_mynumber")
     assert state is not None
     assert state.state == "50"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: "number.test_mynumber", ATTR_VALUE: 50},
@@ -65,7 +65,7 @@ async def test_generic_number_entity(
 
 
 async def test_generic_number_nan(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -91,13 +91,13 @@ async def test_generic_number_nan(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("number.test_mynumber")
+    state = menuai.states.get("number.test_mynumber")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
 
 async def test_generic_number_with_unit_of_measurement_as_empty_string(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -123,14 +123,14 @@ async def test_generic_number_with_unit_of_measurement_as_empty_string(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("number.test_mynumber")
+    state = menuai.states.get("number.test_mynumber")
     assert state is not None
     assert state.state == "42"
     assert ATTR_UNIT_OF_MEASUREMENT not in state.attributes
 
 
 async def test_generic_number_entity_set_when_disconnected(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -158,8 +158,8 @@ async def test_generic_number_entity_set_when_disconnected(
 
     mock_client.number_command = Mock(side_effect=APIConnectionError("Not connected"))
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: "number.test_mynumber", ATTR_VALUE: 20},

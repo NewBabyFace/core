@@ -6,9 +6,9 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from weheat.abstractions.discovery import HeatPumpDiscovery
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_weheat_discover: AsyncMock,
     mock_weheat_heat_pump: AsyncMock,
@@ -25,17 +25,17 @@ async def test_all_entities(
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.weheat.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.weheat.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(("has_dhw", "nr_of_entities"), [(False, 16), (True, 19)])
 async def test_create_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_weheat_discover: AsyncMock,
     mock_weheat_heat_pump: AsyncMock,
     mock_heat_pump_info: HeatPumpDiscovery.HeatPumpInfo,
@@ -47,8 +47,8 @@ async def test_create_entities(
     mock_heat_pump_info.has_dhw = has_dhw
     mock_weheat_discover.return_value = [mock_heat_pump_info]
 
-    with patch("homeassistant.components.weheat.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.weheat.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == nr_of_entities
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == nr_of_entities

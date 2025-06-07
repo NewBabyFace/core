@@ -20,7 +20,7 @@ from annotatedyaml.loader import (
 )
 import yaml
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 __all__ = [
     "HAS_C_LOADER",
@@ -40,13 +40,13 @@ def load_yaml(
 ) -> JSON_TYPE | None:
     """Load a YAML file.
 
-    If opening the file raises an OSError it will be wrapped in a HomeAssistantError,
+    If opening the file raises an OSError it will be wrapped in a menuaiError,
     except for FileNotFoundError which will be re-raised.
     """
     try:
         return load_annotated_yaml(fname, secrets)
     except YAMLException as exc:
-        raise HomeAssistantError(str(exc)) from exc
+        raise menuaiError(str(exc)) from exc
 
 
 def load_yaml_dict(
@@ -62,7 +62,7 @@ def load_yaml_dict(
     except YamlTypeError:
         raise
     except YAMLException as exc:
-        raise HomeAssistantError(str(exc)) from exc
+        raise menuaiError(str(exc)) from exc
 
 
 def parse_yaml(
@@ -72,7 +72,7 @@ def parse_yaml(
     try:
         return parse_annotated_yaml(content, secrets)
     except YAMLException as exc:
-        raise HomeAssistantError(str(exc)) from exc
+        raise menuaiError(str(exc)) from exc
 
 
 def secret_yaml(loader: LoaderType, node: yaml.nodes.Node) -> JSON_TYPE:
@@ -80,4 +80,4 @@ def secret_yaml(loader: LoaderType, node: yaml.nodes.Node) -> JSON_TYPE:
     try:
         return annotated_secret_yaml(loader, node)
     except YAMLException as exc:
-        raise HomeAssistantError(str(exc)) from exc
+        raise menuaiError(str(exc)) from exc

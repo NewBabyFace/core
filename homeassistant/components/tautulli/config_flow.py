@@ -8,9 +8,9 @@ from typing import Any
 from pytautulli import PyTautulli, PyTautulliException, exceptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -79,7 +79,7 @@ class TautulliConfigFlow(ConfigFlow, domain=DOMAIN):
                 api_token=user_input[CONF_API_KEY],
                 url=user_input[CONF_URL],
                 session=async_get_clientsession(
-                    self.hass, user_input.get(CONF_VERIFY_SSL, True)
+                    self.menuai, user_input.get(CONF_VERIFY_SSL, True)
                 ),
                 verify_ssl=user_input.get(CONF_VERIFY_SSL, True),
             )

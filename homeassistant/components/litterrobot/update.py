@@ -7,15 +7,15 @@ from typing import Any
 
 from pylitterbot import LitterRobot4
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import LitterRobotConfigEntry
 from .entity import LitterRobotEntity
@@ -29,7 +29,7 @@ FIRMWARE_UPDATE_ENTITY = UpdateEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LitterRobotConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,4 +85,4 @@ class RobotUpdateEntity(LitterRobotEntity[LitterRobot4], UpdateEntity):
         if await self.robot.has_firmware_update(True):
             if not await self.robot.update_firmware():
                 message = f"Unable to start firmware update on {self.robot.name}"
-                raise HomeAssistantError(message)
+                raise menuaiError(message)

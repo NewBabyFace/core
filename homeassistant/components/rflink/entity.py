@@ -7,12 +7,12 @@ import logging
 
 from rflink.protocol import ProtocolBase
 
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_STATE, STATE_ON
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import ATTR_ENTITY_ID, ATTR_STATE, STATE_ON
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     DATA_ENTITY_GROUP_LOOKUP,
@@ -80,7 +80,7 @@ class RflinkDevice(Entity):
 
         # Put command onto bus for user to subscribe to
         if self._should_fire_event and identify_event_type(event) == EVENT_KEY_COMMAND:
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 EVENT_BUTTON_PRESSED,
                 {ATTR_ENTITY_ID: self.entity_id, ATTR_STATE: event[EVENT_KEY_COMMAND]},
             )
@@ -120,56 +120,56 @@ class RflinkDevice(Entity):
         self._available = availability
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         # Remove temporary bogus entity_id if added
         tmp_entity = TMP_ENTITY.format(self._device_id)
         if (
             tmp_entity
-            in self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][self._device_id]
+            in self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][self._device_id]
         ):
-            self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][
+            self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][
                 self._device_id
             ].remove(tmp_entity)
 
         # Register id and aliases
-        self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][self._device_id].append(
+        self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][self._device_id].append(
             self.entity_id
         )
         if self._group:
-            self.hass.data[DATA_ENTITY_GROUP_LOOKUP][EVENT_KEY_COMMAND][
+            self.menuai.data[DATA_ENTITY_GROUP_LOOKUP][EVENT_KEY_COMMAND][
                 self._device_id
             ].append(self.entity_id)
         # aliases respond to both normal and group commands (allon/alloff)
         if self._aliases:
             for _id in self._aliases:
-                self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][_id].append(
+                self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][_id].append(
                     self.entity_id
                 )
-                self.hass.data[DATA_ENTITY_GROUP_LOOKUP][EVENT_KEY_COMMAND][_id].append(
+                self.menuai.data[DATA_ENTITY_GROUP_LOOKUP][EVENT_KEY_COMMAND][_id].append(
                     self.entity_id
                 )
         # group_aliases only respond to group commands (allon/alloff)
         if self._group_aliases:
             for _id in self._group_aliases:
-                self.hass.data[DATA_ENTITY_GROUP_LOOKUP][EVENT_KEY_COMMAND][_id].append(
+                self.menuai.data[DATA_ENTITY_GROUP_LOOKUP][EVENT_KEY_COMMAND][_id].append(
                     self.entity_id
                 )
         # nogroup_aliases only respond to normal commands
         if self._nogroup_aliases:
             for _id in self._nogroup_aliases:
-                self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][_id].append(
+                self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND][_id].append(
                     self.entity_id
                 )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_AVAILABILITY, self._availability_callback
+                self.menuai, SIGNAL_AVAILABILITY, self._availability_callback
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_HANDLE_EVENT.format(self.entity_id),
                 self.handle_event_callback,
             )
@@ -278,7 +278,7 @@ class RflinkCommand(RflinkDevice):
         _LOGGER.debug("Sending command: %s to Rflink device: %s", cmd, self._device_id)
 
         if not self.is_connected():
-            raise HomeAssistantError("Cannot send command, not connected!")
+            raise menuaiError("Cannot send command, not connected!")
 
         if self._wait_ack:
             # Puts command on outgoing buffer then waits for Rflink to confirm
@@ -292,7 +292,7 @@ class RflinkCommand(RflinkDevice):
             self._protocol.send_command(self._device_id, cmd)
 
         if repetitions > 1:
-            self._repetition_task = self.hass.async_create_task(
+            self._repetition_task = self.menuai.async_create_task(
                 self._async_send_command(cmd, repetitions - 1), eager_start=False
             )
 
@@ -300,9 +300,9 @@ class RflinkCommand(RflinkDevice):
 class SwitchableRflinkDevice(RflinkCommand, RestoreEntity):
     """Rflink entity which can switch on/off (eg: light, switch)."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore RFLink device state (ON/OFF)."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (old_state := await self.async_get_last_state()) is not None:
             self._state = old_state.state == STATE_ON
 

@@ -8,10 +8,10 @@ from unittest.mock import patch
 import pytest
 from pytrafikverket.models import FerryStopModel
 
-from homeassistant.components.trafikverket_ferry.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.trafikverket_ferry.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import ENTRY_CONFIG
 
@@ -20,9 +20,9 @@ from tests.common import MockConfigEntry
 
 @pytest.fixture(name="load_int")
 async def load_integration_from_entry(
-    hass: HomeAssistant, get_ferries: list[FerryStopModel]
+    menuai: menuai, get_ferries: list[FerryStopModel]
 ) -> MockConfigEntry:
-    """Set up the Trafikverket Ferry integration in Home Assistant."""
+    """Set up the Trafikverket Ferry integration in MenuAI."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         source=SOURCE_USER,
@@ -31,14 +31,14 @@ async def load_integration_from_entry(
         unique_id="123",
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_ferry.coordinator.TrafikverketFerry.async_get_next_ferry_stops",
+        "menuai.components.trafikverket_ferry.coordinator.TrafikverketFerry.async_get_next_ferry_stops",
         return_value=get_ferries,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry
 

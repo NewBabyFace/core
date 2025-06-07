@@ -6,16 +6,16 @@ import xml.etree.ElementTree as ET
 from pylgnetcast import AccessTokenError, LgNetCastClient, SessionIdError
 import requests
 
-from homeassistant.components.lg_netcast import DOMAIN
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.const import (
+from menuai.components.lg_netcast import DOMAIN
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_HOST,
     CONF_ID,
     CONF_MODEL,
     CONF_NAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -89,12 +89,12 @@ def _patch_lg_netcast(
         )
 
     return patch(
-        "homeassistant.components.lg_netcast.config_flow.LgNetCastClient",
+        "menuai.components.lg_netcast.config_flow.LgNetCastClient",
         new=_generate_fake_lgnetcast_client,
     )
 
 
-async def setup_lgnetcast(hass: HomeAssistant, unique_id: str = UNIQUE_ID):
+async def setup_lgnetcast(menuai: menuai, unique_id: str = UNIQUE_ID):
     """Initialize lg netcast and media_player for tests."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -108,9 +108,9 @@ async def setup_lgnetcast(hass: HomeAssistant, unique_id: str = UNIQUE_ID):
         title=MODEL_NAME,
         unique_id=unique_id,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry

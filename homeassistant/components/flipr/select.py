@@ -2,9 +2,9 @@
 
 import logging
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import FliprConfigEntry
 from .entity import FliprEntity
@@ -21,7 +21,7 @@ SELECT_TYPES: tuple[SelectEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FliprConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -47,7 +47,7 @@ class FliprHubSelect(FliprEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Select new mode for Hub."""
         _LOGGER.debug("Changing mode of %s to %s", self.device_id, option)
-        data = await self.hass.async_add_executor_job(
+        data = await self.menuai.async_add_executor_job(
             self.coordinator.client.set_hub_mode,
             self.device_id,
             option,

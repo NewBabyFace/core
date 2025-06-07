@@ -18,33 +18,33 @@ from freezegun import freeze_time
 from sqlalchemy import create_engine, event as sqlalchemy_event
 from sqlalchemy.orm.session import Session
 
-from homeassistant import core as ha
-from homeassistant.components import recorder
-from homeassistant.components.recorder import (
+from menuai import core as ha
+from menuai.components import recorder
+from menuai.components.recorder import (
     Recorder,
     core,
     get_instance,
     migration,
     statistics,
 )
-from homeassistant.components.recorder.db_schema import (
+from menuai.components.recorder.db_schema import (
     Events,
     EventTypes,
     RecorderRuns,
     States,
     StatesMeta,
 )
-from homeassistant.components.recorder.tasks import RecorderTask, StatisticsTask
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import DEGREE, UnitOfTemperature
-from homeassistant.core import Event, HomeAssistant, State
-from homeassistant.helpers import recorder as recorder_helper
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.tasks import RecorderTask, StatisticsTask
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.const import DEGREE, UnitOfTemperature
+from menuai.core import Event, menuai, State
+from menuai.helpers import recorder as recorder_helper
+from menuai.util import dt as dt_util
 
 from . import db_schema_0
 
 DEFAULT_PURGE_TASKS = 3
-CREATE_ENGINE_TARGET = "homeassistant.components.recorder.core.create_engine"
+CREATE_ENGINE_TARGET = "menuai.components.recorder.core.create_engine"
 
 
 @dataclass
@@ -56,7 +56,7 @@ class BlockRecorderTask(RecorderTask):
 
     def run(self, instance: Recorder) -> None:
         """Block the recorders event loop."""
-        instance.hass.loop.call_soon_threadsafe(self.event.set)
+        instance.menuai.loop.call_soon_threadsafe(self.event.set)
         time.sleep(self.seconds)
 
 
@@ -69,7 +69,7 @@ class ForceReturnConnectionToPool(RecorderTask):
         instance.event_session.commit()
 
 
-async def async_block_recorder(hass: HomeAssistant, seconds: float) -> None:
+async def async_block_recorder(menuai: menuai, seconds: float) -> None:
     """Block the recorders event loop for testing.
 
     Returns as soon as the recorder has started the block.
@@ -77,13 +77,13 @@ async def async_block_recorder(hass: HomeAssistant, seconds: float) -> None:
     Does not wait for the block to finish.
     """
     event = asyncio.Event()
-    get_instance(hass).queue_task(BlockRecorderTask(event, seconds))
+    get_instance(menuai).queue_task(BlockRecorderTask(event, seconds))
     await event.wait()
 
 
-async def async_wait_recorder(hass: HomeAssistant) -> bool:
+async def async_wait_recorder(menuai: menuai) -> bool:
     """Wait for recorder to initialize and return connection status."""
-    return await hass.data[recorder_helper.DATA_RECORDER].db_connected
+    return await menuai.data[recorder_helper.DATA_RECORDER].db_connected
 
 
 def get_start_time(start: datetime) -> datetime:
@@ -92,40 +92,40 @@ def get_start_time(start: datetime) -> datetime:
     return start.replace(minute=start_minutes, second=0, microsecond=0)
 
 
-def do_adhoc_statistics(hass: HomeAssistant, **kwargs: Any) -> None:
+def do_adhoc_statistics(menuai: menuai, **kwargs: Any) -> None:
     """Trigger an adhoc statistics run."""
     if not (start := kwargs.get("start")):
         start = statistics.get_start_time()
     elif (start.minute % 5) != 0 or start.second != 0 or start.microsecond != 0:
         raise ValueError(f"Statistics must start on 5 minute boundary got {start}")
-    get_instance(hass).queue_task(StatisticsTask(start, False))
+    get_instance(menuai).queue_task(StatisticsTask(start, False))
 
 
-def wait_recording_done(hass: HomeAssistant) -> None:
+def wait_recording_done(menuai: menuai) -> None:
     """Block till recording is done."""
-    hass.block_till_done()
-    trigger_db_commit(hass)
-    hass.block_till_done()
-    recorder.get_instance(hass).block_till_done()
-    hass.block_till_done()
+    menuai.block_till_done()
+    trigger_db_commit(menuai)
+    menuai.block_till_done()
+    recorder.get_instance(menuai).block_till_done()
+    menuai.block_till_done()
 
 
-def trigger_db_commit(hass: HomeAssistant) -> None:
+def trigger_db_commit(menuai: menuai) -> None:
     """Force the recorder to commit."""
-    recorder.get_instance(hass)._async_commit(dt_util.utcnow())
+    recorder.get_instance(menuai)._async_commit(dt_util.utcnow())
 
 
-async def async_wait_recording_done(hass: HomeAssistant) -> None:
+async def async_wait_recording_done(menuai: menuai) -> None:
     """Async wait until recording is done."""
-    await hass.async_block_till_done()
-    async_trigger_db_commit(hass)
-    await hass.async_block_till_done()
-    await async_recorder_block_till_done(hass)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    async_trigger_db_commit(menuai)
+    await menuai.async_block_till_done()
+    await async_recorder_block_till_done(menuai)
+    await menuai.async_block_till_done()
 
 
 async def async_wait_purge_done(
-    hass: HomeAssistant, max_number: int | None = None
+    menuai: menuai, max_number: int | None = None
 ) -> None:
     """Wait for max number of purge events.
 
@@ -137,18 +137,18 @@ async def async_wait_purge_done(
     if not max_number:
         max_number = DEFAULT_PURGE_TASKS
     for _ in range(max_number + 1):
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
 
 @ha.callback
-def async_trigger_db_commit(hass: HomeAssistant) -> None:
+def async_trigger_db_commit(menuai: menuai) -> None:
     """Force the recorder to commit. Async friendly."""
-    recorder.get_instance(hass)._async_commit(dt_util.utcnow())
+    recorder.get_instance(menuai)._async_commit(dt_util.utcnow())
 
 
-async def async_recorder_block_till_done(hass: HomeAssistant) -> None:
+async def async_recorder_block_till_done(menuai: menuai) -> None:
     """Non blocking version of recorder.block_till_done()."""
-    await hass.async_add_executor_job(recorder.get_instance(hass).block_till_done)
+    await menuai.async_add_executor_job(recorder.get_instance(menuai).block_till_done)
 
 
 def corrupt_db_file(test_db_file):
@@ -187,7 +187,7 @@ def run_information_with_session(
 
 
 def statistics_during_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: datetime,
     end_time: datetime | None = None,
     statistic_ids: set[str] | None = None,
@@ -202,7 +202,7 @@ def statistics_during_period(
     if types is None:
         types = {"last_reset", "max", "mean", "min", "state", "sum"}
     return statistics.statistics_during_period(
-        hass, start_time, end_time, statistic_ids, period, units, types
+        menuai, start_time, end_time, statistic_ids, period, units, types
     )
 
 
@@ -273,14 +273,14 @@ def assert_dict_of_states_equal_without_context_and_last_changed(
 
 
 async def async_record_states(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> tuple[datetime, datetime, dict[str, list[State | None]]]:
     """Record some test states."""
-    return await hass.async_add_executor_job(record_states, hass)
+    return await menuai.async_add_executor_job(record_states, menuai)
 
 
 def record_states(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> tuple[datetime, datetime, dict[str, list[State | None]]]:
     """Record some test states.
 
@@ -312,9 +312,9 @@ def record_states(
 
     def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.set(entity_id, state, **kwargs)
-        wait_recording_done(hass)
-        return hass.states.get(entity_id)
+        menuai.states.set(entity_id, state, **kwargs)
+        wait_recording_done(menuai)
+        return menuai.states.get(entity_id)
 
     zero = get_start_time(dt_util.utcnow())
     one = zero + timedelta(seconds=1 * 5)
@@ -425,12 +425,12 @@ def create_engine_test_for_schema_version_postfix(
     importlib.import_module(schema_module)
     old_db_schema = sys.modules[schema_module]
     instance: Recorder | None = None
-    if "hass" in kwargs:
-        hass: HomeAssistant = kwargs.pop("hass")
-        instance = recorder.get_instance(hass)
+    if "menuai" in kwargs:
+        menuai: menuai = kwargs.pop("menuai")
+        instance = recorder.get_instance(menuai)
     engine = create_engine(*args, **kwargs)
     if instance is not None:
-        instance = recorder.get_instance(hass)
+        instance = recorder.get_instance(menuai)
         instance.engine = engine
         sqlalchemy_event.listen(engine, "connect", instance._setup_recorder_connection)
     old_db_schema.Base.metadata.create_all(engine)
@@ -453,7 +453,7 @@ def get_schema_module_path(schema_version_postfix: str) -> str:
 
 
 @contextmanager
-def old_db_schema(hass: HomeAssistant, schema_version_postfix: str) -> Iterator[None]:
+def old_db_schema(menuai: menuai, schema_version_postfix: str) -> Iterator[None]:
     """Fixture to initialize the db with the old schema."""
     schema_module = get_schema_module_path(schema_version_postfix)
     importlib.import_module(schema_module)
@@ -473,7 +473,7 @@ def old_db_schema(hass: HomeAssistant, schema_version_postfix: str) -> Iterator[
             CREATE_ENGINE_TARGET,
             new=partial(
                 create_engine_test_for_schema_version_postfix,
-                hass=hass,
+                menuai=menuai,
                 schema_version_postfix=schema_version_postfix,
             ),
         ),
@@ -481,9 +481,9 @@ def old_db_schema(hass: HomeAssistant, schema_version_postfix: str) -> Iterator[
         yield
 
 
-async def async_attach_db_engine(hass: HomeAssistant) -> None:
+async def async_attach_db_engine(menuai: menuai) -> None:
     """Attach a database engine to the recorder."""
-    instance = recorder.get_instance(hass)
+    instance = recorder.get_instance(menuai)
 
     def _mock_setup_recorder_connection():
         with instance.engine.connect() as connection:

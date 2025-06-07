@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from homeassistant.components.imeon_inverter.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.components.imeon_inverter.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
@@ -48,11 +48,11 @@ def mock_imeon_inverter() -> Generator[MagicMock]:
     """Mock data from the device."""
     with (
         patch(
-            "homeassistant.components.imeon_inverter.coordinator.Inverter",
+            "menuai.components.imeon_inverter.coordinator.Inverter",
             autospec=True,
         ) as inverter_mock,
         patch(
-            "homeassistant.components.imeon_inverter.config_flow.Inverter",
+            "menuai.components.imeon_inverter.config_flow.Inverter",
             new=inverter_mock,
         ),
     ):
@@ -69,7 +69,7 @@ def mock_imeon_inverter() -> Generator[MagicMock]:
 def mock_async_setup_entry() -> Generator[AsyncMock]:
     """Fixture for mocking async_setup_entry."""
     with patch(
-        "homeassistant.components.imeon_inverter.async_setup_entry",
+        "menuai.components.imeon_inverter.async_setup_entry",
         return_value=True,
     ) as mock:
         yield mock

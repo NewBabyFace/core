@@ -6,29 +6,29 @@ from typing import Any, cast
 
 from todoist_api_python.models import Task
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import TodoistCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Todoist todo platform config entry."""
-    coordinator: TodoistCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: TodoistCoordinator = menuai.data[DOMAIN][entry.entry_id]
     projects = await coordinator.async_get_projects()
     async_add_entities(
         TodoistTodoListEntity(coordinator, entry.entry_id, project.id, project.name)
@@ -159,7 +159,7 @@ class TodoistTodoListEntity(CoordinatorEntity[TodoistCoordinator], TodoListEntit
         )
         await self.coordinator.async_refresh()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass update state from existing coordinator data."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai update state from existing coordinator data."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()

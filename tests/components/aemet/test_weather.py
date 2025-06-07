@@ -7,9 +7,9 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.aemet.const import ATTRIBUTION
-from homeassistant.components.aemet.coordinator import WEATHER_UPDATE_INTERVAL
-from homeassistant.components.weather import (
+from menuai.components.aemet.const import ATTRIBUTION
+from menuai.components.aemet.coordinator import WEATHER_UPDATE_INTERVAL
+from menuai.components.weather import (
     ATTR_CONDITION_SNOWY,
     ATTR_WEATHER_HUMIDITY,
     ATTR_WEATHER_PRESSURE,
@@ -20,8 +20,8 @@ from homeassistant.components.weather import (
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.const import ATTR_ATTRIBUTION
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ATTRIBUTION
+from menuai.core import menuai
 
 from .util import async_init_integration, mock_api_call
 
@@ -29,16 +29,16 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_aemet_weather(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test states of the weather."""
 
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     freezer.move_to("2021-01-09 12:00:00+00:00")
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("weather.aemet")
+    state = menuai.states.get("weather.aemet")
     assert state
     assert state.state == ATTR_CONDITION_SNOWY
     assert state.attributes[ATTR_ATTRIBUTION] == ATTRIBUTION
@@ -49,7 +49,7 @@ async def test_aemet_weather(
     assert state.attributes[ATTR_WEATHER_WIND_GUST_SPEED] == 12.2
     assert state.attributes[ATTR_WEATHER_WIND_SPEED] == 3.2
 
-    state = hass.states.get("weather.aemet_hourly")
+    state = menuai.states.get("weather.aemet_hourly")
     assert state is None
 
 
@@ -58,18 +58,18 @@ async def test_aemet_weather(
     [SERVICE_GET_FORECASTS],
 )
 async def test_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     service: str,
 ) -> None:
     """Test multiple forecast."""
 
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     freezer.move_to("2021-01-09 12:00:00+00:00")
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -81,7 +81,7 @@ async def test_forecast_service(
     )
     assert response == snapshot
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -96,18 +96,18 @@ async def test_forecast_service(
 
 @pytest.mark.parametrize("forecast_type", ["daily", "hourly"])
 async def test_forecast_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     forecast_type: str,
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     freezer.move_to("2021-01-09 12:00:00+00:00")
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
     await client.send_json_auto_id(
         {
@@ -129,11 +129,11 @@ async def test_forecast_subscription(
     assert forecast1 == snapshot
 
     with patch(
-        "homeassistant.components.aemet.AEMET.api_call",
+        "menuai.components.aemet.AEMET.api_call",
         side_effect=mock_api_call,
     ):
         freezer.tick(WEATHER_UPDATE_INTERVAL + datetime.timedelta(seconds=1))
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         msg = await client.receive_json()
 
     assert msg["id"] == subscription_id

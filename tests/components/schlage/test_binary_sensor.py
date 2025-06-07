@@ -6,9 +6,9 @@ from unittest.mock import Mock
 from freezegun.api import FrozenDateTimeFactory
 from pyschlage.exceptions import UnknownError
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.const import STATE_ON
+from menuai.core import menuai
 
 from . import MockSchlageConfigEntry
 
@@ -16,7 +16,7 @@ from tests.common import async_fire_time_changed
 
 
 async def test_keypad_disabled_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_schlage: Mock,
     mock_lock: Mock,
     mock_added_config_entry: MockSchlageConfigEntry,
@@ -28,10 +28,10 @@ async def test_keypad_disabled_binary_sensor(
 
     # Make the coordinator refresh data.
     freezer.tick(timedelta(seconds=30))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    keypad = hass.states.get("binary_sensor.vault_door_keypad_disabled")
+    keypad = menuai.states.get("binary_sensor.vault_door_keypad_disabled")
     assert keypad is not None
     assert keypad.state == STATE_ON
     assert keypad.attributes["device_class"] == BinarySensorDeviceClass.PROBLEM
@@ -40,7 +40,7 @@ async def test_keypad_disabled_binary_sensor(
 
 
 async def test_keypad_disabled_binary_sensor_use_previous_logs_on_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_schlage: Mock,
     mock_lock: Mock,
     mock_added_config_entry: MockSchlageConfigEntry,
@@ -54,10 +54,10 @@ async def test_keypad_disabled_binary_sensor_use_previous_logs_on_failure(
 
     # Make the coordinator refresh data.
     freezer.tick(timedelta(seconds=30))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    keypad = hass.states.get("binary_sensor.vault_door_keypad_disabled")
+    keypad = menuai.states.get("binary_sensor.vault_door_keypad_disabled")
     assert keypad is not None
     assert keypad.state == STATE_ON
     assert keypad.attributes["device_class"] == BinarySensorDeviceClass.PROBLEM

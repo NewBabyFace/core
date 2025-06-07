@@ -2,15 +2,15 @@
 
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.const import CONF_NAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai import config_entries
+from menuai.const import CONF_NAME, EVENT_menuai_STOP
+from menuai.core import menuai, callback
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_ACCESSPOINT,
@@ -42,17 +42,17 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the HomematicIP Cloud component."""
     accesspoints = config.get(DOMAIN, [])
 
     for conf in accesspoints:
         if conf[CONF_ACCESSPOINT] not in {
             entry.data[HMIPC_HAPID]
-            for entry in hass.config_entries.async_entries(DOMAIN)
+            for entry in menuai.config_entries.async_entries(DOMAIN)
         }:
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": config_entries.SOURCE_IMPORT},
                     data={
@@ -63,37 +63,37 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 )
             )
 
-    await async_setup_services(hass)
+    await async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HomematicIPConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HomematicIPConfigEntry) -> bool:
     """Set up an access point from a config entry."""
 
     # 0.104 introduced config entry unique id, this makes upgrading possible
     if entry.unique_id is None:
         new_data = dict(entry.data)
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=new_data[HMIPC_HAPID], data=new_data
         )
 
-    hap = HomematicipHAP(hass, entry)
+    hap = HomematicipHAP(menuai, entry)
 
     entry.runtime_data = hap
     if not await hap.async_setup():
         return False
 
-    _async_remove_obsolete_entities(hass, entry, hap)
+    _async_remove_obsolete_entities(menuai, entry, hap)
 
     # Register on HA stop event to gracefully shutdown HomematicIP Cloud connection
-    hap.reset_connection_listener = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP, hap.shutdown
+    hap.reset_connection_listener = menuai.bus.async_listen_once(
+        EVENT_menuai_STOP, hap.shutdown
     )
 
     # Register hap as device in registry.
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     home = hap.home
     hapname = home.label if home.label != entry.unique_id else f"Home-{home.label}"
@@ -109,7 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomematicIPConfigEntry) 
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: HomematicIPConfigEntry
+    menuai: menuai, entry: HomematicIPConfigEntry
 ) -> bool:
     """Unload a config entry."""
     hap = entry.runtime_data
@@ -121,14 +121,14 @@ async def async_unload_entry(
 
 @callback
 def _async_remove_obsolete_entities(
-    hass: HomeAssistant, entry: HomematicIPConfigEntry, hap: HomematicipHAP
+    menuai: menuai, entry: HomematicIPConfigEntry, hap: HomematicipHAP
 ):
     """Remove obsolete entities from entity registry."""
 
     if hap.home.currentAPVersion < "2.2.12":
         return
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     er_entries = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     for er_entry in er_entries:
         if er_entry.unique_id.startswith("HomematicipAccesspointStatus"):

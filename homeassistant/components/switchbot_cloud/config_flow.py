@@ -10,8 +10,8 @@ from switchbot_api import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_API_TOKEN
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_API_TOKEN
 
 from .const import DOMAIN, ENTRY_TITLE
 

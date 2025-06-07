@@ -9,9 +9,9 @@ from typing import Any
 from aiokem import AioKem, AuthenticationError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONNECTION_EXCEPTIONS, DOMAIN
 
@@ -55,7 +55,7 @@ class RehlkoConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate the user input."""
         errors: dict[str, str] = {}
         token_subject = None
-        rehlko = AioKem(session=async_get_clientsession(self.hass))
+        rehlko = AioKem(session=async_get_clientsession(self.menuai))
         try:
             await rehlko.authenticate(config[CONF_EMAIL], config[CONF_PASSWORD])
         except CONNECTION_EXCEPTIONS:

@@ -8,11 +8,11 @@ from pydroid_ipcam import PyDroidIPCam
 from pydroid_ipcam.exceptions import PyDroidIPCamException, Unauthorized
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -26,10 +26,10 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect."""
 
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     cam = PyDroidIPCam(
         websession,
         data[CONF_HOST],
@@ -67,7 +67,7 @@ class AndroidIPWebcamConfigFlow(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match(
             {CONF_HOST: user_input[CONF_HOST], CONF_PORT: user_input[CONF_PORT]}
         )
-        if not (errors := await validate_input(self.hass, user_input)):
+        if not (errors := await validate_input(self.menuai, user_input)):
             return self.async_create_entry(title=user_input[CONF_HOST], data=user_input)
 
         return self.async_show_form(

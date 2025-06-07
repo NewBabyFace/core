@@ -14,7 +14,7 @@ from google_nest_sdm.thermostat_traits import (
     ThermostatTemperatureSetpointTrait,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -27,10 +27,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .device_info import NestDeviceInfo
 from .types import NestConfigEntry
@@ -76,7 +76,7 @@ MIN_TEMP_RANGE = 1.66667
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NestConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -120,7 +120,7 @@ class ThermostatEntity(ClimateEntity):
         """Return device availability."""
         return self._device_info.available
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity is added to register update signal handler."""
         self._attr_supported_features = self._get_supported_features()
         self.async_on_remove(
@@ -274,7 +274,7 @@ class ThermostatEntity(ClimateEntity):
         try:
             await trait.set_mode(api_mode)
         except ApiException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error setting {self.entity_id} HVAC mode to {hvac_mode}: {err}"
             ) from err
 
@@ -288,7 +288,7 @@ class ThermostatEntity(ClimateEntity):
         high_temp = kwargs.get(ATTR_TARGET_TEMP_HIGH)
         temp = kwargs.get(ATTR_TEMPERATURE)
         if ThermostatTemperatureSetpointTrait.NAME not in self._device.traits:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error setting {self.entity_id} temperature to {kwargs}: "
                 "Unable to find setpoint trait."
             )
@@ -309,7 +309,7 @@ class ThermostatEntity(ClimateEntity):
             elif hvac_mode == HVACMode.HEAT and temp:
                 await trait.set_heat(temp)
         except ApiException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error setting {self.entity_id} temperature to {kwargs}: {err}"
             ) from err
 
@@ -323,7 +323,7 @@ class ThermostatEntity(ClimateEntity):
         try:
             await trait.set_mode(PRESET_INV_MODE_MAP[preset_mode])
         except ApiException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error setting {self.entity_id} preset mode to {preset_mode}: {err}"
             ) from err
 
@@ -342,6 +342,6 @@ class ThermostatEntity(ClimateEntity):
         try:
             await trait.set_timer(FAN_INV_MODE_MAP[fan_mode], duration=duration)
         except ApiException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error setting {self.entity_id} fan mode to {fan_mode}: {err}"
             ) from err

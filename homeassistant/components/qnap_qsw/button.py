@@ -8,15 +8,15 @@ from typing import Final
 
 from aioqsw.localapi import QnapQswApi
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, QSW_COORD_DATA, QSW_REBOOT
 from .coordinator import QswDataCoordinator
@@ -41,12 +41,12 @@ BUTTON_TYPES: Final[tuple[QswButtonDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add QNAP QSW buttons from a config_entry."""
-    coordinator: QswDataCoordinator = hass.data[DOMAIN][entry.entry_id][QSW_COORD_DATA]
+    coordinator: QswDataCoordinator = menuai.data[DOMAIN][entry.entry_id][QSW_COORD_DATA]
     async_add_entities(
         QswButton(coordinator, description, entry) for description in BUTTON_TYPES
     )

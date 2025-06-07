@@ -11,17 +11,17 @@ from typing import Any, final, override
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification as pn
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_PLATFORM, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
+from menuai.components import persistent_notification as pn
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_PLATFORM, STATE_UNAVAILABLE
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (  # noqa: F401
     ATTR_DATA,
@@ -46,9 +46,9 @@ from .repairs import migrate_notify_issue  # noqa: F401
 # mypy: disallow-any-generics
 
 # Platform specific data
-ATTR_TITLE_DEFAULT = "Home Assistant"
+ATTR_TITLE_DEFAULT = "MenuAI"
 
-DATA_COMPONENT: HassKey[EntityComponent[NotifyEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[NotifyEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
 MIN_TIME_BETWEEN_SCANS = timedelta(seconds=10)
@@ -67,20 +67,20 @@ class NotifyEntityFeature(IntFlag):
     TITLE = 1
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the notify services."""
 
-    for setup in async_setup_legacy(hass, config):
+    for setup in async_setup_legacy(menuai, config):
         # Tasks are created as tracked tasks to ensure startup
         # waits for them to finish, but we explicitly do not
         # want to wait for them to finish here because we want
         # any config entries that use notify as a base platform
         # to be able to start with out having to wait for the
         # legacy platforms to finish setting up.
-        hass.async_create_task(setup, eager_start=True)
+        menuai.async_create_task(setup, eager_start=True)
 
-    component = hass.data[DATA_COMPONENT] = EntityComponent[NotifyEntity](
-        _LOGGER, DOMAIN, hass
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[NotifyEntity](
+        _LOGGER, DOMAIN, menuai
     )
     component.async_register_entity_service(
         SERVICE_SEND_MESSAGE,
@@ -100,9 +100,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if data := service.data.get(ATTR_DATA):
             notification_id = data.get(pn.ATTR_NOTIFICATION_ID)
 
-        pn.async_create(hass, message, title, notification_id)
+        pn.async_create(menuai, message, title, notification_id)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_PERSISTENT_NOTIFICATION,
         persistent_notification,
@@ -116,14 +116,14 @@ class NotifyEntityDescription(EntityDescription, frozen_or_thawed=True):
     """A class that describes button entities."""
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class NotifyEntity(RestoreEntity):
@@ -148,9 +148,9 @@ class NotifyEntity(RestoreEntity):
         self.__dict__.pop("state", None)
         self.__last_notified_isoformat = state
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the notify entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the notify entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         state = await self.async_get_last_state()
         if state is not None and state.state not in (STATE_UNAVAILABLE, None):
             self.__set_state(state.state)
@@ -178,6 +178,6 @@ class NotifyEntity(RestoreEntity):
             and self.supported_features & NotifyEntityFeature.TITLE
         ):
             kwargs[ATTR_TITLE] = title
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(self.send_message, message, **kwargs)
         )

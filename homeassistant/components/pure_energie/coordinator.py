@@ -6,11 +6,11 @@ from typing import NamedTuple
 
 from gridnet import Device, GridNet, SmartBridge
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL
 
@@ -31,12 +31,12 @@ class PureEnergieDataUpdateCoordinator(DataUpdateCoordinator[PureEnergieData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: PureEnergieConfigEntry,
     ) -> None:
         """Initialize global Pure Energie data updater."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -44,7 +44,7 @@ class PureEnergieDataUpdateCoordinator(DataUpdateCoordinator[PureEnergieData]):
         )
 
         self.gridnet = GridNet(
-            self.config_entry.data[CONF_HOST], session=async_get_clientsession(hass)
+            self.config_entry.data[CONF_HOST], session=async_get_clientsession(menuai)
         )
 
     async def _async_update_data(self) -> PureEnergieData:

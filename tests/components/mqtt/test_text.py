@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import mqtt, text
-from homeassistant.const import ATTR_ASSUMED_STATE, ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.components import mqtt, text
+from menuai.const import ATTR_ASSUMED_STATE, ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .common import (
     help_custom_config,
@@ -51,10 +51,10 @@ DEFAULT_CONFIG = {
 
 
 async def async_set_value(
-    hass: HomeAssistant, entity_id: str, value: str | None
+    menuai: menuai, entity_id: str, value: str | None
 ) -> None:
     """Set input_text to value."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         text.DOMAIN,
         text.SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: entity_id, text.ATTR_VALUE: value},
@@ -63,7 +63,7 @@ async def async_set_value(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -78,34 +78,34 @@ async def async_set_value(
     ],
 )
 async def test_controlling_state_via_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the controlling state via topic."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes[text.ATTR_MODE] == "password"
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", "some state")
+    async_fire_mqtt_message(menuai, "state-topic", "some state")
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "some state"
 
-    async_fire_mqtt_message(hass, "state-topic", "some other state")
+    async_fire_mqtt_message(menuai, "state-topic", "some other state")
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "some other state"
 
-    async_fire_mqtt_message(hass, "state-topic", "")
+    async_fire_mqtt_message(menuai, "state-topic", "")
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == ""
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -121,25 +121,25 @@ async def test_controlling_state_via_topic(
     ],
 )
 async def test_forced_text_length(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test a text entity that only allows a fixed length."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", "12345")
-    state = hass.states.get("text.test")
+    async_fire_mqtt_message(menuai, "state-topic", "12345")
+    state = menuai.states.get("text.test")
     assert state.state == "12345"
 
     caplog.clear()
     # Text too long
-    async_fire_mqtt_message(hass, "state-topic", "123456")
-    state = hass.states.get("text.test")
+    async_fire_mqtt_message(menuai, "state-topic", "123456")
+    state = menuai.states.get("text.test")
     assert state.state == "12345"
     assert (
         "Entity text.test provides state 123456 "
@@ -148,21 +148,21 @@ async def test_forced_text_length(
 
     caplog.clear()
     # Text too short
-    async_fire_mqtt_message(hass, "state-topic", "1")
-    state = hass.states.get("text.test")
+    async_fire_mqtt_message(menuai, "state-topic", "1")
+    state = menuai.states.get("text.test")
     assert state.state == "12345"
     assert (
         "Entity text.test provides state 1 "
         "which is too short (minimum length 5)" in caplog.text
     )
     # Valid update
-    async_fire_mqtt_message(hass, "state-topic", "54321")
-    state = hass.states.get("text.test")
+    async_fire_mqtt_message(menuai, "state-topic", "54321")
+    state = menuai.states.get("text.test")
     assert state.state == "54321"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -180,63 +180,63 @@ async def test_forced_text_length(
     ],
 )
 async def test_controlling_validation_state_via_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the validation of a received state."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes[text.ATTR_MODE] == "text"
 
-    async_fire_mqtt_message(hass, "state-topic", "yes")
-    state = hass.states.get("text.test")
+    async_fire_mqtt_message(menuai, "state-topic", "yes")
+    state = menuai.states.get("text.test")
     assert state.state == "yes"
 
     # test pattern error
     caplog.clear()
-    async_fire_mqtt_message(hass, "state-topic", "other")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "state-topic", "other")
+    await menuai.async_block_till_done()
     assert (
         "Entity text.test provides state other which does not match expected pattern (y|n)"
         in caplog.text
     )
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "yes"
 
     # test text size to large
     caplog.clear()
-    async_fire_mqtt_message(hass, "state-topic", "yesyesyesyes")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "state-topic", "yesyesyesyes")
+    await menuai.async_block_till_done()
     assert (
         "Entity text.test provides state yesyesyesyes which is too long (maximum length 10)"
         in caplog.text
     )
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "yes"
 
     # test text size to small
     caplog.clear()
-    async_fire_mqtt_message(hass, "state-topic", "y")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "state-topic", "y")
+    await menuai.async_block_till_done()
     assert (
         "Entity text.test provides state y which is too short (minimum length 2)"
         in caplog.text
     )
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "yes"
 
     # test with valid text
-    async_fire_mqtt_message(hass, "state-topic", "no")
-    await hass.async_block_till_done()
-    state = hass.states.get("text.test")
+    async_fire_mqtt_message(menuai, "state-topic", "no")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("text.test")
     assert state.state == "no"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -259,7 +259,7 @@ async def test_attribute_validation_max_greater_then_min(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -282,7 +282,7 @@ async def test_attribute_validation_max_not_greater_then_max_state_length(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -296,23 +296,23 @@ async def test_attribute_validation_max_not_greater_then_max_state_length(
     ],
 )
 async def test_validation_payload_greater_then_max_state_length(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the max value of of max configuration attribute."""
     assert await mqtt_mock_entry()
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == STATE_UNKNOWN
 
-    async_fire_mqtt_message(hass, "state-topic", "".join("x" for _ in range(310)))
+    async_fire_mqtt_message(menuai, "state-topic", "".join("x" for _ in range(310)))
 
     assert "Cannot update state for entity text.test" in caplog.text
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -326,36 +326,36 @@ async def test_validation_payload_greater_then_max_state_length(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the sending MQTT commands in optimistic mode."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await async_set_value(hass, "text.test", "some other state")
-    await hass.async_block_till_done()
+    await async_set_value(menuai, "text.test", "some other state")
+    await menuai.async_block_till_done()
 
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", "some other state", 2, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "some other state"
 
-    await async_set_value(hass, "text.test", "some new state")
+    await async_set_value(menuai, "text.test", "some new state")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", "some new state", 2, False
     )
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "some new state"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -372,54 +372,54 @@ async def test_sending_mqtt_commands_and_optimistic(
     ],
 )
 async def test_set_text_validation(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the initial state in optimistic mode."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     # text too long
     with pytest.raises(ValueError):
-        await async_set_value(hass, "text.test", "yes yes yes yes")
+        await async_set_value(menuai, "text.test", "yes yes yes yes")
 
     # text too short
     with pytest.raises(ValueError):
-        await async_set_value(hass, "text.test", "y")
+        await async_set_value(menuai, "text.test", "y")
 
     # text not matching pattern
     with pytest.raises(ValueError):
-        await async_set_value(hass, "text.test", "other")
+        await async_set_value(menuai, "text.test", "other")
 
-    await async_set_value(hass, "text.test", "no")
-    state = hass.states.get("text.test")
+    await async_set_value(menuai, "text.test", "no")
+    state = menuai.states.get("text.test")
     assert state.state == "no"
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
     await help_test_availability_when_connection_lost(
-        hass, mqtt_mock_entry, text.DOMAIN
+        menuai, mqtt_mock_entry, text.DOMAIN
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     config = {
@@ -432,12 +432,12 @@ async def test_default_availability_payload(
         }
     }
     await help_test_default_availability_payload(
-        hass, mqtt_mock_entry, text.DOMAIN, config, True, "state-topic", "some state"
+        menuai, mqtt_mock_entry, text.DOMAIN, config, True, "state-topic", "some state"
     )
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     config = {
@@ -451,70 +451,70 @@ async def test_custom_availability_payload(
     }
 
     await help_test_custom_availability_payload(
-        hass, mqtt_mock_entry, text.DOMAIN, config, True, "state-topic", "1"
+        menuai, mqtt_mock_entry, text.DOMAIN, config, True, "state-topic", "1"
     )
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG, None
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG, None
     )
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -537,14 +537,14 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique id option only creates one text per unique_id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, text.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, text.DOMAIN)
 
 
 async def test_discovery_removal_text(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered text entity."""
     data = (
@@ -552,11 +552,11 @@ async def test_discovery_removal_text(
         '  "state_topic": "test_topic",'
         '  "command_topic": "test_topic" }'
     )
-    await help_test_discovery_removal(hass, mqtt_mock_entry, text.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, text.DOMAIN, data)
 
 
 async def test_discovery_text_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered text entity."""
     config1 = {
@@ -571,50 +571,50 @@ async def test_discovery_text_update(
     }
 
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, text.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, text.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered update."""
     data1 = '{ "name": "Beer", "state_topic": "text-topic", "command_topic": "command-topic"}'
     with patch(
-        "homeassistant.components.mqtt.text.MqttTextEntity.discovery_update"
+        "menuai.components.mqtt.text.MqttTextEntity.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, text.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, text.DOMAIN, data1, discovery_update
         )
 
 
 async def test_discovery_update_text(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered text entity."""
     config1 = {"name": "Beer", "command_topic": "cmd-topic1"}
     config2 = {"name": "Milk", "command_topic": "cmd-topic2"}
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, text.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, text.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_climate(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered text entity."""
     data1 = '{ "name": "Beer", "command_topic": "cmd-topic" }'
     with patch(
-        "homeassistant.components.mqtt.text.MqttTextEntity.discovery_update"
+        "menuai.components.mqtt.text.MqttTextEntity.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, text.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, text.DOMAIN, data1, discovery_update
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer" }'
@@ -623,69 +623,69 @@ async def test_discovery_broken(
         '  "state_topic": "test_topic",'
         '  "command_topic": "test_topic" }'
     )
-    await help_test_discovery_broken(hass, mqtt_mock_entry, text.DOMAIN, data1, data2)
+    await help_test_discovery_broken(menuai, mqtt_mock_entry, text.DOMAIN, data1, data2)
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT text device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT text device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_debug_info_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT debug info."""
     await help_test_entity_debug_info_message(
-        hass, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG, None
+        menuai, mqtt_mock_entry, text.DOMAIN, DEFAULT_CONFIG, None
     )
 
 
@@ -702,7 +702,7 @@ async def test_entity_debug_info_message(
     ],
 )
 async def test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -716,7 +716,7 @@ async def test_publishing_with_custom_encoding(
     config = DEFAULT_CONFIG
 
     await help_test_publishing_with_custom_encoding(
-        hass,
+        menuai,
         mqtt_mock_entry,
         caplog,
         domain,
@@ -730,12 +730,12 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    menuai: menuai, mqtt_client_mock: MqttMockPahoClient
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = text.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
@@ -745,7 +745,7 @@ async def test_reloadable(
     ],
 )
 async def test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     value: str,
@@ -754,7 +754,7 @@ async def test_encoding_subscribable_topics(
 ) -> None:
     """Test handling of incoming encoded payload."""
     await help_test_encoding_subscribable_topics(
-        hass,
+        menuai,
         mqtt_mock_entry,
         text.DOMAIN,
         DEFAULT_CONFIG[mqtt.DOMAIN][text.DOMAIN],
@@ -766,32 +766,32 @@ async def test_encoding_subscribable_topics(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = text.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unloading the config entry."""
     domain = text.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_unload_config_entry_with_platform(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             text.DOMAIN,
@@ -815,7 +815,7 @@ async def test_unload_entry(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -823,11 +823,11 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             text.DOMAIN,
@@ -842,13 +842,13 @@ async def test_skipped_async_ha_write_state(
     ],
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text

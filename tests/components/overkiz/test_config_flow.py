@@ -16,12 +16,12 @@ from pyoverkiz.exceptions import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.overkiz.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.overkiz.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -74,15 +74,15 @@ FAKE_ZERO_CONF_INFO_LOCAL = ZeroconfServiceInfo(
 )
 
 
-async def test_form_cloud(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form_cloud(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -90,7 +90,7 @@ async def test_form_cloud(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> N
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "cloud"},
     )
@@ -105,27 +105,27 @@ async def test_form_cloud(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> N
             return_value=MOCK_GATEWAY_RESPONSE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": TEST_EMAIL, "password": TEST_PASSWORD},
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 async def test_form_only_cloud_supported(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER2},
     )
@@ -140,27 +140,27 @@ async def test_form_only_cloud_supported(
             return_value=MOCK_GATEWAY_RESPONSE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": TEST_EMAIL, "password": TEST_PASSWORD},
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 async def test_form_local_happy_flow(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test local API configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -168,7 +168,7 @@ async def test_form_local_happy_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "local"},
     )
@@ -181,7 +181,7 @@ async def test_form_local_happy_flow(
         login=AsyncMock(return_value=True),
         get_gateways=AsyncMock(return_value=MOCK_GATEWAY_RESPONSE),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "gateway-1234-5678-1234.local:8443",
@@ -190,7 +190,7 @@ async def test_form_local_happy_flow(
             },
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "gateway-1234-5678-1234.local:8443"
@@ -218,16 +218,16 @@ async def test_form_local_happy_flow(
     ],
 )
 async def test_form_invalid_auth_cloud(
-    hass: HomeAssistant, side_effect: Exception, error: str
+    menuai: menuai, side_effect: Exception, error: str
 ) -> None:
     """Test we handle invalid auth (cloud)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -235,7 +235,7 @@ async def test_form_invalid_auth_cloud(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "cloud"},
     )
@@ -244,12 +244,12 @@ async def test_form_invalid_auth_cloud(
     assert result["step_id"] == "cloud"
 
     with patch("pyoverkiz.client.OverkizClient.login", side_effect=side_effect):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": TEST_EMAIL, "password": TEST_PASSWORD},
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
@@ -274,16 +274,16 @@ async def test_form_invalid_auth_cloud(
     ],
 )
 async def test_form_invalid_auth_local(
-    hass: HomeAssistant, side_effect: Exception, error: str
+    menuai: menuai, side_effect: Exception, error: str
 ) -> None:
     """Test we handle invalid auth (local)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -291,7 +291,7 @@ async def test_form_invalid_auth_local(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "local"},
     )
@@ -300,7 +300,7 @@ async def test_form_invalid_auth_local(
     assert result["step_id"] == "local"
 
     with patch("pyoverkiz.client.OverkizClient.login", side_effect=side_effect):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": TEST_HOST,
@@ -309,7 +309,7 @@ async def test_form_invalid_auth_local(
             },
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
@@ -322,16 +322,16 @@ async def test_form_invalid_auth_local(
     ],
 )
 async def test_form_invalid_cozytouch_auth(
-    hass: HomeAssistant, side_effect: Exception, error: str
+    menuai: menuai, side_effect: Exception, error: str
 ) -> None:
     """Test we handle invalid auth (cloud)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER_COZYTOUCH},
     )
@@ -340,12 +340,12 @@ async def test_form_invalid_cozytouch_auth(
     assert result["step_id"] == "cloud"
 
     with patch("pyoverkiz.client.OverkizClient.login", side_effect=side_effect):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": TEST_EMAIL, "password": TEST_PASSWORD},
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
@@ -353,7 +353,7 @@ async def test_form_invalid_cozytouch_auth(
 
 
 async def test_cloud_abort_on_duplicate_entry(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
 
@@ -361,15 +361,15 @@ async def test_cloud_abort_on_duplicate_entry(
         domain=DOMAIN,
         unique_id=TEST_GATEWAY_ID,
         data={"username": TEST_EMAIL, "password": TEST_PASSWORD, "hub": TEST_SERVER},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -377,7 +377,7 @@ async def test_cloud_abort_on_duplicate_entry(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "cloud"},
     )
@@ -392,7 +392,7 @@ async def test_cloud_abort_on_duplicate_entry(
             return_value=MOCK_GATEWAY_RESPONSE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": TEST_EMAIL, "password": TEST_PASSWORD},
         )
@@ -402,7 +402,7 @@ async def test_cloud_abort_on_duplicate_entry(
 
 
 async def test_local_abort_on_duplicate_entry(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test local API configuration is aborted if gateway already exists."""
 
@@ -417,15 +417,15 @@ async def test_local_abort_on_duplicate_entry(
             "hub": TEST_SERVER,
             "api_type": "local",
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -433,7 +433,7 @@ async def test_local_abort_on_duplicate_entry(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "local"},
     )
@@ -447,7 +447,7 @@ async def test_local_abort_on_duplicate_entry(
         get_gateways=AsyncMock(return_value=MOCK_GATEWAY_RESPONSE),
         get_setup_option=AsyncMock(return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": TEST_HOST,
@@ -461,7 +461,7 @@ async def test_local_abort_on_duplicate_entry(
 
 
 async def test_cloud_allow_multiple_unique_entries(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
 
@@ -470,15 +470,15 @@ async def test_cloud_allow_multiple_unique_entries(
         domain=DOMAIN,
         unique_id=TEST_GATEWAY_ID2,
         data={"username": TEST_EMAIL, "password": TEST_PASSWORD, "hub": TEST_SERVER},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -486,7 +486,7 @@ async def test_cloud_allow_multiple_unique_entries(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "cloud"},
     )
@@ -501,7 +501,7 @@ async def test_cloud_allow_multiple_unique_entries(
             return_value=MOCK_GATEWAY_RESPONSE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": TEST_EMAIL, "password": TEST_PASSWORD},
         )
@@ -516,7 +516,7 @@ async def test_cloud_allow_multiple_unique_entries(
     }
 
 
-async def test_cloud_reauth_success(hass: HomeAssistant) -> None:
+async def test_cloud_reauth_success(menuai: menuai) -> None:
     """Test reauthentication flow."""
 
     mock_entry = MockConfigEntry(
@@ -530,9 +530,9 @@ async def test_cloud_reauth_success(hass: HomeAssistant) -> None:
             "api_type": "cloud",
         },
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "cloud"
@@ -544,7 +544,7 @@ async def test_cloud_reauth_success(hass: HomeAssistant) -> None:
             return_value=MOCK_GATEWAY_RESPONSE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 "username": TEST_EMAIL,
@@ -558,7 +558,7 @@ async def test_cloud_reauth_success(hass: HomeAssistant) -> None:
         assert mock_entry.data["password"] == TEST_PASSWORD2
 
 
-async def test_cloud_reauth_wrong_account(hass: HomeAssistant) -> None:
+async def test_cloud_reauth_wrong_account(menuai: menuai) -> None:
     """Test reauthentication flow."""
 
     mock_entry = MockConfigEntry(
@@ -572,9 +572,9 @@ async def test_cloud_reauth_wrong_account(hass: HomeAssistant) -> None:
             "api_type": "cloud",
         },
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "cloud"
@@ -586,7 +586,7 @@ async def test_cloud_reauth_wrong_account(hass: HomeAssistant) -> None:
             return_value=MOCK_GATEWAY2_RESPONSE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 "username": TEST_EMAIL,
@@ -598,7 +598,7 @@ async def test_cloud_reauth_wrong_account(hass: HomeAssistant) -> None:
         assert result["reason"] == "reauth_wrong_account"
 
 
-async def test_local_reauth_legacy(hass: HomeAssistant) -> None:
+async def test_local_reauth_legacy(menuai: menuai) -> None:
     """Test legacy reauthentication flow with username/password."""
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -613,14 +613,14 @@ async def test_local_reauth_legacy(hass: HomeAssistant) -> None:
             "api_type": "local",
         },
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "local"},
     )
@@ -632,7 +632,7 @@ async def test_local_reauth_legacy(hass: HomeAssistant) -> None:
         login=AsyncMock(return_value=True),
         get_gateways=AsyncMock(return_value=MOCK_GATEWAY_RESPONSE),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": TEST_HOST,
@@ -648,7 +648,7 @@ async def test_local_reauth_legacy(hass: HomeAssistant) -> None:
         assert mock_entry.data["verify_ssl"] is True
 
 
-async def test_local_reauth_success(hass: HomeAssistant) -> None:
+async def test_local_reauth_success(menuai: menuai) -> None:
     """Test modern local reauth flow."""
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -662,13 +662,13 @@ async def test_local_reauth_success(hass: HomeAssistant) -> None:
             "api_type": "local",
         },
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "local"},
     )
@@ -680,7 +680,7 @@ async def test_local_reauth_success(hass: HomeAssistant) -> None:
         login=AsyncMock(return_value=True),
         get_gateways=AsyncMock(return_value=MOCK_GATEWAY_RESPONSE),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": TEST_HOST,
@@ -698,7 +698,7 @@ async def test_local_reauth_success(hass: HomeAssistant) -> None:
         assert "password" not in mock_entry.data
 
 
-async def test_local_reauth_wrong_account(hass: HomeAssistant) -> None:
+async def test_local_reauth_wrong_account(menuai: menuai) -> None:
     """Test local reauth flow with wrong gateway account."""
 
     mock_entry = MockConfigEntry(
@@ -713,13 +713,13 @@ async def test_local_reauth_wrong_account(hass: HomeAssistant) -> None:
             "api_type": "local",
         },
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "local"},
     )
@@ -731,7 +731,7 @@ async def test_local_reauth_wrong_account(hass: HomeAssistant) -> None:
         login=AsyncMock(return_value=True),
         get_gateways=AsyncMock(return_value=MOCK_GATEWAY_RESPONSE),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": TEST_HOST,
@@ -744,9 +744,9 @@ async def test_local_reauth_wrong_account(hass: HomeAssistant) -> None:
         assert result3["reason"] == "reauth_wrong_account"
 
 
-async def test_dhcp_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_dhcp_flow(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test that DHCP discovery for new bridge works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=DhcpServiceInfo(
             hostname="gateway-1234-5678-9123",
@@ -759,7 +759,7 @@ async def test_dhcp_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> No
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == config_entries.SOURCE_USER
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -767,7 +767,7 @@ async def test_dhcp_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> No
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "cloud"},
     )
@@ -776,7 +776,7 @@ async def test_dhcp_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> No
         patch("pyoverkiz.client.OverkizClient.login", return_value=True),
         patch("pyoverkiz.client.OverkizClient.get_gateways", return_value=None),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": TEST_EMAIL,
@@ -796,16 +796,16 @@ async def test_dhcp_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> No
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_dhcp_flow_already_configured(hass: HomeAssistant) -> None:
+async def test_dhcp_flow_already_configured(menuai: menuai) -> None:
     """Test that DHCP doesn't setup already configured gateways."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=TEST_GATEWAY_ID,
         data={"username": TEST_EMAIL, "password": TEST_PASSWORD, "hub": TEST_SERVER},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=DhcpServiceInfo(
             hostname="gateway-1234-5678-9123",
@@ -819,9 +819,9 @@ async def test_dhcp_flow_already_configured(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_zeroconf_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_zeroconf_flow(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test that zeroconf discovery for new bridge works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=FAKE_ZERO_CONF_INFO,
         context={"source": config_entries.SOURCE_ZEROCONF},
@@ -830,7 +830,7 @@ async def test_zeroconf_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == config_entries.SOURCE_USER
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -838,7 +838,7 @@ async def test_zeroconf_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "cloud"},
     )
@@ -853,7 +853,7 @@ async def test_zeroconf_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -
             return_value=MOCK_GATEWAY_RESPONSE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": TEST_EMAIL, "password": TEST_PASSWORD},
         )
@@ -871,10 +871,10 @@ async def test_zeroconf_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -
 
 
 async def test_local_zeroconf_flow(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test that zeroconf discovery for new local bridge works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=FAKE_ZERO_CONF_INFO_LOCAL,
         context={"source": config_entries.SOURCE_ZEROCONF},
@@ -883,7 +883,7 @@ async def test_local_zeroconf_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == config_entries.SOURCE_USER
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"hub": TEST_SERVER},
     )
@@ -891,7 +891,7 @@ async def test_local_zeroconf_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "local_or_cloud"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"api_type": "local"},
     )
@@ -904,7 +904,7 @@ async def test_local_zeroconf_flow(
         login=AsyncMock(return_value=True),
         get_gateways=AsyncMock(return_value=MOCK_GATEWAY_RESPONSE),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "gateway-1234-5678-9123.local:8443",
@@ -927,16 +927,16 @@ async def test_local_zeroconf_flow(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_flow_already_configured(hass: HomeAssistant) -> None:
+async def test_zeroconf_flow_already_configured(menuai: menuai) -> None:
     """Test that zeroconf doesn't setup already configured gateways."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=TEST_GATEWAY_ID,
         data={"username": TEST_EMAIL, "password": TEST_PASSWORD, "hub": TEST_SERVER},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=FAKE_ZERO_CONF_INFO,
         context={"source": config_entries.SOURCE_ZEROCONF},

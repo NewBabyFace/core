@@ -7,16 +7,16 @@ from typing import Any
 from pyplaato.plaato import PlaatoDeviceType
 import voluptuous as vol
 
-from homeassistant.components import cloud, webhook
-from homeassistant.config_entries import (
+from menuai.components import cloud, webhook
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_WEBHOOK_ID
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_WEBHOOK_ID
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_CLOUDHOOK,
@@ -164,11 +164,11 @@ class PlaatoConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _get_webhook_id(self):
         """Generate webhook ID."""
         webhook_id = webhook.async_generate_id()
-        if cloud.async_active_subscription(self.hass):
-            webhook_url = await cloud.async_create_cloudhook(self.hass, webhook_id)
+        if cloud.async_active_subscription(self.menuai):
+            webhook_url = await cloud.async_create_cloudhook(self.menuai, webhook_id)
             cloudhook = True
         else:
-            webhook_url = webhook.async_generate_url(self.hass, webhook_id)
+            webhook_url = webhook.async_generate_url(self.menuai, webhook_id)
             cloudhook = False
 
         return webhook_id, webhook_url, cloudhook
@@ -231,7 +231,7 @@ class PlaatoOptionsFlowHandler(OptionsFlow):
         webhook_url = (
             ""
             if webhook_id is None
-            else webhook.async_generate_url(self.hass, webhook_id)
+            else webhook.async_generate_url(self.menuai, webhook_id)
         )
 
         return self.async_show_form(

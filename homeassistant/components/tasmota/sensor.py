@@ -9,14 +9,14 @@ from hatasmota import const as hc, sensor as tasmota_sensor, status_sensor
 from hatasmota.entity import TasmotaEntity as HATasmotaEntity
 from hatasmota.models import DiscoveryHashType
 
-from homeassistant.components import sensor
-from homeassistant.components.sensor import (
+from menuai.components import sensor
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -38,9 +38,9 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DATA_REMOVE_DISCOVER_COMPONENT
 from .discovery import TASMOTA_DISCOVERY_ENTITY_NEW
@@ -241,7 +241,7 @@ SENSOR_UNIT_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -260,9 +260,9 @@ async def async_setup_entry(
             ]
         )
 
-    hass.data[DATA_REMOVE_DISCOVER_COMPONENT.format(sensor.DOMAIN)] = (
+    menuai.data[DATA_REMOVE_DISCOVER_COMPONENT.format(sensor.DOMAIN)] = (
         async_dispatcher_connect(
-            hass,
+            menuai,
             TASMOTA_DISCOVERY_ENTITY_NEW.format(sensor.DOMAIN),
             async_discover,
         )
@@ -312,10 +312,10 @@ class TasmotaSensor(TasmotaAvailability, TasmotaDiscoveryUpdate, SensorEntity):
             if self._tasmota_entity.discovered_as_numeric:
                 self._attr_state_class = SensorStateClass.MEASUREMENT
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
         self._tasmota_entity.set_on_state_callback(self.sensor_state_updated)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def sensor_state_updated(self, state: Any, **kwargs: Any) -> None:

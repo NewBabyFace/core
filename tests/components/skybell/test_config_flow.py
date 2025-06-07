@@ -5,11 +5,11 @@ from unittest.mock import patch
 from aioskybell import exceptions
 import pytest
 
-from homeassistant.components.skybell.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.skybell.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import CONF_DATA, PASSWORD, USER_ID
 
@@ -20,22 +20,22 @@ from tests.common import MockConfigEntry
 def setup_entry() -> None:
     """Make sure component doesn't initialize."""
     with patch(
-        "homeassistant.components.skybell.async_setup_entry",
+        "menuai.components.skybell.async_setup_entry",
         return_value=True,
     ):
         yield
 
 
-async def test_flow_user(hass: HomeAssistant) -> None:
+async def test_flow_user(menuai: menuai) -> None:
     """Test that the user step works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=CONF_DATA,
     )
@@ -46,15 +46,15 @@ async def test_flow_user(hass: HomeAssistant) -> None:
     assert result["result"].unique_id == USER_ID
 
 
-async def test_flow_user_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_user_already_configured(menuai: menuai) -> None:
     """Test user initialized flow with duplicate server."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CONF_DATA,
     )
 
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
     )
 
@@ -62,10 +62,10 @@ async def test_flow_user_already_configured(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_flow_user_cannot_connect(hass: HomeAssistant, skybell_mock) -> None:
+async def test_flow_user_cannot_connect(menuai: menuai, skybell_mock) -> None:
     """Test user initialized flow with unreachable server."""
-    skybell_mock.async_initialize.side_effect = exceptions.SkybellException(hass)
-    result = await hass.config_entries.flow.async_init(
+    skybell_mock.async_initialize.side_effect = exceptions.SkybellException(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
     )
     assert result["type"] is FlowResultType.FORM
@@ -73,12 +73,12 @@ async def test_flow_user_cannot_connect(hass: HomeAssistant, skybell_mock) -> No
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_invalid_credentials(hass: HomeAssistant, skybell_mock) -> None:
+async def test_invalid_credentials(menuai: menuai, skybell_mock) -> None:
     """Test that invalid credentials throws an error."""
     skybell_mock.async_initialize.side_effect = (
-        exceptions.SkybellAuthenticationException(hass)
+        exceptions.SkybellAuthenticationException(menuai)
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
     )
 
@@ -87,10 +87,10 @@ async def test_invalid_credentials(hass: HomeAssistant, skybell_mock) -> None:
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_flow_user_unknown_error(hass: HomeAssistant, skybell_mock) -> None:
+async def test_flow_user_unknown_error(menuai: menuai, skybell_mock) -> None:
     """Test user initialized flow with unreachable server."""
     skybell_mock.async_initialize.side_effect = Exception
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
     )
     assert result["type"] is FlowResultType.FORM
@@ -98,17 +98,17 @@ async def test_flow_user_unknown_error(hass: HomeAssistant, skybell_mock) -> Non
     assert result["errors"] == {"base": "unknown"}
 
 
-async def test_step_reauth(hass: HomeAssistant) -> None:
+async def test_step_reauth(menuai: menuai) -> None:
     """Test the reauth flow."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id=USER_ID, data=CONF_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: PASSWORD},
     )
@@ -116,20 +116,20 @@ async def test_step_reauth(hass: HomeAssistant) -> None:
     assert result["reason"] == "reauth_successful"
 
 
-async def test_step_reauth_failed(hass: HomeAssistant, skybell_mock) -> None:
+async def test_step_reauth_failed(menuai: menuai, skybell_mock) -> None:
     """Test the reauth flow fails and recovers."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id=USER_ID, data=CONF_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     skybell_mock.async_initialize.side_effect = (
-        exceptions.SkybellAuthenticationException(hass)
+        exceptions.SkybellAuthenticationException(menuai)
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: PASSWORD},
     )
@@ -139,7 +139,7 @@ async def test_step_reauth_failed(hass: HomeAssistant, skybell_mock) -> None:
 
     skybell_mock.async_initialize.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: PASSWORD},
     )

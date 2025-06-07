@@ -9,11 +9,11 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util import yaml as yaml_util
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.util import yaml as yaml_util
 
 from . import importer, models
 from .const import DOMAIN
@@ -22,19 +22,19 @@ from .schemas import BLUEPRINT_SCHEMA
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the websocket API."""
-    websocket_api.async_register_command(hass, ws_delete_blueprint)
-    websocket_api.async_register_command(hass, ws_import_blueprint)
-    websocket_api.async_register_command(hass, ws_list_blueprints)
-    websocket_api.async_register_command(hass, ws_save_blueprint)
-    websocket_api.async_register_command(hass, ws_substitute_blueprint)
+    websocket_api.async_register_command(menuai, ws_delete_blueprint)
+    websocket_api.async_register_command(menuai, ws_import_blueprint)
+    websocket_api.async_register_command(menuai, ws_list_blueprints)
+    websocket_api.async_register_command(menuai, ws_save_blueprint)
+    websocket_api.async_register_command(menuai, ws_substitute_blueprint)
 
 
 def _ws_with_blueprint_domain(
     func: Callable[
         [
-            HomeAssistant,
+            menuai,
             websocket_api.ActiveConnection,
             dict[str, Any],
             models.DomainBlueprints,
@@ -46,11 +46,11 @@ def _ws_with_blueprint_domain(
 
     @functools.wraps(func)
     async def with_domain_blueprints(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
-        domain_blueprints: models.DomainBlueprints | None = hass.data.get(
+        domain_blueprints: models.DomainBlueprints | None = menuai.data.get(
             DOMAIN, {}
         ).get(msg["domain"])
         if domain_blueprints is None:
@@ -59,7 +59,7 @@ def _ws_with_blueprint_domain(
             )
             return
 
-        await func(hass, connection, msg, domain_blueprints)
+        await func(menuai, connection, msg, domain_blueprints)
 
     return with_domain_blueprints
 
@@ -72,12 +72,12 @@ def _ws_with_blueprint_domain(
 )
 @websocket_api.async_response
 async def ws_list_blueprints(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List available blueprints."""
-    domain_blueprints: dict[str, models.DomainBlueprints] = hass.data.get(DOMAIN, {})
+    domain_blueprints: dict[str, models.DomainBlueprints] = menuai.data.get(DOMAIN, {})
     results: dict[str, Any] = {}
 
     if msg["domain"] not in domain_blueprints:
@@ -105,13 +105,13 @@ async def ws_list_blueprints(
 )
 @websocket_api.async_response
 async def ws_import_blueprint(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Import a blueprint."""
     async with asyncio.timeout(10):
-        imported_blueprint = await importer.fetch_blueprint_from_url(hass, msg["url"])
+        imported_blueprint = await importer.fetch_blueprint_from_url(menuai, msg["url"])
 
     if imported_blueprint is None:
         connection.send_error(  # type: ignore[unreachable]
@@ -121,7 +121,7 @@ async def ws_import_blueprint(
 
     # Check it exists and if so, which automations are using it
     domain = imported_blueprint.blueprint.metadata["domain"]
-    domain_blueprints: models.DomainBlueprints | None = hass.data.get(DOMAIN, {}).get(
+    domain_blueprints: models.DomainBlueprints | None = menuai.data.get(DOMAIN, {}).get(
         domain
     )
     if domain_blueprints is None:
@@ -163,7 +163,7 @@ async def ws_import_blueprint(
 @websocket_api.async_response
 @_ws_with_blueprint_domain
 async def ws_save_blueprint(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     domain_blueprints: models.DomainBlueprints,
@@ -180,7 +180,7 @@ async def ws_save_blueprint(
         )
         if "source_url" in msg:
             blueprint.update_metadata(source_url=msg["source_url"])
-    except HomeAssistantError as err:
+    except menuaiError as err:
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, str(err))
         return
 
@@ -216,7 +216,7 @@ async def ws_save_blueprint(
 @websocket_api.async_response
 @_ws_with_blueprint_domain
 async def ws_delete_blueprint(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     domain_blueprints: models.DomainBlueprints,
@@ -244,7 +244,7 @@ async def ws_delete_blueprint(
 @websocket_api.async_response
 @_ws_with_blueprint_domain
 async def ws_substitute_blueprint(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     domain_blueprints: models.DomainBlueprints,

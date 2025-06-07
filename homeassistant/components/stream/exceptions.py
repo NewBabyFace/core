@@ -1,11 +1,11 @@
 """Stream component exceptions."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .const import StreamClientError
 
 
-class StreamOpenClientError(HomeAssistantError):
+class StreamOpenClientError(menuaiError):
     """Raised when client error received when trying to open a stream.
 
     :param stream_client_error: The type of client error

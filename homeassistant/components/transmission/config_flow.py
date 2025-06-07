@@ -7,13 +7,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -22,7 +22,7 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from . import get_api
 from .const import (
@@ -76,7 +76,7 @@ class TransmissionFlowHandler(ConfigFlow, domain=DOMAIN):
                 {CONF_HOST: user_input[CONF_HOST], CONF_PORT: user_input[CONF_PORT]}
             )
             try:
-                await get_api(self.hass, user_input)
+                await get_api(self.menuai, user_input)
 
             except AuthenticationError:
                 errors[CONF_USERNAME] = "invalid_auth"
@@ -111,7 +111,7 @@ class TransmissionFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input = {**reauth_entry.data, **user_input}
             try:
-                await get_api(self.hass, user_input)
+                await get_api(self.menuai, user_input)
 
             except AuthenticationError:
                 errors[CONF_PASSWORD] = "invalid_auth"

@@ -6,10 +6,10 @@ import pytest
 import roborock
 from roborock import RoborockException
 
-from homeassistant.components.button import SERVICE_PRESS
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.button import SERVICE_PRESS
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
@@ -19,7 +19,7 @@ def bypass_api_client_get_scenes_fixture(bypass_api_fixture) -> None:
     """Fixture to raise when getting scenes."""
     with (
         patch(
-            "homeassistant.components.roborock.RoborockApiClient.get_scenes",
+            "menuai.components.roborock.RoborockApiClient.get_scenes",
             side_effect=RoborockException(),
         ),
     ):
@@ -44,25 +44,25 @@ def platforms() -> list[Platform]:
 @pytest.mark.freeze_time("2023-10-30 08:50:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_update_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
     entity_id: str,
 ) -> None:
     """Test pressing the button entities."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id).state == "unknown"
+    assert menuai.states.get(entity_id).state == "unknown"
     with patch(
-        "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.send_message"
+        "menuai.components.roborock.coordinator.RoborockLocalClientV1.send_message"
     ) as mock_send_message:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             SERVICE_PRESS,
             blocking=True,
             target={"entity_id": entity_id},
         )
     assert mock_send_message.assert_called_once
-    assert hass.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"
+    assert menuai.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"
 
 
 @pytest.mark.parametrize(
@@ -74,29 +74,29 @@ async def test_update_success(
 @pytest.mark.freeze_time("2023-10-30 08:50:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_update_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
     entity_id: str,
 ) -> None:
     """Test failure while pressing the button entity."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id).state == "unknown"
+    assert menuai.states.get(entity_id).state == "unknown"
     with (
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.send_message",
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.send_message",
             side_effect=roborock.exceptions.RoborockTimeout,
         ) as mock_send_message,
-        pytest.raises(HomeAssistantError, match="Error while calling RESET_CONSUMABLE"),
+        pytest.raises(menuaiError, match="Error while calling RESET_CONSUMABLE"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             SERVICE_PRESS,
             blocking=True,
             target={"entity_id": entity_id},
         )
     assert mock_send_message.assert_called_once
-    assert hass.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"
+    assert menuai.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"
 
 
 @pytest.mark.parametrize(
@@ -108,14 +108,14 @@ async def test_update_failure(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_get_button_routines_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_client_get_scenes_fixture,
     setup_entry: MockConfigEntry,
     entity_id: str,
 ) -> None:
     """Test that if routine retrieval fails, no entity is being created."""
     # Ensure that the entity does not exist
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
 
 @pytest.mark.parametrize(
@@ -128,7 +128,7 @@ async def test_get_button_routines_failure(
 @pytest.mark.freeze_time("2023-10-30 08:50:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_press_routine_button_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
     entity_id: str,
@@ -136,16 +136,16 @@ async def test_press_routine_button_success(
 ) -> None:
     """Test pressing the button entities."""
     with patch(
-        "homeassistant.components.roborock.RoborockApiClient.execute_scene"
+        "menuai.components.roborock.RoborockApiClient.execute_scene"
     ) as mock_execute_scene:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             SERVICE_PRESS,
             blocking=True,
             target={"entity_id": entity_id},
         )
     mock_execute_scene.assert_called_once_with(ANY, routine_id)
-    assert hass.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"
+    assert menuai.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"
 
 
 @pytest.mark.parametrize(
@@ -157,7 +157,7 @@ async def test_press_routine_button_success(
 @pytest.mark.freeze_time("2023-10-30 08:50:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_press_routine_button_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
     entity_id: str,
@@ -166,16 +166,16 @@ async def test_press_routine_button_failure(
     """Test failure while pressing the button entity."""
     with (
         patch(
-            "homeassistant.components.roborock.RoborockApiClient.execute_scene",
+            "menuai.components.roborock.RoborockApiClient.execute_scene",
             side_effect=RoborockException,
         ) as mock_execute_scene,
-        pytest.raises(HomeAssistantError, match="Error while calling execute_scene"),
+        pytest.raises(menuaiError, match="Error while calling execute_scene"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             SERVICE_PRESS,
             blocking=True,
             target={"entity_id": entity_id},
         )
     mock_execute_scene.assert_called_once_with(ANY, routine_id)
-    assert hass.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"
+    assert menuai.states.get(entity_id).state == "2023-10-30T08:50:00+00:00"

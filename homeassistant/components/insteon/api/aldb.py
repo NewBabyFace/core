@@ -6,9 +6,9 @@ from pyinsteon import devices
 from pyinsteon.constants import ALDBStatus
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
 
 from ..const import DEVICE_ADDRESS, ID, INSTEON_DEVICE_NOT_FOUND, TYPE
 from ..utils import async_device_name
@@ -51,13 +51,13 @@ async def async_aldb_record_to_dict(dev_registry, record, dirty=False):
     )
 
 
-async def async_reload_and_save_aldb(hass, device):
+async def async_reload_and_save_aldb(menuai, device):
     """Add default links to an Insteon device."""
     if device == devices.modem:
         await device.aldb.async_load()
     else:
         await device.aldb.async_load(refresh=True)
-    await devices.async_save(workdir=hass.config.config_dir)
+    await devices.async_save(workdir=menuai.config.config_dir)
 
 
 def any_aldb_loading() -> bool:
@@ -73,7 +73,7 @@ def any_aldb_loading() -> bool:
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_aldb(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -87,7 +87,7 @@ async def websocket_get_aldb(
     aldb.update(device.aldb.pending_changes)
     changed_records = list(device.aldb.pending_changes.keys())
 
-    dev_registry = dr.async_get(hass)
+    dev_registry = dr.async_get(menuai)
 
     records = [
         await async_aldb_record_to_dict(
@@ -109,7 +109,7 @@ async def websocket_get_aldb(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_change_aldb_record(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -142,7 +142,7 @@ async def websocket_change_aldb_record(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_create_aldb_record(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -172,7 +172,7 @@ async def websocket_create_aldb_record(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_write_aldb(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -182,7 +182,7 @@ async def websocket_write_aldb(
         return
 
     await device.aldb.async_write()
-    hass.async_create_task(async_reload_and_save_aldb(hass, device))
+    menuai.async_create_task(async_reload_and_save_aldb(menuai, device))
     connection.send_result(msg[ID])
 
 
@@ -195,7 +195,7 @@ async def websocket_write_aldb(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_load_aldb(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -204,7 +204,7 @@ async def websocket_load_aldb(
         notify_device_not_found(connection, msg, INSTEON_DEVICE_NOT_FOUND)
         return
 
-    hass.async_create_task(async_reload_and_save_aldb(hass, device))
+    menuai.async_create_task(async_reload_and_save_aldb(menuai, device))
     connection.send_result(msg[ID])
 
 
@@ -217,7 +217,7 @@ async def websocket_load_aldb(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_reset_aldb(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -239,7 +239,7 @@ async def websocket_reset_aldb(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_add_default_links(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -250,7 +250,7 @@ async def websocket_add_default_links(
 
     device.aldb.clear_pending()
     await device.async_add_default_links()
-    hass.async_create_task(async_reload_and_save_aldb(hass, device))
+    menuai.async_create_task(async_reload_and_save_aldb(menuai, device))
     connection.send_result(msg[ID])
 
 
@@ -263,7 +263,7 @@ async def websocket_add_default_links(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_notify_on_aldb_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -307,7 +307,7 @@ async def websocket_notify_on_aldb_status(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_notify_on_aldb_status_all(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:

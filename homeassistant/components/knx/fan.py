@@ -7,17 +7,17 @@ from typing import Any, Final
 
 from xknx.devices import Fan as XknxFan
 
-from homeassistant import config_entries
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.const import CONF_ENTITY_CATEGORY, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.percentage import (
+from menuai import config_entries
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.const import CONF_ENTITY_CATEGORY, CONF_NAME, Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
+from menuai.util.scaling import int_states_in_range
 
 from . import KNXModule
 from .const import KNX_ADDRESS, KNX_MODULE_KEY
@@ -28,12 +28,12 @@ DEFAULT_PERCENTAGE: Final = 50
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up fan(s) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     config: list[ConfigType] = knx_module.config_yaml[Platform.FAN]
 
     async_add_entities(KNXFan(knx_module, entity_config) for entity_config in config)

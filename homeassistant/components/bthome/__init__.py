@@ -8,17 +8,17 @@ import logging
 from bthome_ble import BTHomeBluetoothDeviceData, SensorUpdate
 from bthome_ble.parser import EncryptionScheme
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     DOMAIN as BLUETOOTH_DOMAIN,
     BluetoothScanningMode,
     BluetoothServiceInfoBleak,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceRegistry
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.util.signal_type import SignalType
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceRegistry
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.util.signal_type import SignalType
 
 from .const import (
     BTHOME_BLE_EVENT,
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def process_service_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BTHomeConfigEntry,
     device_registry: DeviceRegistry,
     service_info: BluetoothServiceInfoBleak,
@@ -48,7 +48,7 @@ def process_service_info(
     update = data.update(service_info)
     discovered_event_classes = coordinator.discovered_event_classes
     if entry.data.get(CONF_SLEEPY_DEVICE, False) != data.sleepy_device:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data=entry.data | {CONF_SLEEPY_DEVICE: data.sleepy_device},
         )
@@ -81,25 +81,25 @@ def process_service_info(
 
             if event_class not in discovered_event_classes:
                 discovered_event_classes.add(event_class)
-                hass.config_entries.async_update_entry(
+                menuai.config_entries.async_update_entry(
                     entry,
                     data=entry.data
                     | {CONF_DISCOVERED_EVENT_CLASSES: list(discovered_event_classes)},
                 )
                 async_dispatcher_send(
-                    hass, format_discovered_event_class(address), event_class, ble_event
+                    menuai, format_discovered_event_class(address), event_class, ble_event
                 )
 
-            hass.bus.async_fire(BTHOME_BLE_EVENT, ble_event)
+            menuai.bus.async_fire(BTHOME_BLE_EVENT, ble_event)
             async_dispatcher_send(
-                hass,
+                menuai,
                 format_event_dispatcher_name(address, event_class),
                 ble_event,
             )
 
     # If payload is encrypted and the bindkey is not verified then we need to reauth
     if data.encryption_scheme != EncryptionScheme.NONE and not data.bindkey_verified:
-        entry.async_start_reauth(hass, data={"device": data})
+        entry.async_start_reauth(menuai, data={"device": data})
 
     return update
 
@@ -116,7 +116,7 @@ def format_discovered_event_class(address: str) -> SignalType[str, BTHomeBleEven
     return SignalType(f"{DOMAIN}_discovered_event_class_{address}")
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BTHomeConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BTHomeConfigEntry) -> bool:
     """Set up BTHome Bluetooth from a config entry."""
     address = entry.unique_id
     assert address is not None
@@ -126,27 +126,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: BTHomeConfigEntry) -> bo
         kwargs[CONF_BINDKEY] = bytes.fromhex(bindkey)
     data = BTHomeBluetoothDeviceData(**kwargs)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     event_classes = set(entry.data.get(CONF_DISCOVERED_EVENT_CLASSES, ()))
     coordinator = BTHomePassiveBluetoothProcessorCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         address=address,
         mode=BluetoothScanningMode.PASSIVE,
-        update_method=partial(process_service_info, hass, entry, device_registry),
+        update_method=partial(process_service_info, menuai, entry, device_registry),
         device_data=data,
         discovered_event_classes=event_classes,
         connectable=False,
         entry=entry,
     )
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # only start after all platforms have had a chance to subscribe
     entry.async_on_unload(coordinator.async_start())
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BTHomeConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BTHomeConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

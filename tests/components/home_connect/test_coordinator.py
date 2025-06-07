@@ -28,18 +28,18 @@ from aiohomeconnect.model.error import (
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.home_connect.const import (
+from menuai.components.home_connect.const import (
     BSH_DOOR_STATE_OPEN,
     BSH_EVENT_PRESENT_STATE_PRESENT,
     BSH_POWER_OFF,
     DOMAIN,
 )
-from homeassistant.components.homeassistant import (
+from menuai.components.menuai import (
     DOMAIN as HA_DOMAIN,
     SERVICE_UPDATE_ENTITY,
 )
-from homeassistant.config_entries import ConfigEntries, ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntries, ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     EVENT_STATE_REPORTED,
     STATE_OFF,
@@ -47,19 +47,19 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import (
-    Event as HassEvent,
+from menuai.core import (
+    Event as menuaiEvent,
     EventStateReportedData,
-    HomeAssistant,
+    menuai,
     callback,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.typing import ClientSessionGenerator
@@ -82,7 +82,7 @@ def platforms() -> list[str]:
 @pytest.mark.parametrize("platforms", [("binary_sensor",)])
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def test_coordinator_failure_refresh_and_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -97,28 +97,28 @@ async def test_coordinator_failure_refresh_and_stream(
     )
     entity_id_1 = "binary_sensor.washer_remote_control"
     entity_id_2 = "binary_sensor.washer_remote_start"
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, HA_DOMAIN, {})
     await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
-    state = hass.states.get(entity_id_1)
+    state = menuai.states.get(entity_id_1)
     assert state
     assert state.state != STATE_UNAVAILABLE
-    state = hass.states.get(entity_id_2)
+    state = menuai.states.get(entity_id_2)
     assert state
     assert state.state != STATE_UNAVAILABLE
 
     client.get_home_appliances.side_effect = HomeConnectError()
 
     # Force a coordinator refresh.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN, SERVICE_UPDATE_ENTITY, {ATTR_ENTITY_ID: entity_id_1}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id_1)
+    state = menuai.states.get(entity_id_1)
     assert state
     assert state.state == STATE_UNAVAILABLE
-    state = hass.states.get(entity_id_2)
+    state = menuai.states.get(entity_id_2)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -131,19 +131,19 @@ async def test_coordinator_failure_refresh_and_stream(
 
     # Move time forward to pass the debounce time.
     freezer.tick(timedelta(hours=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Force a coordinator refresh.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN, SERVICE_UPDATE_ENTITY, {ATTR_ENTITY_ID: entity_id_1}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id_1)
+    state = menuai.states.get(entity_id_1)
     assert state
     assert state.state != STATE_UNAVAILABLE
-    state = hass.states.get(entity_id_2)
+    state = menuai.states.get(entity_id_2)
     assert state
     assert state.state != STATE_UNAVAILABLE
 
@@ -154,19 +154,19 @@ async def test_coordinator_failure_refresh_and_stream(
 
     # Move time forward to pass the debounce time
     freezer.tick(timedelta(hours=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Force a coordinator refresh
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN, SERVICE_UPDATE_ENTITY, {ATTR_ENTITY_ID: entity_id_1}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id_1)
+    state = menuai.states.get(entity_id_1)
     assert state
     assert state.state == STATE_UNAVAILABLE
-    state = hass.states.get(entity_id_2)
+    state = menuai.states.get(entity_id_2)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -194,12 +194,12 @@ async def test_coordinator_failure_refresh_and_stream(
         ),
     )
     await client.add_events([event_message])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id_1)
+    state = menuai.states.get(entity_id_1)
     assert state
     assert state.state != STATE_UNAVAILABLE
-    state = hass.states.get(entity_id_2)
+    state = menuai.states.get(entity_id_2)
     assert state
     assert state.state != STATE_UNAVAILABLE
 
@@ -273,7 +273,7 @@ async def test_coordinator_update_failing(
     ],
 )
 async def test_event_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -288,7 +288,7 @@ async def test_event_listener(
     await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     event_message = EventMessage(
         appliance.ha_id,
@@ -307,9 +307,9 @@ async def test_event_listener(
         ),
     )
     await client.add_events([event_message])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    new_state = hass.states.get(entity_id)
+    new_state = menuai.states.get(entity_id)
     assert new_state
     assert new_state.state != state.state
 
@@ -318,19 +318,19 @@ async def test_event_listener(
     listener = MagicMock()
 
     @callback
-    def listener_callback(event: HassEvent[EventStateReportedData]) -> None:
+    def listener_callback(event: menuaiEvent[EventStateReportedData]) -> None:
         listener(event.data["entity_id"])
 
     @callback
     def event_filter(_: EventStateReportedData) -> bool:
         return True
 
-    hass.bus.async_listen_once(EVENT_STATE_REPORTED, listener_callback, event_filter)
+    menuai.bus.async_listen_once(EVENT_STATE_REPORTED, listener_callback, event_filter)
 
     entity_registry.async_update_entity(entity_id, new_entity_id=new_entity_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     await client.add_events([event_message])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Because the entity's id has been updated, the entity has been unloaded
     # and the listener has been removed, and the new entity adds a new listener,
@@ -340,7 +340,7 @@ async def test_event_listener(
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def tests_receive_setting_and_status_for_first_time_at_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -389,13 +389,13 @@ async def tests_receive_setting_and_status_for_first_time_at_events(
             ),
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(config_entry._background_tasks) == 1
     assert config_entry.state is ConfigEntryState.LOADED
 
 
 async def test_event_listener_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -410,7 +410,7 @@ async def test_event_listener_error(
         "async_schedule_reload",
     ) as mock_schedule_reload:
         await integration_setup(client_with_exception)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     client_with_exception.stream_all_events.assert_called_once()
     mock_schedule_reload.assert_called_once_with(config_entry.entry_id)
@@ -442,7 +442,7 @@ async def test_event_listener_error(
     ],
 )
 async def test_event_listener_resilience(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -455,7 +455,7 @@ async def test_event_listener_resilience(
     after_event_expected_state: str,
 ) -> None:
     """Test that the event listener is resilient to interruptions."""
-    future = hass.loop.create_future()
+    future = menuai.loop.create_future()
 
     async def stream_exception():
         yield await future
@@ -465,20 +465,20 @@ async def test_event_listener_resilience(
     )
 
     await integration_setup(client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
     assert len(config_entry._background_tasks) == 1
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == initial_state
 
     future.set_exception(exception)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=30))
+    await menuai.async_block_till_done()
 
     assert client.stream_all_events.call_count == 2
 
@@ -502,15 +502,15 @@ async def test_event_listener_resilience(
             ),
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == after_event_expected_state
 
 
 async def test_devices_updated_on_refresh(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -525,7 +525,7 @@ async def test_devices_updated_on_refresh(
         return_value=ArrayOfHomeAppliances(appliances[:2]),
     )
 
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, HA_DOMAIN, {})
     await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -536,7 +536,7 @@ async def test_devices_updated_on_refresh(
     client.get_home_appliances = AsyncMock(
         return_value=ArrayOfHomeAppliances(appliances[1:3]),
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: "switch.dishwasher_power"},
@@ -550,7 +550,7 @@ async def test_devices_updated_on_refresh(
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def test_paired_disconnected_devices_not_fetching(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -571,7 +571,7 @@ async def test_paired_disconnected_devices_not_fetching(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     client.get_specific_appliance.assert_awaited_once_with(appliance.ha_id)
     for method in INITIAL_FETCH_CLIENT_METHODS:
@@ -579,8 +579,8 @@ async def test_paired_disconnected_devices_not_fetching(
 
 
 async def test_coordinator_disabling_updates_for_appliance(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -597,7 +597,7 @@ async def test_coordinator_disabling_updates_for_appliance(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert hass.states.is_state("switch.dishwasher_power", STATE_ON)
+    assert menuai.states.is_state("switch.dishwasher_power", STATE_ON)
 
     await client.add_events(
         [
@@ -609,7 +609,7 @@ async def test_coordinator_disabling_updates_for_appliance(
             for _ in range(8)
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     issue = issue_registry.async_get_issue(DOMAIN, issue_id)
     assert issue
@@ -640,11 +640,11 @@ async def test_coordinator_disabling_updates_for_appliance(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.is_state("switch.dishwasher_power", STATE_ON)
+    assert menuai.states.is_state("switch.dishwasher_power", STATE_ON)
 
-    _client = await hass_client()
+    _client = await menuai_client()
     resp = await _client.post(
         "/api/repairs/issues/fix",
         json={"handler": DOMAIN, "issue_id": issue.issue_id},
@@ -665,13 +665,13 @@ async def test_coordinator_disabling_updates_for_appliance(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.is_state("switch.dishwasher_power", STATE_OFF)
+    assert menuai.states.is_state("switch.dishwasher_power", STATE_OFF)
 
 
 async def test_coordinator_disabling_updates_for_appliance_is_gone_after_entry_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -687,7 +687,7 @@ async def test_coordinator_disabling_updates_for_appliance_is_gone_after_entry_r
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert hass.states.is_state("switch.dishwasher_power", STATE_ON)
+    assert menuai.states.is_state("switch.dishwasher_power", STATE_ON)
 
     await client.add_events(
         [
@@ -699,13 +699,13 @@ async def test_coordinator_disabling_updates_for_appliance_is_gone_after_entry_r
             for _ in range(8)
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     issue = issue_registry.async_get_issue(DOMAIN, issue_id)
     assert issue
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert not issue_registry.async_get_issue(DOMAIN, issue_id)
 
@@ -738,6 +738,6 @@ async def test_coordinator_disabling_updates_for_appliance_is_gone_after_entry_r
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.is_state("switch.dishwasher_power", STATE_OFF)
+    assert menuai.states.is_state("switch.dishwasher_power", STATE_OFF)

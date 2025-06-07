@@ -25,11 +25,11 @@ from propcache.api import cached_property
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_AUTHENTICATED, HomeAssistantView
-from homeassistant.components.websocket_api import ERR_NOT_SUPPORTED, ERR_UNKNOWN_ERROR
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (  # noqa: F401
+from menuai.components import websocket_api
+from menuai.components.http import KEY_AUTHENTICATED, menuaiView
+from menuai.components.websocket_api import ERR_NOT_SUPPORTED, ERR_UNKNOWN_ERROR
+from menuai.config_entries import ConfigEntry
+from menuai.const import (  # noqa: F401
     ATTR_ENTITY_PICTURE,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -52,21 +52,21 @@ from homeassistant.const import (  # noqa: F401
     STATE_PLAYING,
     STATE_STANDBY,
 )
-from homeassistant.core import HomeAssistant, SupportsResponse
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.deprecation import (
+from menuai.core import menuai, SupportsResponse
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.deprecation import (
     DeprecatedConstantEnum,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.network import get_url
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.network import get_url
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.menuai_dict import menuaiKey
 
 from .browse_media import (  # noqa: F401
     BrowseMedia,
@@ -149,7 +149,7 @@ from .errors import BrowseError, SearchError
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[MediaPlayerEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[MediaPlayerEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -262,15 +262,15 @@ class _ImageCache(TypedDict):
 _ENTITY_IMAGE_CACHE = _ImageCache(images=collections.OrderedDict(), maxsize=16)
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str | None = None) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str | None = None) -> bool:
     """Return true if specified media player entity_id is on.
 
     Check all media player if no entity_id specified.
     """
-    entity_ids = [entity_id] if entity_id else hass.states.entity_ids(DOMAIN)
+    entity_ids = [entity_id] if entity_id else menuai.states.entity_ids(DOMAIN)
     return any(
-        not hass.states.is_state(entity_id, MediaPlayerState.OFF)
+        not menuai.states.is_state(entity_id, MediaPlayerState.OFF)
         for entity_id in entity_ids
     )
 
@@ -292,15 +292,15 @@ def _rename_keys(**keys: Any) -> Callable[[dict[str, Any]], dict[str, Any]]:
     return rename
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for media_players."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[MediaPlayerEntity](
-        logging.getLogger(__name__), DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[MediaPlayerEntity](
+        logging.getLogger(__name__), DOMAIN, menuai, SCAN_INTERVAL
     )
 
-    websocket_api.async_register_command(hass, websocket_browse_media)
-    websocket_api.async_register_command(hass, websocket_search_media)
-    hass.http.register_view(MediaPlayerImageView(component))
+    websocket_api.async_register_command(menuai, websocket_browse_media)
+    websocket_api.async_register_command(menuai, websocket_search_media)
+    menuai.http.register_view(MediaPlayerImageView(component))
 
     await component.async_setup(config)
 
@@ -413,7 +413,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         [MediaPlayerEntityFeature.SELECT_SOUND_MODE],
     )
 
-    # Remove in Home Assistant 2022.9
+    # Remove in MenuAI 2022.9
     def _rewrite_enqueue(value: dict[str, Any]) -> dict[str, Any]:
         """Rewrite the enqueue value."""
         if ATTR_MEDIA_ENQUEUE not in value:
@@ -492,14 +492,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class MediaPlayerEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -670,7 +670,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     def media_position_updated_at(self) -> dt.datetime | None:
         """When was the position of the current playing media valid.
 
-        Returns value from homeassistant.util.dt.utcnow().
+        Returns value from menuai.util.dt.utcnow().
         """
         return self._attr_media_position_updated_at
 
@@ -833,7 +833,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
-        await self.hass.async_add_executor_job(self.turn_on)
+        await self.menuai.async_add_executor_job(self.turn_on)
 
     def turn_off(self) -> None:
         """Turn the media player off."""
@@ -841,7 +841,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_off(self) -> None:
         """Turn the media player off."""
-        await self.hass.async_add_executor_job(self.turn_off)
+        await self.menuai.async_add_executor_job(self.turn_off)
 
     def mute_volume(self, mute: bool) -> None:
         """Mute the volume."""
@@ -849,7 +849,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_mute_volume(self, mute: bool) -> None:
         """Mute the volume."""
-        await self.hass.async_add_executor_job(self.mute_volume, mute)
+        await self.menuai.async_add_executor_job(self.mute_volume, mute)
 
     def set_volume_level(self, volume: float) -> None:
         """Set volume level, range 0..1."""
@@ -857,7 +857,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_volume_level(self, volume: float) -> None:
         """Set volume level, range 0..1."""
-        await self.hass.async_add_executor_job(self.set_volume_level, volume)
+        await self.menuai.async_add_executor_job(self.set_volume_level, volume)
 
     def media_play(self) -> None:
         """Send play command."""
@@ -865,7 +865,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_media_play(self) -> None:
         """Send play command."""
-        await self.hass.async_add_executor_job(self.media_play)
+        await self.menuai.async_add_executor_job(self.media_play)
 
     def media_pause(self) -> None:
         """Send pause command."""
@@ -873,7 +873,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_media_pause(self) -> None:
         """Send pause command."""
-        await self.hass.async_add_executor_job(self.media_pause)
+        await self.menuai.async_add_executor_job(self.media_pause)
 
     def media_stop(self) -> None:
         """Send stop command."""
@@ -881,7 +881,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_media_stop(self) -> None:
         """Send stop command."""
-        await self.hass.async_add_executor_job(self.media_stop)
+        await self.menuai.async_add_executor_job(self.media_stop)
 
     def media_previous_track(self) -> None:
         """Send previous track command."""
@@ -889,7 +889,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_media_previous_track(self) -> None:
         """Send previous track command."""
-        await self.hass.async_add_executor_job(self.media_previous_track)
+        await self.menuai.async_add_executor_job(self.media_previous_track)
 
     def media_next_track(self) -> None:
         """Send next track command."""
@@ -897,7 +897,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_media_next_track(self) -> None:
         """Send next track command."""
-        await self.hass.async_add_executor_job(self.media_next_track)
+        await self.menuai.async_add_executor_job(self.media_next_track)
 
     def media_seek(self, position: float) -> None:
         """Send seek command."""
@@ -905,7 +905,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_media_seek(self, position: float) -> None:
         """Send seek command."""
-        await self.hass.async_add_executor_job(self.media_seek, position)
+        await self.menuai.async_add_executor_job(self.media_seek, position)
 
     def play_media(
         self, media_type: MediaType | str, media_id: str, **kwargs: Any
@@ -917,7 +917,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         self, media_type: MediaType | str, media_id: str, **kwargs: Any
     ) -> None:
         """Play a piece of media."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.play_media, media_type, media_id, **kwargs)
         )
 
@@ -927,7 +927,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_select_source(self, source: str) -> None:
         """Select input source."""
-        await self.hass.async_add_executor_job(self.select_source, source)
+        await self.menuai.async_add_executor_job(self.select_source, source)
 
     def select_sound_mode(self, sound_mode: str) -> None:
         """Select sound mode."""
@@ -935,7 +935,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_select_sound_mode(self, sound_mode: str) -> None:
         """Select sound mode."""
-        await self.hass.async_add_executor_job(self.select_sound_mode, sound_mode)
+        await self.menuai.async_add_executor_job(self.select_sound_mode, sound_mode)
 
     def clear_playlist(self) -> None:
         """Clear players playlist."""
@@ -943,7 +943,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_clear_playlist(self) -> None:
         """Clear players playlist."""
-        await self.hass.async_add_executor_job(self.clear_playlist)
+        await self.menuai.async_add_executor_job(self.clear_playlist)
 
     def set_shuffle(self, shuffle: bool) -> None:
         """Enable/disable shuffle mode."""
@@ -951,7 +951,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_shuffle(self, shuffle: bool) -> None:
         """Enable/disable shuffle mode."""
-        await self.hass.async_add_executor_job(self.set_shuffle, shuffle)
+        await self.menuai.async_add_executor_job(self.set_shuffle, shuffle)
 
     def set_repeat(self, repeat: RepeatMode) -> None:
         """Set repeat mode."""
@@ -959,7 +959,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_repeat(self, repeat: RepeatMode) -> None:
         """Set repeat mode."""
-        await self.hass.async_add_executor_job(self.set_repeat, repeat)
+        await self.menuai.async_add_executor_job(self.set_repeat, repeat)
 
     # No need to overwrite these.
     @final
@@ -1051,7 +1051,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     async def async_toggle(self) -> None:
         """Toggle the power on the media player."""
         if hasattr(self, "toggle"):
-            await self.hass.async_add_executor_job(self.toggle)
+            await self.menuai.async_add_executor_job(self.toggle)
             return
 
         if self.state in {
@@ -1068,7 +1068,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         This method is a coroutine.
         """
         if hasattr(self, "volume_up"):
-            await self.hass.async_add_executor_job(self.volume_up)
+            await self.menuai.async_add_executor_job(self.volume_up)
             return
 
         if (
@@ -1086,7 +1086,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         This method is a coroutine.
         """
         if hasattr(self, "volume_down"):
-            await self.hass.async_add_executor_job(self.volume_down)
+            await self.menuai.async_add_executor_job(self.volume_down)
             return
 
         if (
@@ -1101,7 +1101,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     async def async_media_play_pause(self) -> None:
         """Play or pause the media player."""
         if hasattr(self, "media_play_pause"):
-            await self.hass.async_add_executor_job(self.media_play_pause)
+            await self.menuai.async_add_executor_job(self.media_play_pause)
             return
 
         if self.state == MediaPlayerState.PLAYING:
@@ -1211,7 +1211,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_join_players(self, group_members: list[str]) -> None:
         """Join `group_members` as a player group with the current player."""
-        await self.hass.async_add_executor_job(self.join_players, group_members)
+        await self.menuai.async_add_executor_job(self.join_players, group_members)
 
     def unjoin_player(self) -> None:
         """Remove this player from any group."""
@@ -1219,7 +1219,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_unjoin_player(self) -> None:
         """Remove this player from any group."""
-        await self.hass.async_add_executor_job(self.unjoin_player)
+        await self.menuai.async_add_executor_job(self.unjoin_player)
 
     async def _async_fetch_image_from_cache(
         self, url: str
@@ -1232,7 +1232,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         cache_maxsize = _ENTITY_IMAGE_CACHE[CACHE_MAXSIZE]
 
         if urlparse(url).hostname is None:
-            url = f"{get_url(self.hass)}{url}"
+            url = f"{get_url(self.menuai)}{url}"
 
         if url not in cache_images:
             cache_images[url] = {CACHE_LOCK: asyncio.Lock()}
@@ -1252,7 +1252,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def _async_fetch_image(self, url: str) -> tuple[bytes | None, str | None]:
         """Retrieve an image."""
-        return await async_fetch_image(_LOGGER, self.hass, url)
+        return await async_fetch_image(_LOGGER, self.menuai, url)
 
     def get_browse_image_url(
         self,
@@ -1275,7 +1275,7 @@ class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         return str(URL(url_path).with_query(url_query))
 
 
-class MediaPlayerImageView(HomeAssistantView):
+class MediaPlayerImageView(menuaiView):
     """Media player view to serve an image."""
 
     requires_auth = False
@@ -1349,7 +1349,7 @@ class MediaPlayerImageView(HomeAssistantView):
 )
 @websocket_api.async_response
 async def websocket_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -1358,7 +1358,7 @@ async def websocket_browse_media(
     To use, media_player integrations can implement
     MediaPlayerEntity.async_browse_media()
     """
-    player = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    player = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
 
     if player is None:
         connection.send_error(msg["id"], "entity_not_found", "Entity not found")
@@ -1432,7 +1432,7 @@ async def websocket_browse_media(
 )
 @websocket_api.async_response
 async def websocket_search_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -1441,7 +1441,7 @@ async def websocket_search_media(
     To use, media_player integrations can implement
     MediaPlayerEntity.async_search_media()
     """
-    player = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    player = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
 
     if player is None:
         connection.send_error(msg["id"], "entity_not_found", "Entity not found")
@@ -1481,11 +1481,11 @@ _FETCH_TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
 async def async_fetch_image(
-    logger: logging.Logger, hass: HomeAssistant, url: str
+    logger: logging.Logger, menuai: menuai, url: str
 ) -> tuple[bytes | None, str | None]:
     """Retrieve an image."""
     content, content_type = (None, None)
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     with suppress(TimeoutError):
         response = await websession.get(url, timeout=_FETCH_TIMEOUT)
         if response.status == HTTPStatus.OK:

@@ -11,14 +11,14 @@ from bimmer_connected.models import (
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.bmw_connected_drive import DOMAIN
-from homeassistant.components.bmw_connected_drive.const import (
+from menuai.components.bmw_connected_drive import DOMAIN
+from menuai.components.bmw_connected_drive.const import (
     CONF_REFRESH_TOKEN,
     SCAN_INTERVALS,
 )
-from homeassistant.const import CONF_REGION
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import issue_registry as ir
+from menuai.const import CONF_REGION
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import issue_registry as ir
 
 from . import BIMMER_CONNECTED_VEHICLE_PATCH, FIXTURE_CONFIG_ENTRY
 
@@ -37,27 +37,27 @@ FIXTURE_DEFAULT_REGION = FIXTURE_CONFIG_ENTRY["data"][CONF_REGION]
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_config_entry_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test if the coordinator updates the refresh token in config entry."""
     config_entry_fixure = deepcopy(FIXTURE_CONFIG_ENTRY)
     config_entry_fixure["data"][CONF_REFRESH_TOKEN] = "old_token"
     config_entry = MockConfigEntry(**config_entry_fixure)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     assert (
-        hass.config_entries.async_get_entry(config_entry.entry_id).data[
+        menuai.config_entries.async_get_entry(config_entry.entry_id).data[
             CONF_REFRESH_TOKEN
         ]
         == "old_token"
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
-        hass.config_entries.async_get_entry(config_entry.entry_id).data[
+        menuai.config_entries.async_get_entry(config_entry.entry_id).data[
             CONF_REFRESH_TOKEN
         ]
         == "another_token_string"
@@ -66,19 +66,19 @@ async def test_config_entry_update(
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test a failing API call."""
     config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test if entities show data correctly
     for entity_id, state in FIXTURE_ENTITY_STATES.items():
-        assert hass.states.get(entity_id).state == state
+        assert menuai.states.get(entity_id).state == state
 
     # On API error, entities should be unavailable
     freezer.tick(SCAN_INTERVALS[FIXTURE_DEFAULT_REGION])
@@ -86,37 +86,37 @@ async def test_update_failed(
         BIMMER_CONNECTED_VEHICLE_PATCH,
         side_effect=MyBMWAPIError("Test error"),
     ):
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     for entity_id in FIXTURE_ENTITY_STATES:
-        assert hass.states.get(entity_id).state == "unavailable"
+        assert menuai.states.get(entity_id).state == "unavailable"
 
     # And should recover on next update
     freezer.tick(SCAN_INTERVALS[FIXTURE_DEFAULT_REGION])
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     for entity_id, state in FIXTURE_ENTITY_STATES.items():
-        assert hass.states.get(entity_id).state == state
+        assert menuai.states.get(entity_id).state == state
 
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_auth_failed_as_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test a single auth failure not initializing reauth flow."""
     config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test if entities show data correctly
     for entity_id, state in FIXTURE_ENTITY_STATES.items():
-        assert hass.states.get(entity_id).state == state
+        assert menuai.states.get(entity_id).state == state
 
     # Due to flaky API, we allow one retry on AuthError and raise as UpdateFailed
     freezer.tick(SCAN_INTERVALS[FIXTURE_DEFAULT_REGION])
@@ -124,42 +124,42 @@ async def test_auth_failed_as_update_failed(
         BIMMER_CONNECTED_VEHICLE_PATCH,
         side_effect=MyBMWAuthError("Test error"),
     ):
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     for entity_id in FIXTURE_ENTITY_STATES:
-        assert hass.states.get(entity_id).state == "unavailable"
+        assert menuai.states.get(entity_id).state == "unavailable"
 
     # And should recover on next update
     freezer.tick(SCAN_INTERVALS[FIXTURE_DEFAULT_REGION])
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     for entity_id, state in FIXTURE_ENTITY_STATES.items():
-        assert hass.states.get(entity_id).state == state
+        assert menuai.states.get(entity_id).state == state
 
     # Verify that no issues are raised and no reauth flow is initialized
     assert len(issue_registry.issues) == 0
-    assert len(hass.config_entries.flow.async_progress_by_handler(DOMAIN)) == 0
+    assert len(menuai.config_entries.flow.async_progress_by_handler(DOMAIN)) == 0
 
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_auth_failed_init_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test a two subsequent auth failures initializing reauth flow."""
 
     config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test if entities show data correctly
     for entity_id, state in FIXTURE_ENTITY_STATES.items():
-        assert hass.states.get(entity_id).state == state
+        assert menuai.states.get(entity_id).state == state
     assert len(issue_registry.issues) == 0
 
     # Due to flaky API, we allow one retry on AuthError and raise as UpdateFailed
@@ -168,11 +168,11 @@ async def test_auth_failed_init_reauth(
         BIMMER_CONNECTED_VEHICLE_PATCH,
         side_effect=MyBMWAuthError("Test error"),
     ):
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     for entity_id in FIXTURE_ENTITY_STATES:
-        assert hass.states.get(entity_id).state == "unavailable"
+        assert menuai.states.get(entity_id).state == "unavailable"
     assert len(issue_registry.issues) == 0
 
     # On second failure, we should initialize reauth flow
@@ -181,21 +181,21 @@ async def test_auth_failed_init_reauth(
         BIMMER_CONNECTED_VEHICLE_PATCH,
         side_effect=MyBMWAuthError("Test error"),
     ):
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     for entity_id in FIXTURE_ENTITY_STATES:
-        assert hass.states.get(entity_id).state == "unavailable"
+        assert menuai.states.get(entity_id).state == "unavailable"
     assert len(issue_registry.issues) == 1
 
     reauth_issue = issue_registry.async_get_issue(
-        HOMEASSISTANT_DOMAIN,
+        menuai_DOMAIN,
         f"config_entry_reauth_{DOMAIN}_{config_entry.entry_id}",
     )
     assert reauth_issue.active is True
 
     # Check if reauth flow is initialized correctly
-    flow = hass.config_entries.flow.async_get(reauth_issue.data["flow_id"])
+    flow = menuai.config_entries.flow.async_get(reauth_issue.data["flow_id"])
     assert flow["handler"] == DOMAIN
     assert flow["context"]["source"] == "reauth"
     assert flow["context"]["unique_id"] == config_entry.unique_id
@@ -203,20 +203,20 @@ async def test_auth_failed_init_reauth(
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_captcha_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test a CaptchaError initializing reauth flow."""
     config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test if entities show data correctly
     for entity_id, state in FIXTURE_ENTITY_STATES.items():
-        assert hass.states.get(entity_id).state == state
+        assert menuai.states.get(entity_id).state == state
 
     # If library decides a captcha is needed, we should initialize reauth flow
     freezer.tick(SCAN_INTERVALS[FIXTURE_DEFAULT_REGION])
@@ -224,21 +224,21 @@ async def test_captcha_reauth(
         BIMMER_CONNECTED_VEHICLE_PATCH,
         side_effect=MyBMWCaptchaMissingError("Missing hCaptcha token"),
     ):
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     for entity_id in FIXTURE_ENTITY_STATES:
-        assert hass.states.get(entity_id).state == "unavailable"
+        assert menuai.states.get(entity_id).state == "unavailable"
     assert len(issue_registry.issues) == 1
 
     reauth_issue = issue_registry.async_get_issue(
-        HOMEASSISTANT_DOMAIN,
+        menuai_DOMAIN,
         f"config_entry_reauth_{DOMAIN}_{config_entry.entry_id}",
     )
     assert reauth_issue.active is True
 
     # Check if reauth flow is initialized correctly
-    flow = hass.config_entries.flow.async_get(reauth_issue.data["flow_id"])
+    flow = menuai.config_entries.flow.async_get(reauth_issue.data["flow_id"])
     assert flow["handler"] == DOMAIN
     assert flow["context"]["source"] == "reauth"
     assert flow["context"]["unique_id"] == config_entry.unique_id

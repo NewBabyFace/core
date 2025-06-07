@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from homeassistant.components.logbook import (
+from menuai.components.logbook import (
     LOGBOOK_ENTRY_CONTEXT_ID,
     LOGBOOK_ENTRY_ENTITY_ID,
     LOGBOOK_ENTRY_MESSAGE,
@@ -11,8 +11,8 @@ from homeassistant.components.logbook import (
     LOGBOOK_ENTRY_SOURCE,
     LazyEventPartialState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_NAME
-from homeassistant.core import HomeAssistant, callback
+from menuai.const import ATTR_ENTITY_ID, ATTR_NAME
+from menuai.core import menuai, callback
 
 from . import ATTR_SOURCE, EVENT_AUTOMATION_TRIGGERED
 from .const import DOMAIN
@@ -20,7 +20,7 @@ from .const import DOMAIN
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[
         [str, str, Callable[[LazyEventPartialState], dict[str, Any]]], None
     ],

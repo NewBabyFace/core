@@ -5,7 +5,7 @@ from typing import Any
 
 from jsonpath import jsonpath
 
-from homeassistant.util.json import json_loads
+from menuai.util.json import json_loads
 
 _LOGGER = logging.getLogger(__name__)
 

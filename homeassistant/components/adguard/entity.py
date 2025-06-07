@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from adguardhome import AdGuardHomeError
 
-from homeassistant.config_entries import SOURCE_HASSIO
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.config_entries import SOURCE_menuaiIO
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from . import AdGuardConfigEntry, AdGuardData
 from .const import DOMAIN, LOGGER
@@ -51,8 +51,8 @@ class AdGuardHomeEntity(Entity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information about this AdGuard Home instance."""
-        if self._entry.source == SOURCE_HASSIO:
-            config_url = "homeassistant://hassio/ingress/a0d7b954_adguard"
+        if self._entry.source == SOURCE_menuaiIO:
+            config_url = "menuai://menuaiio/ingress/a0d7b954_adguard"
         elif self.adguard.tls:
             config_url = f"https://{self.adguard.host}:{self.adguard.port}"
         else:

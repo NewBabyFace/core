@@ -7,8 +7,8 @@ import dataclasses
 from dataclasses import dataclass
 from typing import TypedDict
 
-from homeassistant.loader import DHCPMatcher
-from homeassistant.util.hass_dict import HassKey
+from menuai.loader import DHCPMatcher
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN
 
@@ -40,4 +40,4 @@ class DHCPData:
     address_data: dict[str, DHCPAddressData] = dataclasses.field(default_factory=dict)
 
 
-DATA_DHCP: HassKey[DHCPData] = HassKey(DOMAIN)
+DATA_DHCP: menuaiKey[DHCPData] = menuaiKey(DOMAIN)

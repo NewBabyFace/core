@@ -7,26 +7,26 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_EXCLUDE,
     EVENT_RECORDER_5MIN_STATISTICS_GENERATED,  # noqa: F401
     EVENT_RECORDER_HOURLY_STATISTICS_GENERATED,  # noqa: F401
     EVENT_STATE_CHANGED,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entityfilter import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entityfilter import (
     INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA,
     INCLUDE_EXCLUDE_FILTER_SCHEMA_INNER,
     convert_include_exclude_filter,
 )
-from homeassistant.helpers.integration_platform import (
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
-from homeassistant.helpers.recorder import DATA_INSTANCE
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.event_type import EventType
+from menuai.helpers.recorder import DATA_INSTANCE
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.event_type import EventType
 
 # Pre-import backup to avoid it being imported
 # later when the import executor is busy and delaying
@@ -52,7 +52,7 @@ from .util import get_instance
 _LOGGER = logging.getLogger(__name__)
 
 
-DEFAULT_URL = "sqlite:///{hass_config_path}"
+DEFAULT_URL = "sqlite:///{menuai_config_path}"
 DEFAULT_DB_FILE = "home-assistant_v2.db"
 DEFAULT_DB_INTEGRITY_CHECK = True
 DEFAULT_DB_MAX_RETRIES = 10
@@ -128,17 +128,17 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-@bind_hass
-def is_entity_recorded(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_entity_recorded(menuai: menuai, entity_id: str) -> bool:
     """Check if an entity is being recorded.
 
     Async friendly.
     """
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     return instance.entity_filter is None or instance.entity_filter(entity_id)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the recorder."""
     conf = config[DOMAIN]
     _filter = convert_include_exclude_filter(conf)
@@ -149,7 +149,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     commit_interval = conf[CONF_COMMIT_INTERVAL]
     db_max_retries = conf[CONF_DB_MAX_RETRIES]
     db_retry_wait = conf[CONF_DB_RETRY_WAIT]
-    db_url = conf.get(CONF_DB_URL) or get_default_url(hass)
+    db_url = conf.get(CONF_DB_URL) or get_default_url(menuai)
     exclude = conf[CONF_EXCLUDE]
     exclude_event_types: set[EventType[Any] | str] = set(
         exclude.get(CONF_EVENT_TYPES, [])
@@ -157,8 +157,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if EVENT_STATE_CHANGED in exclude_event_types:
         _LOGGER.error("State change events cannot be excluded, use a filter instead")
         exclude_event_types.remove(EVENT_STATE_CHANGED)
-    instance = hass.data[DATA_INSTANCE] = Recorder(
-        hass=hass,
+    instance = menuai.data[DATA_INSTANCE] = Recorder(
+        menuai=menuai,
         auto_purge=auto_purge,
         auto_repack=auto_repack,
         keep_days=keep_days,
@@ -170,26 +170,26 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         exclude_event_types=exclude_event_types,
     )
     get_instance.cache_clear()
-    entity_registry.async_setup(hass)
+    entity_registry.async_setup(menuai)
     instance.async_initialize()
     instance.async_register()
     instance.start()
-    async_register_services(hass, instance)
-    websocket_api.async_setup(hass)
+    async_register_services(menuai, instance)
+    websocket_api.async_setup(menuai)
 
-    await _async_setup_integration_platform(hass, instance)
+    await _async_setup_integration_platform(menuai, instance)
 
     return await instance.async_db_ready
 
 
 async def _async_setup_integration_platform(
-    hass: HomeAssistant, instance: Recorder
+    menuai: menuai, instance: Recorder
 ) -> None:
     """Set up a recorder integration platform."""
 
     @callback
     def _process_recorder_platform(
-        hass: HomeAssistant, domain: str, platform: Any
+        menuai: menuai, domain: str, platform: Any
     ) -> None:
         """Process a recorder platform."""
         # If the platform has a compile_statistics method, we need to
@@ -197,9 +197,9 @@ async def _async_setup_integration_platform(
         if any(hasattr(platform, _attr) for _attr in INTEGRATION_PLATFORM_METHODS):
             instance.queue_task(AddRecorderPlatformTask(domain, platform))
 
-    await async_process_integration_platforms(hass, DOMAIN, _process_recorder_platform)
+    await async_process_integration_platforms(menuai, DOMAIN, _process_recorder_platform)
 
 
-def get_default_url(hass: HomeAssistant) -> str:
+def get_default_url(menuai: menuai) -> str:
     """Return the default URL."""
-    return DEFAULT_URL.format(hass_config_path=hass.config.path(DEFAULT_DB_FILE))
+    return DEFAULT_URL.format(menuai_config_path=menuai.config.path(DEFAULT_DB_FILE))

@@ -24,7 +24,7 @@ def mock_asyncio_subprocess_run(
     mock_process = MockProcess(MagicMock(), MagicMock(), MagicMock())
 
     with patch(
-        "homeassistant.components.command_line.utils.asyncio.create_subprocess_shell",
+        "menuai.components.command_line.utils.asyncio.create_subprocess_shell",
         return_value=mock_process,
     ) as mock:
         yield mock

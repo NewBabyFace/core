@@ -12,16 +12,16 @@ import httpx
 import ollama
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_LLM_HASS_API, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import llm
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_LLM_menuai_API, CONF_URL
+from menuai.core import menuai
+from menuai.helpers import llm
+from menuai.helpers.selector import (
     BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
@@ -34,7 +34,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.util.ssl import get_default_context
+from menuai.util.ssl import get_default_context
 
 from .const import (
     CONF_KEEP_ALIVE,
@@ -161,7 +161,7 @@ class OllamaConfigFlow(ConfigFlow, domain=DOMAIN):
             # Tell Ollama server to pull the model.
             # The task will block until the model and metadata are fully
             # downloaded.
-            self.download_task = self.hass.async_create_background_task(
+            self.download_task = self.menuai.async_create_background_task(
                 self.client.pull(self.model),
                 f"Downloading {self.model}",
             )
@@ -223,7 +223,7 @@ class OllamaOptionsFlow(OptionsFlow):
             )
 
         options: Mapping[str, Any] = self.config_entry.options or {}
-        schema = ollama_config_option_schema(self.hass, options)
+        schema = ollama_config_option_schema(self.menuai, options)
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema),
@@ -231,15 +231,15 @@ class OllamaOptionsFlow(OptionsFlow):
 
 
 def ollama_config_option_schema(
-    hass: HomeAssistant, options: Mapping[str, Any]
+    menuai: menuai, options: Mapping[str, Any]
 ) -> dict:
     """Ollama options schema."""
-    hass_apis: list[SelectOptionDict] = [
+    menuai_apis: list[SelectOptionDict] = [
         SelectOptionDict(
             label=api.name,
             value=api.id,
         )
-        for api in llm.async_get_apis(hass)
+        for api in llm.async_get_apis(menuai)
     ]
 
     return {
@@ -252,9 +252,9 @@ def ollama_config_option_schema(
             },
         ): TemplateSelector(),
         vol.Optional(
-            CONF_LLM_HASS_API,
-            description={"suggested_value": options.get(CONF_LLM_HASS_API)},
-        ): SelectSelector(SelectSelectorConfig(options=hass_apis, multiple=True)),
+            CONF_LLM_menuai_API,
+            description={"suggested_value": options.get(CONF_LLM_menuai_API)},
+        ): SelectSelector(SelectSelectorConfig(options=menuai_apis, multiple=True)),
         vol.Optional(
             CONF_NUM_CTX,
             description={"suggested_value": options.get(CONF_NUM_CTX, DEFAULT_NUM_CTX)},

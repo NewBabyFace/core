@@ -6,17 +6,17 @@ import logging
 
 from blinkpy.blinkpy import Blink, BlinkSyncModule
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.const import ATTR_ATTRIBUTION
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import ATTR_ATTRIBUTION
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DEFAULT_ATTRIBUTION, DEFAULT_BRAND, DOMAIN
 from .coordinator import BlinkConfigEntry, BlinkUpdateCoordinator
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BlinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -90,7 +90,7 @@ class BlinkSyncModuleHA(
             await self.sync.async_arm(False)
 
         except TimeoutError as er:
-            raise HomeAssistantError("Blink failed to disarm camera") from er
+            raise menuaiError("Blink failed to disarm camera") from er
 
         await self.coordinator.async_refresh()
 
@@ -100,6 +100,6 @@ class BlinkSyncModuleHA(
             await self.sync.async_arm(True)
 
         except TimeoutError as er:
-            raise HomeAssistantError("Blink failed to arm camera away") from er
+            raise menuaiError("Blink failed to arm camera away") from er
 
         await self.coordinator.async_refresh()

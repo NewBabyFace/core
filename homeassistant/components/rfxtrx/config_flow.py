@@ -14,13 +14,13 @@ import serial
 import serial.tools.list_ports
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_COMMAND_OFF,
     CONF_COMMAND_ON,
     CONF_DEVICE,
@@ -30,15 +30,15 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_TYPE,
 )
-from homeassistant.core import Event, EventStateChangedData, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import Event, EventStateChangedData, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import VolDictType
 
 from . import (
     DOMAIN,
@@ -143,7 +143,7 @@ class RfxtrxOptionsFlow(OptionsFlow):
 
                 return self.async_create_entry(title="", data={})
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_entries = dr.async_entries_for_config_entry(
             device_registry, self.config_entry.entry_id
         )
@@ -332,7 +332,7 @@ class RfxtrxOptionsFlow(OptionsFlow):
         old_device_id = "_".join(x for x in old_device_data[CONF_DEVICE_ID])
         new_device_id = "_".join(x for x in new_device_data[CONF_DEVICE_ID])
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         entity_entries = er.async_entries_for_device(
             entity_registry, old_device, include_disabled_entities=True
         )
@@ -363,11 +363,11 @@ class RfxtrxOptionsFlow(OptionsFlow):
         entities_to_be_removed = {
             entry.entity_id
             for entry in entity_migration_map.values()
-            if not self.hass.states.async_available(entry.entity_id)
+            if not self.menuai.states.async_available(entry.entity_id)
         }
         wait_for_entities = asyncio.Event()
         remove_track_state_changes = async_track_state_change_event(
-            self.hass, entities_to_be_removed, _handle_state_removed
+            self.menuai, entities_to_be_removed, _handle_state_removed
         )
 
         for entry in entity_migration_map.values():
@@ -393,11 +393,11 @@ class RfxtrxOptionsFlow(OptionsFlow):
         entities_to_be_added = {
             entry.entity_id
             for entry in entity_migration_map.values()
-            if self.hass.states.async_available(entry.entity_id)
+            if self.menuai.states.async_available(entry.entity_id)
         }
         wait_for_entities = asyncio.Event()
         remove_track_state_changes = async_track_state_change_event(
-            self.hass, entities_to_be_added, _handle_state_added
+            self.menuai, entities_to_be_added, _handle_state_added
         )
 
         for entity_id, entry in entity_migration_map.items():
@@ -488,9 +488,9 @@ class RfxtrxOptionsFlow(OptionsFlow):
                     entry_data[CONF_DEVICES].pop(event_code, None)
                 else:
                     entry_data[CONF_DEVICES][event_code] = options
-        self.hass.config_entries.async_update_entry(self.config_entry, data=entry_data)
-        self.hass.async_create_task(
-            self.hass.config_entries.async_reload(self.config_entry.entry_id)
+        self.menuai.config_entries.async_update_entry(self.config_entry, data=entry_data)
+        self.menuai.async_create_task(
+            self.menuai.config_entries.async_reload(self.config_entry.entry_id)
         )
 
 
@@ -556,7 +556,7 @@ class RfxtrxConfigFlow(ConfigFlow, domain=DOMAIN):
             if user_selection == CONF_MANUAL_PATH:
                 return await self.async_step_setup_serial_manual_path()
 
-            dev_path = await self.hass.async_add_executor_job(
+            dev_path = await self.menuai.async_add_executor_job(
                 get_serial_by_id, user_selection
             )
 
@@ -568,7 +568,7 @@ class RfxtrxConfigFlow(ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_create_entry(title="RFXTRX", data=data)
 
-        ports = await self.hass.async_add_executor_job(serial.tools.list_ports.comports)
+        ports = await self.menuai.async_add_executor_job(serial.tools.list_ports.comports)
         list_of_ports = {}
         for port in ports:
             list_of_ports[port.device] = (
@@ -614,7 +614,7 @@ class RfxtrxConfigFlow(ConfigFlow, domain=DOMAIN):
         device: str | None = None,
     ) -> dict[str, Any]:
         """Create data for rfxtrx entry."""
-        success = await self.hass.async_add_executor_job(
+        success = await self.menuai.async_add_executor_job(
             _test_transport, host, port, device
         )
         if not success:
@@ -665,5 +665,5 @@ def get_serial_by_id(dev_path: str) -> str:
     return dev_path
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

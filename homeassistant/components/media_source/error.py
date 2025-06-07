@@ -1,9 +1,9 @@
 """Errors for media source."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class MediaSourceError(HomeAssistantError):
+class MediaSourceError(menuaiError):
     """Base class for media source errors."""
 
 

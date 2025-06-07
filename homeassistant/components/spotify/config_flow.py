@@ -8,10 +8,10 @@ from typing import Any
 
 from spotifyaio import SpotifyClient
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_NAME, CONF_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_NAME, CONF_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, SPOTIFY_SCOPES
 
@@ -36,7 +36,7 @@ class SpotifyFlowHandler(
 
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Create an entry for Spotify."""
-        spotify = SpotifyClient(async_get_clientsession(self.hass))
+        spotify = SpotifyClient(async_get_clientsession(self.menuai))
         spotify.authenticate(data[CONF_TOKEN][CONF_ACCESS_TOKEN])
 
         try:

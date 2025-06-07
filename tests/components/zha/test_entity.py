@@ -3,15 +3,15 @@
 from zigpy.profiles import zha
 from zigpy.zcl.clusters import general
 
-from homeassistant.components.zha.helpers import get_zha_gateway
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.zha.helpers import get_zha_gateway
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .conftest import SIG_EP_INPUT, SIG_EP_OUTPUT, SIG_EP_PROFILE, SIG_EP_TYPE
 
 
 async def test_device_registry_via_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_zha,
     zigpy_device_mock,
     device_registry: dr.DeviceRegistry,
@@ -19,7 +19,7 @@ async def test_device_registry_via_device(
     """Test ZHA `via_device` is set correctly."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -34,7 +34,7 @@ async def test_device_registry_via_device(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     reg_coordinator_device = device_registry.async_get_device(
         identifiers={("zha", str(gateway.state.node_info.ieee))}

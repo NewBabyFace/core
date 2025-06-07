@@ -9,14 +9,14 @@ from typing import TYPE_CHECKING, Any
 from propcache.api import cached_property
 from sqlalchemy.engine.row import Row
 
-from homeassistant.const import (
+from menuai.const import (
     COMPRESSED_STATE_ATTRIBUTES,
     COMPRESSED_STATE_LAST_CHANGED,
     COMPRESSED_STATE_LAST_UPDATED,
     COMPRESSED_STATE_STATE,
 )
-from homeassistant.core import Context, State
-from homeassistant.util import dt as dt_util
+from menuai.core import Context, State
+from menuai.util import dt as dt_util
 
 from .state_attributes import decode_attributes_from_source
 

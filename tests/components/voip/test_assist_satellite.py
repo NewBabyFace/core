@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.voip.devices import VoIPDevice
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent as intent_helper
+from menuai.components.voip.devices import VoIPDevice
+from menuai.core import menuai
+from menuai.helpers import intent as intent_helper
 
 
 @pytest.mark.parametrize(
@@ -23,12 +23,12 @@ from homeassistant.helpers import intent as intent_helper
     ],
 )
 async def test_timer_events(
-    hass: HomeAssistant, voip_device: VoIPDevice, intent_args: dict, message: str
+    menuai: menuai, voip_device: VoIPDevice, intent_args: dict, message: str
 ) -> None:
     """Test for timer events."""
 
     await intent_helper.async_handle(
-        hass,
+        menuai,
         "test",
         intent_helper.INTENT_START_TIMER,
         {
@@ -40,14 +40,14 @@ async def test_timer_events(
 
     with (
         patch(
-            "homeassistant.components.voip.assist_satellite.VoipAssistSatellite._resolve_announcement_media_id",
+            "menuai.components.voip.assist_satellite.VoipAssistSatellite._resolve_announcement_media_id",
         ) as mock_resolve,
         patch(
-            "homeassistant.components.voip.assist_satellite.VoipAssistSatellite.async_announce",
+            "menuai.components.voip.assist_satellite.VoipAssistSatellite.async_announce",
         ) as mock_announce,
     ):
         await intent_helper.async_handle(
-            hass,
+            menuai,
             "test",
             intent_helper.INTENT_DECREASE_TIMER,
             {
@@ -55,7 +55,7 @@ async def test_timer_events(
             },
             device_id=voip_device.device_id,
         )
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert len(mock_resolve.mock_calls) == 1
     assert len(mock_announce.mock_calls) == 1

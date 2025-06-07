@@ -1,6 +1,6 @@
 """Checks for basic helper utils."""
 
-from homeassistant.components.homekit_controller.utils import unique_id_to_iids
+from menuai.components.homekit_controller.utils import unique_id_to_iids
 
 
 def test_unique_id_to_iids() -> None:

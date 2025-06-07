@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.velbus.const import (
+from menuai.components.velbus.const import (
     CONF_CONFIG_ENTRY,
     CONF_INTERFACE,
     CONF_MEMO_TEXT,
@@ -15,10 +15,10 @@ from homeassistant.components.velbus.const import (
     SERVICE_SET_MEMO_TEXT,
     SERVICE_SYNC,
 )
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import issue_registry as ir
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import issue_registry as ir
 
 from . import init_integration
 
@@ -26,14 +26,14 @@ from tests.common import MockConfigEntry
 
 
 async def test_global_services_with_interface(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test services directed at the bus with an interface parameter."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SCAN,
         {CONF_INTERFACE: config_entry.data["port"]},
@@ -42,7 +42,7 @@ async def test_global_services_with_interface(
     config_entry.runtime_data.controller.scan.assert_called_once_with()
     assert issue_registry.async_get_issue(DOMAIN, "deprecated_interface_parameter")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SYNC,
         {CONF_INTERFACE: config_entry.data["port"]},
@@ -52,7 +52,7 @@ async def test_global_services_with_interface(
 
     # Test invalid interface
     with pytest.raises(vol.error.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SCAN,
             {CONF_INTERFACE: "nonexistent"},
@@ -61,7 +61,7 @@ async def test_global_services_with_interface(
 
     # Test missing interface
     with pytest.raises(vol.error.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SCAN,
             {},
@@ -70,13 +70,13 @@ async def test_global_services_with_interface(
 
 
 async def test_global_survices_with_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test services directed at the bus with a config_entry."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SCAN,
         {CONF_CONFIG_ENTRY: config_entry.entry_id},
@@ -84,7 +84,7 @@ async def test_global_survices_with_config_entry(
     )
     config_entry.runtime_data.controller.scan.assert_called_once_with()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SYNC,
         {CONF_CONFIG_ENTRY: config_entry.entry_id},
@@ -94,7 +94,7 @@ async def test_global_survices_with_config_entry(
 
     # Test invalid interface
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SCAN,
             {CONF_CONFIG_ENTRY: "nonexistent"},
@@ -103,7 +103,7 @@ async def test_global_survices_with_config_entry(
 
     # Test missing interface
     with pytest.raises(vol.error.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SCAN,
             {},
@@ -112,14 +112,14 @@ async def test_global_survices_with_config_entry(
 
 
 async def test_set_memo_text(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     controller: AsyncMock,
 ) -> None:
     """Test the set_memo_text service."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_MEMO_TEXT,
         {
@@ -136,7 +136,7 @@ async def test_set_memo_text(
     # Test with unfound module
     controller.return_value.get_module.return_value = None
     with pytest.raises(ServiceValidationError, match="Module not found"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_MEMO_TEXT,
             {
@@ -149,13 +149,13 @@ async def test_set_memo_text(
 
 
 async def test_clear_cache(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the clear_cache service."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CLEAR_CACHE,
         {CONF_CONFIG_ENTRY: config_entry.entry_id},
@@ -163,7 +163,7 @@ async def test_clear_cache(
     )
     config_entry.runtime_data.controller.scan.assert_called_once_with()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CLEAR_CACHE,
         {CONF_CONFIG_ENTRY: config_entry.entry_id, CONF_ADDRESS: 1},

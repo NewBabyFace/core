@@ -8,15 +8,15 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from yarl import URL
 
-from homeassistant.components.unifi.const import CONF_SITE_ID
-from homeassistant.components.update import (
+from menuai.components.unifi.const import CONF_SITE_ID
+from menuai.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
     DOMAIN as UPDATE_DOMAIN,
     SERVICE_INSTALL,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_HOST,
     STATE_OFF,
@@ -24,8 +24,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import (
     ConfigEntryFactoryType,
@@ -77,24 +77,24 @@ DEVICE_2 = {
     ],
 )
 async def test_entity_and_device_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Validate entity and device data with and without admin rights."""
-    with patch("homeassistant.components.unifi.PLATFORMS", [Platform.UPDATE]):
+    with patch("menuai.components.unifi.PLATFORMS", [Platform.UPDATE]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize("device_payload", [[DEVICE_1]])
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_updates(
-    hass: HomeAssistant, mock_websocket_message: WebsocketMessageMock
+    menuai: menuai, mock_websocket_message: WebsocketMessageMock
 ) -> None:
     """Test the update_items function with some devices."""
-    device_1_state = hass.states.get("update.device_1")
+    device_1_state = menuai.states.get("update.device_1")
     assert device_1_state.state == STATE_ON
     assert device_1_state.attributes[ATTR_IN_PROGRESS] is False
 
@@ -104,7 +104,7 @@ async def test_device_updates(
     device_1["state"] = 4
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
 
-    device_1_state = hass.states.get("update.device_1")
+    device_1_state = menuai.states.get("update.device_1")
     assert device_1_state.state == STATE_ON
     assert device_1_state.attributes[ATTR_INSTALLED_VERSION] == "4.0.42.10433"
     assert device_1_state.attributes[ATTR_LATEST_VERSION] == "4.3.17.11279"
@@ -118,7 +118,7 @@ async def test_device_updates(
     del device_1["upgrade_to_firmware"]
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
 
-    device_1_state = hass.states.get("update.device_1")
+    device_1_state = menuai.states.get("update.device_1")
     assert device_1_state.state == STATE_OFF
     assert device_1_state.attributes[ATTR_INSTALLED_VERSION] == "4.3.17.11279"
     assert device_1_state.attributes[ATTR_LATEST_VERSION] == "4.3.17.11279"
@@ -127,12 +127,12 @@ async def test_device_updates(
 
 @pytest.mark.parametrize("device_payload", [[DEVICE_1]])
 async def test_install(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     config_entry_setup: MockConfigEntry,
 ) -> None:
     """Test the device update install call."""
-    device_state = hass.states.get("update.device_1")
+    device_state = menuai.states.get("update.device_1")
     assert device_state.state == STATE_ON
 
     url = (
@@ -142,13 +142,13 @@ async def test_install(
     aioclient_mock.clear_requests()
     aioclient_mock.post(url)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.device_1"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count == 1
     assert aioclient_mock.mock_calls[0] == (
@@ -162,15 +162,15 @@ async def test_install(
 @pytest.mark.parametrize("device_payload", [[DEVICE_1]])
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_hub_state_change(
-    hass: HomeAssistant, mock_websocket_state: WebsocketStateManager
+    menuai: menuai, mock_websocket_state: WebsocketStateManager
 ) -> None:
     """Verify entities state reflect on hub becoming unavailable."""
-    assert hass.states.get("update.device_1").state == STATE_ON
+    assert menuai.states.get("update.device_1").state == STATE_ON
 
     # Controller unavailable
     await mock_websocket_state.disconnect()
-    assert hass.states.get("update.device_1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("update.device_1").state == STATE_UNAVAILABLE
 
     # Controller available
     await mock_websocket_state.reconnect()
-    assert hass.states.get("update.device_1").state == STATE_ON
+    assert menuai.states.get("update.device_1").state == STATE_ON

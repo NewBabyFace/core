@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature, CoverState
+from menuai.components.cover import CoverEntity, CoverEntityFeature, CoverState
 
 from tests.common import MockEntity
 

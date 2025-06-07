@@ -7,15 +7,15 @@ import mimetypes
 import pycountry
 from radios import FilterBy, Order, RadioBrowser, Station
 
-from homeassistant.components.media_player import MediaClass, MediaType
-from homeassistant.components.media_source import (
+from menuai.components.media_player import MediaClass, MediaType
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from . import RadioBrowserConfigEntry
 from .const import DOMAIN
@@ -28,12 +28,12 @@ CODEC_TO_MIMETYPE = {
 }
 
 
-async def async_get_media_source(hass: HomeAssistant) -> RadioMediaSource:
+async def async_get_media_source(menuai: menuai) -> RadioMediaSource:
     """Set up Radio Browser media source."""
     # Radio browser supports only a single config entry
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    return RadioMediaSource(hass, entry)
+    return RadioMediaSource(menuai, entry)
 
 
 class RadioMediaSource(MediaSource):
@@ -41,10 +41,10 @@ class RadioMediaSource(MediaSource):
 
     name = "Radio Browser"
 
-    def __init__(self, hass: HomeAssistant, entry: RadioBrowserConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: RadioBrowserConfigEntry) -> None:
         """Initialize RadioMediaSource."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
         self.entry = entry
 
     @property
@@ -147,7 +147,7 @@ class RadioMediaSource(MediaSource):
         # We show country in the root additionally, when there is no item
         if not item.identifier or category == "country":
             # Trigger the lazy loading of the country database to happen inside the executor
-            await self.hass.async_add_executor_job(lambda: len(pycountry.countries))
+            await self.menuai.async_add_executor_job(lambda: len(pycountry.countries))
             countries = await radios.countries(order=Order.NAME)
             return [
                 BrowseMediaSource(

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 
-from homeassistant.components.slack.const import CONF_DEFAULT_CHANNEL, DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_NAME
-from homeassistant.core import HomeAssistant
+from menuai.components.slack.const import CONF_DEFAULT_CHANNEL, DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_NAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -23,14 +23,14 @@ CONF_INPUT = {CONF_API_KEY: TOKEN, CONF_DEFAULT_CHANNEL: "test_channel"}
 CONF_DATA = CONF_INPUT | {CONF_NAME: TEAM_NAME}
 
 
-def create_entry(hass: HomeAssistant) -> ConfigEntry:
-    """Add config entry in Home Assistant."""
+def create_entry(menuai: menuai) -> ConfigEntry:
+    """Add config entry in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CONF_DATA,
         unique_id=TEAM_ID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -57,17 +57,17 @@ def mock_connection(
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     skip_setup: bool = False,
     error: str | None = None,
 ) -> ConfigEntry:
-    """Set up the Slack integration in Home Assistant."""
-    entry = create_entry(hass)
+    """Set up the Slack integration in MenuAI."""
+    entry = create_entry(menuai)
     mock_connection(aioclient_mock, error)
 
     if not skip_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

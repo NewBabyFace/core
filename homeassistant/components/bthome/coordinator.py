@@ -5,15 +5,15 @@ from logging import Logger
 
 from bthome_ble import BTHomeBluetoothDeviceData, SensorUpdate
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothScanningMode,
     BluetoothServiceInfoBleak,
 )
-from homeassistant.components.bluetooth.passive_update_processor import (
+from menuai.components.bluetooth.passive_update_processor import (
     PassiveBluetoothDataProcessor,
     PassiveBluetoothProcessorCoordinator,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import CONF_SLEEPY_DEVICE
 from .types import BTHomeConfigEntry
@@ -26,7 +26,7 @@ class BTHomePassiveBluetoothProcessorCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         address: str,
         mode: BluetoothScanningMode,
@@ -37,7 +37,7 @@ class BTHomePassiveBluetoothProcessorCoordinator(
         connectable: bool = False,
     ) -> None:
         """Initialize the BTHome Bluetooth Passive Update Processor Coordinator."""
-        super().__init__(hass, logger, address, mode, update_method, connectable)
+        super().__init__(menuai, logger, address, mode, update_method, connectable)
         self.discovered_event_classes = discovered_event_classes
         self.device_data = device_data
         self.entry = entry

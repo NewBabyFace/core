@@ -1,27 +1,27 @@
-"""Connect two Home Assistant instances via MQTT."""
+"""Connect two MenuAI instances via MQTT."""
 
 import json
 import logging
 
 import voluptuous as vol
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt import valid_publish_topic, valid_subscribe_topic
-from homeassistant.const import (
+from menuai.components import mqtt
+from menuai.components.mqtt import valid_publish_topic, valid_subscribe_topic
+from menuai.const import (
     ATTR_SERVICE_DATA,
     EVENT_CALL_SERVICE,
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_FINAL_WRITE,
+    EVENT_menuai_START,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
     MATCH_ALL,
 )
-from homeassistant.core import EventOrigin, HomeAssistant, State, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import EventOrigin, menuai, State, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import JSONEncoder
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,18 +48,18 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 BLOCKED_EVENTS = [
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_START,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
+    EVENT_menuai_FINAL_WRITE,
 ]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the MQTT eventstream component."""
     # Make sure MQTT integration is enabled and the client is available
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return False
 
@@ -89,21 +89,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         event_info = {"event_type": event.event_type, "event_data": event.data}
         msg = json.dumps(event_info, cls=JSONEncoder)
-        await mqtt.async_publish(hass, pub_topic, msg)
+        await mqtt.async_publish(menuai, pub_topic, msg)
 
     # Only listen for local events if you are going to publish them.
     if pub_topic:
-        hass.bus.async_listen(MATCH_ALL, _event_publisher)
+        menuai.bus.async_listen(MATCH_ALL, _event_publisher)
 
     # Process events from a remote server that are received on a queue.
     @callback
     def _event_receiver(msg):
-        """Receive events published by and fire them on this hass instance."""
+        """Receive events published by and fire them on this menuai instance."""
         event = json.loads(msg.payload)
         event_type = event.get("event_type")
         event_data = event.get("event_data")
 
-        # Don't fire HOMEASSISTANT_* events on this instance
+        # Don't fire menuai_* events on this instance
         if event_type in BLOCKED_EVENTS:
             return
 
@@ -118,12 +118,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 if state:
                     event_data[key] = state
 
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             event_type, event_data=event_data, origin=EventOrigin.remote
         )
 
     # Only subscribe if you specified a topic.
     if sub_topic:
-        await mqtt.async_subscribe(hass, sub_topic, _event_receiver)
+        await mqtt.async_subscribe(menuai, sub_topic, _event_receiver)
 
     return True

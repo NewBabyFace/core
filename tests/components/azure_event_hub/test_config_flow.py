@@ -7,16 +7,16 @@ from unittest.mock import AsyncMock, MagicMock
 from azure.eventhub.exceptions import EventHubError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.azure_event_hub.const import (
+from menuai import config_entries
+from menuai.components.azure_event_hub.const import (
     CONF_MAX_DELAY,
     CONF_SEND_INTERVAL,
     DOMAIN,
     STEP_CONN_STRING,
     STEP_SAS,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import (
     BASE_CONFIG_CS,
@@ -46,7 +46,7 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 )
 @pytest.mark.usefixtures("mock_from_connection_string")
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     step1_config: dict[str, Any],
     step_id: str,
@@ -54,19 +54,19 @@ async def test_form(
     data_config: dict[str, str],
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=None
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         step1_config.copy(),
     )
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == step_id
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         step2_config.copy(),
     )
@@ -76,11 +76,11 @@ async def test_form(
     mock_setup_entry.assert_called_once()
 
 
-async def test_import(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_import(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
 
     import_config = IMPORT_CONFIG.copy()
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data=IMPORT_CONFIG.copy(),
@@ -102,16 +102,16 @@ async def test_import(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     [config_entries.SOURCE_USER, config_entries.SOURCE_IMPORT],
     ids=["user", "import"],
 )
-async def test_single_instance(hass: HomeAssistant, source: str) -> None:
+async def test_single_instance(menuai: menuai, source: str) -> None:
     """Test uniqueness of username."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CS_CONFIG_FULL,
         title="test-instance",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": source},
         data=BASE_CONFIG_CS.copy(),
@@ -126,13 +126,13 @@ async def test_single_instance(hass: HomeAssistant, source: str) -> None:
     ids=["cannot_connect", "unknown"],
 )
 async def test_connection_error_sas(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_get_eventhub_properties: AsyncMock,
     side_effect: Exception,
     error_message: str,
 ) -> None:
     """Test we handle connection errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=BASE_CONFIG_SAS.copy(),
@@ -141,7 +141,7 @@ async def test_connection_error_sas(
     assert result["errors"] is None
 
     mock_get_eventhub_properties.side_effect = side_effect
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         SAS_CONFIG.copy(),
     )
@@ -155,13 +155,13 @@ async def test_connection_error_sas(
     ids=["cannot_connect", "unknown"],
 )
 async def test_connection_error_cs(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_from_connection_string: MagicMock,
     side_effect: Exception,
     error_message: str,
 ) -> None:
     """Test we handle connection errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=BASE_CONFIG_CS.copy(),
@@ -171,7 +171,7 @@ async def test_connection_error_cs(
     mock_from_connection_string.return_value.get_eventhub_properties.side_effect = (
         side_effect
     )
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CS_CONFIG.copy(),
     )
@@ -179,17 +179,17 @@ async def test_connection_error_cs(
     assert result2["errors"] == {"base": error_message}
 
 
-async def test_options_flow(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def test_options_flow(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test options flow."""
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     assert result["last_step"]
 
-    updated = await hass.config_entries.options.async_configure(
+    updated = await menuai.config_entries.options.async_configure(
         result["flow_id"], UPDATE_OPTIONS
     )
     assert updated["type"] is FlowResultType.CREATE_ENTRY
     assert updated["data"] == UPDATE_OPTIONS
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

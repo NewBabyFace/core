@@ -5,16 +5,16 @@ from unittest.mock import patch
 import pytest
 from pyuptimerobot import UptimeRobotAuthenticationException, UptimeRobotException
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .common import (
     MOCK_UPTIMEROBOT_CONFIG_ENTRY_DATA,
@@ -29,21 +29,21 @@ from .common import (
 from tests.common import MockConfigEntry
 
 
-async def test_presentation(hass: HomeAssistant) -> None:
+async def test_presentation(menuai: menuai) -> None:
     """Test the presentation of UptimeRobot switches."""
-    await setup_uptimerobot_integration(hass)
+    await setup_uptimerobot_integration(menuai)
 
-    entity = hass.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
 
     assert entity.state == STATE_ON
     assert entity.attributes["target"] == MOCK_UPTIMEROBOT_MONITOR["url"]
 
 
-async def test_switch_off(hass: HomeAssistant) -> None:
+async def test_switch_off(menuai: menuai) -> None:
     """Test entity unavailable on update failure."""
 
     mock_entry = MockConfigEntry(**MOCK_UPTIMEROBOT_CONFIG_ENTRY_DATA)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -57,25 +57,25 @@ async def test_switch_off(hass: HomeAssistant) -> None:
             return_value=mock_uptimerobot_api_response(),
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: UPTIMEROBOT_SWITCH_TEST_ENTITY},
             blocking=True,
         )
 
-    entity = hass.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
     assert entity.state == STATE_OFF
 
 
-async def test_switch_on(hass: HomeAssistant) -> None:
+async def test_switch_on(menuai: menuai) -> None:
     """Test entity unaviable on update failure."""
 
     mock_entry = MockConfigEntry(**MOCK_UPTIMEROBOT_CONFIG_ENTRY_DATA)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -87,27 +87,27 @@ async def test_switch_on(hass: HomeAssistant) -> None:
             return_value=mock_uptimerobot_api_response(),
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: UPTIMEROBOT_SWITCH_TEST_ENTITY},
             blocking=True,
         )
 
-        entity = hass.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
+        entity = menuai.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
         assert entity.state == STATE_ON
 
 
 async def test_authentication_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test authentication error turning switch on/off."""
-    await setup_uptimerobot_integration(hass)
+    await setup_uptimerobot_integration(menuai)
 
-    entity = hass.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
     assert entity.state == STATE_ON
 
     with (
@@ -116,10 +116,10 @@ async def test_authentication_error(
             side_effect=UptimeRobotAuthenticationException,
         ),
         patch(
-            "homeassistant.config_entries.ConfigEntry.async_start_reauth"
+            "menuai.config_entries.ConfigEntry.async_start_reauth"
         ) as config_entry_reauth,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: UPTIMEROBOT_SWITCH_TEST_ENTITY},
@@ -129,11 +129,11 @@ async def test_authentication_error(
         assert config_entry_reauth.assert_called
 
 
-async def test_action_execution_failure(hass: HomeAssistant) -> None:
+async def test_action_execution_failure(menuai: menuai) -> None:
     """Test turning switch on/off failure."""
-    await setup_uptimerobot_integration(hass)
+    await setup_uptimerobot_integration(menuai)
 
-    entity = hass.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
     assert entity.state == STATE_ON
 
     with (
@@ -141,9 +141,9 @@ async def test_action_execution_failure(hass: HomeAssistant) -> None:
             "pyuptimerobot.UptimeRobot.async_edit_monitor",
             side_effect=UptimeRobotException,
         ),
-        pytest.raises(HomeAssistantError) as exc_info,
+        pytest.raises(menuaiError) as exc_info,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: UPTIMEROBOT_SWITCH_TEST_ENTITY},
@@ -157,19 +157,19 @@ async def test_action_execution_failure(hass: HomeAssistant) -> None:
     }
 
 
-async def test_switch_api_failure(hass: HomeAssistant) -> None:
+async def test_switch_api_failure(menuai: menuai) -> None:
     """Test general exception turning switch on/off."""
-    await setup_uptimerobot_integration(hass)
+    await setup_uptimerobot_integration(menuai)
 
-    entity = hass.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_SWITCH_TEST_ENTITY)
     assert entity.state == STATE_ON
 
     with patch(
         "pyuptimerobot.UptimeRobot.async_edit_monitor",
         return_value=mock_uptimerobot_api_response(key=MockApiResponseKey.ERROR),
     ):
-        with pytest.raises(HomeAssistantError) as exc_info:
-            await hass.services.async_call(
+        with pytest.raises(menuaiError) as exc_info:
+            await menuai.services.async_call(
                 SWITCH_DOMAIN,
                 SERVICE_TURN_OFF,
                 {ATTR_ENTITY_ID: UPTIMEROBOT_SWITCH_TEST_ENTITY},

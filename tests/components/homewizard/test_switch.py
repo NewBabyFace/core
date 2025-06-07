@@ -7,18 +7,18 @@ from homewizard_energy.errors import DisabledError, RequestError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import switch
-from homeassistant.components.homewizard.const import UPDATE_INTERVAL
-from homeassistant.const import (
+from menuai.components import switch
+from menuai.components.homewizard.const import UPDATE_INTERVAL
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
@@ -75,12 +75,12 @@ pytestmark = [
     ],
 )
 async def test_entities_not_created_for_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_ids: list[str],
 ) -> None:
     """Ensures entities for a specific device are not created."""
     for entity_id in entity_ids:
-        assert not hass.states.get(entity_id)
+        assert not menuai.states.get(entity_id)
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ async def test_entities_not_created_for_device(
     ],
 )
 async def test_switch_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_homewizardenergy: MagicMock,
@@ -110,7 +110,7 @@ async def test_switch_entities(
     parameter: str,
 ) -> None:
     """Test that switch handles state changes correctly."""
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert snapshot == state
 
     assert (entity_entry := entity_registry.async_get(entity_id))
@@ -123,7 +123,7 @@ async def test_switch_entities(
     mocked_method = getattr(mock_homewizardenergy, method)
 
     # Turn power_on on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         switch.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -134,7 +134,7 @@ async def test_switch_entities(
     mocked_method.assert_called_with(**{parameter: True})
 
     # Turn power_on off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         switch.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -148,10 +148,10 @@ async def test_switch_entities(
     mocked_method.side_effect = RequestError
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=r"^An error occurred while communicating with HomeWizard device$",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             switch.DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -159,10 +159,10 @@ async def test_switch_entities(
         )
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=r"^An error occurred while communicating with HomeWizard device$",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             switch.DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
@@ -173,10 +173,10 @@ async def test_switch_entities(
     mocked_method.side_effect = DisabledError
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=r"^The local API is disabled$",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             switch.DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -184,10 +184,10 @@ async def test_switch_entities(
         )
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=r"^The local API is disabled$",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             switch.DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
@@ -206,7 +206,7 @@ async def test_switch_entities(
     ],
 )
 async def test_switch_unreachable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     exception: Exception,
     entity_id: str,
@@ -215,8 +215,8 @@ async def test_switch_unreachable(
     """Test that unreachable devices are marked as unavailable."""
     mocked_method = getattr(mock_homewizardenergy, method)
     mocked_method.side_effect = exception
-    async_fire_time_changed(hass, dt_util.utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNAVAILABLE

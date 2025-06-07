@@ -7,12 +7,12 @@ import pytest
 from sfrbox_api.exceptions import SFRBoxAuthenticationError, SFRBoxError
 from sfrbox_api.models import SystemInfo
 
-from homeassistant import config_entries
-from homeassistant.components.sfr_box.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.sfr_box.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import async_load_fixture
 
@@ -20,20 +20,20 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 async def test_config_flow_skip_auth(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.sfr_box.config_flow.SFRBox.system_get_info",
+        "menuai.components.sfr_box.config_flow.SFRBox.system_get_info",
         side_effect=SFRBoxError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_HOST: "192.168.0.1",
@@ -44,12 +44,12 @@ async def test_config_flow_skip_auth(
     assert result["errors"] == {"base": "cannot_connect"}
 
     with patch(
-        "homeassistant.components.sfr_box.config_flow.SFRBox.system_get_info",
+        "menuai.components.sfr_box.config_flow.SFRBox.system_get_info",
         return_value=SystemInfo(
-            **json.loads(await async_load_fixture(hass, "system_getInfo.json", DOMAIN))
+            **json.loads(await async_load_fixture(menuai, "system_getInfo.json", DOMAIN))
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_HOST: "192.168.0.1",
@@ -59,7 +59,7 @@ async def test_config_flow_skip_auth(
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "choose_auth"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "skip_auth"},
     )
@@ -72,22 +72,22 @@ async def test_config_flow_skip_auth(
 
 
 async def test_config_flow_with_auth(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.sfr_box.config_flow.SFRBox.system_get_info",
+        "menuai.components.sfr_box.config_flow.SFRBox.system_get_info",
         return_value=SystemInfo(
-            **json.loads(await async_load_fixture(hass, "system_getInfo.json", DOMAIN))
+            **json.loads(await async_load_fixture(menuai, "system_getInfo.json", DOMAIN))
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_HOST: "192.168.0.1",
@@ -97,16 +97,16 @@ async def test_config_flow_with_auth(
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "choose_auth"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "auth"},
     )
 
     with patch(
-        "homeassistant.components.sfr_box.config_flow.SFRBox.authenticate",
+        "menuai.components.sfr_box.config_flow.SFRBox.authenticate",
         side_effect=SFRBoxAuthenticationError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: "admin",
@@ -117,8 +117,8 @@ async def test_config_flow_with_auth(
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_auth"}
 
-    with patch("homeassistant.components.sfr_box.config_flow.SFRBox.authenticate"):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.sfr_box.config_flow.SFRBox.authenticate"):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: "admin",
@@ -139,27 +139,27 @@ async def test_config_flow_with_auth(
 
 @pytest.mark.usefixtures("config_entry")
 async def test_config_flow_duplicate_host(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test abort if unique_id configured."""
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     system_info = SystemInfo(
-        **json.loads(await async_load_fixture(hass, "system_getInfo.json", DOMAIN))
+        **json.loads(await async_load_fixture(menuai, "system_getInfo.json", DOMAIN))
     )
     # Ensure mac doesn't match existing mock entry
     system_info.mac_addr = "aa:bb:cc:dd:ee:ff"
     with patch(
-        "homeassistant.components.sfr_box.config_flow.SFRBox.system_get_info",
+        "menuai.components.sfr_box.config_flow.SFRBox.system_get_info",
         return_value=system_info,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_HOST: "192.168.0.1",
@@ -168,32 +168,32 @@ async def test_config_flow_duplicate_host(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("config_entry")
 async def test_config_flow_duplicate_mac(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test abort if unique_id configured."""
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     system_info = SystemInfo(
-        **json.loads(await async_load_fixture(hass, "system_getInfo.json", DOMAIN))
+        **json.loads(await async_load_fixture(menuai, "system_getInfo.json", DOMAIN))
     )
     with patch(
-        "homeassistant.components.sfr_box.config_flow.SFRBox.system_get_info",
+        "menuai.components.sfr_box.config_flow.SFRBox.system_get_info",
         return_value=system_info,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_HOST: "192.168.0.2",
@@ -202,26 +202,26 @@ async def test_config_flow_duplicate_mac(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 0
 
 
-async def test_reauth(hass: HomeAssistant, config_entry_with_auth: ConfigEntry) -> None:
+async def test_reauth(menuai: menuai, config_entry_with_auth: ConfigEntry) -> None:
     """Test the start of the config flow."""
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await config_entry_with_auth.start_reauth_flow(hass)
+    result = await config_entry_with_auth.start_reauth_flow(menuai)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("errors") == {}
 
     # Failed credentials
     with patch(
-        "homeassistant.components.sfr_box.config_flow.SFRBox.authenticate",
+        "menuai.components.sfr_box.config_flow.SFRBox.authenticate",
         side_effect=SFRBoxAuthenticationError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: "admin",
@@ -233,8 +233,8 @@ async def test_reauth(hass: HomeAssistant, config_entry_with_auth: ConfigEntry) 
     assert result.get("errors") == {"base": "invalid_auth"}
 
     # Valid credentials
-    with patch("homeassistant.components.sfr_box.config_flow.SFRBox.authenticate"):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.sfr_box.config_flow.SFRBox.authenticate"):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: "admin",

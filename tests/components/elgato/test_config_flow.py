@@ -6,23 +6,23 @@ from unittest.mock import AsyncMock, MagicMock
 from elgato import ElgatoConnectionError
 import pytest
 
-from homeassistant.components.elgato.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.elgato.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST, CONF_MAC, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_user_flow_implementation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_elgato: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the full manual user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -30,7 +30,7 @@ async def test_full_user_flow_implementation(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: "127.0.0.1"}
     )
 
@@ -49,12 +49,12 @@ async def test_full_user_flow_implementation(
 
 
 async def test_full_zeroconf_flow_implementation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_elgato: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the zeroconf flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -72,13 +72,13 @@ async def test_full_zeroconf_flow_implementation(
     assert result["step_id"] == "zeroconf_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    progress = hass.config_entries.flow.async_progress()
+    progress = menuai.config_entries.flow.async_progress()
     assert len(progress) == 1
     assert progress[0].get("flow_id") == result["flow_id"]
     assert "context" in progress[0]
     assert progress[0]["context"].get("confirm_only") is True
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -97,12 +97,12 @@ async def test_full_zeroconf_flow_implementation(
 
 
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_elgato: MagicMock,
 ) -> None:
     """Test we show user form on Elgato Key Light connection error."""
     mock_elgato.info.side_effect = ElgatoConnectionError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "127.0.0.1"},
@@ -115,7 +115,7 @@ async def test_connection_error(
     # Recover from error
     mock_elgato.info.side_effect = None
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "127.0.0.2"},
@@ -133,12 +133,12 @@ async def test_connection_error(
 
 
 async def test_zeroconf_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_elgato: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow on Elgato Key Light connection error."""
     mock_elgato.info.side_effect = ElgatoConnectionError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -158,11 +158,11 @@ async def test_zeroconf_connection_error(
 
 @pytest.mark.usefixtures("mock_elgato")
 async def test_user_device_exists_abort(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we abort zeroconf flow if Elgato Key Light device already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "127.0.0.1"},
@@ -174,11 +174,11 @@ async def test_user_device_exists_abort(
 
 @pytest.mark.usefixtures("mock_elgato")
 async def test_zeroconf_device_exists_abort(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we abort zeroconf flow if Elgato Key Light device already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -195,11 +195,11 @@ async def test_zeroconf_device_exists_abort(
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].data[CONF_HOST] == "127.0.0.1"
 
     # Check the host updates on discovery
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -216,18 +216,18 @@ async def test_zeroconf_device_exists_abort(
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].data[CONF_HOST] == "127.0.0.2"
 
 
 async def test_zeroconf_during_onboarding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_elgato: MagicMock,
     mock_setup_entry: AsyncMock,
     mock_onboarding: MagicMock,
 ) -> None:
     """Test the zeroconf creates an entry during onboarding."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(

@@ -9,24 +9,24 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components import stt, tts, wake_word
-from homeassistant.components.assist_pipeline import DOMAIN, select as assist_select
-from homeassistant.components.assist_pipeline.const import (
+from menuai.components import stt, tts, wake_word
+from menuai.components.assist_pipeline import DOMAIN, select as assist_select
+from menuai.components.assist_pipeline.const import (
     BYTES_PER_CHUNK,
     SAMPLE_CHANNELS,
     SAMPLE_RATE,
     SAMPLE_WIDTH,
 )
-from homeassistant.components.assist_pipeline.pipeline import (
+from menuai.components.assist_pipeline.pipeline import (
     PipelineData,
     PipelineStorageCollection,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import chat_session, device_registry as dr
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.setup import async_setup_component
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import chat_session, device_registry as dr
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -193,9 +193,9 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, "test.config_flow")
+    mock_platform(menuai, "test.config_flow")
 
     with mock_config_flow("test", MockFlow):
         yield
@@ -203,7 +203,7 @@ def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
 
 @pytest.fixture
 async def init_supporting_components(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider: MockSTTProvider,
     mock_stt_provider_entity: MockSTTProviderEntity,
     mock_tts_provider: MockTTSProvider,
@@ -215,25 +215,25 @@ async def init_supporting_components(
     """Initialize relevant components with empty configs."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.STT, Platform.TTS, Platform.WAKE_WORD]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload up test config entry."""
-        await hass.config_entries.async_unload_platforms(
+        await menuai.config_entries.async_unload_platforms(
             config_entry, [Platform.STT, Platform.WAKE_WORD]
         )
         return True
 
     async def async_setup_entry_stt_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -241,7 +241,7 @@ async def init_supporting_components(
         async_add_entities([mock_stt_provider_entity])
 
     async def async_setup_entry_tts_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -249,7 +249,7 @@ async def init_supporting_components(
         async_add_entities([mock_tts_entity])
 
     async def async_setup_entry_wake_word_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -259,7 +259,7 @@ async def init_supporting_components(
         )
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=async_setup_entry_init,
@@ -267,7 +267,7 @@ async def init_supporting_components(
         ),
     )
     mock_platform(
-        hass,
+        menuai,
         "test.tts",
         MockTTSPlatform(
             async_get_engine=AsyncMock(return_value=mock_tts_provider),
@@ -275,7 +275,7 @@ async def init_supporting_components(
         ),
     )
     mock_platform(
-        hass,
+        menuai,
         "test.stt",
         MockSttPlatform(
             async_get_engine=AsyncMock(return_value=mock_stt_provider),
@@ -283,39 +283,39 @@ async def init_supporting_components(
         ),
     )
     mock_platform(
-        hass,
+        menuai,
         "test.wake_word",
         MockPlatform(
             async_setup_entry=async_setup_entry_wake_word_platform,
         ),
     )
-    mock_platform(hass, "test.config_flow")
+    mock_platform(menuai, "test.config_flow")
 
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, tts.DOMAIN, {"tts": {"platform": "test"}})
-    assert await async_setup_component(hass, stt.DOMAIN, {"stt": {"platform": "test"}})
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, tts.DOMAIN, {"tts": {"platform": "test"}})
+    assert await async_setup_component(menuai, stt.DOMAIN, {"stt": {"platform": "test"}})
+    assert await async_setup_component(menuai, "media_source", {})
 
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
-async def init_components(hass: HomeAssistant, init_supporting_components):
+async def init_components(menuai: menuai, init_supporting_components):
     """Initialize relevant components with empty configs."""
 
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
 
 @pytest.fixture
 async def assist_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, init_components
+    menuai: menuai, device_registry: dr.DeviceRegistry, init_components
 ) -> dr.DeviceEntry:
     """Create an assist device."""
     config_entry = MockConfigEntry(domain="test_assist_device")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         name="Test Device",
@@ -324,34 +324,34 @@ async def assist_device(
     )
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.SELECT]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload up test config entry."""
-        await hass.config_entries.async_unload_platforms(
+        await menuai.config_entries.async_unload_platforms(
             config_entry, [Platform.SELECT]
         )
         return True
 
     async def async_setup_entry_select_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
         """Set up test select platform via config entry."""
         entities = [
             assist_select.AssistPipelineSelect(
-                hass, "test_assist_device", "test-prefix"
+                menuai, "test_assist_device", "test-prefix"
             ),
-            assist_select.VadSensitivitySelect(hass, "test-prefix"),
+            assist_select.VadSensitivitySelect(menuai, "test-prefix"),
         ]
         for ent in entities:
             ent._attr_device_info = dr.DeviceInfo(
@@ -360,7 +360,7 @@ async def assist_device(
         async_add_entities(entities)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test_assist_device",
             async_setup_entry=async_setup_entry_init,
@@ -368,25 +368,25 @@ async def assist_device(
         ),
     )
     mock_platform(
-        hass,
+        menuai,
         "test_assist_device.select",
         MockPlatform(
             async_setup_entry=async_setup_entry_select_platform,
         ),
     )
-    mock_platform(hass, "test_assist_device.config_flow")
+    mock_platform(menuai, "test_assist_device.config_flow")
 
     with mock_config_flow("test_assist_device", ConfigFlow):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return device
 
 
 @pytest.fixture
-def pipeline_data(hass: HomeAssistant, init_components) -> PipelineData:
+def pipeline_data(menuai: menuai, init_components) -> PipelineData:
     """Return pipeline data."""
-    return hass.data[DOMAIN]
+    return menuai.data[DOMAIN]
 
 
 @pytest.fixture
@@ -401,11 +401,11 @@ def make_10ms_chunk(header: bytes) -> bytes:
 
 
 @pytest.fixture
-def mock_chat_session(hass: HomeAssistant) -> Generator[chat_session.ChatSession]:
+def mock_chat_session(menuai: menuai) -> Generator[chat_session.ChatSession]:
     """Mock the ulid of chat sessions."""
     # pylint: disable-next=contextmanager-generator-missing-cleanup
     with (
-        patch("homeassistant.helpers.chat_session.ulid_now", return_value="mock-ulid"),
-        chat_session.async_get_chat_session(hass) as session,
+        patch("menuai.helpers.chat_session.ulid_now", return_value="mock-ulid"),
+        chat_session.async_get_chat_session(menuai) as session,
     ):
         yield session

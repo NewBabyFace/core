@@ -7,10 +7,10 @@ from screenlogicpy import ScreenLogicError
 from screenlogicpy.device_const.system import EQUIPMENT_FLAG
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import selector
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import selector
 
 from .const import (
     ATTR_COLOR_MODE,
@@ -55,7 +55,7 @@ TURN_ON_SUPER_CHLOR_SCHEMA = BASE_SERVICE_SCHEMA.extend(
 
 
 @callback
-def async_load_screenlogic_services(hass: HomeAssistant):
+def async_load_screenlogic_services(menuai: menuai):
     """Set up services for the ScreenLogic integration."""
 
     async def get_coordinators(
@@ -66,7 +66,7 @@ def async_load_screenlogic_services(hass: HomeAssistant):
         for entry_id in entry_ids:
             config_entry = cast(
                 ScreenLogicConfigEntry | None,
-                hass.config_entries.async_get_entry(entry_id),
+                menuai.config_entries.async_get_entry(entry_id),
             )
             if not config_entry:
                 raise ServiceValidationError(
@@ -102,7 +102,7 @@ def async_load_screenlogic_services(hass: HomeAssistant):
                 # Debounced refresh to catch any secondary changes in the device
                 await coordinator.async_request_refresh()
             except ScreenLogicError as error:
-                raise HomeAssistantError(error) from error
+                raise menuaiError(error) from error
 
     async def async_set_super_chlor(
         service_call: ServiceCall,
@@ -130,7 +130,7 @@ def async_load_screenlogic_services(hass: HomeAssistant):
                 # Debounced refresh to catch any secondary changes in the device
                 await coordinator.async_request_refresh()
             except ScreenLogicError as error:
-                raise HomeAssistantError(error) from error
+                raise menuaiError(error) from error
 
     async def async_start_super_chlor(service_call: ServiceCall) -> None:
         runtime = service_call.data[ATTR_RUNTIME]
@@ -139,18 +139,18 @@ def async_load_screenlogic_services(hass: HomeAssistant):
     async def async_stop_super_chlor(service_call: ServiceCall) -> None:
         await async_set_super_chlor(service_call, False)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_COLOR_MODE, async_set_color_mode, SET_COLOR_MODE_SCHEMA
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_START_SUPER_CHLORINATION,
         async_start_super_chlor,
         TURN_ON_SUPER_CHLOR_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_STOP_SUPER_CHLORINATION,
         async_stop_super_chlor,

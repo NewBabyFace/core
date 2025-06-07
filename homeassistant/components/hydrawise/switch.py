@@ -9,14 +9,14 @@ from typing import Any
 
 from pydrawise import HydrawiseBase, Zone
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import DEFAULT_WATERING_TIME
 from .coordinator import HydrawiseConfigEntry
@@ -60,7 +60,7 @@ SWITCH_KEYS: list[str] = [desc.key for desc in SWITCH_TYPES]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HydrawiseConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

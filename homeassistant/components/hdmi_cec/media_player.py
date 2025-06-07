@@ -26,16 +26,16 @@ from pycec.const import (
     TYPE_TUNER,
 )
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     DOMAIN as MP_DOMAIN,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import ATTR_NEW, DOMAIN
 from .entity import CecEntity
@@ -46,7 +46,7 @@ ENTITY_ID_FORMAT = MP_DOMAIN + ".{}"
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -56,7 +56,7 @@ def setup_platform(
         _LOGGER.debug("Setting up HDMI devices %s", discovery_info[ATTR_NEW])
         entities = []
         for device in discovery_info[ATTR_NEW]:
-            hdmi_device = hass.data[DOMAIN][device]
+            hdmi_device = menuai.data[DOMAIN][device]
             entities.append(CecPlayerEntity(hdmi_device, hdmi_device.logical_address))
         add_entities(entities, True)
 

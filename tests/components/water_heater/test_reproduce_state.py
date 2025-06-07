@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     ATTR_AWAY_MODE,
     ATTR_OPERATION_MODE,
     ATTR_TEMPERATURE,
@@ -12,36 +12,36 @@ from homeassistant.components.water_heater import (
     STATE_ECO,
     STATE_GAS,
 )
-from homeassistant.const import SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.const import SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_OFF, STATE_ON
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Water heater states."""
-    hass.states.async_set("water_heater.entity_off", STATE_OFF, {})
-    hass.states.async_set("water_heater.entity_on", STATE_ON, {ATTR_TEMPERATURE: 45})
-    hass.states.async_set("water_heater.entity_away", STATE_ON, {ATTR_AWAY_MODE: True})
-    hass.states.async_set("water_heater.entity_gas", STATE_GAS, {})
-    hass.states.async_set(
+    menuai.states.async_set("water_heater.entity_off", STATE_OFF, {})
+    menuai.states.async_set("water_heater.entity_on", STATE_ON, {ATTR_TEMPERATURE: 45})
+    menuai.states.async_set("water_heater.entity_away", STATE_ON, {ATTR_AWAY_MODE: True})
+    menuai.states.async_set("water_heater.entity_gas", STATE_GAS, {})
+    menuai.states.async_set(
         "water_heater.entity_all",
         STATE_ECO,
         {ATTR_AWAY_MODE: True, ATTR_TEMPERATURE: 45},
     )
 
-    turn_on_calls = async_mock_service(hass, "water_heater", SERVICE_TURN_ON)
-    turn_off_calls = async_mock_service(hass, "water_heater", SERVICE_TURN_OFF)
-    set_op_calls = async_mock_service(hass, "water_heater", SERVICE_SET_OPERATION_MODE)
-    set_temp_calls = async_mock_service(hass, "water_heater", SERVICE_SET_TEMPERATURE)
-    set_away_calls = async_mock_service(hass, "water_heater", SERVICE_SET_AWAY_MODE)
+    turn_on_calls = async_mock_service(menuai, "water_heater", SERVICE_TURN_ON)
+    turn_off_calls = async_mock_service(menuai, "water_heater", SERVICE_TURN_OFF)
+    set_op_calls = async_mock_service(menuai, "water_heater", SERVICE_SET_OPERATION_MODE)
+    set_temp_calls = async_mock_service(menuai, "water_heater", SERVICE_SET_TEMPERATURE)
+    set_away_calls = async_mock_service(menuai, "water_heater", SERVICE_SET_AWAY_MODE)
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("water_heater.entity_off", STATE_OFF),
             State("water_heater.entity_on", STATE_ON, {ATTR_TEMPERATURE: 45}),
@@ -63,7 +63,7 @@ async def test_reproducing_states(
 
     # Test invalid state is handled
     await async_reproduce_state(
-        hass, [State("water_heater.entity_off", "not_supported")]
+        menuai, [State("water_heater.entity_off", "not_supported")]
     )
 
     assert "not_supported" in caplog.text
@@ -75,7 +75,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("water_heater.entity_on", STATE_OFF),
             State("water_heater.entity_off", STATE_ON, {ATTR_TEMPERATURE: 45}),

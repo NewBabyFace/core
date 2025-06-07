@@ -16,23 +16,23 @@ from aioairzone.const import (
     AZD_ZONES,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import TEMP_UNIT_LIB_TO_HASS
+from .const import TEMP_UNIT_LIB_TO_menuai
 from .coordinator import AirzoneConfigEntry, AirzoneUpdateCoordinator
 from .entity import (
     AirzoneEntity,
@@ -93,7 +93,7 @@ ZONE_SENSOR_TYPES: Final[tuple[SensorEntityDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirzoneConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -187,7 +187,7 @@ class AirzoneHotWaterSensor(AirzoneHotWaterEntity, AirzoneSensor):
         self._attr_unique_id = f"{self._attr_unique_id}_dhw_{description.key}"
         self.entity_description = description
 
-        self._attr_native_unit_of_measurement = TEMP_UNIT_LIB_TO_HASS.get(
+        self._attr_native_unit_of_measurement = TEMP_UNIT_LIB_TO_menuai.get(
             self.get_airzone_value(AZD_TEMP_UNIT)
         )
 
@@ -230,7 +230,7 @@ class AirzoneZoneSensor(AirzoneZoneEntity, AirzoneSensor):
         self.entity_description = description
 
         if description.key == AZD_TEMP:
-            self._attr_native_unit_of_measurement = TEMP_UNIT_LIB_TO_HASS.get(
+            self._attr_native_unit_of_measurement = TEMP_UNIT_LIB_TO_menuai.get(
                 self.get_airzone_value(AZD_TEMP_UNIT)
             )
 

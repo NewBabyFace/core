@@ -1,14 +1,14 @@
 """Test config flow."""
 
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
+from menuai import config_entries
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
 
 from tests.typing import MqttMockHAClient
 
 
-async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_mqtt_setup(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
         topic="drop_connect/discovery/DROP-1_C0FFEE/255",
@@ -18,7 +18,7 @@ async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> N
         subscribed_topic="drop_connect/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect",
         context={"source": config_entries.SOURCE_MQTT},
         data=discovery_info,
@@ -27,10 +27,10 @@ async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> N
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result is not None
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -45,7 +45,7 @@ async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> N
     }
 
 
-async def test_duplicate(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_duplicate(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
         topic="drop_connect/discovery/DROP-1_C0FFEE/255",
@@ -55,7 +55,7 @@ async def test_duplicate(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> No
         subscribed_topic="drop_connect/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect",
         context={"source": config_entries.SOURCE_MQTT},
         data=discovery_info,
@@ -64,15 +64,15 @@ async def test_duplicate(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> No
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result is not None
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     # Attempting configuration of the same object should abort
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect",
         context={"source": config_entries.SOURCE_MQTT},
         data=discovery_info,
@@ -83,7 +83,7 @@ async def test_duplicate(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> No
 
 
 async def test_mqtt_setup_incomplete_payload(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
@@ -94,7 +94,7 @@ async def test_mqtt_setup_incomplete_payload(
         subscribed_topic="drop_connect/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect",
         context={"source": config_entries.SOURCE_MQTT},
         data=discovery_info,
@@ -105,7 +105,7 @@ async def test_mqtt_setup_incomplete_payload(
 
 
 async def test_mqtt_setup_bad_json(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
@@ -116,7 +116,7 @@ async def test_mqtt_setup_bad_json(
         subscribed_topic="drop_connect/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect",
         context={"source": config_entries.SOURCE_MQTT},
         data=discovery_info,
@@ -127,7 +127,7 @@ async def test_mqtt_setup_bad_json(
 
 
 async def test_mqtt_setup_bad_topic(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
@@ -138,7 +138,7 @@ async def test_mqtt_setup_bad_topic(
         subscribed_topic="drop_connect/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect",
         context={"source": config_entries.SOURCE_MQTT},
         data=discovery_info,
@@ -149,7 +149,7 @@ async def test_mqtt_setup_bad_topic(
 
 
 async def test_mqtt_setup_no_payload(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
@@ -160,7 +160,7 @@ async def test_mqtt_setup_no_payload(
         subscribed_topic="drop_connect/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect",
         context={"source": config_entries.SOURCE_MQTT},
         data=discovery_info,
@@ -170,9 +170,9 @@ async def test_mqtt_setup_no_payload(
     assert result["reason"] == "invalid_discovery_info"
 
 
-async def test_user_setup(hass: HomeAssistant) -> None:
+async def test_user_setup(menuai: menuai) -> None:
     """Test user setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "drop_connect", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT

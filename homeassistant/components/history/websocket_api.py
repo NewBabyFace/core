@@ -11,32 +11,32 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.recorder import get_instance, history
-from homeassistant.components.websocket_api import ActiveConnection, messages
-from homeassistant.const import (
+from menuai.components import websocket_api
+from menuai.components.recorder import get_instance, history
+from menuai.components.websocket_api import ActiveConnection, messages
+from menuai.const import (
     COMPRESSED_STATE_ATTRIBUTES,
     COMPRESSED_STATE_LAST_CHANGED,
     COMPRESSED_STATE_LAST_UPDATED,
     COMPRESSED_STATE_STATE,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
     is_callback,
     valid_entity_id,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_point_in_utc_time,
     async_track_state_change_event,
 )
-from homeassistant.helpers.json import json_bytes
-from homeassistant.util import dt as dt_util
-from homeassistant.util.async_ import create_eager_task
+from menuai.helpers.json import json_bytes
+from menuai.util import dt as dt_util
+from menuai.util.async_ import create_eager_task
 
 from .const import EVENT_COALESCE_TIME, MAX_PENDING_HISTORY_STATES
 from .helpers import entities_may_have_state_changes_after, has_states_before
@@ -56,14 +56,14 @@ class HistoryLiveStream:
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the history websocket API."""
-    websocket_api.async_register_command(hass, ws_get_history_during_period)
-    websocket_api.async_register_command(hass, ws_stream)
+    websocket_api.async_register_command(menuai, ws_get_history_during_period)
+    websocket_api.async_register_command(menuai, ws_stream)
 
 
 def _ws_get_significant_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     msg_id: int,
     start_time: dt,
     end_time: dt | None,
@@ -78,7 +78,7 @@ def _ws_get_significant_states(
         messages.result_message(
             msg_id,
             history.get_significant_states(
-                hass,
+                menuai,
                 start_time,
                 end_time,
                 entity_ids,
@@ -107,7 +107,7 @@ def _ws_get_significant_states(
 )
 @websocket_api.async_response
 async def ws_get_history_during_period(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle history during period websocket command."""
     start_time_str = msg["start_time"]
@@ -134,7 +134,7 @@ async def ws_get_history_during_period(
 
     entity_ids: list[str] = msg["entity_ids"]
     for entity_id in entity_ids:
-        if not hass.states.get(entity_id) and not valid_entity_id(entity_id):
+        if not menuai.states.get(entity_id) and not valid_entity_id(entity_id):
             connection.send_error(msg["id"], "invalid_entity_ids", "Invalid entity_ids")
             return
 
@@ -145,12 +145,12 @@ async def ws_get_history_during_period(
         # has_states_before will return True if there are states older than
         # end_time. If it's false, we know there are no states in the
         # database up until end_time.
-        (end_time and not has_states_before(hass, end_time))
+        (end_time and not has_states_before(menuai, end_time))
         or (
             not include_start_time_state
             and entity_ids
             and not entities_may_have_state_changes_after(
-                hass, entity_ids, start_time, no_attributes
+                menuai, entity_ids, start_time, no_attributes
             )
         )
     ):
@@ -161,9 +161,9 @@ async def ws_get_history_during_period(
     minimal_response = msg["minimal_response"]
 
     connection.send_message(
-        await get_instance(hass).async_add_executor_job(
+        await get_instance(menuai).async_add_executor_job(
             _ws_get_significant_states,
-            hass,
+            menuai,
             msg["id"],
             start_time,
             end_time,
@@ -216,7 +216,7 @@ def _generate_websocket_response(
 
 
 def _generate_historical_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     msg_id: int,
     start_time: dt,
     end_time: dt,
@@ -231,7 +231,7 @@ def _generate_historical_response(
     states = cast(
         dict[str, list[dict[str, Any]]],
         history.get_significant_states(
-            hass,
+            menuai,
             start_time,
             end_time,
             entity_ids,
@@ -270,7 +270,7 @@ def _generate_historical_response(
 
 
 async def _async_send_historical_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg_id: int,
     start_time: dt,
@@ -283,10 +283,10 @@ async def _async_send_historical_states(
     send_empty: bool,
 ) -> dt | None:
     """Fetch history significant_states and send them to the client."""
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     last_time_ts, last_time_dt, payload = await instance.async_add_executor_job(
         _generate_historical_response,
-        hass,
+        menuai,
         msg_id,
         start_time,
         end_time,
@@ -365,7 +365,7 @@ async def _async_events_consumer(
 
 @callback
 def _async_subscribe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     subscriptions: list[CALLBACK_TYPE],
     target: Callable[[Event[Any]], None],
     entity_ids: list[str],
@@ -395,7 +395,7 @@ def _async_subscribe_events(
         target(event)
 
     subscriptions.append(
-        async_track_state_change_event(hass, entity_ids, _forward_state_events_filtered)
+        async_track_state_change_event(menuai, entity_ids, _forward_state_events_filtered)
     )
 
 
@@ -413,7 +413,7 @@ def _async_subscribe_events(
 )
 @websocket_api.async_response
 async def ws_stream(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle history stream websocket command."""
     start_time_str = msg["start_time"]
@@ -440,7 +440,7 @@ async def ws_stream(
 
     entity_ids: list[str] = msg["entity_ids"]
     for entity_id in entity_ids:
-        if not hass.states.get(entity_id) and not valid_entity_id(entity_id):
+        if not menuai.states.get(entity_id) and not valid_entity_id(entity_id):
             connection.send_error(msg["id"], "invalid_entity_ids", "Invalid entity_ids")
             return
 
@@ -454,7 +454,7 @@ async def ws_stream(
             not include_start_time_state
             and entity_ids
             and not entities_may_have_state_changes_after(
-                hass, entity_ids, start_time, no_attributes
+                menuai, entity_ids, start_time, no_attributes
             )
         ):
             _async_send_empty_response(connection, msg_id, start_time, end_time)
@@ -463,7 +463,7 @@ async def ws_stream(
         connection.subscriptions[msg_id] = callback(lambda: None)
         connection.send_result(msg_id)
         await _async_send_historical_states(
-            hass,
+            menuai,
             connection,
             msg_id,
             start_time,
@@ -499,7 +499,7 @@ async def ws_stream(
 
     if end_time:
         live_stream.end_time_unsub = async_track_point_in_utc_time(
-            hass, _unsub, end_time
+            menuai, _unsub, end_time
         )
 
     @callback
@@ -515,7 +515,7 @@ async def ws_stream(
             _unsub()
 
     _async_subscribe_events(
-        hass,
+        menuai,
         subscriptions,
         _queue_or_cancel,
         entity_ids,
@@ -527,7 +527,7 @@ async def ws_stream(
     connection.send_result(msg_id)
     # Fetch everything from history
     last_event_time = await _async_send_historical_states(
-        hass,
+        menuai,
         connection,
         msg_id,
         start_time,
@@ -554,7 +554,7 @@ async def ws_stream(
         )
     )
 
-    if sync_future := get_instance(hass).async_get_commit_future():
+    if sync_future := get_instance(menuai).async_get_commit_future():
         # Set the future so we can cancel it if the client
         # unsubscribes before the commit is done so we don't
         # query the database needlessly
@@ -570,7 +570,7 @@ async def ws_stream(
     # we had from the last database query
     #
     await _async_send_historical_states(
-        hass,
+        menuai,
         connection,
         msg_id,
         # Add one microsecond so we are outside the window of

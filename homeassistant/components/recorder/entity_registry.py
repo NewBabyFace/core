@@ -3,10 +3,10 @@
 import logging
 from typing import TYPE_CHECKING
 
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_has_entity_registry_updated_listeners
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.event import async_has_entity_registry_updated_listeners
 
 from .core import Recorder
 from .util import filter_unique_constraint_integrity_error, get_instance, session_scope
@@ -15,14 +15,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the entity hooks."""
 
     @callback
     def _async_entity_id_changed(
         event: Event[er.EventEntityRegistryUpdatedData],
     ) -> None:
-        instance = get_instance(hass)
+        instance = get_instance(menuai)
         if TYPE_CHECKING:
             assert event.data["action"] == "update" and "old_entity_id" in event.data
         old_entity_id = event.data["old_entity_id"]
@@ -41,13 +41,13 @@ def async_setup(hass: HomeAssistant) -> None:
         """Handle entity_id changed filter."""
         return event_data["action"] == "update" and "old_entity_id" in event_data
 
-    if async_has_entity_registry_updated_listeners(hass):
-        raise HomeAssistantError(
+    if async_has_entity_registry_updated_listeners(menuai):
+        raise menuaiError(
             "The recorder entity registry listener must be installed"
             " before async_track_entity_registry_updated_event is called"
         )
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         er.EVENT_ENTITY_REGISTRY_UPDATED,
         _async_entity_id_changed,
         event_filter=entity_registry_changed_filter,

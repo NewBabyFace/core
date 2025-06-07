@@ -7,31 +7,31 @@ from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 
 import aiohttp
 from aiohttp import web
-from hass_nabucasa.client import RemoteActivationNotAllowed
+from menuai_nabucasa.client import RemoteActivationNotAllowed
 import pytest
 
-from homeassistant.components import webhook
-from homeassistant.components.cloud import DOMAIN
-from homeassistant.components.cloud.client import (
+from menuai.components import webhook
+from menuai.components.cloud import DOMAIN
+from menuai.components.cloud.client import (
     VALID_REPAIR_TRANSLATION_KEYS,
     CloudClient,
 )
-from homeassistant.components.cloud.const import (
+from menuai.components.cloud.const import (
     DATA_CLOUD,
     PREF_ALEXA_REPORT_STATE,
     PREF_ENABLE_ALEXA,
     PREF_ENABLE_GOOGLE,
 )
-from homeassistant.components.cloud.prefs import CloudPreferences
-from homeassistant.components.homeassistant.exposed_entities import (
+from menuai.components.cloud.prefs import CloudPreferences
+from menuai.components.menuai.exposed_entities import (
     DATA_EXPOSED_ENTITIES,
     async_expose_entity,
 )
-from homeassistant.const import CONTENT_TYPE_JSON, __version__ as HA_VERSION
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.const import CONTENT_TYPE_JSON, __version__ as HA_VERSION
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import mock_cloud, mock_cloud_prefs
 
@@ -45,13 +45,13 @@ def mock_cloud_inst() -> MagicMock:
     return MagicMock(subscription_expired=False)
 
 
-async def test_handler_alexa(hass: HomeAssistant) -> None:
+async def test_handler_alexa(menuai: menuai) -> None:
     """Test handler Alexa."""
-    hass.states.async_set("switch.test", "on", {"friendly_name": "Test switch"})
-    hass.states.async_set("switch.test2", "on", {"friendly_name": "Test switch 2"})
+    menuai.states.async_set("switch.test", "on", {"friendly_name": "Test switch"})
+    menuai.states.async_set("switch.test2", "on", {"friendly_name": "Test switch 2"})
 
     await mock_cloud(
-        hass,
+        menuai,
         {
             "alexa": {
                 "filter": {"exclude_entities": "switch.test2"},
@@ -66,8 +66,8 @@ async def test_handler_alexa(hass: HomeAssistant) -> None:
         },
     )
 
-    mock_cloud_prefs(hass, {PREF_ALEXA_REPORT_STATE: False})
-    cloud = hass.data[DATA_CLOUD]
+    mock_cloud_prefs(menuai, {PREF_ALEXA_REPORT_STATE: False})
+    cloud = menuai.data[DATA_CLOUD]
 
     resp = await cloud.client.async_alexa_message(
         test_alexa.get_new_request("Alexa.Discovery", "Discover")
@@ -78,18 +78,18 @@ async def test_handler_alexa(hass: HomeAssistant) -> None:
     assert len(endpoints) == 1
     device = endpoints[0]
 
-    assert device["description"] == "Config description via Home Assistant"
+    assert device["description"] == "Config description via MenuAI"
     assert device["friendlyName"] == "Config name"
     assert device["displayCategories"] == ["LIGHT"]
-    assert device["manufacturerName"] == "Home Assistant"
+    assert device["manufacturerName"] == "MenuAI"
 
 
 async def test_handler_alexa_disabled(
-    hass: HomeAssistant, mock_cloud_fixture: CloudPreferences
+    menuai: menuai, mock_cloud_fixture: CloudPreferences
 ) -> None:
     """Test handler Alexa when user has disabled it."""
     mock_cloud_fixture._prefs[PREF_ENABLE_ALEXA] = False
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
 
     resp = await cloud.client.async_alexa_message(
         test_alexa.get_new_request("Alexa.Discovery", "Discover")
@@ -100,14 +100,14 @@ async def test_handler_alexa_disabled(
     assert resp["event"]["payload"]["type"] == "BRIDGE_UNREACHABLE"
 
 
-async def test_handler_google_actions(hass: HomeAssistant) -> None:
+async def test_handler_google_actions(menuai: menuai) -> None:
     """Test handler Google Actions."""
-    hass.states.async_set("switch.test", "on", {"friendly_name": "Test switch"})
-    hass.states.async_set("switch.test2", "on", {"friendly_name": "Test switch 2"})
-    hass.states.async_set("group.all_locks", "on", {"friendly_name": "Evil locks"})
+    menuai.states.async_set("switch.test", "on", {"friendly_name": "Test switch"})
+    menuai.states.async_set("switch.test2", "on", {"friendly_name": "Test switch 2"})
+    menuai.states.async_set("group.all_locks", "on", {"friendly_name": "Evil locks"})
 
     await mock_cloud(
-        hass,
+        menuai,
         {
             "google_actions": {
                 "filter": {"exclude_entities": "switch.test2"},
@@ -122,14 +122,14 @@ async def test_handler_google_actions(hass: HomeAssistant) -> None:
         },
     )
 
-    mock_cloud_prefs(hass, {})
-    cloud = hass.data[DATA_CLOUD]
+    mock_cloud_prefs(menuai, {})
+    cloud = menuai.data[DATA_CLOUD]
 
     reqid = "5711642932632160983"
     data = {"requestId": reqid, "inputs": [{"intent": "action.devices.SYNC"}]}
 
     with patch(
-        "hass_nabucasa.Cloud._decode_claims",
+        "menuai_nabucasa.Cloud._decode_claims",
         return_value={"cognito:username": "myUserName"},
     ):
         await cloud.client.get_google_config()
@@ -159,7 +159,7 @@ async def test_handler_google_actions(hass: HomeAssistant) -> None:
     ],
 )
 async def test_handler_google_actions_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cloud_fixture: CloudPreferences,
     intent: str,
     response_payload: dict[str, Any],
@@ -167,15 +167,15 @@ async def test_handler_google_actions_disabled(
     """Test handler Google Actions when user has disabled it."""
     mock_cloud_fixture._prefs[PREF_ENABLE_GOOGLE] = False
 
-    with patch("hass_nabucasa.Cloud.initialize"):
-        assert await async_setup_component(hass, "cloud", {})
+    with patch("menuai_nabucasa.Cloud.initialize"):
+        assert await async_setup_component(menuai, "cloud", {})
 
     reqid = "5711642932632160983"
     data = {"requestId": reqid, "inputs": [{"intent": intent}]}
 
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     with patch(
-        "hass_nabucasa.Cloud._decode_claims",
+        "menuai_nabucasa.Cloud._decode_claims",
         return_value={"cognito:username": "myUserName"},
     ):
         resp = await cloud.client.async_google_message(data)
@@ -185,13 +185,13 @@ async def test_handler_google_actions_disabled(
 
 
 async def test_handler_ice_servers(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
     set_cloud_prefs: Callable[[dict[str, Any]], Coroutine[Any, Any, None]],
 ) -> None:
     """Test handler ICE servers."""
-    assert await async_setup_component(hass, "cloud", {"cloud": {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "cloud", {"cloud": {}})
+    await menuai.async_block_till_done()
     # make sure that preferences will not be reset
     await cloud.client.prefs.async_set_username(cloud.username)
     await set_cloud_prefs(
@@ -209,13 +209,13 @@ async def test_handler_ice_servers(
 
 
 async def test_handler_ice_servers_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
     set_cloud_prefs: Callable[[dict[str, Any]], Coroutine[Any, Any, None]],
 ) -> None:
     """Test handler ICE servers when user has disabled it."""
-    assert await async_setup_component(hass, "cloud", {"cloud": {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "cloud", {"cloud": {}})
+    await menuai.async_block_till_done()
     # make sure that preferences will not be reset
     await cloud.client.prefs.async_set_username(cloud.username)
     await set_cloud_prefs(
@@ -238,13 +238,13 @@ async def test_handler_ice_servers_disabled(
 
 
 async def test_webhook_msg(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test webhook msg."""
-    with patch("hass_nabucasa.Cloud.initialize"):
-        setup = await async_setup_component(hass, "cloud", {"cloud": {}})
+    with patch("menuai_nabucasa.Cloud.initialize"):
+        setup = await async_setup_component(menuai, "cloud", {"cloud": {}})
         assert setup
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
 
     await cloud.client.prefs.async_initialize()
     await cloud.client.prefs.async_update(
@@ -263,13 +263,13 @@ async def test_webhook_msg(
     received = []
 
     async def handler(
-        hass: HomeAssistant, webhook_id: str, request: web.Request
+        menuai: menuai, webhook_id: str, request: web.Request
     ) -> web.Response:
         """Handle a webhook."""
         received.append(request)
         return web.json_response({"from": "handler"})
 
-    webhook.async_register(hass, "test", "Test", "mock-webhook-id", handler)
+    webhook.async_register(menuai, "test", "Test", "mock-webhook-id", handler)
 
     response = await cloud.client.async_webhook_message(
         {
@@ -318,13 +318,13 @@ async def test_webhook_msg(
 
 @pytest.mark.usefixtures("mock_cloud_setup", "mock_cloud_login")
 async def test_google_config_expose_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test Google config exposing entity method uses latest config."""
 
     # Enable exposing new entities to Google
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     exposed_entities.async_set_expose_new_entities("cloud.google_assistant", True)
 
     # Register a light entity
@@ -332,20 +332,20 @@ async def test_google_config_expose_entity(
         "light", "test", "unique", suggested_object_id="kitchen"
     )
 
-    cloud_client = hass.data[DATA_CLOUD].client
+    cloud_client = menuai.data[DATA_CLOUD].client
     state = State(entity_entry.entity_id, "on")
     gconf = await cloud_client.get_google_config()
 
     assert gconf.should_expose(state)
 
-    async_expose_entity(hass, "cloud.google_assistant", entity_entry.entity_id, False)
+    async_expose_entity(menuai, "cloud.google_assistant", entity_entry.entity_id, False)
 
     assert not gconf.should_expose(state)
 
 
 @pytest.mark.usefixtures("mock_cloud_setup", "mock_cloud_login")
 async def test_google_config_should_2fa(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test Google config disabling 2FA method uses latest config."""
@@ -355,7 +355,7 @@ async def test_google_config_should_2fa(
         "light", "test", "unique", suggested_object_id="kitchen"
     )
 
-    cloud_client = hass.data[DATA_CLOUD].client
+    cloud_client = menuai.data[DATA_CLOUD].client
     gconf = await cloud_client.get_google_config()
     state = State(entity_entry.entity_id, "on")
 
@@ -368,14 +368,14 @@ async def test_google_config_should_2fa(
     assert not gconf.should_2fa(state)
 
 
-async def test_set_username(hass: HomeAssistant) -> None:
+async def test_set_username(menuai: menuai) -> None:
     """Test we set username during login."""
     prefs = MagicMock(
         alexa_enabled=False,
         google_enabled=False,
         async_set_username=AsyncMock(return_value=None),
     )
-    client = CloudClient(hass, prefs, None, {}, {})
+    client = CloudClient(menuai, prefs, None, {}, {})
     client.cloud = MagicMock(is_logged_in=True, username="mock-username")
     await client.cloud_connected()
 
@@ -384,7 +384,7 @@ async def test_set_username(hass: HomeAssistant) -> None:
 
 
 async def test_login_recovers_bad_internet(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test Alexa can recover bad auth."""
     prefs = Mock(
@@ -392,7 +392,7 @@ async def test_login_recovers_bad_internet(
         google_enabled=False,
         async_set_username=AsyncMock(return_value=None),
     )
-    client = CloudClient(hass, prefs, None, {}, {})
+    client = CloudClient(menuai, prefs, None, {}, {})
     client.cloud = Mock()
     client._alexa_config = Mock(
         async_enable_proactive_mode=Mock(side_effect=aiohttp.ClientError)
@@ -401,18 +401,18 @@ async def test_login_recovers_bad_internet(
     assert len(client._alexa_config.async_enable_proactive_mode.mock_calls) == 1
     assert "Unable to activate Alexa Report State" in caplog.text
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=30))
+    await menuai.async_block_till_done()
 
     assert len(client._alexa_config.async_enable_proactive_mode.mock_calls) == 2
 
 
-async def test_system_msg(hass: HomeAssistant) -> None:
+async def test_system_msg(menuai: menuai) -> None:
     """Test system msg."""
-    with patch("hass_nabucasa.Cloud.initialize"):
-        setup = await async_setup_component(hass, "cloud", {"cloud": {}})
+    with patch("menuai_nabucasa.Cloud.initialize"):
+        setup = await async_setup_component(menuai, "cloud", {"cloud": {}})
         assert setup
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
 
     assert cloud.client.relayer_region is None
 
@@ -426,16 +426,16 @@ async def test_system_msg(hass: HomeAssistant) -> None:
     assert cloud.client.relayer_region == "xx-earth-616"
 
 
-async def test_cloud_connection_info(hass: HomeAssistant) -> None:
+async def test_cloud_connection_info(menuai: menuai) -> None:
     """Test connection info msg."""
     with (
-        patch("hass_nabucasa.Cloud.initialize"),
+        patch("menuai_nabucasa.Cloud.initialize"),
         patch("uuid.UUID.hex", new_callable=PropertyMock) as hexmock,
     ):
         hexmock.return_value = "12345678901234567890"
-        setup = await async_setup_component(hass, "cloud", {"cloud": {}})
+        setup = await async_setup_component(menuai, "cloud", {"cloud": {}})
         assert setup
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
 
     response = await cloud.client.async_cloud_connection_info({})
 
@@ -533,14 +533,14 @@ async def test_async_delete_repair_issue(
     assert issue is None
 
 
-async def test_disconnected(hass: HomeAssistant) -> None:
+async def test_disconnected(menuai: menuai) -> None:
     """Test cleanup when disconnected from the cloud."""
     prefs = MagicMock(
         alexa_enabled=False,
         google_enabled=True,
         async_set_username=AsyncMock(return_value=None),
     )
-    client = CloudClient(hass, prefs, None, {}, {})
+    client = CloudClient(menuai, prefs, None, {}, {})
     client.cloud = MagicMock(is_logged_in=True, username="mock-username")
     client._google_config = Mock()
     client._google_config.async_disable_local_sdk.assert_not_called()
@@ -550,13 +550,13 @@ async def test_disconnected(hass: HomeAssistant) -> None:
 
 
 async def test_logged_out(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
 ) -> None:
     """Test cleanup when logged out from the cloud."""
 
-    assert await async_setup_component(hass, "cloud", {"cloud": {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "cloud", {"cloud": {}})
+    await menuai.async_block_till_done()
     await cloud.login("test-user", "test-pass")
 
     alexa_config_mock = Mock(async_enable_proactive_mode=AsyncMock())
@@ -565,13 +565,13 @@ async def test_logged_out(
     cloud.client._google_config = google_config_mock
 
     await cloud.client.cloud_connected()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert cloud.client._cloud_ice_servers_listener is not None
 
     # Simulate logged out
     await cloud.logout()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check we clean up Alexa, Google and ICE servers
     assert cloud.client._alexa_config is None
@@ -581,23 +581,23 @@ async def test_logged_out(
     alexa_config_mock.async_deinitialize.assert_called_once_with()
 
 
-async def test_remote_enable(hass: HomeAssistant) -> None:
+async def test_remote_enable(menuai: menuai) -> None:
     """Test enabling remote UI."""
     prefs = MagicMock(async_update=AsyncMock(return_value=None))
-    client = CloudClient(hass, prefs, None, {}, {})
+    client = CloudClient(menuai, prefs, None, {}, {})
     client.cloud = MagicMock(is_logged_in=True, username="mock-username")
 
     await client.async_cloud_connect_update(True)
     prefs.async_update.assert_called_once_with(remote_enabled=True)
 
 
-async def test_remote_enable_not_allowed(hass: HomeAssistant) -> None:
+async def test_remote_enable_not_allowed(menuai: menuai) -> None:
     """Test enabling remote UI."""
     prefs = MagicMock(
         async_update=AsyncMock(return_value=None),
         remote_allow_remote_enable=False,
     )
-    client = CloudClient(hass, prefs, None, {}, {})
+    client = CloudClient(menuai, prefs, None, {}, {})
     client.cloud = MagicMock(is_logged_in=True, username="mock-username")
 
     with pytest.raises(RemoteActivationNotAllowed):

@@ -5,15 +5,15 @@ from unittest.mock import MagicMock
 import pytest
 from voluptuous.error import Invalid
 
-from homeassistant import config_entries
-from homeassistant.components.jellyfin.const import (
+from menuai import config_entries
+from menuai.components.jellyfin.const import (
     CONF_AUDIO_CODEC,
     CONF_CLIENT_DEVICE_ID,
     DOMAIN,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import async_load_json_fixture
 from .const import REAUTH_INPUT, TEST_PASSWORD, TEST_URL, TEST_USERNAME, USER_INPUT
@@ -23,11 +23,11 @@ from tests.common import MockConfigEntry
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
-async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
+async def test_abort_if_existing_entry(menuai: menuai) -> None:
     """Check flow abort when an entry already exist."""
-    MockConfigEntry(domain=DOMAIN).add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -35,25 +35,25 @@ async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
 
 
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
     mock_client_device_id: MagicMock,
     mock_setup_entry: MagicMock,
 ) -> None:
     """Test the complete configuration form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "JELLYFIN-SERVER"
@@ -71,27 +71,27 @@ async def test_form(
 
 
 async def test_form_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
     mock_client_device_id: MagicMock,
 ) -> None:
     """Test configuration with an unreachable server."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     mock_client.auth.connect_to_address.return_value = await async_load_json_fixture(
-        hass, "auth-connect-address-failure.json"
+        menuai, "auth-connect-address-failure.json"
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
@@ -100,27 +100,27 @@ async def test_form_cannot_connect(
 
 
 async def test_form_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
     mock_client_device_id: MagicMock,
 ) -> None:
     """Test configuration with invalid credentials."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass, "auth-login-failure.json"
+        menuai, "auth-login-failure.json"
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_auth"}
@@ -130,10 +130,10 @@ async def test_form_invalid_auth(
 
 
 async def test_form_exception(
-    hass: HomeAssistant, mock_jellyfin: MagicMock, mock_client: MagicMock
+    menuai: menuai, mock_jellyfin: MagicMock, mock_client: MagicMock
 ) -> None:
     """Test configuration with an unexpected exception."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -141,11 +141,11 @@ async def test_form_exception(
 
     mock_client.auth.connect_to_address.side_effect = Exception("UnknownException")
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "unknown"}
@@ -154,13 +154,13 @@ async def test_form_exception(
 
 
 async def test_form_persists_device_id_on_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
     mock_client_device_id: MagicMock,
 ) -> None:
     """Test persisting the device id on error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -168,28 +168,28 @@ async def test_form_persists_device_id_on_error(
 
     mock_client_device_id.return_value = "TEST-UUID-1"
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass, "auth-login-failure.json"
+        menuai, "auth-login-failure.json"
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_auth"}
 
     mock_client_device_id.return_value = "TEST-UUID-2"
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass, "auth-login.json"
+        menuai, "auth-login.json"
     )
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         user_input=USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3
     assert result3["type"] is FlowResultType.CREATE_ENTRY
@@ -202,7 +202,7 @@ async def test_form_persists_device_id_on_error(
 
 
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
@@ -210,19 +210,19 @@ async def test_reauth(
     """Test a reauth flow."""
     # Force a reauth
     mock_client.auth.connect_to_address.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-connect-address.json",
     )
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login-failure.json",
     )
 
-    mock_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -230,22 +230,22 @@ async def test_reauth(
 
     # Complete the reauth
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login.json",
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=REAUTH_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
 
 
 async def test_reauth_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
@@ -253,19 +253,19 @@ async def test_reauth_cannot_connect(
     """Test an unreachable server during a reauth flow."""
     # Force a reauth
     mock_client.auth.connect_to_address.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-connect-address.json",
     )
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login-failure.json",
     )
 
-    mock_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -273,14 +273,14 @@ async def test_reauth_cannot_connect(
 
     # Perform reauth with unreachable server
     mock_client.auth.connect_to_address.return_value = await async_load_json_fixture(
-        hass, "auth-connect-address-failure.json"
+        menuai, "auth-connect-address-failure.json"
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=REAUTH_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
@@ -289,14 +289,14 @@ async def test_reauth_cannot_connect(
 
     # Complete reauth with reachable server
     mock_client.auth.connect_to_address.return_value = await async_load_json_fixture(
-        hass, "auth-connect-address.json"
+        menuai, "auth-connect-address.json"
     )
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login.json",
     )
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=REAUTH_INPUT,
     )
@@ -305,7 +305,7 @@ async def test_reauth_cannot_connect(
 
 
 async def test_reauth_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
@@ -313,30 +313,30 @@ async def test_reauth_invalid(
     """Test invalid credentials during a reauth flow."""
     # Force a reauth
     mock_client.auth.connect_to_address.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-connect-address.json",
     )
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login-failure.json",
     )
 
-    mock_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
 
     # Perform reauth with invalid credentials
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=REAUTH_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_auth"}
@@ -346,11 +346,11 @@ async def test_reauth_invalid(
 
     # Complete reauth with valid credentials
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login.json",
     )
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=REAUTH_INPUT,
     )
@@ -359,7 +359,7 @@ async def test_reauth_invalid(
 
 
 async def test_reauth_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
@@ -367,19 +367,19 @@ async def test_reauth_exception(
     """Test an unexpected exception during a reauth flow."""
     # Force a reauth
     mock_client.auth.connect_to_address.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-connect-address.json",
     )
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login-failure.json",
     )
 
-    mock_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -388,11 +388,11 @@ async def test_reauth_exception(
     # Perform a reauth with an unknown exception
     mock_client.auth.connect_to_address.side_effect = Exception("UnknownException")
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=REAUTH_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "unknown"}
@@ -401,12 +401,12 @@ async def test_reauth_exception(
 
     # Complete the reauth without an exception
     mock_client.auth.login.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "auth-login.json",
     )
     mock_client.auth.connect_to_address.side_effect = None
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=REAUTH_INPUT,
     )
@@ -415,32 +415,32 @@ async def test_reauth_exception(
 
 
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
 ) -> None:
     """Test config flow options."""
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     assert config_entry.options == {}
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "init"
 
     # Audio Codec
     # Default
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert CONF_AUDIO_CODEC not in config_entry.options
 
     # Bad
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     with pytest.raises(Invalid):
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input={CONF_AUDIO_CODEC: "ogg"}
         )
 
@@ -450,7 +450,7 @@ async def test_options_flow(
     [("aac"), ("wma"), ("vorbis"), ("mp3")],
 )
 async def test_setting_codec(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_client: MagicMock,
@@ -458,10 +458,10 @@ async def test_setting_codec(
 ) -> None:
     """Test setting the audio_codec."""
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_AUDIO_CODEC: codec}
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY

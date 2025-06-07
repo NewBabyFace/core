@@ -4,16 +4,16 @@ import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.components.nut.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.nut.const import DOMAIN
+from menuai.const import (
     CONF_ALIAS,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_load_fixture
 
@@ -40,7 +40,7 @@ def _get_mock_nutclient(
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     ups_fixture: str | None = None,
     host: str = "mock",
     port: int = 1234,
@@ -53,7 +53,7 @@ async def async_init_integration(
     list_commands_side_effect=None,
     run_command: MagicMock | None = None,
 ) -> MockConfigEntry:
-    """Set up the nut integration in Home Assistant."""
+    """Set up the nut integration in MenuAI."""
 
     if list_ups is None:
         list_ups = {"ups1": "UPS 1"}
@@ -61,7 +61,7 @@ async def async_init_integration(
     if ups_fixture is not None:
         ups_fixture = f"{ups_fixture}.json"
         if list_vars is None:
-            list_vars = json.loads(await async_load_fixture(hass, ups_fixture, DOMAIN))
+            list_vars = json.loads(await async_load_fixture(menuai, ups_fixture, DOMAIN))
 
     mock_pynut = _get_mock_nutclient(
         list_ups=list_ups,
@@ -72,7 +72,7 @@ async def async_init_integration(
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
         extra_config_entry_data: dict[str, Any] = {}
@@ -93,16 +93,16 @@ async def async_init_integration(
             | extra_config_entry_data,
         )
 
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry
 
 
 def _test_sensor_and_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unique_id: str,
     device_id: str,
@@ -115,7 +115,7 @@ def _test_sensor_and_attributes(
     assert entry
     assert entry.unique_id == unique_id
 
-    state = hass.states.get(device_id)
+    state = menuai.states.get(device_id)
     assert state.state == state_value
 
     # Only test for a subset of attributes in case

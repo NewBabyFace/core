@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from mastodon.Mastodon import Account, Instance, InstanceV2, Mastodon, MastodonError
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_NAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
+from menuai.util import slugify
 
 from .const import CONF_BASE_URL, DOMAIN, LOGGER
 from .coordinator import MastodonConfigEntry, MastodonCoordinator, MastodonData
@@ -27,17 +27,17 @@ PLATFORMS: list[Platform] = [Platform.NOTIFY, Platform.SENSOR]
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Mastodon component."""
-    setup_services(hass)
+    setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: MastodonConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: MastodonConfigEntry) -> bool:
     """Set up Mastodon from a config entry."""
 
     try:
-        client, instance, account = await hass.async_add_executor_job(
+        client, instance, account = await menuai.async_add_executor_job(
             setup_mastodon,
             entry,
         )
@@ -47,35 +47,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: MastodonConfigEntry) -> 
 
     assert entry.unique_id
 
-    coordinator = MastodonCoordinator(hass, entry, client)
+    coordinator = MastodonCoordinator(menuai, entry, client)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = MastodonData(client, instance, account, coordinator)
 
     await discovery.async_load_platform(
-        hass,
+        menuai,
         Platform.NOTIFY,
         DOMAIN,
         {CONF_NAME: entry.title, "client": client},
         {},
     )
 
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: MastodonConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: MastodonConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: MastodonConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: MastodonConfigEntry) -> bool:
     """Migrate old config."""
 
     if entry.version == 1 and entry.minor_version == 1:
@@ -83,7 +83,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: MastodonConfigEntry) -
         LOGGER.debug("Migrating config entry from version %s", entry.version)
 
         try:
-            _, instance, account = await hass.async_add_executor_job(
+            _, instance, account = await menuai.async_add_executor_job(
                 setup_mastodon,
                 entry,
             )
@@ -91,7 +91,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: MastodonConfigEntry) -
             LOGGER.error("Migration failed with error %s", ex)
             return False
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             minor_version=2,
             unique_id=slugify(construct_mastodon_username(instance, account)),

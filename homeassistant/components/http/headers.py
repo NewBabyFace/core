@@ -10,7 +10,7 @@ from aiohttp.web import Application, Request, StreamResponse, middleware
 from aiohttp.web_exceptions import HTTPException
 from multidict import CIMultiDict, istr
 
-from homeassistant.core import callback
+from menuai.core import callback
 
 REFERRER_POLICY: Final[istr] = istr("Referrer-Policy")
 X_CONTENT_TYPE_OPTIONS: Final[istr] = istr("X-Content-Type-Options")

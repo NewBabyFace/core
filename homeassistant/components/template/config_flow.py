@@ -8,17 +8,17 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.button import ButtonDeviceClass
-from homeassistant.components.sensor import (
+from menuai.components import websocket_api
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.button import ButtonDeviceClass
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASS_STATE_CLASSES,
     DEVICE_CLASS_UNITS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_DEVICE_ID,
     CONF_NAME,
@@ -29,10 +29,10 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er, selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er, selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowFormStep,
@@ -398,7 +398,7 @@ OPTIONS_FLOW = {
 
 CREATE_PREVIEW_ENTITY: dict[
     str,
-    Callable[[HomeAssistant, str, dict[str, Any]], TemplateEntity],
+    Callable[[menuai, str, dict[str, Any]], TemplateEntity],
 ] = {
     "binary_sensor": async_create_preview_binary_sensor,
     "number": async_create_preview_number,
@@ -419,9 +419,9 @@ class TemplateConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
         return cast(str, options["name"])
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
 @websocket_api.websocket_command(
@@ -434,7 +434,7 @@ class TemplateConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
 )
 @callback
 def ws_start_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -465,20 +465,20 @@ def ws_start_preview(
 
     entity_registry_entry: er.RegistryEntry | None = None
     if msg["flow_type"] == "config_flow":
-        flow_status = hass.config_entries.flow.async_get(msg["flow_id"])
+        flow_status = menuai.config_entries.flow.async_get(msg["flow_id"])
         template_type = flow_status["step_id"]
         form_step = cast(SchemaFlowFormStep, CONFIG_FLOW[template_type])
         schema = cast(vol.Schema, form_step.schema)
         name = msg["user_input"]["name"]
     else:
-        flow_status = hass.config_entries.options.async_get(msg["flow_id"])
-        config_entry = hass.config_entries.async_get_entry(flow_status["handler"])
+        flow_status = menuai.config_entries.options.async_get(msg["flow_id"])
+        config_entry = menuai.config_entries.async_get_entry(flow_status["handler"])
         if not config_entry:
-            raise HomeAssistantError
+            raise menuaiError
         template_type = config_entry.options["template_type"]
         name = config_entry.options["name"]
         schema = cast(vol.Schema, OPTIONS_FLOW[template_type].schema)
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         entries = er.async_entries_for_config_entry(
             entity_registry, flow_status["handler"]
         )
@@ -521,8 +521,8 @@ def ws_start_preview(
         )
         return
 
-    preview_entity = CREATE_PREVIEW_ENTITY[template_type](hass, name, msg["user_input"])
-    preview_entity.hass = hass
+    preview_entity = CREATE_PREVIEW_ENTITY[template_type](menuai, name, msg["user_input"])
+    preview_entity.menuai = menuai
     preview_entity.registry_entry = entity_registry_entry
 
     connection.send_result(msg["id"])

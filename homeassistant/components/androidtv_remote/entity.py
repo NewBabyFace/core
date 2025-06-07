@@ -6,12 +6,12 @@ from typing import Any
 
 from androidtvremote2 import AndroidTVRemote, ConnectionClosed
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import CONF_APPS, DOMAIN
 
@@ -54,12 +54,12 @@ class AndroidTVRemoteBaseEntity(Entity):
         self._attr_is_on = is_on
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self._api.add_is_available_updated_callback(self._is_available_updated)
         self._api.add_is_on_updated_callback(self._is_on_updated)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove callbacks."""
         self._api.remove_is_available_updated_callback(self._is_available_updated)
         self._api.remove_is_on_updated_callback(self._is_on_updated)
@@ -72,7 +72,7 @@ class AndroidTVRemoteBaseEntity(Entity):
         try:
             self._api.send_key_command(key_code, direction)
         except ConnectionClosed as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="connection_closed"
             ) from exc
 
@@ -84,6 +84,6 @@ class AndroidTVRemoteBaseEntity(Entity):
         try:
             self._api.send_launch_app_command(app_link)
         except ConnectionClosed as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="connection_closed"
             ) from exc

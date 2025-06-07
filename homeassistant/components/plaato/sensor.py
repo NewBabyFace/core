@@ -5,18 +5,18 @@ from __future__ import annotations
 from pyplaato.models.device import PlaatoDevice
 from pyplaato.plaato import PlaatoKeg
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import (
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import ATTR_TEMP, SENSOR_UPDATE
 from .const import (
@@ -32,7 +32,7 @@ from .entity import PlaatoEntity
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -41,12 +41,12 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Plaato from a config entry."""
-    entry_data = hass.data[DOMAIN][entry.entry_id]
+    entry_data = menuai.data[DOMAIN][entry.entry_id]
 
     @callback
     def _async_update_from_webhook(device_id, sensor_data: PlaatoDevice):
@@ -63,10 +63,10 @@ async def async_setup_entry(
             )
         else:
             for sensor_type in sensor_data.sensors:
-                async_dispatcher_send(hass, SENSOR_SIGNAL % (device_id, sensor_type))
+                async_dispatcher_send(menuai, SENSOR_SIGNAL % (device_id, sensor_type))
 
     if entry.data[CONF_USE_WEBHOOK]:
-        async_dispatcher_connect(hass, SENSOR_UPDATE, _async_update_from_webhook)
+        async_dispatcher_connect(menuai, SENSOR_UPDATE, _async_update_from_webhook)
     else:
         coordinator = entry_data[COORDINATOR]
         async_add_entities(

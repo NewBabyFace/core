@@ -7,17 +7,17 @@ from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant import config_entries
-from homeassistant.components.version.const import (
+from menuai import config_entries
+from menuai.components.version.const import (
     DEFAULT_CONFIGURATION,
     DEFAULT_NAME_CURRENT,
     DOMAIN,
     UPDATE_COORDINATOR_UPDATE_INTERVAL,
     VERSION_SOURCE_LOCAL,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_NAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -39,7 +39,7 @@ TEST_DEFAULT_IMPORT_CONFIG: Final = {
 
 
 async def mock_get_version_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     version: str = MOCK_VERSION,
     side_effect: Exception | None = None,
@@ -51,12 +51,12 @@ async def mock_get_version_update(
         side_effect=side_effect,
     ):
         freezer.tick(UPDATE_COORDINATOR_UPDATE_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
 
 async def setup_version_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_data: dict[str, Any] | None = None,
 ) -> MockConfigEntry:
     """Set up the Version integration."""
@@ -66,14 +66,14 @@ async def setup_version_integration(
             "data": entry_data or MOCK_VERSION_CONFIG_ENTRY_DATA["data"],
         }
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with patch(
         "pyhaversion.HaVersion.get_version",
         return_value=(MOCK_VERSION, MOCK_VERSION_DATA),
     ):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert mock_entry.state is ConfigEntryState.LOADED
 

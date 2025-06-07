@@ -2,10 +2,10 @@
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_DEVICE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DEVICE, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "elv"
 
@@ -23,12 +23,12 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the PCA switch platform."""
 
     for platform in ELV_PLATFORMS:
         discovery.load_platform(
-            hass, platform, DOMAIN, {"device": config[DOMAIN][CONF_DEVICE]}, config
+            menuai, platform, DOMAIN, {"device": config[DOMAIN][CONF_DEVICE]}, config
         )
 
     return True

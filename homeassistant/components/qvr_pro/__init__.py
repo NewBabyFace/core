@@ -7,17 +7,17 @@ from pyqvrpro.client import AuthenticationError, InsufficientPermissionsError
 from requests.exceptions import ConnectionError as RequestsConnectionError
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_EXCLUDE_CHANNELS,
@@ -54,7 +54,7 @@ SERVICE_CHANNEL_RECORD_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the QVR Pro component."""
     conf = config[DOMAIN]
     user = conf[CONF_USERNAME]
@@ -86,9 +86,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         channels.append(channel)
 
-    hass.data[DOMAIN] = {"channels": channels, "client": qvrpro}
+    menuai.data[DOMAIN] = {"channels": channels, "client": qvrpro}
 
-    load_platform(hass, Platform.CAMERA, DOMAIN, {}, config)
+    load_platform(menuai, Platform.CAMERA, DOMAIN, {}, config)
 
     # Register services
     def handle_start_record(call: ServiceCall) -> None:
@@ -99,13 +99,13 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         guid = call.data[SERVICE_CHANNEL_GUID]
         qvrpro.stop_recording(guid)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_START_RECORD,
         handle_start_record,
         schema=SERVICE_CHANNEL_RECORD_SCHEMA,
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_STOP_RECORD,
         handle_stop_record,

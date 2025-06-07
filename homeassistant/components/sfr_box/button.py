@@ -11,17 +11,17 @@ from sfrbox_api.bridge import SFRBox
 from sfrbox_api.exceptions import SFRBoxError
 from sfrbox_api.models import SystemInfo
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .models import DomainData
@@ -38,11 +38,11 @@ def with_error_wrapping[**_P, _R](
         *args: _P.args,
         **kwargs: _P.kwargs,
     ) -> _R:
-        """Catch SFRBoxError errors and raise HomeAssistantError."""
+        """Catch SFRBoxError errors and raise menuaiError."""
         try:
             return await func(self, *args, **kwargs)
         except SFRBoxError as err:
-            raise HomeAssistantError(err) from err
+            raise menuaiError(err) from err
 
     return wrapper
 
@@ -65,12 +65,12 @@ BUTTON_TYPES: tuple[SFRBoxButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the buttons."""
-    data: DomainData = hass.data[DOMAIN][entry.entry_id]
+    data: DomainData = menuai.data[DOMAIN][entry.entry_id]
     system_info = data.system.data
     if TYPE_CHECKING:
         assert system_info is not None

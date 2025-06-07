@@ -9,12 +9,12 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.history import get_significant_states
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import (
     REMOTE_SERVICE_EXC_REASON,
@@ -31,7 +31,7 @@ from tests.components.recorder.common import async_wait_recording_done
 @pytest.mark.usefixtures("bmw_fixture")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity_state_attrs(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -39,11 +39,11 @@ async def test_entity_state_attrs(
 
     # Setup component
     with patch(
-        "homeassistant.components.bmw_connected_drive.PLATFORMS", [Platform.LOCK]
+        "menuai.components.bmw_connected_drive.PLATFORMS", [Platform.LOCK]
     ):
-        mock_config_entry = await setup_mocked_integration(hass)
+        mock_config_entry = await setup_mocked_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("recorder_mock")
@@ -61,7 +61,7 @@ async def test_entity_state_attrs(
     ],
 )
 async def test_service_call_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     new_value: str,
     old_value: str,
@@ -72,26 +72,26 @@ async def test_service_call_success(
     """Test successful service call."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    hass.states.async_set(entity_id, old_value)
-    assert hass.states.get(entity_id).state == old_value
+    assert await setup_mocked_integration(menuai)
+    menuai.states.async_set(entity_id, old_value)
+    assert menuai.states.get(entity_id).state == old_value
 
     now = dt_util.utcnow()
 
     # Test
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "lock",
         service,
         blocking=True,
         target={"entity_id": entity_id},
     )
     check_remote_service_call(bmw_fixture, remote_service)
-    assert hass.states.get(entity_id).state == new_value
+    assert menuai.states.get(entity_id).state == new_value
 
     # wait for the recorder to really store the data
-    await async_wait_recording_done(hass)
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, [entity_id]
+    await async_wait_recording_done(menuai)
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, [entity_id]
     )
     assert any(s for s in states[entity_id] if s.state == STATE_UNKNOWN) is False
 
@@ -106,7 +106,7 @@ async def test_service_call_success(
     ],
 )
 async def test_service_call_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     service: str,
     monkeypatch: pytest.MonkeyPatch,
@@ -114,8 +114,8 @@ async def test_service_call_fail(
     """Test failed service call."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    old_value = hass.states.get(entity_id).state
+    assert await setup_mocked_integration(menuai)
+    old_value = menuai.states.get(entity_id).state
 
     now = dt_util.utcnow()
 
@@ -127,18 +127,18 @@ async def test_service_call_fail(
     )
 
     # Test
-    with pytest.raises(HomeAssistantError, match=REMOTE_SERVICE_EXC_TRANSLATION):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=REMOTE_SERVICE_EXC_TRANSLATION):
+        await menuai.services.async_call(
             "lock",
             service,
             blocking=True,
             target={"entity_id": entity_id},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value
 
     # wait for the recorder to really store the data
-    await async_wait_recording_done(hass)
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, [entity_id]
+    await async_wait_recording_done(menuai)
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, [entity_id]
     )
     assert states[entity_id][-2].state == STATE_UNKNOWN

@@ -17,16 +17,16 @@ from pycomfoconnect import (
     SENSOR_OPERATING_MODE_BIS,
 )
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
+from menuai.util.scaling import int_states_in_range
 
 from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
@@ -46,13 +46,13 @@ PRESET_MODES = [PRESET_MODE_AUTO]
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the ComfoConnect fan platform."""
-    ccb = hass.data[DOMAIN]
+    ccb = menuai.data[DOMAIN]
 
     add_entities([ComfoConnectFan(ccb)], True)
 
@@ -79,27 +79,27 @@ class ComfoConnectFan(FanEntity):
         self._attr_unique_id = ccb.unique_id
         self._attr_preset_mode = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register for sensor updates."""
         _LOGGER.debug("Registering for fan speed")
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(SENSOR_FAN_SPEED_MODE),
                 self._handle_speed_update,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(SENSOR_OPERATING_MODE_BIS),
                 self._handle_mode_update,
             )
         )
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ccb.comfoconnect.register_sensor, SENSOR_FAN_SPEED_MODE
         )
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ccb.comfoconnect.register_sensor, SENSOR_OPERATING_MODE_BIS
         )
 

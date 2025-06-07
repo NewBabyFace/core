@@ -1,9 +1,9 @@
 """Errors for the Plex component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class PlexException(HomeAssistantError):
+class PlexException(menuaiError):
     """Base class for Plex exceptions."""
 
 

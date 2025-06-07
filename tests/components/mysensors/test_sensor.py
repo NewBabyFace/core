@@ -7,12 +7,12 @@ from collections.abc import Callable
 from mysensors.sensor import Sensor
 import pytest
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_DEVICE_CLASS,
     ATTR_ICON,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.unit_system import (
+from menuai.core import menuai
+from menuai.util.unit_system import (
     METRIC_SYSTEM,
     US_CUSTOMARY_SYSTEM,
     UnitSystem,
@@ -32,14 +32,14 @@ from tests.common import MockConfigEntry
 
 
 async def test_gps_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     gps_sensor: Sensor,
     receive_message: Callable[[str], None],
 ) -> None:
     """Test a gps sensor."""
     entity_id = "sensor.gps_sensor_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "40.741894,-73.989311,12"
@@ -50,67 +50,67 @@ async def test_gps_sensor(
     message_string = f"1;1;1;0;49;{new_coords},{altitude}\n"
 
     receive_message(message_string)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == f"{new_coords},{altitude}"
 
 
 async def test_ir_transceiver(
-    hass: HomeAssistant,
+    menuai: menuai,
     ir_transceiver: Sensor,
     receive_message: Callable[[str], None],
 ) -> None:
     """Test an ir transceiver."""
     entity_id = "sensor.ir_transceiver_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "test_code"
     assert state.attributes[ATTR_BATTERY_LEVEL] == 0
 
     receive_message("1;1;1;0;50;new_code\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "new_code"
 
 
 async def test_battery_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     battery_sensor: Sensor,
     receive_message: Callable[[str], None],
 ) -> None:
     """Test sensor with battery level reporting."""
     battery_entity_id = "sensor.battery_sensor_1_battery"
-    state = hass.states.get(battery_entity_id)
+    state = menuai.states.get(battery_entity_id)
     assert state
     assert state.state == "42"
     assert ATTR_BATTERY_LEVEL not in state.attributes
 
     receive_message("1;255;3;0;0;84\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(battery_entity_id)
+    state = menuai.states.get(battery_entity_id)
     assert state
     assert state.state == "84"
     assert ATTR_BATTERY_LEVEL not in state.attributes
 
 
 async def test_power_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     power_sensor: Sensor,
     integration: MockConfigEntry,
 ) -> None:
     """Test a power sensor."""
     entity_id = "sensor.power_sensor_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "1200"
@@ -121,14 +121,14 @@ async def test_power_sensor(
 
 
 async def test_energy_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     energy_sensor: Sensor,
     integration: MockConfigEntry,
 ) -> None:
     """Test an energy sensor."""
     entity_id = "sensor.energy_sensor_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "18000"
@@ -139,14 +139,14 @@ async def test_energy_sensor(
 
 
 async def test_sound_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     sound_sensor: Sensor,
     integration: MockConfigEntry,
 ) -> None:
     """Test a sound sensor."""
     entity_id = "sensor.sound_sensor_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "10"
@@ -156,14 +156,14 @@ async def test_sound_sensor(
 
 
 async def test_distance_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     distance_sensor: Sensor,
     integration: MockConfigEntry,
 ) -> None:
     """Test a distance sensor."""
     entity_id = "sensor.distance_sensor_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "15"
@@ -181,7 +181,7 @@ async def test_distance_sensor(
     ],
 )
 async def test_temperature_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     temperature_sensor: Sensor,
     receive_message: Callable[[str], None],
     unit_system: UnitSystem,
@@ -189,14 +189,14 @@ async def test_temperature_sensor(
 ) -> None:
     """Test a temperature sensor."""
     entity_id = "sensor.temperature_sensor_1_1"
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     temperature = "22.0"
     message_string = f"1;1;1;0;0;{temperature}\n"
 
     receive_message(message_string)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == temperature

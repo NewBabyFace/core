@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 
 from bimmer_connected.utils import MyBMWJSONEncoder
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from . import BMWConfigEntry
 from .const import CONF_REFRESH_TOKEN
@@ -48,7 +48,7 @@ def vehicle_to_dict(vehicle: MyBMWVehicle | None) -> dict:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: BMWConfigEntry
+    menuai: menuai, config_entry: BMWConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = config_entry.runtime_data
@@ -74,7 +74,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: BMWConfigEntry, device: DeviceEntry
+    menuai: menuai, config_entry: BMWConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
     coordinator = config_entry.runtime_data

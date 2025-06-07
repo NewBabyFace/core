@@ -20,7 +20,7 @@ from zwave_js_server.const.command_class.thermostat import (
 from zwave_js_server.model.driver import Driver
 from zwave_js_server.model.value import Value as ZwaveValue
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -31,12 +31,12 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_conversion import TemperatureConverter
 
 from .const import DATA_CLIENT, DOMAIN
 from .discovery import ZwaveDiscoveryInfo
@@ -56,14 +56,14 @@ THERMOSTAT_MODES = [
     ThermostatMode.DRY,
 ]
 
-# Map Z-Wave HVAC Mode to Home Assistant value
+# Map Z-Wave HVAC Mode to MenuAI value
 # Note: We treat "auto" as "heat_cool" as most Z-Wave devices
 # report auto_changeover as auto without schedule support.
 ZW_HVAC_MODE_MAP: dict[int, HVACMode] = {
     ThermostatMode.OFF: HVACMode.OFF,
     ThermostatMode.HEAT: HVACMode.HEAT,
     ThermostatMode.COOL: HVACMode.COOL,
-    # Z-Wave auto mode is actually heat/cool in the hass world
+    # Z-Wave auto mode is actually heat/cool in the menuai world
     ThermostatMode.AUTO: HVACMode.HEAT_COOL,
     ThermostatMode.AUXILIARY: HVACMode.HEAT,
     ThermostatMode.FAN: HVACMode.FAN_ONLY,
@@ -95,7 +95,7 @@ ATTR_FAN_STATE = "fan_state"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -117,7 +117,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_{CLIMATE_DOMAIN}",
             async_add_climate,
         )
@@ -238,7 +238,7 @@ class ZWaveClimate(ZWaveBaseEntity, ClimateEntity):
         return get_value_of_zwave_value(temp)
 
     def _set_modes_and_presets(self) -> None:
-        """Convert Z-Wave Thermostat modes into Home Assistant modes and presets."""
+        """Convert Z-Wave Thermostat modes into MenuAI modes and presets."""
         all_modes: dict[HVACMode, int | None] = {}
         all_presets: dict[str, int | None] = {PRESET_NONE: None}
 
@@ -254,8 +254,8 @@ class ZWaveClimate(ZWaveBaseEntity, ClimateEntity):
             mode_id = int(mode_id)
             if mode_id in THERMOSTAT_MODES:
                 # treat value as hvac mode
-                if hass_mode := ZW_HVAC_MODE_MAP.get(mode_id):
-                    all_modes[hass_mode] = mode_id
+                if menuai_mode := ZW_HVAC_MODE_MAP.get(mode_id):
+                    all_modes[menuai_mode] = mode_id
             else:
                 # treat value as hvac preset
                 all_presets[mode_name] = mode_id

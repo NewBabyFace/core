@@ -15,9 +15,9 @@ from aiohttp.web_urldispatcher import (
 )
 import aiohttp_cors
 
-from homeassistant.const import HTTP_HEADER_X_REQUESTED_WITH
-from homeassistant.core import callback
-from homeassistant.helpers.http import (
+from menuai.const import HTTP_HEADER_X_REQUESTED_WITH
+from menuai.core import callback
+from menuai.helpers.http import (
     KEY_ALLOW_ALL_CORS,
     KEY_ALLOW_CONFIGURED_CORS,
     AllowCorsType,
@@ -63,7 +63,7 @@ def setup_cors(app: Application, origins: list[str]) -> None:
 
         path_str = path.canonical
 
-        if path_str.startswith("/api/hassio_ingress/"):
+        if path_str.startswith("/api/menuaiio_ingress/"):
             return
 
         if path_str in cors_added:

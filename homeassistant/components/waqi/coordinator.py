@@ -6,9 +6,9 @@ from datetime import timedelta
 
 from aiowaqi import WAQIAirQuality, WAQIClient, WAQIError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_STATION_NUMBER, DOMAIN, LOGGER
 
@@ -19,11 +19,11 @@ class WAQIDataUpdateCoordinator(DataUpdateCoordinator[WAQIAirQuality]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, client: WAQIClient
+        self, menuai: menuai, config_entry: ConfigEntry, client: WAQIClient
     ) -> None:
         """Initialize the WAQI data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

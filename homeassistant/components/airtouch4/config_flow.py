@@ -5,8 +5,8 @@ from typing import Any
 from airtouch4pyapi import AirTouch, AirTouchStatus
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
 
 from .const import DOMAIN
 

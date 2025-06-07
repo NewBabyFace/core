@@ -6,13 +6,13 @@ from unittest.mock import patch
 import pytest
 from voluptuous import Invalid
 
-from homeassistant import config_entries
-from homeassistant.components.random import async_setup_entry
-from homeassistant.components.random.const import DOMAIN
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import UnitOfEnergy, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.random import async_setup_entry
+from menuai.components.random.const import DOMAIN
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import UnitOfEnergy, UnitOfPower
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -50,37 +50,37 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_config_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_type: str,
     extra_input: dict[str, Any],
     extra_options: dict[str, Any],
 ) -> None:
     """Test the config flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": entity_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == entity_type
 
     with patch(
-        "homeassistant.components.random.async_setup_entry", wraps=async_setup_entry
+        "menuai.components.random.async_setup_entry", wraps=async_setup_entry
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "name": "My random entity",
                 **extra_input,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "My random entity"
@@ -101,25 +101,25 @@ async def test_config_flow(
     ],
 )
 async def test_wrong_uom(
-    hass: HomeAssistant, device_class: SensorDeviceClass, unit_of_measurement: str
+    menuai: menuai, device_class: SensorDeviceClass, unit_of_measurement: str
 ) -> None:
     """Test entering a wrong unit of measurement."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "sensor"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "sensor"
 
     with pytest.raises(Invalid, match="is not a valid unit for device class"):
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "name": "My random entity",
@@ -154,7 +154,7 @@ async def test_wrong_uom(
     ],
 )
 async def test_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_type: str,
     extra_options,
     options_options,
@@ -171,19 +171,19 @@ async def test_options(
         },
         title="My random",
     )
-    random_config_entry.add_to_hass(hass)
+    random_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(random_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(random_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == entity_type
     assert "name" not in result["data_schema"].schema
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=options_options,
     )

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from melnor_bluetooth.device import Device
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.match import BluetoothCallbackMatcher
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.components import bluetooth
+from menuai.components.bluetooth.match import BluetoothCallbackMatcher
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .coordinator import MelnorDataUpdateCoordinator
@@ -22,12 +22,12 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up melnor from a config entry."""
 
-    hass.data.setdefault(DOMAIN, {}).setdefault(entry.entry_id, {})
+    menuai.data.setdefault(DOMAIN, {}).setdefault(entry.entry_id, {})
 
-    ble_device = bluetooth.async_ble_device_from_address(hass, entry.data[CONF_ADDRESS])
+    ble_device = bluetooth.async_ble_device_from_address(menuai, entry.data[CONF_ADDRESS])
 
     if not ble_device:
         raise ConfigEntryNotReady(
@@ -51,29 +51,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device.update_ble_device(service_info.device)
 
     bluetooth.async_register_callback(
-        hass,
+        menuai,
         _async_update_ble,
         BluetoothCallbackMatcher(address=device.mac),
         bluetooth.BluetoothScanningMode.PASSIVE,
     )
 
-    coordinator = MelnorDataUpdateCoordinator(hass, entry, device)
+    coordinator = MelnorDataUpdateCoordinator(menuai, entry, device)
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data[DOMAIN][entry.entry_id] = coordinator
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
-    device: Device = hass.data[DOMAIN][entry.entry_id].data
+    device: Device = menuai.data[DOMAIN][entry.entry_id].data
 
     await device.disconnect()
 
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

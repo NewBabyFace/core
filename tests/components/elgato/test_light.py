@@ -6,23 +6,23 @@ from elgato import ElgatoError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.elgato.const import DOMAIN, SERVICE_IDENTIFY
-from homeassistant.components.light import (
+from menuai.components.elgato.const import DOMAIN, SERVICE_IDENTIFY
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
     DOMAIN as LIGHT_DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = pytest.mark.usefixtures("init_integration")
 
@@ -37,7 +37,7 @@ pytestmark = pytest.mark.usefixtures("init_integration")
     ],
 )
 async def test_light_state_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -45,7 +45,7 @@ async def test_light_state_temperature(
     """Test the creation and values of the Elgato Lights in temperature mode."""
 
     # First segment of the strip
-    assert (state := hass.states.get("light.frenck"))
+    assert (state := menuai.states.get("light.frenck"))
     assert state == snapshot
 
     assert (entry := entity_registry.async_get("light.frenck"))
@@ -61,14 +61,14 @@ async def test_light_state_temperature(
 )
 @pytest.mark.usefixtures("state_variant", "device_fixtures", "init_integration")
 async def test_light_change_state_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_elgato: MagicMock,
 ) -> None:
     """Test the change of state of a Elgato Key Light device."""
-    assert (state := hass.states.get("light.frenck"))
+    assert (state := menuai.states.get("light.frenck"))
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -83,7 +83,7 @@ async def test_light_change_state_temperature(
         on=True, brightness=100, temperature=100, hue=None, saturation=None
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -97,7 +97,7 @@ async def test_light_change_state_temperature(
         on=True, brightness=100, temperature=297, hue=None, saturation=None
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.frenck"},
@@ -106,7 +106,7 @@ async def test_light_change_state_temperature(
     assert len(mock_elgato.light.mock_calls) == 3
     mock_elgato.light.assert_called_with(on=False)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -124,28 +124,28 @@ async def test_light_change_state_temperature(
 
 @pytest.mark.parametrize("service", [SERVICE_TURN_ON, SERVICE_TURN_OFF])
 async def test_light_unavailable(
-    hass: HomeAssistant, mock_elgato: MagicMock, service: str
+    menuai: menuai, mock_elgato: MagicMock, service: str
 ) -> None:
     """Test error/unavailable handling of an Elgato Light."""
     mock_elgato.state.side_effect = ElgatoError
     mock_elgato.light.side_effect = ElgatoError
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             LIGHT_DOMAIN,
             service,
             {ATTR_ENTITY_ID: "light.frenck"},
             blocking=True,
         )
 
-    assert (state := hass.states.get("light.frenck"))
+    assert (state := menuai.states.get("light.frenck"))
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("init_integration")
-async def test_light_identify(hass: HomeAssistant, mock_elgato: MagicMock) -> None:
+async def test_light_identify(menuai: menuai, mock_elgato: MagicMock) -> None:
     """Test identifying an Elgato Light."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_IDENTIFY,
         {
@@ -159,9 +159,9 @@ async def test_light_identify(hass: HomeAssistant, mock_elgato: MagicMock) -> No
     mock_elgato.identify.side_effect = ElgatoError
 
     with pytest.raises(
-        HomeAssistantError, match="An error occurred while identifying the Elgato Light"
+        menuaiError, match="An error occurred while identifying the Elgato Light"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_IDENTIFY,
             {

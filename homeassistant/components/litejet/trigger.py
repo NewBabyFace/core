@@ -9,13 +9,13 @@ from typing import cast
 from pylitejet import LiteJet
 import voluptuous as vol
 
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import track_point_in_utc_time
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import track_point_in_utc_time
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -38,7 +38,7 @@ TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -50,12 +50,12 @@ async def async_attach_trigger(
     held_less_than = config.get(CONF_HELD_LESS_THAN)
     pressed_time = None
     cancel_pressed_more_than: Callable | None = None
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     @callback
     def call_action() -> None:
         """Call action with right context."""
-        hass.async_run_hass_job(
+        menuai.async_run_menuai_job(
             job,
             {
                 "trigger": {
@@ -85,10 +85,10 @@ async def async_attach_trigger(
         nonlocal held_less_than, held_more_than
         pressed_time = dt_util.utcnow()
         if held_more_than is None and held_less_than is None:
-            hass.add_job(call_action)
+            menuai.add_job(call_action)
         if held_more_than is not None and held_less_than is None:
             cancel_pressed_more_than = track_point_in_utc_time(
-                hass, pressed_more_than_satisfied, dt_util.utcnow() + held_more_than
+                menuai, pressed_more_than_satisfied, dt_util.utcnow() + held_more_than
             )
 
     def released() -> None:
@@ -107,9 +107,9 @@ async def async_attach_trigger(
             and held_time < held_less_than
             and (held_more_than is None or held_time > held_more_than)
         ):
-            hass.add_job(call_action)
+            menuai.add_job(call_action)
 
-    system: LiteJet = hass.data[DOMAIN]
+    system: LiteJet = menuai.data[DOMAIN]
 
     system.on_switch_pressed(number, pressed)
     system.on_switch_released(number, released)

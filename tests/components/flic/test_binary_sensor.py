@@ -2,9 +2,9 @@
 
 from unittest import mock
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 
 class _MockFlicClient:
@@ -32,7 +32,7 @@ class _MockFlicClient:
 
 
 async def test_button_uid(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test UID assignment for Flic buttons."""
     address_to_name = {
@@ -50,15 +50,15 @@ async def test_button_uid(
         ScanWizard=mock.DEFAULT,
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             "binary_sensor",
             {"binary_sensor": [{"platform": "flic"}]},
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         for address, name in address_to_name.items():
-            state = hass.states.get(name)
+            state = menuai.states.get(name)
             assert state
             assert state.attributes.get("address") == address
 

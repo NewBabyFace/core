@@ -5,19 +5,19 @@ import logging
 from sense_energy import PlugInstance, SenseLink
 import voluptuous as vol
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     CONF_ENTITIES,
     CONF_NAME,
     CONF_UNIQUE_ID,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.template import Template, is_template_string
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.template import Template, is_template_string
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_POWER, CONF_POWER_ENTITY, DOMAIN
 
@@ -48,7 +48,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the emulated_kasa component."""
     if not (conf := config.get(DOMAIN)):
         return True
@@ -56,7 +56,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     def devices():
         """Devices to be emulated."""
-        yield from get_plug_devices(hass, entity_configs)
+        yield from get_plug_devices(menuai, entity_configs)
 
     server = SenseLink(devices)
 
@@ -64,24 +64,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         await server.stop()
 
     async def start_emulated_kasa(event):
-        await validate_configs(hass, entity_configs)
+        await validate_configs(menuai, entity_configs)
         try:
             await server.start()
         except OSError as error:
             _LOGGER.error("Failed to create UDP server at port 9999: %s", error)
         else:
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_emulated_kasa)
+            menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_emulated_kasa)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, start_emulated_kasa)
+    menuai.bus.async_listen_once(EVENT_menuai_STARTED, start_emulated_kasa)
 
     return True
 
 
-async def validate_configs(hass, entity_configs):
+async def validate_configs(menuai, entity_configs):
     """Validate that entities exist and ensure templates are ready to use."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for entity_id, entity_config in entity_configs.items():
-        if (state := hass.states.get(entity_id)) is None:
+        if (state := menuai.states.get(entity_id)) is None:
             _LOGGER.debug("Entity not found: %s", entity_id)
             continue
 
@@ -93,10 +93,10 @@ async def validate_configs(hass, entity_configs):
         if CONF_POWER in entity_config:
             power_val = entity_config[CONF_POWER]
             if isinstance(power_val, str) and is_template_string(power_val):
-                entity_config[CONF_POWER] = Template(power_val, hass)
+                entity_config[CONF_POWER] = Template(power_val, menuai)
         elif CONF_POWER_ENTITY in entity_config:
             power_val = entity_config[CONF_POWER_ENTITY]
-            if hass.states.get(power_val) is None:
+            if menuai.states.get(power_val) is None:
                 _LOGGER.debug("Sensor Entity not found: %s", power_val)
             else:
                 entity_config[CONF_POWER] = power_val
@@ -111,10 +111,10 @@ def get_system_unique_id(entity: er.RegistryEntry):
     return f"{entity.platform}.{entity.domain}.{entity.unique_id}"
 
 
-def get_plug_devices(hass, entity_configs):
+def get_plug_devices(menuai, entity_configs):
     """Produce list of plug devices from config entities."""
     for entity_id, entity_config in entity_configs.items():
-        if (state := hass.states.get(entity_id)) is None:
+        if (state := menuai.states.get(entity_id)) is None:
             continue
         name = entity_config.get(CONF_NAME, state.name)
 
@@ -124,7 +124,7 @@ def get_plug_devices(hass, entity_configs):
                 if isinstance(power_val, (float, int)):
                     power = float(power_val)
                 elif isinstance(power_val, str):
-                    power = float(hass.states.get(power_val).state)
+                    power = float(menuai.states.get(power_val).state)
                 elif isinstance(power_val, Template):
                     power = float(power_val.async_render())
             elif state.domain == SENSOR_DOMAIN:

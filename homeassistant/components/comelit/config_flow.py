@@ -15,11 +15,11 @@ from aiocomelit.api import ComelitCommonApi
 from aiocomelit.const import BRIDGE
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
 
 from .const import _LOGGER, DEFAULT_PORT, DEVICE_TYPE_LIST, DOMAIN
 from .utils import async_client_session
@@ -46,12 +46,12 @@ STEP_RECONFIGURE = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect."""
 
     api: ComelitCommonApi
 
-    session = await async_client_session(hass)
+    session = await async_client_session(menuai)
     if data.get(CONF_TYPE, BRIDGE) == BRIDGE:
         api = ComeliteSerialBridgeApi(
             data[CONF_HOST], data[CONF_PORT], data[CONF_PIN], session
@@ -96,7 +96,7 @@ class ComelitConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -130,7 +130,7 @@ class ComelitConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 await validate_input(
-                    self.hass,
+                    self.menuai,
                     {
                         CONF_HOST: entry_data[CONF_HOST],
                         CONF_PORT: entry_data.get(CONF_PORT, DEFAULT_PORT),
@@ -180,7 +180,7 @@ class ComelitConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         try:
-            await validate_input(self.hass, user_input)
+            await validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -200,9 +200,9 @@ class ComelitConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

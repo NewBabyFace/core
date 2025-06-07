@@ -8,13 +8,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import binary_sensor
-from homeassistant.components.binary_sensor import (
+from menuai.components import binary_sensor
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_FORCE_UPDATE,
     CONF_NAME,
@@ -25,13 +25,13 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, event as evt
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import config_validation as cv, event as evt
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from . import subscription
 from .config import MQTT_RO_SCHEMA
@@ -66,13 +66,13 @@ DISCOVERY_SCHEMA = PLATFORM_SCHEMA_MODERN.extend({}, extra=vol.REMOVE_EXTRA)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT binary sensor through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttBinarySensor,
         binary_sensor.DOMAIN,
@@ -92,14 +92,14 @@ class MqttBinarySensor(MqttEntity, BinarySensorEntity, RestoreEntity):
     _expire_after: int | None
     _expiration_trigger: CALLBACK_TYPE | None = None
 
-    async def mqtt_async_added_to_hass(self) -> None:
+    async def mqtt_async_added_to_menuai(self) -> None:
         """Restore state for entities with expire_after set."""
         if (
             self._expire_after
             and (last_state := await self.async_get_last_state()) is not None
             and last_state.state not in [STATE_UNKNOWN, STATE_UNAVAILABLE]
             # We might have set up a trigger already after subscribing from
-            # MqttEntity.async_added_to_hass(), then we should not restore state
+            # MqttEntity.async_added_to_menuai(), then we should not restore state
             and not self._expiration_trigger
         ):
             expiration_at: datetime = last_state.last_changed + timedelta(
@@ -115,7 +115,7 @@ class MqttBinarySensor(MqttEntity, BinarySensorEntity, RestoreEntity):
             self._attr_is_on = last_state.state == STATE_ON
 
             self._expiration_trigger = async_call_later(
-                self.hass, remain_seconds, self._value_is_expired
+                self.menuai, remain_seconds, self._value_is_expired
             )
             _LOGGER.debug(
                 (
@@ -126,7 +126,7 @@ class MqttBinarySensor(MqttEntity, BinarySensorEntity, RestoreEntity):
                 remain_seconds,
             )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove exprire triggers."""
         # Clean up expire triggers
         if self._expiration_trigger:
@@ -134,7 +134,7 @@ class MqttBinarySensor(MqttEntity, BinarySensorEntity, RestoreEntity):
             self._expiration_trigger()
             self._expiration_trigger = None
             self._expired = False
-        await MqttEntity.async_will_remove_from_hass(self)
+        await MqttEntity.async_will_remove_from_menuai(self)
 
     @staticmethod
     def config_schema() -> vol.Schema:
@@ -178,7 +178,7 @@ class MqttBinarySensor(MqttEntity, BinarySensorEntity, RestoreEntity):
 
             # Set new trigger
             self._expiration_trigger = async_call_later(
-                self.hass, self._expire_after, self._value_is_expired
+                self.menuai, self._expire_after, self._value_is_expired
             )
 
         payload = self._value_template(msg.payload)
@@ -227,7 +227,7 @@ class MqttBinarySensor(MqttEntity, BinarySensorEntity, RestoreEntity):
         off_delay: int | None = self._config.get(CONF_OFF_DELAY)
         if self._attr_is_on and off_delay is not None:
             self._delay_listener = evt.async_call_later(
-                self.hass, off_delay, self._off_delay_listener
+                self.menuai, off_delay, self._off_delay_listener
             )
 
     @callback
@@ -239,7 +239,7 @@ class MqttBinarySensor(MqttEntity, BinarySensorEntity, RestoreEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     @callback
     def _value_is_expired(self, *_: Any) -> None:

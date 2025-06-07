@@ -1,11 +1,11 @@
 """Test against characteristics captured from an LG TV."""
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE_LIST,
     MediaPlayerEntityFeature,
 )
-from homeassistant.const import ATTR_SUPPORTED_FEATURES, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_SUPPORTED_FEATURES, STATE_ON
+from menuai.core import menuai
 
 from ..common import (
     HUB_TEST_ACCESSORY_ID,
@@ -16,13 +16,13 @@ from ..common import (
 )
 
 
-async def test_lg_tv_setup(hass: HomeAssistant) -> None:
+async def test_lg_tv_setup(menuai: menuai) -> None:
     """Test that a LG TV can be correctly setup in HA."""
-    accessories = await setup_accessories_from_file(hass, "lg_tv.json")
-    await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, "lg_tv.json")
+    await setup_test_accessories(menuai, accessories)
 
     await assert_devices_and_entities_created(
-        hass,
+        menuai,
         DeviceTestInfo(
             unique_id=HUB_TEST_ACCESSORY_ID,
             name="LG webOS TV AF80",
@@ -36,7 +36,7 @@ async def test_lg_tv_setup(hass: HomeAssistant) -> None:
         ),
     )
 
-    state = hass.states.get("media_player.lg_webos_tv_af80")
+    state = menuai.states.get("media_player.lg_webos_tv_af80")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INPUT_SOURCE_LIST] == [

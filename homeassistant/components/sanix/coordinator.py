@@ -7,9 +7,9 @@ from sanix import Sanix
 from sanix.exceptions import SanixException
 from sanix.models import Measurement
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import MANUFACTURER
 
@@ -22,11 +22,11 @@ class SanixCoordinator(DataUpdateCoordinator[Measurement]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, sanix_api: Sanix
+        self, menuai: menuai, config_entry: ConfigEntry, sanix_api: Sanix
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=MANUFACTURER,
@@ -37,6 +37,6 @@ class SanixCoordinator(DataUpdateCoordinator[Measurement]):
     async def _async_update_data(self) -> Measurement:
         """Fetch data from API endpoint."""
         try:
-            return await self.hass.async_add_executor_job(self._sanix_api.fetch_data)
+            return await self.menuai.async_add_executor_job(self._sanix_api.fetch_data)
         except SanixException as err:
             raise UpdateFailed("Error while communicating with the API") from err

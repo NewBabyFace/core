@@ -6,15 +6,15 @@ from unittest.mock import ANY, patch
 
 import pytest
 
-from homeassistant.components.tasmota.const import DEFAULT_PREFIX
-from homeassistant.components.tasmota.discovery import ALREADY_DISCOVERED
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.components.tasmota.const import DEFAULT_PREFIX
+from menuai.components.tasmota.discovery import ALREADY_DISCOVERED
+from menuai.core import menuai
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from .conftest import setup_tasmota_helper
 from .test_common import DEFAULT_CONFIG, DEFAULT_CONFIG_9_0_0_3, remove_device
@@ -24,7 +24,7 @@ from tests.typing import MqttMockHAClient, WebSocketGenerator
 
 
 async def test_subscribing_config_topic(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test setting up discovery."""
     discovery_topic = DEFAULT_PREFIX
@@ -36,7 +36,7 @@ async def test_subscribing_config_topic(
 
 
 async def test_future_discovery_message(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle backwards compatible discovery messages."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -44,85 +44,85 @@ async def test_future_discovery_message(
     config["so"]["another_future_option"] = "EVEN_BETTER"
 
     with patch(
-        "homeassistant.components.tasmota.discovery.tasmota_get_device_config",
+        "menuai.components.tasmota.discovery.tasmota_get_device_config",
         return_value={},
     ) as mock_tasmota_get_device_config:
-        await setup_tasmota_helper(hass)
+        await setup_tasmota_helper(menuai)
 
         async_fire_mqtt_message(
-            hass, f"{DEFAULT_PREFIX}/00000049A3BC/config", json.dumps(config)
+            menuai, f"{DEFAULT_PREFIX}/00000049A3BC/config", json.dumps(config)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert mock_tasmota_get_device_config.called
 
 
 async def test_valid_discovery_message(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test discovery callback called."""
     config = copy.deepcopy(DEFAULT_CONFIG)
 
     with patch(
-        "homeassistant.components.tasmota.discovery.tasmota_get_device_config",
+        "menuai.components.tasmota.discovery.tasmota_get_device_config",
         return_value={},
     ) as mock_tasmota_get_device_config:
-        await setup_tasmota_helper(hass)
+        await setup_tasmota_helper(menuai)
 
         async_fire_mqtt_message(
-            hass, f"{DEFAULT_PREFIX}/00000049A3BC/config", json.dumps(config)
+            menuai, f"{DEFAULT_PREFIX}/00000049A3BC/config", json.dumps(config)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert mock_tasmota_get_device_config.called
 
 
-async def test_invalid_topic(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_invalid_topic(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test receiving discovery message on wrong topic."""
     with patch(
-        "homeassistant.components.tasmota.discovery.tasmota_get_device_config"
+        "menuai.components.tasmota.discovery.tasmota_get_device_config"
     ) as mock_tasmota_get_device_config:
-        await setup_tasmota_helper(hass)
+        await setup_tasmota_helper(menuai)
 
-        async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/123456/configuration", "{}")
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/123456/configuration", "{}")
+        await menuai.async_block_till_done()
         assert not mock_tasmota_get_device_config.called
 
 
 async def test_invalid_message(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test receiving an invalid message."""
     with patch(
-        "homeassistant.components.tasmota.discovery.tasmota_get_device_config"
+        "menuai.components.tasmota.discovery.tasmota_get_device_config"
     ) as mock_tasmota_get_device_config:
-        await setup_tasmota_helper(hass)
+        await setup_tasmota_helper(menuai)
 
-        async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/123456/config", "asd")
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/123456/config", "asd")
+        await menuai.async_block_till_done()
         assert "Invalid discovery message" in caplog.text
         assert not mock_tasmota_get_device_config.called
 
 
 async def test_invalid_mac(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mqtt_mock: MqttMockHAClient, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test topic is not matching device MAC."""
     config = copy.deepcopy(DEFAULT_CONFIG)
 
     with patch(
-        "homeassistant.components.tasmota.discovery.tasmota_get_device_config"
+        "menuai.components.tasmota.discovery.tasmota_get_device_config"
     ) as mock_tasmota_get_device_config:
-        await setup_tasmota_helper(hass)
+        await setup_tasmota_helper(menuai)
 
         async_fire_mqtt_message(
-            hass, f"{DEFAULT_PREFIX}/00000049A3BA/config", json.dumps(config)
+            menuai, f"{DEFAULT_PREFIX}/00000049A3BA/config", json.dumps(config)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert "MAC mismatch" in caplog.text
         assert not mock_tasmota_get_device_config.called
 
 
 async def test_correct_config_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -134,11 +134,11 @@ async def test_correct_config_discovery(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device and registry entries are created
     device_entry = device_registry.async_get_device(
@@ -148,15 +148,15 @@ async def test_correct_config_discovery(
     entity_entry = entity_registry.async_get("switch.tasmota_test")
     assert entity_entry is not None
 
-    state = hass.states.get("switch.tasmota_test")
+    state = menuai.states.get("switch.tasmota_test")
     assert state is not None
     assert state.name == "Tasmota Test"
 
-    assert (mac, "switch", "relay", 0) in hass.data[ALREADY_DISCOVERED]
+    assert (mac, "switch", "relay", 0) in menuai.data[ALREADY_DISCOVERED]
 
 
 async def test_device_discover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
@@ -166,11 +166,11 @@ async def test_device_discover(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device and registry entries are created
     device_entry = device_registry.async_get_device(
@@ -185,7 +185,7 @@ async def test_device_discover(
 
 
 async def test_device_discover_deprecated(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
@@ -195,11 +195,11 @@ async def test_device_discover_deprecated(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device and registry entries are created
     device_entry = device_registry.async_get_device(
@@ -213,7 +213,7 @@ async def test_device_discover_deprecated(
 
 
 async def test_device_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
@@ -226,11 +226,11 @@ async def test_device_update(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is created
     device_entry = device_registry.async_get_device(
@@ -244,11 +244,11 @@ async def test_device_update(
     config["sw"] = "v6.6.6"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is updated
     device_entry = device_registry.async_get_device(
@@ -261,7 +261,7 @@ async def test_device_update(
 
 
 async def test_device_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
@@ -271,11 +271,11 @@ async def test_device_remove(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is created
     device_entry = device_registry.async_get_device(
@@ -284,11 +284,11 @@ async def test_device_remove(
     assert device_entry is not None
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         "",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is removed
     device_entry = device_registry.async_get_device(
@@ -298,7 +298,7 @@ async def test_device_remove(
 
 
 async def test_device_remove_multiple_config_entries_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
@@ -308,21 +308,21 @@ async def test_device_remove_multiple_config_entries_1(
     mac = config["mac"]
 
     mock_entry = MockConfigEntry(domain="test")
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=mock_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, mac)},
     )
 
-    tasmota_entry = hass.config_entries.async_entries("tasmota")[0]
+    tasmota_entry = menuai.config_entries.async_entries("tasmota")[0]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is created
     device_entry = device_registry.async_get_device(
@@ -332,11 +332,11 @@ async def test_device_remove_multiple_config_entries_1(
     assert device_entry.config_entries == {tasmota_entry.entry_id, mock_entry.entry_id}
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         "",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is not removed
     device_entry = device_registry.async_get_device(
@@ -347,7 +347,7 @@ async def test_device_remove_multiple_config_entries_1(
 
 
 async def test_device_remove_multiple_config_entries_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
@@ -357,7 +357,7 @@ async def test_device_remove_multiple_config_entries_2(
     mac = config["mac"]
 
     mock_entry = MockConfigEntry(domain="test")
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=mock_entry.entry_id,
@@ -369,14 +369,14 @@ async def test_device_remove_multiple_config_entries_2(
         connections={(dr.CONNECTION_NETWORK_MAC, "other_device")},
     )
 
-    tasmota_entry = hass.config_entries.async_entries("tasmota")[0]
+    tasmota_entry = menuai.config_entries.async_entries("tasmota")[0]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is created
     device_entry = device_registry.async_get_device(
@@ -390,7 +390,7 @@ async def test_device_remove_multiple_config_entries_2(
     device_registry.async_update_device(
         device_entry.id, remove_config_entry_id=mock_entry.entry_id
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is not removed
     device_entry = device_registry.async_get_device(
@@ -404,22 +404,22 @@ async def test_device_remove_multiple_config_entries_2(
     device_registry.async_update_device(
         other_device_entry.id, remove_config_entry_id=mock_entry.entry_id
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock.async_publish.assert_not_called()
 
 
 async def test_device_remove_stale(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
 ) -> None:
     """Test removing a stale (undiscovered) device does not throw."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     mac = "00000049A3BC"
 
-    config_entry = hass.config_entries.async_entries("tasmota")[0]
+    config_entry = menuai.config_entries.async_entries("tasmota")[0]
 
     # Create a device
     device_registry.async_get_or_create(
@@ -434,7 +434,7 @@ async def test_device_remove_stale(
     assert device_entry is not None
 
     # Remove the device
-    await remove_device(hass, hass_ws_client, device_entry.id)
+    await remove_device(menuai, menuai_ws_client, device_entry.id)
 
     # Verify device entry is removed
     device_entry = device_registry.async_get_device(
@@ -444,7 +444,7 @@ async def test_device_remove_stale(
 
 
 async def test_device_rediscover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     setup_tasmota,
@@ -454,11 +454,11 @@ async def test_device_rediscover(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is created
     device_entry1 = device_registry.async_get_device(
@@ -467,11 +467,11 @@ async def test_device_rediscover(
     assert device_entry1 is not None
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         "",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is removed
     device_entry = device_registry.async_get_device(
@@ -480,11 +480,11 @@ async def test_device_rediscover(
     assert device_entry is None
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device entry is created, and id is reused
     device_entry = device_registry.async_get_device(
@@ -495,7 +495,7 @@ async def test_device_rediscover(
 
 
 async def test_entity_duplicate_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     caplog: pytest.LogCaptureFixture,
     setup_tasmota,
@@ -506,19 +506,19 @@ async def test_entity_duplicate_discovery(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.tasmota_test")
-    state_duplicate = hass.states.get("binary_sensor.beer1")
+    state = menuai.states.get("switch.tasmota_test")
+    state_duplicate = menuai.states.get("binary_sensor.beer1")
 
     assert state is not None
     assert state.name == "Tasmota Test"
@@ -530,7 +530,7 @@ async def test_entity_duplicate_discovery(
 
 
 async def test_entity_duplicate_removal(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     caplog: pytest.LogCaptureFixture,
     setup_tasmota,
@@ -541,24 +541,24 @@ async def test_entity_duplicate_removal(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     config["rl"][0] = 0
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
     assert f"Removing entity: switch ('{mac}', 'switch', 'relay', 0)" in caplog.text
 
     caplog.clear()
-    async_fire_mqtt_message(hass, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"{DEFAULT_PREFIX}/{mac}/config", json.dumps(config))
+    await menuai.async_block_till_done()
     assert "Removing entity: switch" not in caplog.text
 
 
 async def test_same_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -580,11 +580,11 @@ async def test_same_topic(
 
     for config in configs[0:2]:
         async_fire_mqtt_message(
-            hass,
+            menuai,
             f"{DEFAULT_PREFIX}/{config['mac']}/config",
             json.dumps(config),
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device registry entries are created for both devices
     for config in configs[0:2]:
@@ -615,11 +615,11 @@ async def test_same_topic(
 
     # Discover a 3rd device with same topic
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{configs[2]['mac']}/config",
         json.dumps(configs[2]),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device registry entries was created
     device_entry = device_registry.async_get_device(
@@ -645,11 +645,11 @@ async def test_same_topic(
     # Rediscover 3rd device with fixed config
     configs[2]["t"] = "unique_topic_2"
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{configs[2]['mac']}/config",
         json.dumps(configs[2]),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify entities are created also for the third device
     device_entry = device_registry.async_get_device(
@@ -664,11 +664,11 @@ async def test_same_topic(
     # Rediscover 2nd device with fixed config
     configs[1]["t"] = "unique_topic_1"
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{configs[1]['mac']}/config",
         json.dumps(configs[1]),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify entities are created also for the second device
     device_entry = device_registry.async_get_device(
@@ -681,7 +681,7 @@ async def test_same_topic(
 
 
 async def test_topic_no_prefix(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -694,11 +694,11 @@ async def test_topic_no_prefix(
     config["ft"] = "%topic%/blah/"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{config['mac']}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is created
     device_entry = device_registry.async_get_device(
@@ -724,11 +724,11 @@ async def test_topic_no_prefix(
     # Rediscover device with fixed config
     config["ft"] = "%topic%/%prefix%/"
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{config['mac']}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify entities are created
     device_entry = device_registry.async_get_device(

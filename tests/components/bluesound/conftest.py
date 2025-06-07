@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, patch
 from pyblu import Input, Player, Preset, Status, SyncStatus
 import pytest
 
-from homeassistant.components.bluesound.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.bluesound.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from .utils import LongPollingMock
 
@@ -125,7 +125,7 @@ class PlayerMocks:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.bluesound.async_setup_entry", return_value=True
+        "menuai.components.bluesound.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -158,24 +158,24 @@ def config_entry_secondary() -> MockConfigEntry:
 
 @pytest.fixture
 async def setup_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry, player_mocks: PlayerMocks
+    menuai: menuai, config_entry: MockConfigEntry, player_mocks: PlayerMocks
 ) -> None:
     """Set up the platform."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def setup_config_entry_secondary(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_secondary: MockConfigEntry,
     player_mocks: PlayerMocks,
 ) -> None:
     """Set up the platform."""
-    config_entry_secondary.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry_secondary.entry_id)
-    await hass.async_block_till_done()
+    config_entry_secondary.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry_secondary.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
@@ -203,10 +203,10 @@ async def player_mocks() -> AsyncGenerator[PlayerMocks]:
 
     with (
         patch(
-            "homeassistant.components.bluesound.Player", autospec=True
+            "menuai.components.bluesound.Player", autospec=True
         ) as mock_player,
         patch(
-            "homeassistant.components.bluesound.config_flow.Player",
+            "menuai.components.bluesound.config_flow.Player",
             new=mock_player,
         ),
     ):

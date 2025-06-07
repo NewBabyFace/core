@@ -7,10 +7,10 @@ from typing import Any
 
 from energyflip import EnergyFlip, EnergyFlipException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     FETCH_TIMEOUT,
@@ -37,13 +37,13 @@ class EnergyFlipUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: EnergyFlipConfigEntry,
         energyflip: EnergyFlip,
     ) -> None:
         """Initialize the Huisbaasje data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="sensor",

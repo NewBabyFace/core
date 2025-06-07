@@ -11,16 +11,16 @@ from typing import Any
 import anthropic
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_LLM_HASS_API
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import llm
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY, CONF_LLM_menuai_API
+from menuai.core import menuai
+from menuai.helpers import llm
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     SelectOptionDict,
@@ -53,17 +53,17 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 RECOMMENDED_OPTIONS = {
     CONF_RECOMMENDED: True,
-    CONF_LLM_HASS_API: [llm.LLM_API_ASSIST],
+    CONF_LLM_menuai_API: [llm.LLM_API_ASSIST],
     CONF_PROMPT: llm.DEFAULT_INSTRUCTIONS_PROMPT,
 }
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> None:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    client = await hass.async_add_executor_job(
+    client = await menuai.async_add_executor_job(
         partial(anthropic.AsyncAnthropic, api_key=data[CONF_API_KEY])
     )
     await client.models.list(timeout=10.0)
@@ -82,7 +82,7 @@ class AnthropicConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await validate_input(self.hass, user_input)
+                await validate_input(self.menuai, user_input)
             except anthropic.APITimeoutError:
                 errors["base"] = "timeout_connect"
             except anthropic.APIConnectionError:
@@ -135,8 +135,8 @@ class AnthropicOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             if user_input[CONF_RECOMMENDED] == self.last_rendered_recommended:
-                if not user_input.get(CONF_LLM_HASS_API):
-                    user_input.pop(CONF_LLM_HASS_API, None)
+                if not user_input.get(CONF_LLM_menuai_API):
+                    user_input.pop(CONF_LLM_menuai_API, None)
                 if user_input.get(
                     CONF_THINKING_BUDGET, RECOMMENDED_THINKING_BUDGET
                 ) >= user_input.get(CONF_MAX_TOKENS, RECOMMENDED_MAX_TOKENS):
@@ -151,19 +151,19 @@ class AnthropicOptionsFlow(OptionsFlow):
                 options = {
                     CONF_RECOMMENDED: user_input[CONF_RECOMMENDED],
                     CONF_PROMPT: user_input[CONF_PROMPT],
-                    CONF_LLM_HASS_API: user_input.get(CONF_LLM_HASS_API),
+                    CONF_LLM_menuai_API: user_input.get(CONF_LLM_menuai_API),
                 }
 
         suggested_values = options.copy()
         if not suggested_values.get(CONF_PROMPT):
             suggested_values[CONF_PROMPT] = llm.DEFAULT_INSTRUCTIONS_PROMPT
         if (
-            suggested_llm_apis := suggested_values.get(CONF_LLM_HASS_API)
+            suggested_llm_apis := suggested_values.get(CONF_LLM_menuai_API)
         ) and isinstance(suggested_llm_apis, str):
-            suggested_values[CONF_LLM_HASS_API] = [suggested_llm_apis]
+            suggested_values[CONF_LLM_menuai_API] = [suggested_llm_apis]
 
         schema = self.add_suggested_values_to_schema(
-            vol.Schema(anthropic_config_option_schema(self.hass, options)),
+            vol.Schema(anthropic_config_option_schema(self.menuai, options)),
             suggested_values,
         )
 
@@ -175,23 +175,23 @@ class AnthropicOptionsFlow(OptionsFlow):
 
 
 def anthropic_config_option_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     options: Mapping[str, Any],
 ) -> dict:
     """Return a schema for Anthropic completion options."""
-    hass_apis: list[SelectOptionDict] = [
+    menuai_apis: list[SelectOptionDict] = [
         SelectOptionDict(
             label=api.name,
             value=api.id,
         )
-        for api in llm.async_get_apis(hass)
+        for api in llm.async_get_apis(menuai)
     ]
 
     schema = {
         vol.Optional(CONF_PROMPT): TemplateSelector(),
         vol.Optional(
-            CONF_LLM_HASS_API,
-        ): SelectSelector(SelectSelectorConfig(options=hass_apis, multiple=True)),
+            CONF_LLM_menuai_API,
+        ): SelectSelector(SelectSelectorConfig(options=menuai_apis, multiple=True)),
         vol.Required(
             CONF_RECOMMENDED, default=options.get(CONF_RECOMMENDED, False)
         ): bool,

@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 from aioairzone_cloud.exceptions import AirzoneCloudError
 
-from homeassistant.components.airzone_cloud.const import DOMAIN
-from homeassistant.components.airzone_cloud.coordinator import SCAN_INTERVAL
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.util.dt import utcnow
+from menuai.components.airzone_cloud.const import DOMAIN
+from menuai.components.airzone_cloud.coordinator import SCAN_INTERVAL
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.util.dt import utcnow
 
 from .util import (
     CONFIG,
@@ -22,7 +22,7 @@ from .util import (
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_coordinator_client_connector_error(hass: HomeAssistant) -> None:
+async def test_coordinator_client_connector_error(menuai: menuai) -> None:
     """Test ClientConnectorError on coordinator update."""
 
     config_entry = MockConfigEntry(
@@ -30,36 +30,36 @@ async def test_coordinator_client_connector_error(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         unique_id="airzone_cloud_unique_id",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_device_config",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_device_config",
             side_effect=mock_get_device_config,
         ) as mock_device_config,
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_device_status",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_device_status",
             side_effect=mock_get_device_status,
         ) as mock_device_status,
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_installation",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_installation",
             return_value=GET_INSTALLATION_MOCK,
         ) as mock_installation,
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_installations",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_installations",
             return_value=GET_INSTALLATIONS_MOCK,
         ) as mock_installations,
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_webserver",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_webserver",
             side_effect=mock_get_webserver,
         ) as mock_webserver,
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.login",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.login",
             return_value=None,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         mock_device_config.assert_called()
         mock_device_status.assert_called()
@@ -74,10 +74,10 @@ async def test_coordinator_client_connector_error(hass: HomeAssistant) -> None:
         mock_webserver.reset_mock()
 
         mock_device_status.side_effect = AirzoneCloudError
-        async_fire_time_changed(hass, utcnow() + SCAN_INTERVAL)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, utcnow() + SCAN_INTERVAL)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         mock_device_status.assert_called()
 
-        state = hass.states.get("sensor.salon_temperature")
+        state = menuai.states.get("sensor.salon_temperature")
         assert state.state == STATE_UNAVAILABLE

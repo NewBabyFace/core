@@ -2,8 +2,8 @@
 
 from uiprotect.data import NVR, Light
 
-from homeassistant.components.unifiprotect.const import CONF_ALLOW_EA
-from homeassistant.core import HomeAssistant
+from menuai.components.unifiprotect.const import CONF_ALLOW_EA
+from menuai.core import menuai
 
 from .utils import MockUFPFixture, init_entry
 
@@ -12,21 +12,21 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     light: Light,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test generating diagnostics for a config entry."""
 
-    await init_entry(hass, ufp, [light])
+    await init_entry(menuai, ufp, [light])
 
     options = dict(ufp.entry.options)
     options[CONF_ALLOW_EA] = True
-    hass.config_entries.async_update_entry(ufp.entry, options=options)
-    await hass.async_block_till_done()
+    menuai.config_entries.async_update_entry(ufp.entry, options=options)
+    await menuai.async_block_till_done()
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, ufp.entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, ufp.entry)
 
     assert "options" in diag and isinstance(diag["options"], dict)
     options = diag["options"]

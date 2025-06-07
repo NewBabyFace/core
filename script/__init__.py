@@ -1,1 +1,1 @@
-"""Home Assistant scripts."""
+"""MenuAI scripts."""

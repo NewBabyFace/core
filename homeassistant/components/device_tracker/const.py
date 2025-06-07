@@ -7,7 +7,7 @@ from enum import StrEnum
 import logging
 from typing import Final
 
-from homeassistant.util.signal_type import SignalType
+from menuai.util.signal_type import SignalType
 
 LOGGER: Final = logging.getLogger(__package__)
 

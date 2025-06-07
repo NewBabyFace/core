@@ -4,23 +4,23 @@ from __future__ import annotations
 
 from pybotvac import Robot
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import NEATO_ROBOTS
 from .entity import NeatoEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Neato button from config entry."""
-    entities = [NeatoDismissAlertButton(robot) for robot in hass.data[NEATO_ROBOTS]]
+    entities = [NeatoDismissAlertButton(robot) for robot in menuai.data[NEATO_ROBOTS]]
 
     async_add_entities(entities, True)
 
@@ -41,4 +41,4 @@ class NeatoDismissAlertButton(NeatoEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Press the button."""
-        await self.hass.async_add_executor_job(self.robot.dismiss_current_alert)
+        await self.menuai.async_add_executor_job(self.robot.dismiss_current_alert)

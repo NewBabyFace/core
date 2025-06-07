@@ -8,9 +8,9 @@ from typing import Any
 from pysuez import PySuezError, SuezClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.exceptions import menuaiError
 
 from .const import CONF_COUNTER_ID, DOMAIN
 
@@ -89,13 +89,13 @@ class SuezWaterConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class CounterNotFound(HomeAssistantError):
+class CounterNotFound(menuaiError):
     """Error to indicate we failed to automatically find the counter id."""

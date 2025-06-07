@@ -13,8 +13,8 @@ from influxdb_client.rest import ApiException
 import pytest
 from voluptuous import Invalid
 
-from homeassistant.components import sensor
-from homeassistant.components.influxdb.const import (
+from menuai.components import sensor
+from menuai.components.influxdb.const import (
     API_VERSION_2,
     DEFAULT_API_VERSION,
     DEFAULT_BUCKET,
@@ -23,16 +23,16 @@ from homeassistant.components.influxdb.const import (
     TEST_QUERY_V1,
     TEST_QUERY_V2,
 )
-from homeassistant.components.influxdb.sensor import PLATFORM_SCHEMA
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.entity_platform import PLATFORM_NOT_READY_BASE_WAIT_TIME
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.influxdb.sensor import PLATFORM_SCHEMA
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai, State
+from menuai.helpers.entity_platform import PLATFORM_NOT_READY_BASE_WAIT_TIME
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
-INFLUXDB_PATH = "homeassistant.components.influxdb"
+INFLUXDB_PATH = "menuai.components.influxdb"
 INFLUXDB_CLIENT_PATH = f"{INFLUXDB_PATH}.InfluxDBClient"
 INFLUXDB_SENSOR_PATH = f"{INFLUXDB_PATH}.sensor"
 
@@ -191,7 +191,7 @@ def _set_query_mock_v2(
 
 
 async def _setup(
-    hass: HomeAssistant, config_ext, queries, expected_sensors
+    menuai: menuai, config_ext, queries, expected_sensors
 ) -> list[State]:
     """Create client and test expected sensors."""
     config = {
@@ -202,12 +202,12 @@ async def _setup(
     influx_config.update(config_ext)
     influx_config.update(queries)
 
-    assert await async_setup_component(hass, sensor.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, sensor.DOMAIN, config)
+    await menuai.async_block_till_done()
 
     sensors = []
     for expected_sensor in expected_sensors:
-        state = hass.states.get(expected_sensor)
+        state = menuai.states.get(expected_sensor)
         assert state is not None
         sensors.append(state)
 
@@ -223,11 +223,11 @@ async def _setup(
     indirect=["mock_client"],
 )
 async def test_minimal_config(
-    hass: HomeAssistant, mock_client, config_ext, queries, set_query_mock
+    menuai: menuai, mock_client, config_ext, queries, set_query_mock
 ) -> None:
     """Test the minimal config and defaults."""
     set_query_mock(mock_client)
-    await _setup(hass, config_ext, queries, ["sensor.test"])
+    await _setup(menuai, config_ext, queries, ["sensor.test"])
 
 
 @pytest.mark.parametrize(
@@ -295,15 +295,15 @@ async def test_minimal_config(
     indirect=["mock_client"],
 )
 async def test_full_config(
-    hass: HomeAssistant, mock_client, config_ext, queries, set_query_mock
+    menuai: menuai, mock_client, config_ext, queries, set_query_mock
 ) -> None:
     """Test the full config."""
     set_query_mock(mock_client)
-    await _setup(hass, config_ext, queries, ["sensor.test"])
+    await _setup(menuai, config_ext, queries, ["sensor.test"])
 
 
 @pytest.mark.parametrize("config_ext", [(BASE_V1_CONFIG), (BASE_V2_CONFIG)])
-async def test_config_failure(hass: HomeAssistant, config_ext) -> None:
+async def test_config_failure(menuai: menuai, config_ext) -> None:
     """Test an invalid config."""
     config = {"platform": DOMAIN}
     config.update(config_ext)
@@ -333,7 +333,7 @@ async def test_config_failure(hass: HomeAssistant, config_ext) -> None:
     indirect=["mock_client"],
 )
 async def test_state_matches_query_result(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client,
     config_ext,
     queries,
@@ -343,7 +343,7 @@ async def test_state_matches_query_result(
     """Test state of sensor matches response from query api."""
     set_query_mock(mock_client, return_value=make_resultset(42))
 
-    sensors = await _setup(hass, config_ext, queries, ["sensor.test"])
+    sensors = await _setup(menuai, config_ext, queries, ["sensor.test"])
 
     assert sensors[0].state == "42"
 
@@ -369,7 +369,7 @@ async def test_state_matches_query_result(
     indirect=["mock_client"],
 )
 async def test_state_matches_first_query_result_for_multiple_return(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_client,
     config_ext,
@@ -380,7 +380,7 @@ async def test_state_matches_first_query_result_for_multiple_return(
     """Test state of sensor matches response from query api."""
     set_query_mock(mock_client, return_value=make_resultset(42, "not used"))
 
-    sensors = await _setup(hass, config_ext, queries, ["sensor.test"])
+    sensors = await _setup(menuai, config_ext, queries, ["sensor.test"])
     assert sensors[0].state == "42"
     assert (
         len([record for record in caplog.records if record.levelname == "WARNING"]) == 1
@@ -401,7 +401,7 @@ async def test_state_matches_first_query_result_for_multiple_return(
     indirect=["mock_client"],
 )
 async def test_state_for_no_results(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_client,
     config_ext,
@@ -411,7 +411,7 @@ async def test_state_for_no_results(
     """Test state of sensor matches response from query api."""
     set_query_mock(mock_client)
 
-    sensors = await _setup(hass, config_ext, queries, ["sensor.test"])
+    sensors = await _setup(menuai, config_ext, queries, ["sensor.test"])
     assert sensors[0].state == STATE_UNKNOWN
     assert (
         len([record for record in caplog.records if record.levelname == "WARNING"]) == 1
@@ -467,7 +467,7 @@ async def test_state_for_no_results(
     indirect=["mock_client"],
 )
 async def test_error_querying_influx(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_client,
     config_ext,
@@ -478,7 +478,7 @@ async def test_error_querying_influx(
     """Test behavior of sensor when influx returns error."""
     set_query_mock(mock_client, query_exception=query_exception)
 
-    sensors = await _setup(hass, config_ext, queries, ["sensor.test"])
+    sensors = await _setup(menuai, config_ext, queries, ["sensor.test"])
     assert sensors[0].state == STATE_UNKNOWN
     assert (
         len([record for record in caplog.records if record.levelname == "ERROR"]) == 1
@@ -526,7 +526,7 @@ async def test_error_querying_influx(
     indirect=["mock_client"],
 )
 async def test_error_rendering_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_client,
     config_ext,
@@ -538,7 +538,7 @@ async def test_error_rendering_template(
     """Test behavior of sensor with error rendering template."""
     set_query_mock(mock_client, return_value=make_resultset(42))
 
-    sensors = await _setup(hass, config_ext, queries, ["sensor.test"])
+    sensors = await _setup(menuai, config_ext, queries, ["sensor.test"])
     assert sensors[0].state == STATE_UNKNOWN
     assert (
         len(
@@ -607,7 +607,7 @@ async def test_error_rendering_template(
     indirect=["mock_client"],
 )
 async def test_connection_error_at_startup(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_client,
     config_ext,
@@ -621,8 +621,8 @@ async def test_connection_error_at_startup(
     expected_sensor = "sensor.test"
 
     # Test sensor is not setup first time due to connection error
-    await _setup(hass, config_ext, queries, [])
-    assert hass.states.get(expected_sensor) is None
+    await _setup(menuai, config_ext, queries, [])
+    assert menuai.states.get(expected_sensor) is None
     assert (
         len([record for record in caplog.records if record.levelname == "ERROR"]) == 1
     )
@@ -631,9 +631,9 @@ async def test_connection_error_at_startup(
     query_api.reset_mock(side_effect=True)
     set_query_mock(mock_client, return_value=make_resultset(42))
     new_time = dt_util.utcnow() + timedelta(seconds=PLATFORM_NOT_READY_BASE_WAIT_TIME)
-    async_fire_time_changed(hass, new_time)
-    await hass.async_block_till_done()
-    assert hass.states.get(expected_sensor) is not None
+    async_fire_time_changed(menuai, new_time)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(expected_sensor) is not None
 
 
 @pytest.mark.parametrize(
@@ -660,7 +660,7 @@ async def test_connection_error_at_startup(
     indirect=["mock_client"],
 )
 async def test_data_repository_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_client,
     config_ext,
@@ -669,8 +669,8 @@ async def test_data_repository_not_found(
 ) -> None:
     """Test sensor is not setup when bucket not available."""
     set_query_mock(mock_client)
-    await _setup(hass, config_ext, queries, [])
-    assert hass.states.get("sensor.test") is None
+    await _setup(menuai, config_ext, queries, [])
+    assert menuai.states.get("sensor.test") is None
     assert (
         len([record for record in caplog.records if record.levelname == "ERROR"]) == 1
     )

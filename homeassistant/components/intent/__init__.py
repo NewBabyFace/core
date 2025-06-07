@@ -9,14 +9,14 @@ from typing import Any, Protocol
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import http, sensor
-from homeassistant.components.button import (
+from menuai.components import http, sensor
+from menuai.components.button import (
     DOMAIN as BUTTON_DOMAIN,
     SERVICE_PRESS as SERVICE_PRESS_BUTTON,
     ButtonDeviceClass,
 )
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.cover import (
+from menuai.components.climate import DOMAIN as CLIMATE_DOMAIN
+from menuai.components.cover import (
     ATTR_POSITION,
     DOMAIN as COVER_DOMAIN,
     SERVICE_CLOSE_COVER,
@@ -24,37 +24,37 @@ from homeassistant.components.cover import (
     SERVICE_SET_COVER_POSITION,
     CoverDeviceClass,
 )
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.components.input_button import DOMAIN as INPUT_BUTTON_DOMAIN
-from homeassistant.components.lock import (
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.components.input_button import DOMAIN as INPUT_BUTTON_DOMAIN
+from menuai.components.lock import (
     DOMAIN as LOCK_DOMAIN,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
 )
-from homeassistant.components.media_player import MediaPlayerDeviceClass
-from homeassistant.components.switch import SwitchDeviceClass
-from homeassistant.components.valve import (
+from menuai.components.media_player import MediaPlayerDeviceClass
+from menuai.components.switch import SwitchDeviceClass
+from menuai.components.valve import (
     DOMAIN as VALVE_DOMAIN,
     SERVICE_CLOSE_VALVE,
     SERVICE_OPEN_VALVE,
     SERVICE_SET_VALVE_POSITION,
     ValveDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, State
-from homeassistant.helpers import (
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai, State
+from menuai.helpers import (
     area_registry as ar,
     config_validation as cv,
     integration_platform,
     intent,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, TIMER_DATA
 from .timers import (
@@ -94,67 +94,67 @@ ONOFF_DEVICE_CLASSES = {
 }
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Intent component."""
-    hass.data[TIMER_DATA] = TimerManager(hass)
+    menuai.data[TIMER_DATA] = TimerManager(menuai)
 
-    hass.http.register_view(IntentHandleView())
+    menuai.http.register_view(IntentHandleView())
 
     await integration_platform.async_process_integration_platforms(
-        hass, DOMAIN, _async_process_intent
+        menuai, DOMAIN, _async_process_intent
     )
 
     intent.async_register(
-        hass,
+        menuai,
         OnOffIntentHandler(
             intent.INTENT_TURN_ON,
-            HOMEASSISTANT_DOMAIN,
+            menuai_DOMAIN,
             SERVICE_TURN_ON,
             description="Turns on/opens/presses a device or entity. For locks, this performs a 'lock' action. Use for requests like 'turn on', 'activate', 'enable', or 'lock'.",
             device_classes=ONOFF_DEVICE_CLASSES,
         ),
     )
     intent.async_register(
-        hass,
+        menuai,
         OnOffIntentHandler(
             intent.INTENT_TURN_OFF,
-            HOMEASSISTANT_DOMAIN,
+            menuai_DOMAIN,
             SERVICE_TURN_OFF,
             description="Turns off/closes a device or entity. For locks, this performs an 'unlock' action. Use for requests like 'turn off', 'deactivate', 'disable', or 'unlock'.",
             device_classes=ONOFF_DEVICE_CLASSES,
         ),
     )
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             intent.INTENT_TOGGLE,
-            HOMEASSISTANT_DOMAIN,
+            menuai_DOMAIN,
             SERVICE_TOGGLE,
             description="Toggles a device or entity",
             device_classes=ONOFF_DEVICE_CLASSES,
         ),
     )
     intent.async_register(
-        hass,
+        menuai,
         GetStateIntentHandler(),
     )
     intent.async_register(
-        hass,
+        menuai,
         NevermindIntentHandler(),
     )
-    intent.async_register(hass, SetPositionIntentHandler())
-    intent.async_register(hass, StartTimerIntentHandler())
-    intent.async_register(hass, CancelTimerIntentHandler())
-    intent.async_register(hass, CancelAllTimersIntentHandler())
-    intent.async_register(hass, IncreaseTimerIntentHandler())
-    intent.async_register(hass, DecreaseTimerIntentHandler())
-    intent.async_register(hass, PauseTimerIntentHandler())
-    intent.async_register(hass, UnpauseTimerIntentHandler())
-    intent.async_register(hass, TimerStatusIntentHandler())
-    intent.async_register(hass, GetCurrentDateIntentHandler())
-    intent.async_register(hass, GetCurrentTimeIntentHandler())
-    intent.async_register(hass, RespondIntentHandler())
-    intent.async_register(hass, GetTemperatureIntent())
+    intent.async_register(menuai, SetPositionIntentHandler())
+    intent.async_register(menuai, StartTimerIntentHandler())
+    intent.async_register(menuai, CancelTimerIntentHandler())
+    intent.async_register(menuai, CancelAllTimersIntentHandler())
+    intent.async_register(menuai, IncreaseTimerIntentHandler())
+    intent.async_register(menuai, DecreaseTimerIntentHandler())
+    intent.async_register(menuai, PauseTimerIntentHandler())
+    intent.async_register(menuai, UnpauseTimerIntentHandler())
+    intent.async_register(menuai, TimerStatusIntentHandler())
+    intent.async_register(menuai, GetCurrentDateIntentHandler())
+    intent.async_register(menuai, GetCurrentTimeIntentHandler())
+    intent.async_register(menuai, RespondIntentHandler())
+    intent.async_register(menuai, GetTemperatureIntent())
 
     return True
 
@@ -162,7 +162,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class IntentPlatformProtocol(Protocol):
     """Define the format that intent platforms can have."""
 
-    async def async_setup_intents(self, hass: HomeAssistant) -> None:
+    async def async_setup_intents(self, menuai: menuai) -> None:
         """Set up platform intents."""
 
 
@@ -173,7 +173,7 @@ class OnOffIntentHandler(intent.ServiceIntentHandler):
         self, domain: str, service: str, intent_obj: intent.Intent, state: State
     ) -> None:
         """Call service on entity with handling for special cases."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
 
         if state.domain in (BUTTON_DOMAIN, INPUT_BUTTON_DOMAIN):
             if service != SERVICE_TURN_ON:
@@ -182,8 +182,8 @@ class OnOffIntentHandler(intent.ServiceIntentHandler):
                 )
 
             await self._run_then_background(
-                hass.async_create_task(
-                    hass.services.async_call(
+                menuai.async_create_task(
+                    menuai.services.async_call(
                         state.domain,
                         SERVICE_PRESS_BUTTON,
                         {ATTR_ENTITY_ID: state.entity_id},
@@ -203,8 +203,8 @@ class OnOffIntentHandler(intent.ServiceIntentHandler):
                 service_name = SERVICE_CLOSE_COVER
 
             await self._run_then_background(
-                hass.async_create_task(
-                    hass.services.async_call(
+                menuai.async_create_task(
+                    menuai.services.async_call(
                         COVER_DOMAIN,
                         service_name,
                         {ATTR_ENTITY_ID: state.entity_id},
@@ -224,8 +224,8 @@ class OnOffIntentHandler(intent.ServiceIntentHandler):
                 service_name = SERVICE_UNLOCK
 
             await self._run_then_background(
-                hass.async_create_task(
-                    hass.services.async_call(
+                menuai.async_create_task(
+                    menuai.services.async_call(
                         LOCK_DOMAIN,
                         service_name,
                         {ATTR_ENTITY_ID: state.entity_id},
@@ -245,8 +245,8 @@ class OnOffIntentHandler(intent.ServiceIntentHandler):
                 service_name = SERVICE_CLOSE_VALVE
 
             await self._run_then_background(
-                hass.async_create_task(
-                    hass.services.async_call(
+                menuai.async_create_task(
+                    menuai.services.async_call(
                         VALVE_DOMAIN,
                         service_name,
                         {ATTR_ENTITY_ID: state.entity_id},
@@ -257,12 +257,12 @@ class OnOffIntentHandler(intent.ServiceIntentHandler):
             )
             return
 
-        if not hass.services.has_service(state.domain, service):
+        if not menuai.services.has_service(state.domain, service):
             raise intent.IntentHandleError(
                 f"Service {service} does not support entity {state.entity_id}"
             )
 
-        # Fall back to homeassistant.turn_on/off
+        # Fall back to menuai.turn_on/off
         await super().async_call_service(domain, service, intent_obj, state)
 
 
@@ -281,8 +281,8 @@ class GetStateIntentHandler(intent.IntentHandler):
     }
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
-        """Handle the hass intent."""
-        hass = intent_obj.hass
+        """Handle the menuai intent."""
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
 
         # Entity name to match
@@ -324,7 +324,7 @@ class GetStateIntentHandler(intent.IntentHandler):
             floor_id=slots.get("preferred_floor_id", {}).get("value"),
         )
         match_result = intent.async_match_targets(
-            hass, match_constraints, match_preferences
+            menuai, match_constraints, match_preferences
         )
         if (
             (not match_result.is_match)
@@ -494,7 +494,7 @@ class GetTemperatureIntent(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
 
         name: str | None = None
@@ -516,7 +516,7 @@ class GetTemperatureIntent(intent.IntentHandler):
 
         if (not name) and (area or match_preferences.area_id):
             # Look for temperature sensors assigned to an area
-            area_registry = ar.async_get(hass)
+            area_registry = ar.async_get(menuai)
             area_temperature_ids: dict[str, str] = {}
 
             # Keep candidates that are registered as area temperature sensors
@@ -546,7 +546,7 @@ class GetTemperatureIntent(intent.IntentHandler):
                 single_target=True,
             )
             match_result = intent.async_match_targets(
-                hass,
+                menuai,
                 match_constraints,
                 match_preferences,
                 area_candidate_filter=area_candidate_filter,
@@ -568,7 +568,7 @@ class GetTemperatureIntent(intent.IntentHandler):
             single_target=True,
         )
         match_result = intent.async_match_targets(
-            hass, match_constraints, match_preferences
+            menuai, match_constraints, match_preferences
         )
         if not match_result.is_match:
             raise intent.MatchFailedError(
@@ -582,13 +582,13 @@ class GetTemperatureIntent(intent.IntentHandler):
 
 
 async def _async_process_intent(
-    hass: HomeAssistant, domain: str, platform: IntentPlatformProtocol
+    menuai: menuai, domain: str, platform: IntentPlatformProtocol
 ) -> None:
     """Process the intents of an integration."""
-    await platform.async_setup_intents(hass)
+    await platform.async_setup_intents(menuai)
 
 
-class IntentHandleView(http.HomeAssistantView):
+class IntentHandleView(http.menuaiView):
     """View to handle intents from JSON."""
 
     url = "/api/intent/handle"
@@ -604,8 +604,8 @@ class IntentHandleView(http.HomeAssistantView):
     )
     async def post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Handle intent with name/data."""
-        hass = request.app[http.KEY_HASS]
-        language = hass.config.language
+        menuai = request.app[http.KEY_menuai]
+        language = menuai.config.language
 
         try:
             intent_name = data["name"]
@@ -613,7 +613,7 @@ class IntentHandleView(http.HomeAssistantView):
                 key: {"value": value} for key, value in data.get("data", {}).items()
             }
             intent_result = await intent.async_handle(
-                hass, DOMAIN, intent_name, slots, "", self.context(request)
+                menuai, DOMAIN, intent_name, slots, "", self.context(request)
             )
         except intent.IntentHandleError as err:
             intent_result = intent.IntentResponse(language=language)

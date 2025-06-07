@@ -2,22 +2,22 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.raspberry_pi.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.raspberry_pi.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry, MockModule, mock_integration
 
 
-async def test_config_flow(hass: HomeAssistant) -> None:
+async def test_config_flow(menuai: menuai) -> None:
     """Test the config flow."""
-    mock_integration(hass, MockModule("hassio"))
+    mock_integration(menuai, MockModule("menuaiio"))
 
     with patch(
-        "homeassistant.components.raspberry_pi.async_setup_entry",
+        "menuai.components.raspberry_pi.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": "system"}
         )
 
@@ -27,15 +27,15 @@ async def test_config_flow(hass: HomeAssistant) -> None:
     assert result["options"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {}
     assert config_entry.title == "Raspberry Pi"
 
 
-async def test_config_flow_single_entry(hass: HomeAssistant) -> None:
+async def test_config_flow_single_entry(menuai: menuai) -> None:
     """Test only a single entry is allowed."""
-    mock_integration(hass, MockModule("hassio"))
+    mock_integration(menuai, MockModule("menuaiio"))
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -44,13 +44,13 @@ async def test_config_flow_single_entry(hass: HomeAssistant) -> None:
         options={},
         title="Raspberry Pi",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.raspberry_pi.async_setup_entry",
+        "menuai.components.raspberry_pi.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": "system"}
         )
 

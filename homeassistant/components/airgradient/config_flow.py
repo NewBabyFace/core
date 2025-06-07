@@ -12,15 +12,15 @@ from airgradient import (
 from awesomeversion import AwesomeVersion
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     SOURCE_USER,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_MODEL
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_HOST, CONF_MODEL
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -55,7 +55,7 @@ class AirGradientConfigFlow(ConfigFlow, domain=DOMAIN):
         if AwesomeVersion(discovery_info.properties["fw_ver"]) < MIN_VERSION:
             return self.async_abort(reason="invalid_version")
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         self.client = AirGradientClient(host, session=session)
         await self.client.get_current_measures()
 
@@ -89,7 +89,7 @@ class AirGradientConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user."""
         errors: dict[str, str] = {}
         if user_input:
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             self.client = AirGradientClient(user_input[CONF_HOST], session=session)
             try:
                 current_measures = await self.client.get_current_measures()

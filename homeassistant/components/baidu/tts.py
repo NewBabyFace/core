@@ -5,13 +5,13 @@ import logging
 from aip import AipSpeech
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
 )
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_API_KEY
+from menuai.helpers import config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,17 +56,17 @@ _OPTIONS = {
 SUPPORTED_OPTIONS = [CONF_PERSON, CONF_PITCH, CONF_SPEED, CONF_VOLUME]
 
 
-def get_engine(hass, config, discovery_info=None):
+def get_engine(menuai, config, discovery_info=None):
     """Set up Baidu TTS component."""
-    return BaiduTTSProvider(hass, config)
+    return BaiduTTSProvider(menuai, config)
 
 
 class BaiduTTSProvider(Provider):
     """Baidu TTS speech api provider."""
 
-    def __init__(self, hass, conf):
+    def __init__(self, menuai, conf):
         """Init Baidu TTS service."""
-        self.hass = hass
+        self.menuai = menuai
         self._lang = conf[CONF_LANG]
         self._codec = "mp3"
         self.name = "BaiduTTS"

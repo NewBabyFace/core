@@ -6,12 +6,12 @@ from datetime import timedelta
 import logging
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT, CONF_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PORT, CONF_SSL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     DOMAIN,
@@ -34,9 +34,9 @@ SPEED_TEST_INTERVAL = timedelta(hours=2)
 SCAN_INTERVAL_FIRMWARE = timedelta(hours=5)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Netgear component."""
-    router = NetgearRouter(hass, entry)
+    router = NetgearRouter(menuai, entry)
     try:
         if not await router.async_setup():
             raise ConfigEntryNotReady
@@ -47,7 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ssl = entry.data.get(CONF_SSL)
     if port != router.port or ssl != router.ssl:
         data = {**entry.data, CONF_PORT: router.port, CONF_SSL: router.ssl}
-        hass.config_entries.async_update_entry(entry, data=data)
+        menuai.config_entries.async_update_entry(entry, data=data)
         _LOGGER.warning(
             (
                 "Netgear port-SSL combination updated from (%i, %r) to (%i, %r), "
@@ -59,7 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             router.ssl,
         )
 
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -91,7 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create update coordinators
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"{router.device_name} Devices",
@@ -99,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=SCAN_INTERVAL,
     )
     coordinator_traffic_meter = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"{router.device_name} Traffic meter",
@@ -107,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=SCAN_INTERVAL,
     )
     coordinator_speed_test = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"{router.device_name} Speed test",
@@ -115,7 +115,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=SPEED_TEST_INTERVAL,
     )
     coordinator_firmware = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"{router.device_name} Firmware",
@@ -123,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=SCAN_INTERVAL_FIRMWARE,
     )
     coordinator_utilization = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"{router.device_name} Utilization",
@@ -131,7 +131,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=SCAN_INTERVAL,
     )
     coordinator_link = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"{router.device_name} Ethernet Link Status",
@@ -146,7 +146,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator_utilization.async_config_entry_first_refresh()
     await coordinator_link.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data[DOMAIN][entry.entry_id] = {
         KEY_ROUTER: router,
         KEY_COORDINATOR: coordinator,
         KEY_COORDINATOR_TRAFFIC: coordinator_traffic_meter,
@@ -156,26 +156,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         KEY_COORDINATOR_LINK: coordinator_link,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    router = hass.data[DOMAIN][entry.entry_id][KEY_ROUTER]
+    router = menuai.data[DOMAIN][entry.entry_id][KEY_ROUTER]
 
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            hass.data.pop(DOMAIN)
+        menuai.data[DOMAIN].pop(entry.entry_id)
+        if not menuai.data[DOMAIN]:
+            menuai.data.pop(DOMAIN)
 
     if not router.track_devices:
         router_id = None
         # Remove devices that are no longer tracked
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         devices = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
         for device_entry in devices:
             if device_entry.via_device_id is None:
@@ -185,7 +185,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 device_entry.id, remove_config_entry_id=entry.entry_id
             )
         # Remove entities that are no longer tracked
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         entries = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
         for entity_entry in entries:
             if entity_entry.device_id is not router_id:
@@ -194,16 +194,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def update_listener(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a device from a config entry."""
-    router = hass.data[DOMAIN][config_entry.entry_id][KEY_ROUTER]
+    router = menuai.data[DOMAIN][config_entry.entry_id][KEY_ROUTER]
 
     device_mac = None
     for connection in device_entry.connections:

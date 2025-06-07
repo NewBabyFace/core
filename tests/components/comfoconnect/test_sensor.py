@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component
 
@@ -46,48 +46,48 @@ def mock_comfoconnect_command() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def setup_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bridge_discover: MagicMock,
     mock_comfoconnect_command: MagicMock,
 ) -> None:
     """Set up demo sensor component."""
     with assert_setup_component(1, SENSOR_DOMAIN):
-        await async_setup_component(hass, SENSOR_DOMAIN, VALID_CONFIG)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, SENSOR_DOMAIN, VALID_CONFIG)
+        await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("setup_sensor")
-async def test_sensors(hass: HomeAssistant) -> None:
+async def test_sensors(menuai: menuai) -> None:
     """Test the sensors."""
-    state = hass.states.get("sensor.comfoairq_inside_humidity")
+    state = menuai.states.get("sensor.comfoairq_inside_humidity")
     assert state is not None
     assert state.name == "ComfoAirQ Inside humidity"
     assert state.attributes.get("unit_of_measurement") == "%"
     assert state.attributes.get("device_class") == "humidity"
     assert state.attributes.get("icon") is None
 
-    state = hass.states.get("sensor.comfoairq_inside_temperature")
+    state = menuai.states.get("sensor.comfoairq_inside_temperature")
     assert state is not None
     assert state.name == "ComfoAirQ Inside temperature"
     assert state.attributes.get("unit_of_measurement") == "°C"
     assert state.attributes.get("device_class") == "temperature"
     assert state.attributes.get("icon") is None
 
-    state = hass.states.get("sensor.comfoairq_supply_fan_duty")
+    state = menuai.states.get("sensor.comfoairq_supply_fan_duty")
     assert state is not None
     assert state.name == "ComfoAirQ Supply fan duty"
     assert state.attributes.get("unit_of_measurement") == "%"
     assert state.attributes.get("device_class") is None
     assert state.attributes.get("icon") == "mdi:fan-plus"
 
-    state = hass.states.get("sensor.comfoairq_power_usage")
+    state = menuai.states.get("sensor.comfoairq_power_usage")
     assert state is not None
     assert state.name == "ComfoAirQ Power usage"
     assert state.attributes.get("unit_of_measurement") == "W"
     assert state.attributes.get("device_class") == "power"
     assert state.attributes.get("icon") is None
 
-    state = hass.states.get("sensor.comfoairq_preheater_energy_total")
+    state = menuai.states.get("sensor.comfoairq_preheater_energy_total")
     assert state is not None
     assert state.name == "ComfoAirQ Preheater energy total"
     assert state.attributes.get("unit_of_measurement") == "kWh"

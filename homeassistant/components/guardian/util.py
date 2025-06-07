@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any, Concatenate
 
 from aioguardian.errors import GuardianError
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from .const import LOGGER
 
@@ -35,12 +35,12 @@ class EntityDomainReplacementStrategy:
 
 @callback
 def async_finish_entity_domain_replacements(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GuardianConfigEntry,
     entity_replacement_strategies: Iterable[EntityDomainReplacementStrategy],
 ) -> None:
     """Remove old entities and create a repairs issue with info on their replacement."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     for strategy in entity_replacement_strategies:
         try:
             [registry_entry] = [
@@ -60,7 +60,7 @@ def async_finish_entity_domain_replacements(
 
 
 @callback
-def convert_exceptions_to_homeassistant_error[_GuardianEntityT: GuardianEntity, **_P](
+def convert_exceptions_to_menuai_error[_GuardianEntityT: GuardianEntity, **_P](
     func: Callable[Concatenate[_GuardianEntityT, _P], Coroutine[Any, Any, Any]],
 ) -> Callable[Concatenate[_GuardianEntityT, _P], Coroutine[Any, Any, None]]:
     """Decorate to handle exceptions from the Guardian API."""
@@ -73,7 +73,7 @@ def convert_exceptions_to_homeassistant_error[_GuardianEntityT: GuardianEntity, 
         try:
             await func(entity, *args, **kwargs)
         except GuardianError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while calling {func.__name__}: {err}"
             ) from err
 

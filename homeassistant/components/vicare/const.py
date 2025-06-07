@@ -2,7 +2,7 @@
 
 import enum
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "vicare"
 

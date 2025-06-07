@@ -5,15 +5,15 @@ from unittest.mock import patch
 
 from apple_weatherkit import DataSetType
 
-from homeassistant.components.weatherkit.const import (
+from menuai.components.weatherkit.const import (
     CONF_KEY_ID,
     CONF_KEY_PEM,
     CONF_SERVICE_ID,
     CONF_TEAM_ID,
     DOMAIN,
 )
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -54,11 +54,11 @@ def mock_weather_response(
 
     with (
         patch(
-            "homeassistant.components.weatherkit.WeatherKitApiClient.get_weather_data",
+            "menuai.components.weatherkit.WeatherKitApiClient.get_weather_data",
             return_value=weather_response,
         ),
         patch(
-            "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+            "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
             return_value=available_data_sets,
         ),
     ):
@@ -66,9 +66,9 @@ def mock_weather_response(
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> MockConfigEntry:
-    """Set up the WeatherKit integration in Home Assistant."""
+    """Set up the WeatherKit integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Home",
@@ -76,8 +76,8 @@ async def init_integration(
         data=EXAMPLE_CONFIG_DATA,
     )
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry

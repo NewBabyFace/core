@@ -6,8 +6,8 @@ from typing import Any
 from pysmarty2 import Smarty
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
 
 from .const import DOMAIN
 
@@ -37,7 +37,7 @@ class SmartyConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._async_abort_entries_match(user_input)
-            error = await self.hass.async_add_executor_job(
+            error = await self.menuai.async_add_executor_job(
                 self._test_connection, user_input[CONF_HOST]
             )
             if not error:

@@ -1,9 +1,9 @@
 {
-  "domain": "hassio",
-  "name": "Home Assistant Supervisor",
+  "domain": "menuaiio",
+  "name": "MenuAI Supervisor",
   "codeowners": ["@home-assistant/supervisor"],
   "dependencies": ["http", "repairs"],
-  "documentation": "https://www.home-assistant.io/integrations/hassio",
+  "documentation": "https://www.home-assistant.io/integrations/menuaiio",
   "iot_class": "local_polling",
   "quality_scale": "internal",
   "requirements": ["aiohasupervisor==0.3.1"],

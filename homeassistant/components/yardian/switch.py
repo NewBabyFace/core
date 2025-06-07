@@ -6,13 +6,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DEFAULT_WATERING_DURATION, DOMAIN
 from .coordinator import YardianUpdateCoordinator
@@ -24,12 +24,12 @@ SERVICE_SCHEMA_START_IRRIGATION: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up entry for a Yardian irrigation switches."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = menuai.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
         YardianSwitch(
             coordinator,

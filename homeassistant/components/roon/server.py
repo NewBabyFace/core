@@ -5,9 +5,9 @@ import logging
 
 from roonapi import RoonApi, RoonDiscovery
 
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.util.dt import utcnow
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.util.dt import utcnow
 
 from .const import CONF_ROON_ID, ROON_APPINFO
 
@@ -19,10 +19,10 @@ FULL_SYNC_INTERVAL = 30
 class RoonServer:
     """Manages a single Roon Server."""
 
-    def __init__(self, hass, config_entry):
+    def __init__(self, menuai, config_entry):
         """Initialize the system."""
         self.config_entry = config_entry
-        self.hass = hass
+        self.menuai = menuai
         self.roonapi = None
         self.roon_id = None
         self.all_player_ids = set()
@@ -55,7 +55,7 @@ class RoonServer:
 
         core_id = self.config_entry.data.get(CONF_ROON_ID)
 
-        self.roonapi = await self.hass.async_add_executor_job(get_roon_api)
+        self.roonapi = await self.menuai.async_add_executor_job(get_roon_api)
 
         self.roonapi.register_state_callback(
             self.roonapi_state_callback, event_filter=["zones_changed"]
@@ -68,7 +68,7 @@ class RoonServer:
 
         # Initialize Roon background polling
         self.config_entry.async_create_background_task(
-            self.hass, self.async_do_loop(), "roon.server-do-loop"
+            self.menuai, self.async_do_loop(), "roon.server-do-loop"
         )
 
         return True
@@ -107,7 +107,7 @@ class RoonServer:
 
     def roonapi_state_callback(self, event, changed_zones):
         """Callbacks from the roon api websocket with state change."""
-        self.hass.add_job(self.async_update_changed_players(changed_zones))
+        self.menuai.add_job(self.async_update_changed_players(changed_zones))
 
     async def async_do_loop(self):
         """Background work loop."""
@@ -136,7 +136,7 @@ class RoonServer:
                 if dev_id in self.offline_devices:
                     # player back online
                     self.offline_devices.remove(dev_id)
-                async_dispatcher_send(self.hass, "roon_media_player", player_data)
+                async_dispatcher_send(self.menuai, "roon_media_player", player_data)
                 self.all_player_ids.add(dev_id)
 
     async def async_update_players(self):
@@ -157,7 +157,7 @@ class RoonServer:
             # player was removed!
             player_data = {"dev_id": dev_id}
             player_data["is_available"] = False
-            async_dispatcher_send(self.hass, "roon_media_player", player_data)
+            async_dispatcher_send(self.menuai, "roon_media_player", player_data)
             self.offline_devices.add(dev_id)
 
     async def async_create_player_data(self, zone, output):

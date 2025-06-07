@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from sensorpush_ha import SensorPushCloudApi
 
-from homeassistant.components.sensorpush_cloud.const import DOMAIN
-from homeassistant.const import CONF_EMAIL
+from menuai.components.sensorpush_cloud.const import DOMAIN
+from menuai.const import CONF_EMAIL
 
 from .const import CONF_DATA, MOCK_DATA
 
@@ -22,7 +22,7 @@ def mock_api() -> Generator[AsyncMock]:
     mock_api = AsyncMock(SensorPushCloudApi)
     with (
         patch(
-            "homeassistant.components.sensorpush_cloud.config_flow.SensorPushCloudApi",
+            "menuai.components.sensorpush_cloud.config_flow.SensorPushCloudApi",
             return_value=mock_api,
         ),
     ):
@@ -34,7 +34,7 @@ def mock_helper() -> Generator[AsyncMock]:
     """Override SensorPushCloudHelper."""
     with (
         patch(
-            "homeassistant.components.sensorpush_cloud.coordinator.SensorPushCloudHelper",
+            "menuai.components.sensorpush_cloud.coordinator.SensorPushCloudHelper",
             autospec=True,
         ) as mock_helper,
     ):
@@ -55,6 +55,6 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.sensorpush_cloud.async_setup_entry", return_value=True
+        "menuai.components.sensorpush_cloud.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

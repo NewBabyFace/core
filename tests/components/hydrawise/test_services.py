@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 from pydrawise.schema import Zone
 
-from homeassistant.components.hydrawise.const import (
+from menuai.components.hydrawise.const import (
     ATTR_DURATION,
     ATTR_UNTIL,
     DOMAIN,
@@ -13,20 +13,20 @@ from homeassistant.components.hydrawise.const import (
     SERVICE_START_WATERING,
     SERVICE_SUSPEND,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def test_start_watering(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_added_config_entry: MockConfigEntry,
     mock_pydrawise: AsyncMock,
     zones: list[Zone],
 ) -> None:
     """Test that the start_watering service works as intended."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_START_WATERING,
         {
@@ -41,13 +41,13 @@ async def test_start_watering(
 
 
 async def test_start_watering_no_duration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_added_config_entry: MockConfigEntry,
     mock_pydrawise: AsyncMock,
     zones: list[Zone],
 ) -> None:
     """Test that the start_watering service works with no duration specified."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_START_WATERING,
         {ATTR_ENTITY_ID: "binary_sensor.zone_one_watering"},
@@ -57,13 +57,13 @@ async def test_start_watering_no_duration(
 
 
 async def test_resume(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_added_config_entry: MockConfigEntry,
     mock_pydrawise: AsyncMock,
     zones: list[Zone],
 ) -> None:
     """Test that the resume service works as intended."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_RESUME,
         {ATTR_ENTITY_ID: "binary_sensor.zone_one_watering"},
@@ -73,13 +73,13 @@ async def test_resume(
 
 
 async def test_suspend(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_added_config_entry: MockConfigEntry,
     mock_pydrawise: AsyncMock,
     zones: list[Zone],
 ) -> None:
     """Test that the suspend service works as intended."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SUSPEND,
         {

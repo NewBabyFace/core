@@ -11,15 +11,15 @@ from hyperion.const import (
     KEY_VISIBLE,
 )
 
-from homeassistant.components.hyperion import get_hyperion_device_id
-from homeassistant.components.hyperion.const import (
+from menuai.components.hyperion import get_hyperion_device_id
+from menuai.components.hyperion.const import (
     DOMAIN,
     HYPERION_MANUFACTURER_NAME,
     HYPERION_MODEL_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import slugify
 
 from . import (
     TEST_CONFIG_ENTRY_ID,
@@ -39,28 +39,28 @@ TEST_SENSOR_BASE_ENTITY_ID = "sensor.test_instance_1"
 TEST_VISIBLE_EFFECT_SENSOR_ID = "sensor.test_instance_1_visible_priority"
 
 
-async def test_sensor_has_correct_entities(hass: HomeAssistant) -> None:
+async def test_sensor_has_correct_entities(menuai: menuai) -> None:
     """Test that the correct sensor entities are created."""
     client = create_mock_client()
     client.components = TEST_COMPONENTS
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
     for component in TEST_COMPONENTS:
         name = slugify(component["name"])
         entity_id = f"{TEST_SENSOR_BASE_ENTITY_ID}_{name}"
-        entity_state = hass.states.get(entity_id)
+        entity_state = menuai.states.get(entity_id)
         assert entity_state, f"Couldn't find entity: {entity_id}"
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Verify device information includes expected details."""
     client = create_mock_client()
     client.components = TEST_COMPONENTS
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
     device_identifer = get_hyperion_device_id(TEST_SYSINFO_ID, TEST_INSTANCE)
 
@@ -83,11 +83,11 @@ async def test_device_info(
         assert entity_id in entities_from_device
 
 
-async def test_visible_effect_state_changes(hass: HomeAssistant) -> None:
+async def test_visible_effect_state_changes(menuai: menuai) -> None:
     """Verify that state changes are processed as expected for visible effect sensor."""
     client = create_mock_client()
     client.components = TEST_COMPONENTS
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
     # Simulate a platform grabber effect state callback from Hyperion.
     client.priorities = [
@@ -102,7 +102,7 @@ async def test_visible_effect_state_changes(hass: HomeAssistant) -> None:
     ]
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
+    entity_state = menuai.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
     assert entity_state
     assert entity_state.state == client.priorities[0][KEY_OWNER]
     assert (
@@ -124,7 +124,7 @@ async def test_visible_effect_state_changes(hass: HomeAssistant) -> None:
     ]
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
+    entity_state = menuai.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
     assert entity_state
     assert entity_state.state == client.priorities[0][KEY_OWNER]
     assert (
@@ -146,7 +146,7 @@ async def test_visible_effect_state_changes(hass: HomeAssistant) -> None:
     ]
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
+    entity_state = menuai.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
     assert entity_state
     assert entity_state.state == client.priorities[0][KEY_OWNER]
     assert (
@@ -168,7 +168,7 @@ async def test_visible_effect_state_changes(hass: HomeAssistant) -> None:
     ]
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
+    entity_state = menuai.states.get(TEST_VISIBLE_EFFECT_SENSOR_ID)
     assert entity_state
     assert entity_state.state == str(client.priorities[0][KEY_VALUE][KEY_RGB])
     assert (

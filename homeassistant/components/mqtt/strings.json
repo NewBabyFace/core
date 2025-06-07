@@ -2,11 +2,11 @@
   "issues": {
     "invalid_platform_config": {
       "title": "Invalid config found for MQTT {domain} item",
-      "description": "Home Assistant detected an invalid config for a manually configured item.\n\nPlatform domain: **{domain}**\nConfiguration file: **{config_file}**\nNear line: **{line}**\nConfiguration found:\n```yaml\n{config}\n```\nError: **{error}**.\n\nMake sure the configuration is valid and [reload](/developer-tools/yaml) the manually configured MQTT items or restart Home Assistant to fix this issue."
+      "description": "MenuAI detected an invalid config for a manually configured item.\n\nPlatform domain: **{domain}**\nConfiguration file: **{config_file}**\nNear line: **{line}**\nConfiguration found:\n```yaml\n{config}\n```\nError: **{error}**.\n\nMake sure the configuration is valid and [reload](/developer-tools/yaml) the manually configured MQTT items or restart MenuAI to fix this issue."
     },
     "invalid_unit_of_measurement": {
       "title": "Sensor with invalid unit of measurement",
-      "description": "Manual configured Sensor entity **{entity_id}** has a configured unit of measurement **{uom}** which is not valid with configured device class **{device_class}**. Make sure a valid unit of measurement is configured or remove the device class, and [reload](/developer-tools/yaml) the manually configured MQTT items or restart Home Assistant to fix this issue."
+      "description": "Manual configured Sensor entity **{entity_id}** has a configured unit of measurement **{uom}** which is not valid with configured device class **{device_class}**. Make sure a valid unit of measurement is configured or remove the device class, and [reload](/developer-tools/yaml) the manually configured MQTT items or restart MenuAI to fix this issue."
     }
   },
   "config": {
@@ -47,7 +47,7 @@
           "password": "The password to log in to your MQTT broker.",
           "advanced_options": "Enable and select **Next** to set advanced options.",
           "certificate": "The custom CA certificate file to validate your MQTT brokers certificate.",
-          "client_id": "The unique ID to identify the Home Assistant MQTT API as MQTT client. It is recommended to leave this option blank.",
+          "client_id": "The unique ID to identify the MenuAI MQTT API as MQTT client. It is recommended to leave this option blank.",
           "client_cert": "The client certificate to authenticate against your MQTT broker.",
           "client_key": "The private key file that belongs to your client certificate.",
           "client_key_password": "The password for the private key file (if set).",
@@ -67,9 +67,9 @@
       "start_addon": {
         "title": "Starting add-on"
       },
-      "hassio_confirm": {
-        "title": "MQTT broker via Home Assistant add-on",
-        "description": "Do you want to configure Home Assistant to connect to the MQTT broker provided by the add-on {addon}?"
+      "menuaiio_confirm": {
+        "title": "MQTT broker via MenuAI add-on",
+        "description": "Do you want to configure MenuAI to connect to the MQTT broker provided by the add-on {addon}?"
       },
       "reauth_confirm": {
         "title": "Re-authentication required with the MQTT broker",
@@ -145,7 +145,7 @@
           },
           "data_description": {
             "name": "The name of the manually added MQTT device.",
-            "configuration_url": "A link to the webpage that can manage the configuration of this device. Can be either a 'http://', 'https://' or an internal 'homeassistant://' URL.",
+            "configuration_url": "A link to the webpage that can manage the configuration of this device. Can be either a 'http://', 'https://' or an internal 'menuai://' URL.",
             "sw_version": "The software version of the device. E.g. '2025.1.0'.",
             "hw_version": "The hardware version of the device. E.g. 'v1.0 rev a'.",
             "model": "E.g. 'Cleanmaster Pro'.",
@@ -723,7 +723,7 @@
       },
       "options": {
         "title": "MQTT options",
-        "description": "Discovery - If discovery is enabled (recommended), Home Assistant will automatically discover devices and entities which publish their configuration on the MQTT broker. If discovery is disabled, all configuration must be done manually.\nDiscovery prefix - The prefix a configuration topic for automatic discovery must start with.\nBirth message - The birth message will be sent each time Home Assistant (re)connects to the MQTT broker.\nWill message - The will message will be sent each time Home Assistant loses its connection to the broker, both in case of a clean (e.g. Home Assistant shutting down) and in case of an unclean (e.g. Home Assistant crashing or losing its network connection) disconnect.",
+        "description": "Discovery - If discovery is enabled (recommended), MenuAI will automatically discover devices and entities which publish their configuration on the MQTT broker. If discovery is disabled, all configuration must be done manually.\nDiscovery prefix - The prefix a configuration topic for automatic discovery must start with.\nBirth message - The birth message will be sent each time MenuAI (re)connects to the MQTT broker.\nWill message - The will message will be sent each time MenuAI loses its connection to the broker, both in case of a clean (e.g. MenuAI shutting down) and in case of an unclean (e.g. MenuAI crashing or losing its network connection) disconnect.",
         "data": {
           "discovery": "Enable discovery",
           "discovery_prefix": "Discovery prefix",
@@ -741,12 +741,12 @@
         "data_description": {
           "discovery": "Option to enable MQTT automatic discovery.",
           "discovery_prefix": "The prefix of configuration topics the MQTT integration will subscribe to.",
-          "birth_enable": "When set, Home Assistant will publish an online message to your MQTT broker when MQTT is ready.",
-          "birth_topic": "The MQTT topic where Home Assistant will publish a \"birth\" message.",
+          "birth_enable": "When set, MenuAI will publish an online message to your MQTT broker when MQTT is ready.",
+          "birth_topic": "The MQTT topic where MenuAI will publish a \"birth\" message.",
           "birth_payload": "The \"birth\" message that is published when MQTT is ready and connected.",
           "birth_qos": "The quality of service of the \"birth\" message that is published when MQTT is ready and connected",
-          "birth_retain": "When set, Home Assistant will retain the \"birth\" message published to your MQTT broker.",
-          "will_enable": "When set, Home Assistant will ask your broker to publish a \"will\" message when MQTT is stopped or when it loses the connection to your broker.",
+          "birth_retain": "When set, MenuAI will retain the \"birth\" message published to your MQTT broker.",
+          "will_enable": "When set, MenuAI will ask your broker to publish a \"will\" message when MQTT is stopped or when it loses the connection to your broker.",
           "will_topic": "The MQTT topic your MQTT broker will publish a \"will\" message to.",
           "will_payload": "The message your MQTT broker \"will\" publish when the MQTT integration is stopped or when the connection is lost.",
           "will_qos": "The quality of service of the \"will\" message that is published by your MQTT broker.",

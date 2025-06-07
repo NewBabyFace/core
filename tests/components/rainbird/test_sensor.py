@@ -4,10 +4,10 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import (
     CONFIG_ENTRY_DATA_OLD_FORMAT,
@@ -28,10 +28,10 @@ def platforms() -> list[str]:
 
 @pytest.fixture(autouse=True)
 async def setup_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> list[Platform]:
     """Fixture to setup the config entry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
 
@@ -40,13 +40,13 @@ async def setup_config_entry(
     [(RAIN_DELAY, "16"), (RAIN_DELAY_OFF, "0")],
 )
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     expected_state: str,
 ) -> None:
     """Test sensor platform."""
 
-    raindelay = hass.states.get("sensor.rain_bird_controller_raindelay")
+    raindelay = menuai.states.get("sensor.rain_bird_controller_raindelay")
     assert raindelay is not None
     assert raindelay.state == expected_state
     assert raindelay.attributes == {
@@ -73,7 +73,7 @@ async def test_sensors(
     ],
 )
 async def test_sensor_no_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     responses: list[AiohttpClientMockResponse],
     config_entry_unique_id: str | None,
@@ -84,10 +84,10 @@ async def test_sensor_no_unique_id(
     # Failure to migrate config entry to a unique id
     responses.insert(0, mock_response_error(HTTPStatus.SERVICE_UNAVAILABLE))
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    raindelay = hass.states.get("sensor.rain_bird_controller_raindelay")
+    raindelay = menuai.states.get("sensor.rain_bird_controller_raindelay")
     assert raindelay is not None
     assert raindelay.attributes.get("friendly_name") == "Rain Bird Controller Raindelay"
 

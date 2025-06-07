@@ -10,10 +10,10 @@ from pybotvac.exceptions import NeatoRobotException
 from pybotvac.robot import Robot
 from urllib3.response import HTTPResponse
 
-from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import NEATO_LOGIN, NEATO_MAP_DATA, NEATO_ROBOTS, SCAN_INTERVAL_MINUTES
 from .entity import NeatoEntity
@@ -26,16 +26,16 @@ ATTR_GENERATED_AT = "generated_at"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Neato camera with config entry."""
-    neato: NeatoHub = hass.data[NEATO_LOGIN]
-    mapdata: dict[str, Any] | None = hass.data.get(NEATO_MAP_DATA)
+    neato: NeatoHub = menuai.data[NEATO_LOGIN]
+    mapdata: dict[str, Any] | None = menuai.data.get(NEATO_MAP_DATA)
     dev = [
         NeatoCleaningMap(neato, robot, mapdata)
-        for robot in hass.data[NEATO_ROBOTS]
+        for robot in menuai.data[NEATO_ROBOTS]
         if "maps" in robot.traits
     ]
 

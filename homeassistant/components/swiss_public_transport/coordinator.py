@@ -12,11 +12,11 @@ from opendata_transport.exceptions import (
     OpendataTransportError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonValueType
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonValueType
 
 from .const import CONNECTIONS_COUNT, DEFAULT_UPDATE_TIME, DOMAIN
 from .helper import offset_opendata
@@ -60,14 +60,14 @@ class SwissPublicTransportDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SwissPublicTransportConfigEntry,
         opendata: OpendataTransport,
         time_offset: dict[str, int] | None,
     ) -> None:
         """Initialize the SwissPublicTransport data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

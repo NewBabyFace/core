@@ -23,17 +23,17 @@ from aiolifx_themes.themes import ThemeLibrary, ThemePainter
 from awesomeversion import AwesomeVersion
 from propcache.api import cached_property
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     SIGNAL_STRENGTH_DECIBELS,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     _LOGGER,
@@ -91,7 +91,7 @@ class LIFXUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         connection: LIFXConnection,
     ) -> None:
@@ -106,7 +106,7 @@ class LIFXUpdateCoordinator(DataUpdateCoordinator[None]):
         self.last_used_theme: str = ""
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{config_entry.title} ({self.device.ip_addr})",
@@ -114,7 +114,7 @@ class LIFXUpdateCoordinator(DataUpdateCoordinator[None]):
             # We don't want an immediate refresh since the device
             # takes a moment to reflect the state change
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+                menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
         )
 
@@ -221,7 +221,7 @@ class LIFXUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def async_get_entity_id(self, platform: Platform, key: str) -> str | None:
         """Return the entity_id from the platform and key provided."""
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         return ent_reg.async_get_entity_id(
             platform, DOMAIN, f"{self.serial_number}_{key}"
         )
@@ -355,7 +355,7 @@ class LIFXUpdateCoordinator(DataUpdateCoordinator[None]):
         try:
             await async_execute_lifx(self.device.get_extended_color_zones)
         except TimeoutError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Timeout getting color zones from {self.name}"
             ) from ex
 
@@ -446,7 +446,7 @@ class LIFXUpdateCoordinator(DataUpdateCoordinator[None]):
 
             if theme_name is not None:
                 theme = ThemeLibrary().get_theme(theme_name)
-                await ThemePainter(self.hass.loop).paint(
+                await ThemePainter(self.menuai.loop).paint(
                     theme, [self.device], round(speed)
                 )
 
@@ -544,4 +544,4 @@ class LIFXUpdateCoordinator(DataUpdateCoordinator[None]):
         """Apply the selected theme to the device."""
         self.last_used_theme = theme_name
         theme = ThemeLibrary().get_theme(theme_name)
-        await ThemePainter(self.hass.loop).paint(theme, [self.device])
+        await ThemePainter(self.menuai.loop).paint(theme, [self.device])

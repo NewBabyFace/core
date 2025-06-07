@@ -6,13 +6,13 @@ from devolo_plc_api.exceptions.device import DevicePasswordProtected, DeviceUnav
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as PLATFORM, SERVICE_PRESS
-from homeassistant.components.devolo_home_network.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as PLATFORM, SERVICE_PRESS
+from menuai.components.devolo_home_network.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import configure_integration
 from .mock import MockDevice
@@ -20,14 +20,14 @@ from .mock import MockDevice
 
 @pytest.mark.usefixtures("mock_device")
 async def test_button_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test default setup of the button component."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
     assert not entity_registry.async_get(
@@ -69,7 +69,7 @@ async def test_button_setup(
 )
 @pytest.mark.freeze_time("2023-01-13 12:00:00+00:00")
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MockDevice,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -78,25 +78,25 @@ async def test_button(
     trigger_method: str,
 ) -> None:
     """Test a button."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_{name}"
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(state_key) == snapshot
+    assert menuai.states.get(state_key) == snapshot
     assert entity_registry.async_get(state_key) == snapshot
 
     # Emulate button press
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: state_key},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state.state == "2023-01-13T12:00:00+00:00"
     api = getattr(mock_device, api_name)
     assert getattr(api, trigger_method).call_count == 1
@@ -104,8 +104,8 @@ async def test_button(
     # Emulate device failure
     setattr(api, trigger_method, AsyncMock())
     getattr(api, trigger_method).side_effect = DeviceUnavailable
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             PLATFORM,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: state_key},
@@ -113,27 +113,27 @@ async def test_button(
         )
 
 
-async def test_auth_failed(hass: HomeAssistant, mock_device: MockDevice) -> None:
+async def test_auth_failed(menuai: menuai, mock_device: MockDevice) -> None:
     """Test setting unautherized triggers the reauth flow."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_start_wps"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     mock_device.device.async_start_wps.side_effect = DevicePasswordProtected
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             PLATFORM,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: state_key},
             blocking=True,
         )
 
-    await hass.async_block_till_done()
-    flows = hass.config_entries.flow.async_progress()
+    await menuai.async_block_till_done()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

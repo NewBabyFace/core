@@ -5,8 +5,8 @@ from typing import Any
 from aioeafm import get_stations
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -35,7 +35,7 @@ class UKFloodsFlowHandler(ConfigFlow, domain=DOMAIN):
                 data={"station": selected_station},
             )
 
-        session = async_get_clientsession(hass=self.hass)
+        session = async_get_clientsession(menuai=self.menuai)
         stations = await get_stations(session)
 
         self.stations = {}

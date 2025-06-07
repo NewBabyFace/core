@@ -16,8 +16,8 @@ from aiostreammagic.models import (
 )
 import pytest
 
-from homeassistant.components.cambridge_audio.const import DOMAIN
-from homeassistant.const import CONF_HOST
+from menuai.components.cambridge_audio.const import DOMAIN
+from menuai.const import CONF_HOST
 
 from tests.common import MockConfigEntry, load_fixture, load_json_array_fixture
 
@@ -26,7 +26,7 @@ from tests.common import MockConfigEntry, load_fixture, load_json_array_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.cambridge_audio.async_setup_entry",
+        "menuai.components.cambridge_audio.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -37,11 +37,11 @@ def mock_stream_magic_client() -> Generator[AsyncMock]:
     """Mock an Cambridge Audio client."""
     with (
         patch(
-            "homeassistant.components.cambridge_audio.StreamMagicClient",
+            "menuai.components.cambridge_audio.StreamMagicClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.cambridge_audio.config_flow.StreamMagicClient",
+            "menuai.components.cambridge_audio.config_flow.StreamMagicClient",
             new=mock_client,
         ),
     ):

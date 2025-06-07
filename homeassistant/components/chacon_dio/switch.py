@@ -5,9 +5,9 @@ from typing import Any
 
 from dio_chacon_wifi_api.const import DeviceTypeEnum
 
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchDeviceClass, SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ChaconDioConfigEntry
 from .entity import ChaconDioEntity
@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ChaconDioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

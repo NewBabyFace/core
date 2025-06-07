@@ -6,9 +6,9 @@ from collections.abc import Callable
 from datetime import datetime
 import logging
 
-from homeassistant.core import callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_call_later
+from menuai.core import callback
+from menuai.helpers.entity import Entity
+from menuai.helpers.event import async_call_later
 
 from .data import HarmonyData
 
@@ -47,7 +47,7 @@ class HarmonyEntity(Entity):
         # We're going to wait for 10 seconds before announcing we're
         # unavailable, this to allow a reconnection to happen.
         self._unsub_mark_disconnected = async_call_later(
-            self.hass,
+            self.menuai,
             TIME_MARK_DISCONNECTED,
             self._async_mark_disconnected_if_unavailable,
         )

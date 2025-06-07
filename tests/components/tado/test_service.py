@@ -6,14 +6,14 @@ from unittest.mock import patch
 import pytest
 from requests.exceptions import RequestException
 
-from homeassistant.components.tado.const import (
+from menuai.components.tado.const import (
     CONF_CONFIG_ENTRY,
     CONF_READING,
     DOMAIN,
     SERVICE_ADD_METER_READING,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .util import async_init_integration
 
@@ -21,29 +21,29 @@ from tests.common import MockConfigEntry, async_load_fixture
 
 
 async def test_has_services(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the existence of the Tado Service."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    assert hass.services.has_service(DOMAIN, SERVICE_ADD_METER_READING)
+    assert menuai.services.has_service(DOMAIN, SERVICE_ADD_METER_READING)
 
 
 async def test_add_meter_readings(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the add_meter_readings service."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(DOMAIN)[0]
-    fixture: str = await async_load_fixture(hass, "add_readings_success.json", DOMAIN)
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(DOMAIN)[0]
+    fixture: str = await async_load_fixture(menuai, "add_readings_success.json", DOMAIN)
     with patch(
         "PyTado.interface.api.Tado.set_eiq_meter_readings",
         return_value=json.loads(fixture),
     ):
-        response: None = await hass.services.async_call(
+        response: None = await menuai.services.async_call(
             DOMAIN,
             SERVICE_ADD_METER_READING,
             service_data={
@@ -56,21 +56,21 @@ async def test_add_meter_readings(
 
 
 async def test_add_meter_readings_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the add_meter_readings service with a RequestException."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(DOMAIN)[0]
     with (
         patch(
             "PyTado.interface.api.Tado.set_eiq_meter_readings",
             side_effect=RequestException("Error"),
         ),
-        pytest.raises(HomeAssistantError) as exc,
+        pytest.raises(menuaiError) as exc,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_ADD_METER_READING,
             service_data={
@@ -84,24 +84,24 @@ async def test_add_meter_readings_exception(
 
 
 async def test_add_meter_readings_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the add_meter_readings service with an invalid_meter_reading response."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(DOMAIN)[0]
     fixture: str = await async_load_fixture(
-        hass, "add_readings_invalid_meter_reading.json", DOMAIN
+        menuai, "add_readings_invalid_meter_reading.json", DOMAIN
     )
     with (
         patch(
             "PyTado.interface.api.Tado.set_eiq_meter_readings",
             return_value=json.loads(fixture),
         ),
-        pytest.raises(HomeAssistantError) as exc,
+        pytest.raises(menuaiError) as exc,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_ADD_METER_READING,
             service_data={
@@ -115,24 +115,24 @@ async def test_add_meter_readings_invalid(
 
 
 async def test_add_meter_readings_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the add_meter_readings service with a duplicated_meter_reading response."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(DOMAIN)[0]
     fixture: str = await async_load_fixture(
-        hass, "add_readings_duplicated_meter_reading.json", DOMAIN
+        menuai, "add_readings_duplicated_meter_reading.json", DOMAIN
     )
     with (
         patch(
             "PyTado.interface.api.Tado.set_eiq_meter_readings",
             return_value=json.loads(fixture),
         ),
-        pytest.raises(HomeAssistantError) as exc,
+        pytest.raises(menuaiError) as exc,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_ADD_METER_READING,
             service_data={

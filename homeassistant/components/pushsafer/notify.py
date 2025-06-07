@@ -11,7 +11,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
@@ -19,10 +19,10 @@ from homeassistant.components.notify import (
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import ATTR_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_ICON
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 _RESOURCE = "https://www.pushsafer.com/api"
@@ -60,13 +60,13 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> PushsaferNotificationService:
     """Get the Pushsafer.com notification service."""
     return PushsaferNotificationService(
-        config.get(CONF_DEVICE_KEY), hass.config.is_allowed_path
+        config.get(CONF_DEVICE_KEY), menuai.config.is_allowed_path
     )
 
 

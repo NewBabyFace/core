@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers.trigger import (
+from menuai.const import CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers.trigger import (
     TriggerActionType,
     TriggerInfo,
     TriggerProtocol,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .triggers import event, value_updated
 
@@ -28,19 +28,19 @@ def _get_trigger_platform(config: ConfigType) -> TriggerProtocol:
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     platform = _get_trigger_platform(config)
-    return await platform.async_validate_trigger_config(hass, config)
+    return await platform.async_validate_trigger_config(menuai, config)
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach trigger of specified platform."""
     platform = _get_trigger_platform(config)
-    return await platform.async_attach_trigger(hass, config, action, trigger_info)
+    return await platform.async_attach_trigger(menuai, config, action, trigger_info)

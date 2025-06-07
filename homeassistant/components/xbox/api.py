@@ -1,11 +1,11 @@
-"""API for xbox bound to Home Assistant OAuth."""
+"""API for xbox bound to MenuAI OAuth."""
 
 from xbox.webapi.authentication.manager import AuthenticationManager
 from xbox.webapi.authentication.models import OAuth2TokenResponse
 from xbox.webapi.common.signed_session import SignedSession
 
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.util.dt import utc_from_timestamp
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.util.dt import utc_from_timestamp
 
 
 class AsyncConfigEntryAuth(AuthenticationManager):
@@ -15,7 +15,7 @@ class AsyncConfigEntryAuth(AuthenticationManager):
         self, signed_session: SignedSession, oauth_session: OAuth2Session
     ) -> None:
         """Initialize xbox auth."""
-        # Leaving out client credentials as they are handled by Home Assistant
+        # Leaving out client credentials as they are handled by MenuAI
         super().__init__(signed_session, "", "", "")
         self._oauth_session = oauth_session
         self.oauth = self._get_oauth_token()

@@ -29,22 +29,22 @@ from zwave_js_server.model.value import (
 )
 from zwave_js_server.version import VersionInfo, get_server_version
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import (
     ATTR_AREA_ID,
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
     CONF_TYPE,
     __version__ as HA_VERSION,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.group import expand_entity_ids
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.group import expand_entity_ids
+from menuai.helpers.typing import ConfigType, VolSchemaType
 
 from .const import (
     ATTR_COMMAND_CLASS,
@@ -139,17 +139,17 @@ def get_value_of_zwave_value(value: ZwaveValue | None) -> Any | None:
 
 async def async_enable_statistics(driver: Driver) -> None:
     """Enable statistics on the driver."""
-    await driver.async_enable_statistics("Home Assistant", HA_VERSION)
+    await driver.async_enable_statistics("MenuAI", HA_VERSION)
 
 
 async def async_enable_server_logging_if_needed(
-    hass: HomeAssistant, entry: ConfigEntry, driver: Driver
+    menuai: menuai, entry: ConfigEntry, driver: Driver
 ) -> None:
     """Enable logging of zwave-js-server in the lib."""
     # If lib log level is set to debug, we want to enable server logging. First we
     # check if server log level is less verbose than library logging, and if so, set it
     # to debug to match library logging. We will store the old server log level in
-    # hass.data so we can reset it later
+    # menuai.data so we can reset it later
     if (
         not driver
         or not driver.client.connected
@@ -169,7 +169,7 @@ async def async_enable_server_logging_if_needed(
 
 
 async def async_disable_server_logging_if_needed(
-    hass: HomeAssistant, entry: ConfigEntry, driver: Driver
+    menuai: menuai, entry: ConfigEntry, driver: Driver
 ) -> None:
     """Disable logging of zwave-js-server in the lib if still connected to server."""
     if (
@@ -247,14 +247,14 @@ def get_home_and_node_id_from_device_entry(
 
 @callback
 def async_get_node_from_device_id(
-    hass: HomeAssistant, device_id: str, dev_reg: dr.DeviceRegistry | None = None
+    menuai: menuai, device_id: str, dev_reg: dr.DeviceRegistry | None = None
 ) -> ZwaveNode:
     """Get node from a device ID.
 
     Raises ValueError if device is invalid or node can't be found.
     """
     if not dev_reg:
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
 
     if not (device_entry := dev_reg.async_get(device_id)):
         raise ValueError(f"Device ID {device_id} is not valid")
@@ -265,7 +265,7 @@ def async_get_node_from_device_id(
     entry = next(
         (
             entry
-            for entry in hass.config_entries.async_entries(DOMAIN)
+            for entry in menuai.config_entries.async_entries(DOMAIN)
             if entry.entry_id in config_entry_ids
         ),
         None,
@@ -296,13 +296,13 @@ def async_get_node_from_device_id(
 
 
 async def async_get_provisioning_entry_from_device_id(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> ProvisioningEntry | None:
     """Get provisioning entry from a device ID.
 
     Raises ValueError if device is invalid
     """
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
 
     if not (device_entry := dev_reg.async_get(device_id)):
         raise ValueError(f"Device ID {device_id} is not valid")
@@ -313,7 +313,7 @@ async def async_get_provisioning_entry_from_device_id(
     entry = next(
         (
             entry
-            for entry in hass.config_entries.async_entries(DOMAIN)
+            for entry in menuai.config_entries.async_entries(DOMAIN)
             if entry.entry_id in config_entry_ids
         ),
         None,
@@ -344,7 +344,7 @@ async def async_get_provisioning_entry_from_device_id(
 
 @callback
 def async_get_node_from_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     ent_reg: er.EntityRegistry | None = None,
     dev_reg: dr.DeviceRegistry | None = None,
@@ -354,7 +354,7 @@ def async_get_node_from_entity_id(
     Raises ValueError if entity is invalid.
     """
     if not ent_reg:
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
     entity_entry = ent_reg.async_get(entity_id)
 
     if entity_entry is None or entity_entry.platform != DOMAIN:
@@ -363,12 +363,12 @@ def async_get_node_from_entity_id(
     # Assert for mypy, safe because we know that zwave_js entities are always
     # tied to a device
     assert entity_entry.device_id
-    return async_get_node_from_device_id(hass, entity_entry.device_id, dev_reg)
+    return async_get_node_from_device_id(menuai, entity_entry.device_id, dev_reg)
 
 
 @callback
 def async_get_nodes_from_area_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_id: str,
     ent_reg: er.EntityRegistry | None = None,
     dev_reg: dr.DeviceRegistry | None = None,
@@ -376,25 +376,25 @@ def async_get_nodes_from_area_id(
     """Get nodes for all Z-Wave JS devices and entities that are in an area."""
     nodes: set[ZwaveNode] = set()
     if ent_reg is None:
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
     if dev_reg is None:
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
     # Add devices for all entities in an area that are Z-Wave JS entities
     nodes.update(
         {
-            async_get_node_from_device_id(hass, entity.device_id, dev_reg)
+            async_get_node_from_device_id(menuai, entity.device_id, dev_reg)
             for entity in er.async_entries_for_area(ent_reg, area_id)
             if entity.platform == DOMAIN and entity.device_id is not None
         }
     )
     # Add devices in an area that are Z-Wave JS devices
     nodes.update(
-        async_get_node_from_device_id(hass, device.id, dev_reg)
+        async_get_node_from_device_id(menuai, device.id, dev_reg)
         for device in dr.async_entries_for_area(dev_reg, area_id)
         if any(
             cast(
                 ConfigEntry,
-                hass.config_entries.async_get_entry(config_entry_id),
+                menuai.config_entries.async_get_entry(config_entry_id),
             ).domain
             == DOMAIN
             for config_entry_id in device.config_entries
@@ -406,7 +406,7 @@ def async_get_nodes_from_area_id(
 
 @callback
 def async_get_nodes_from_targets(
-    hass: HomeAssistant,
+    menuai: menuai,
     val: dict[str, Any],
     ent_reg: er.EntityRegistry | None = None,
     dev_reg: dr.DeviceRegistry | None = None,
@@ -418,20 +418,20 @@ def async_get_nodes_from_targets(
     """
     nodes: set[ZwaveNode] = set()
     # Convert all entity IDs to nodes
-    for entity_id in expand_entity_ids(hass, val.get(ATTR_ENTITY_ID, [])):
+    for entity_id in expand_entity_ids(menuai, val.get(ATTR_ENTITY_ID, [])):
         try:
-            nodes.add(async_get_node_from_entity_id(hass, entity_id, ent_reg, dev_reg))
+            nodes.add(async_get_node_from_entity_id(menuai, entity_id, ent_reg, dev_reg))
         except ValueError as err:
             logger.warning(err.args[0])
 
     # Convert all area IDs to nodes
     for area_id in val.get(ATTR_AREA_ID, []):
-        nodes.update(async_get_nodes_from_area_id(hass, area_id, ent_reg, dev_reg))
+        nodes.update(async_get_nodes_from_area_id(menuai, area_id, ent_reg, dev_reg))
 
     # Convert all device IDs to nodes
     for device_id in val.get(ATTR_DEVICE_ID, []):
         try:
-            nodes.add(async_get_node_from_device_id(hass, device_id, dev_reg))
+            nodes.add(async_get_node_from_device_id(menuai, device_id, dev_reg))
         except ValueError as err:
             logger.warning(err.args[0])
 
@@ -458,10 +458,10 @@ def get_zwave_value_from_config(node: ZwaveNode, config: ConfigType) -> ZwaveVal
     return node.values[value_id]
 
 
-def _zwave_js_config_entry(hass: HomeAssistant, device: dr.DeviceEntry) -> str | None:
+def _zwave_js_config_entry(menuai: menuai, device: dr.DeviceEntry) -> str | None:
     """Find zwave_js config entry from a device."""
     for entry_id in device.config_entries:
-        entry = hass.config_entries.async_get_entry(entry_id)
+        entry = menuai.config_entries.async_get_entry(entry_id)
         if entry and entry.domain == DOMAIN:
             return entry_id
     return None
@@ -469,26 +469,26 @@ def _zwave_js_config_entry(hass: HomeAssistant, device: dr.DeviceEntry) -> str |
 
 @callback
 def async_get_node_status_sensor_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_id: str,
     ent_reg: er.EntityRegistry | None = None,
     dev_reg: dr.DeviceRegistry | None = None,
 ) -> str | None:
     """Get the node status sensor entity ID for a given Z-Wave JS device."""
     if not ent_reg:
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
     if not dev_reg:
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
     if not (device := dev_reg.async_get(device_id)):
-        raise HomeAssistantError("Invalid Device ID provided")
+        raise menuaiError("Invalid Device ID provided")
 
-    if not (entry_id := _zwave_js_config_entry(hass, device)):
+    if not (entry_id := _zwave_js_config_entry(menuai, device)):
         return None
 
-    entry = hass.config_entries.async_get_entry(entry_id)
+    entry = menuai.config_entries.async_get_entry(entry_id)
     assert entry
     client = entry.runtime_data[DATA_CLIENT]
-    node = async_get_node_from_device_id(hass, device_id, dev_reg)
+    node = async_get_node_from_device_id(menuai, device_id, dev_reg)
     return ent_reg.async_get_entity_id(
         SENSOR_DOMAIN,
         DOMAIN,
@@ -565,23 +565,23 @@ def get_device_info(driver: Driver, node: ZwaveNode) -> DeviceInfo:
 
 
 def get_network_identifier_for_notification(
-    hass: HomeAssistant, config_entry: ConfigEntry, controller: Controller
+    menuai: menuai, config_entry: ConfigEntry, controller: Controller
 ) -> str:
     """Return the network identifier string for persistent notifications."""
     home_id = str(controller.home_id)
-    if len(hass.config_entries.async_entries(DOMAIN)) > 1:
+    if len(menuai.config_entries.async_entries(DOMAIN)) > 1:
         if str(home_id) != config_entry.title:
             return f"`{config_entry.title}`, with the home ID `{home_id}`,"
         return f"with the home ID `{home_id}`"
     return ""
 
 
-async def async_get_version_info(hass: HomeAssistant, ws_address: str) -> VersionInfo:
+async def async_get_version_info(menuai: menuai, ws_address: str) -> VersionInfo:
     """Return Z-Wave JS version info."""
     try:
         async with asyncio.timeout(SERVER_VERSION_TIMEOUT):
             version_info: VersionInfo = await get_server_version(
-                ws_address, async_get_clientsession(hass)
+                ws_address, async_get_clientsession(menuai)
             )
     except (TimeoutError, aiohttp.ClientError) as err:
         # We don't want to spam the log if the add-on isn't started
@@ -592,5 +592,5 @@ async def async_get_version_info(hass: HomeAssistant, ws_address: str) -> Versio
     return version_info
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Indicate connection error."""

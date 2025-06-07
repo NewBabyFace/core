@@ -12,11 +12,11 @@ from pyvesync.vesyncoutlet import VeSyncOutlet
 from pyvesync.vesyncswitch import VeSyncSwitch
 import requests_mock
 
-from homeassistant.components.vesync import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.vesync import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType
 
 from .common import mock_multiple_device_responses
 
@@ -24,20 +24,20 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(hass: HomeAssistant, config) -> ConfigEntry:
+def config_entry_fixture(menuai: menuai, config) -> ConfigEntry:
     """Create a mock VeSync config entry."""
     entry = MockConfigEntry(
         title="VeSync",
         domain=DOMAIN,
         data=config[DOMAIN],
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 @pytest.fixture(name="config")
 def config_fixture() -> ConfigType:
-    """Create hass config fixture."""
+    """Create menuai config fixture."""
     return {DOMAIN: {CONF_USERNAME: "user", CONF_PASSWORD: "pass"}}
 
 
@@ -67,7 +67,7 @@ def manager_fixture() -> VeSync:
     mock_vesync.time_zone = "America/New_York"
     mock = Mock(return_value=mock_vesync)
 
-    with patch("homeassistant.components.vesync.VeSync", new=mock):
+    with patch("menuai.components.vesync.VeSync", new=mock):
         yield mock_vesync
 
 
@@ -165,7 +165,7 @@ def humidifier_300s_fixture():
 
 @pytest.fixture(name="humidifier_config_entry")
 async def humidifier_config_entry(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker, config
+    menuai: menuai, requests_mock: requests_mock.Mocker, config
 ) -> MockConfigEntry:
     """Create a mock VeSync config entry for `Humidifier 200s`."""
     entry = MockConfigEntry(
@@ -173,19 +173,19 @@ async def humidifier_config_entry(
         domain=DOMAIN,
         data=config[DOMAIN],
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     device_name = "Humidifier 200s"
     mock_multiple_device_responses(requests_mock, [device_name])
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 
 
 @pytest.fixture
 async def install_humidifier_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     manager,
     request: pytest.FixtureRequest,
@@ -194,13 +194,13 @@ async def install_humidifier_device(
 
     # Install the defined humidifier
     manager._dev_list["fans"].append(request.getfixturevalue(request.param))
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture(name="fan_config_entry")
 async def fan_config_entry(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker, config
+    menuai: menuai, requests_mock: requests_mock.Mocker, config
 ) -> MockConfigEntry:
     """Create a mock VeSync config entry for `SmartTowerFan`."""
     entry = MockConfigEntry(
@@ -208,19 +208,19 @@ async def fan_config_entry(
         domain=DOMAIN,
         data=config[DOMAIN],
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     device_name = "SmartTowerFan"
     mock_multiple_device_responses(requests_mock, [device_name])
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 
 
 @pytest.fixture(name="switch_old_id_config_entry")
 async def switch_old_id_config_entry(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker, config
+    menuai: menuai, requests_mock: requests_mock.Mocker, config
 ) -> MockConfigEntry:
     """Create a mock VeSync config entry for `switch` with the old unique ID approach."""
     entry = MockConfigEntry(
@@ -230,7 +230,7 @@ async def switch_old_id_config_entry(
         version=1,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     wall_switch = "Wall Switch"
     humidifer = "Humidifier 200s"

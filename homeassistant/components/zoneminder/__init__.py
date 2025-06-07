@@ -6,7 +6,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 import voluptuous as vol
 from zoneminder.zm import ZoneMinder
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PATH,
@@ -15,10 +15,10 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .services import register_services
@@ -50,10 +50,10 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the ZoneMinder component."""
 
-    hass.data[DOMAIN] = {}
+    menuai.data[DOMAIN] = {}
 
     success = True
 
@@ -70,10 +70,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             conf.get(CONF_PATH_ZMS),
             conf.get(CONF_VERIFY_SSL),
         )
-        hass.data[DOMAIN][host_name] = zm_client
+        menuai.data[DOMAIN][host_name] = zm_client
 
         try:
-            success = await hass.async_add_executor_job(zm_client.login) and success
+            success = await menuai.async_add_executor_job(zm_client.login) and success
         except RequestsConnectionError as ex:
             _LOGGER.error(
                 "ZoneMinder connection failure to %s: %s",
@@ -81,10 +81,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 ex,
             )
 
-    register_services(hass)
+    register_services(menuai)
 
-    hass.async_create_task(
-        async_load_platform(hass, Platform.BINARY_SENSOR, DOMAIN, {}, config)
+    menuai.async_create_task(
+        async_load_platform(menuai, Platform.BINARY_SENSOR, DOMAIN, {}, config)
     )
 
     return success

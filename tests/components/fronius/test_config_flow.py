@@ -5,12 +5,12 @@ from unittest.mock import patch
 from pyfronius import FroniusError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.fronius.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries
+from menuai.components.fronius.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import mock_responses
 
@@ -22,7 +22,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 def no_setup():
     """Disable setting up the whole integration in config_flow tests."""
     with patch(
-        "homeassistant.components.fronius.async_setup_entry",
+        "menuai.components.fronius.async_setup_entry",
         return_value=True,
     ):
         yield
@@ -44,19 +44,19 @@ MOCK_DHCP_DATA = DhcpServiceInfo(
 )
 
 
-async def assert_finish_flow_with_logger(hass: HomeAssistant, flow_id: str) -> None:
+async def assert_finish_flow_with_logger(menuai: menuai, flow_id: str) -> None:
     """Assert finishing the flow with a logger device."""
     with patch(
         "pyfronius.Fronius.current_logger_info",
         return_value=LOGGER_INFO_RETURN_VALUE,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id,
             {
                 "host": "10.9.8.1",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "SolarNet Datalogger at 10.9.8.1"
@@ -68,39 +68,39 @@ async def assert_finish_flow_with_logger(hass: HomeAssistant, flow_id: str) -> N
 
 
 async def assert_abort_flow_with_logger(
-    hass: HomeAssistant, flow_id: str, reason: str
+    menuai: menuai, flow_id: str, reason: str
 ) -> config_entries.ConfigFlowResult:
     """Assert the flow was aborted when a logger device responded."""
     with patch(
         "pyfronius.Fronius.current_logger_info",
         return_value=LOGGER_INFO_RETURN_VALUE,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id,
             {
                 "host": "10.9.8.1",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == reason
     return result
 
 
-async def test_form_with_logger(hass: HomeAssistant) -> None:
+async def test_form_with_logger(menuai: menuai) -> None:
     """Test the basic flow with a logger device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
-    await assert_finish_flow_with_logger(hass, result["flow_id"])
+    await assert_finish_flow_with_logger(menuai, result["flow_id"])
 
 
-async def test_form_with_inverter(hass: HomeAssistant) -> None:
+async def test_form_with_inverter(menuai: menuai) -> None:
     """Test the basic flow with a Gen24 device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -116,13 +116,13 @@ async def test_form_with_inverter(hass: HomeAssistant) -> None:
             return_value=INVERTER_INFO_RETURN_VALUE,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "10.9.1.1",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "SolarNet Inverter at 10.9.1.1"
@@ -141,11 +141,11 @@ async def test_form_with_inverter(hass: HomeAssistant) -> None:
     ],
 )
 async def test_form_cannot_connect(
-    hass: HomeAssistant, inverter_side_effect: type[FroniusError] | None
+    menuai: menuai, inverter_side_effect: type[FroniusError] | None
 ) -> None:
     """Test we handle cannot connect error."""
     INVERTER_INFO_NONE: dict[str, list] = {"inverters": []}
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -160,7 +160,7 @@ async def test_form_cannot_connect(
             return_value=INVERTER_INFO_NONE,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -169,12 +169,12 @@ async def test_form_cannot_connect(
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
-    await assert_finish_flow_with_logger(hass, result2["flow_id"])
+    await assert_finish_flow_with_logger(menuai, result2["flow_id"])
 
 
-async def test_form_unexpected(hass: HomeAssistant) -> None:
+async def test_form_unexpected(menuai: menuai) -> None:
     """Test we handle unexpected error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -182,7 +182,7 @@ async def test_form_unexpected(hass: HomeAssistant) -> None:
         "pyfronius.Fronius.current_logger_info",
         side_effect=KeyError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -191,28 +191,28 @@ async def test_form_unexpected(hass: HomeAssistant) -> None:
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "unknown"}
-    await assert_finish_flow_with_logger(hass, result2["flow_id"])
+    await assert_finish_flow_with_logger(menuai, result2["flow_id"])
 
 
-async def test_form_already_existing(hass: HomeAssistant) -> None:
+async def test_form_already_existing(menuai: menuai) -> None:
     """Test existing entry."""
     MockConfigEntry(
         domain=DOMAIN,
         unique_id=LOGGER_INFO_RETURN_VALUE["unique_identifier"]["value"],
         data={CONF_HOST: "10.9.8.1", "is_logger": True},
-    ).add_to_hass(hass)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    ).add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await assert_abort_flow_with_logger(
-        hass, result["flow_id"], reason="already_configured"
+        menuai, result["flow_id"], reason="already_configured"
     )
 
 
 async def test_config_flow_already_configured(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test existing entry doesn't get updated by config flow."""
     old_host = "http://10.1.0.1"
@@ -225,29 +225,29 @@ async def test_config_flow_already_configured(
             "is_logger": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     mock_responses(aioclient_mock, host=old_host)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_responses(aioclient_mock, host=new_host)
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "host": new_host,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_configured"
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].data == {
         "host": old_host,  # not updated from config flow - only from reconfigure flow
@@ -255,22 +255,22 @@ async def test_config_flow_already_configured(
     }
 
 
-async def test_dhcp(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+async def test_dhcp(menuai: menuai, aioclient_mock: AiohttpClientMocker) -> None:
     """Test starting a flow from discovery."""
     with (
-        patch("homeassistant.components.fronius.config_flow.DHCP_REQUEST_DELAY", 0),
+        patch("menuai.components.fronius.config_flow.DHCP_REQUEST_DELAY", 0),
         patch(
             "pyfronius.Fronius.current_logger_info",
             return_value=LOGGER_INFO_RETURN_VALUE,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=MOCK_DHCP_DATA
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm_discovery"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -283,7 +283,7 @@ async def test_dhcp(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) ->
 
 
 async def test_dhcp_already_configured(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test starting a flow from discovery."""
     entry = MockConfigEntry(
@@ -294,9 +294,9 @@ async def test_dhcp_already_configured(
             "is_logger": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=MOCK_DHCP_DATA
     )
     assert result["type"] is FlowResultType.ABORT
@@ -304,11 +304,11 @@ async def test_dhcp_already_configured(
 
 
 async def test_dhcp_invalid(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test starting a flow from discovery."""
     with (
-        patch("homeassistant.components.fronius.config_flow.DHCP_REQUEST_DELAY", 0),
+        patch("menuai.components.fronius.config_flow.DHCP_REQUEST_DELAY", 0),
         patch(
             "pyfronius.Fronius.current_logger_info",
             side_effect=FroniusError,
@@ -318,14 +318,14 @@ async def test_dhcp_invalid(
             side_effect=FroniusError,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=MOCK_DHCP_DATA
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "invalid_host"
 
 
-async def test_reconfigure(hass: HomeAssistant) -> None:
+async def test_reconfigure(menuai: menuai) -> None:
     """Test reconfiguring an entry."""
     old_host = "http://10.1.0.1"
     new_host = "http://10.1.0.2"
@@ -337,9 +337,9 @@ async def test_reconfigure(hass: HomeAssistant) -> None:
             "is_logger": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
@@ -353,13 +353,13 @@ async def test_reconfigure(hass: HomeAssistant) -> None:
             return_value=INVERTER_INFO_RETURN_VALUE,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 "host": new_host,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -369,7 +369,7 @@ async def test_reconfigure(hass: HomeAssistant) -> None:
     }
 
 
-async def test_reconfigure_cannot_connect(hass: HomeAssistant) -> None:
+async def test_reconfigure_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -379,9 +379,9 @@ async def test_reconfigure_cannot_connect(hass: HomeAssistant) -> None:
             "is_logger": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     with (
         patch(
@@ -393,7 +393,7 @@ async def test_reconfigure_cannot_connect(hass: HomeAssistant) -> None:
             side_effect=FroniusError,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -404,11 +404,11 @@ async def test_reconfigure_cannot_connect(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
     await assert_abort_flow_with_logger(
-        hass, result2["flow_id"], reason="reconfigure_successful"
+        menuai, result2["flow_id"], reason="reconfigure_successful"
     )
 
 
-async def test_reconfigure_unexpected(hass: HomeAssistant) -> None:
+async def test_reconfigure_unexpected(menuai: menuai) -> None:
     """Test we handle unexpected error."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -418,15 +418,15 @@ async def test_reconfigure_unexpected(hass: HomeAssistant) -> None:
             "is_logger": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     with patch(
         "pyfronius.Fronius.current_logger_info",
         side_effect=KeyError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -437,11 +437,11 @@ async def test_reconfigure_unexpected(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "unknown"}
 
     await assert_abort_flow_with_logger(
-        hass, result2["flow_id"], reason="reconfigure_successful"
+        menuai, result2["flow_id"], reason="reconfigure_successful"
     )
 
 
-async def test_reconfigure_to_different_device(hass: HomeAssistant) -> None:
+async def test_reconfigure_to_different_device(menuai: menuai) -> None:
     """Test reconfiguring an entry to a different device."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -451,12 +451,12 @@ async def test_reconfigure_to_different_device(hass: HomeAssistant) -> None:
             "is_logger": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     await assert_abort_flow_with_logger(
-        hass, result["flow_id"], reason="unique_id_mismatch"
+        menuai, result["flow_id"], reason="unique_id_mismatch"
     )

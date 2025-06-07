@@ -10,17 +10,17 @@ from aiohttp import StreamReader
 from synology_dsm.api.file_station import SynoFileStation
 from synology_dsm.exceptions import SynologyDSMAPIErrorException
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AgentBackup,
     BackupAgent,
     BackupAgentError,
     BackupNotFound,
     suggested_filename,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import ChunkAsyncStreamIterator
-from homeassistant.helpers.json import json_dumps
-from homeassistant.util.json import JsonObjectType, json_loads_object
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import ChunkAsyncStreamIterator
+from menuai.helpers.json import json_dumps
+from menuai.util.json import JsonObjectType, json_loads_object
 
 from .const import (
     CONF_BACKUP_PATH,
@@ -43,17 +43,17 @@ def suggested_filenames(backup: AgentBackup) -> tuple[str, str]:
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[BackupAgent]:
     """Return a list of backup agents."""
-    entries: list[SynologyDSMConfigEntry] = hass.config_entries.async_loaded_entries(
+    entries: list[SynologyDSMConfigEntry] = menuai.config_entries.async_loaded_entries(
         DOMAIN
     )
     if not entries:
         LOGGER.debug("No proper config entry found")
         return []
     return [
-        SynologyDSMBackupAgent(hass, entry, entry.unique_id)
+        SynologyDSMBackupAgent(menuai, entry, entry.unique_id)
         for entry in entries
         if entry.unique_id is not None
         and entry.runtime_data.api.file_station
@@ -64,7 +64,7 @@ async def async_get_backup_agents(
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
@@ -73,14 +73,14 @@ def async_register_backup_agents_listener(
 
     :return: A function to unregister the listener.
     """
-    hass.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
+    menuai.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
 
     @callback
     def remove_listener() -> None:
         """Remove the listener."""
-        hass.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
-        if not hass.data[DATA_BACKUP_AGENT_LISTENERS]:
-            del hass.data[DATA_BACKUP_AGENT_LISTENERS]
+        menuai.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
+        if not menuai.data[DATA_BACKUP_AGENT_LISTENERS]:
+            del menuai.data[DATA_BACKUP_AGENT_LISTENERS]
 
     return remove_listener
 
@@ -91,7 +91,7 @@ class SynologyDSMBackupAgent(BackupAgent):
     domain = DOMAIN
 
     def __init__(
-        self, hass: HomeAssistant, entry: SynologyDSMConfigEntry, unique_id: str
+        self, menuai: menuai, entry: SynologyDSMConfigEntry, unique_id: str
     ) -> None:
         """Initialize the Synology DSM backup agent."""
         super().__init__()

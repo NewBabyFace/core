@@ -5,11 +5,11 @@ from typing import Any
 import aiohttp
 from myuplink import DevicePoint
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, F_SERIES
 from .coordinator import MyUplinkConfigEntry, MyUplinkDataCoordinator
@@ -53,7 +53,7 @@ def get_description(device_point: DevicePoint) -> SwitchEntityDescription | None
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MyUplinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -128,7 +128,7 @@ class MyUplinkDevicePointSwitch(MyUplinkEntity, SwitchEntity):
                 self.device_id, data={self.point_id: mode}
             )
         except aiohttp.ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_switch_error",
                 translation_placeholders={

@@ -27,14 +27,14 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
-from homeassistant.helpers.recorder import (  # noqa: F401
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, issue_registry as ir
+from menuai.helpers.recorder import (  # noqa: F401
     DATA_INSTANCE,
     get_instance,
     session_scope,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import DEFAULT_MAX_BIND_VARS, DOMAIN, SQLITE_URL_PREFIX, SupportedDialect
 from .db_schema import (
@@ -340,8 +340,8 @@ def _fail_unsupported_dialect(dialect_name: str) -> NoReturn:
     """Warn about unsupported database version."""
     _LOGGER.error(
         (
-            "Database %s is not supported; Home Assistant supports %s. "
-            "Starting with Home Assistant 2022.6 this prevents the recorder from "
+            "Database %s is not supported; MenuAI supports %s. "
+            "Starting with MenuAI 2022.6 this prevents the recorder from "
             "starting. Please migrate your database to a supported software"
         ),
         dialect_name,
@@ -357,7 +357,7 @@ def _raise_if_version_unsupported(
     _LOGGER.error(
         (
             "Version %s of %s is not supported; minimum supported version is %s. "
-            "Starting with Home Assistant 2022.6 this prevents the recorder from "
+            "Starting with MenuAI 2022.6 this prevents the recorder from "
             "starting. Please upgrade your database software"
         ),
         server_version,
@@ -411,7 +411,7 @@ def build_mysqldb_conv() -> dict:
 
 @callback
 def _async_create_mariadb_range_index_regression_issue(
-    hass: HomeAssistant, version: AwesomeVersion
+    menuai: menuai, version: AwesomeVersion
 ) -> None:
     """Create an issue for the index range regression in older MariaDB.
 
@@ -426,7 +426,7 @@ def _async_create_mariadb_range_index_regression_issue(
     else:
         min_version = RECOMMENDED_MIN_VERSION_MARIA_DB
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         "maria_db_range_index_regression",
         is_fixable=False,
@@ -439,12 +439,12 @@ def _async_create_mariadb_range_index_regression_issue(
 
 @callback
 def async_create_backup_failure_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     local_start_time: datetime,
 ) -> None:
     """Create an issue when the backup fails because we run out of resources."""
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         "backup_failed_out_of_resources",
         is_fixable=False,
@@ -518,9 +518,9 @@ def setup_connection_for_dialect(
                     or (MARIA_DB_107 <= version < RECOMMENDED_MIN_VERSION_MARIA_DB_107)
                     or (MARIA_DB_108 <= version < RECOMMENDED_MIN_VERSION_MARIA_DB_108)
                 ):
-                    instance.hass.add_job(
+                    instance.menuai.add_job(
                         _async_create_mariadb_range_index_regression_issue,
-                        instance.hass,
+                        instance.menuai,
                         version,
                     )
                 slow_range_in_select = bool(
@@ -759,26 +759,26 @@ def write_lock_db_sqlite(instance: Recorder) -> Generator[None]:
             connection.execute(text("END;"))
 
 
-def async_migration_in_progress(hass: HomeAssistant) -> bool:
+def async_migration_in_progress(menuai: menuai) -> bool:
     """Determine if a migration is in progress.
 
     This is a thin wrapper that allows us to change
     out the implementation later.
     """
-    if DATA_INSTANCE not in hass.data:
+    if DATA_INSTANCE not in menuai.data:
         return False
-    return hass.data[DATA_INSTANCE].migration_in_progress
+    return menuai.data[DATA_INSTANCE].migration_in_progress
 
 
-def async_migration_is_live(hass: HomeAssistant) -> bool:
+def async_migration_is_live(menuai: menuai) -> bool:
     """Determine if a migration is live.
 
     This is a thin wrapper that allows us to change
     out the implementation later.
     """
-    if DATA_INSTANCE not in hass.data:
+    if DATA_INSTANCE not in menuai.data:
         return False
-    return hass.data[DATA_INSTANCE].migration_is_live
+    return menuai.data[DATA_INSTANCE].migration_is_live
 
 
 def second_sunday(year: int, month: int) -> date:

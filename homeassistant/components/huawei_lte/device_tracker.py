@@ -8,16 +8,16 @@ from typing import Any, cast
 
 from stringcase import snakecase
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     ScannerEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import Router
 from .const import (
@@ -51,7 +51,7 @@ def _get_hosts(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,13 +60,13 @@ async def async_setup_entry(
     # Grab hosts list once to examine whether the initial fetch has got some data for
     # us, i.e. if wlan host list is supported. Only set up a subscription and proceed
     # with adding and tracking entities if it is.
-    router = hass.data[DOMAIN].routers[config_entry.entry_id]
+    router = menuai.data[DOMAIN].routers[config_entry.entry_id]
     if (hosts := _get_hosts(router, True)) is None:
         return
 
     # Initialize already tracked entities
     tracked: set[str] = set()
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     known_entities: list[Entity] = []
     track_wired_clients = router.config_entry.options.get(
         CONF_TRACK_WIRED_CLIENTS, DEFAULT_TRACK_WIRED_CLIENTS
@@ -99,7 +99,7 @@ async def async_setup_entry(
 
     # Register to handle router data updates
     disconnect_dispatcher = async_dispatcher_connect(
-        hass, UPDATE_SIGNAL, _async_maybe_add_new_entities
+        menuai, UPDATE_SIGNAL, _async_maybe_add_new_entities
     )
     config_entry.async_on_unload(disconnect_dispatcher)
 

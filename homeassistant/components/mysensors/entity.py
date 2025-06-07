@@ -9,18 +9,18 @@ from typing import Any
 from mysensors import BaseAsyncGateway, Sensor
 from mysensors.sensor import ChildSensor
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     CONF_DEVICE,
     STATE_OFF,
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import menuai, callback
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import (
     CHILD_CALLBACK,
@@ -45,7 +45,7 @@ MYSENSORS_PLATFORM_DEVICES = "mysensors_devices_{}"
 class MySensorNodeEntity(Entity):
     """Representation of a MySensors device."""
 
-    hass: HomeAssistant
+    menuai: menuai
 
     def __init__(
         self, gateway_id: GatewayId, gateway: BaseAsyncGateway, node_id: int
@@ -113,7 +113,7 @@ class MySensorNodeEntity(Entity):
         """Update the device after delay."""
         if not self._debouncer:
             self._debouncer = Debouncer(
-                self.hass,
+                self.menuai,
                 _LOGGER,
                 cooldown=UPDATE_DELAY,
                 immediate=False,
@@ -122,11 +122,11 @@ class MySensorNodeEntity(Entity):
 
         await self._debouncer.async_call()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 NODE_CALLBACK.format(self.gateway_id, self.node_id),
                 self.async_update_callback,
             )
@@ -135,12 +135,12 @@ class MySensorNodeEntity(Entity):
 
 
 def get_mysensors_devices(
-    hass: HomeAssistant, domain: Platform
+    menuai: menuai, domain: Platform
 ) -> dict[DevId, MySensorsChildEntity]:
-    """Return MySensors devices for a hass platform name."""
-    if MYSENSORS_PLATFORM_DEVICES.format(domain) not in hass.data[DOMAIN]:
-        hass.data[DOMAIN][MYSENSORS_PLATFORM_DEVICES.format(domain)] = {}
-    devices: dict[DevId, MySensorsChildEntity] = hass.data[DOMAIN][
+    """Return MySensors devices for a menuai platform name."""
+    if MYSENSORS_PLATFORM_DEVICES.format(domain) not in menuai.data[DOMAIN]:
+        menuai.data[DOMAIN][MYSENSORS_PLATFORM_DEVICES.format(domain)] = {}
+    devices: dict[DevId, MySensorsChildEntity] = menuai.data[DOMAIN][
         MYSENSORS_PLATFORM_DEVICES.format(domain)
     ]
     return devices
@@ -181,7 +181,7 @@ class MySensorsChildEntity(MySensorNodeEntity):
 
     @property
     def unique_id(self) -> str:
-        """Return a unique ID for use in home assistant."""
+        """Return a unique ID for use in MenuAI."""
         return f"{self.gateway_id}-{self.node_id}-{self.child_id}-{self.value_type}"
 
     @property
@@ -193,12 +193,12 @@ class MySensorsChildEntity(MySensorNodeEntity):
             return str(child.description)
         return f"{self.node_name} {self.child_id}"
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Remove this entity from home assistant."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Remove this entity from MenuAI."""
         for platform in PLATFORM_TYPES:
             platform_str = MYSENSORS_PLATFORM_DEVICES.format(platform)
-            if platform_str in self.hass.data[DOMAIN]:
-                platform_dict = self.hass.data[DOMAIN][platform_str]
+            if platform_str in self.menuai.data[DOMAIN]:
+                platform_dict = self.menuai.data[DOMAIN][platform_str]
                 if self.dev_id in platform_dict:
                     del platform_dict[self.dev_id]
                     _LOGGER.debug("Deleted %s from platform %s", self.dev_id, platform)
@@ -259,12 +259,12 @@ class MySensorsChildEntity(MySensorNodeEntity):
         self._async_update()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 CHILD_CALLBACK.format(*self.dev_id),
                 self.async_update_callback,
             )

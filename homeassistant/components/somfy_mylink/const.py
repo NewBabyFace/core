@@ -1,6 +1,6 @@
 """Component for the Somfy MyLink device supporting the Synergy API."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 CONF_SYSTEM_ID = "system_id"
 CONF_REVERSE = "reverse"

@@ -7,7 +7,7 @@ from typing import Any, Concatenate
 
 from homewizard_energy.errors import DisabledError, RequestError
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 from .entity import HomeWizardEntity
@@ -29,15 +29,15 @@ def homewizard_exception_handler[_HomeWizardEntityT: HomeWizardEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except RequestError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
             ) from ex
         except DisabledError as ex:
-            await self.hass.config_entries.async_reload(
+            await self.menuai.config_entries.async_reload(
                 self.coordinator.config_entry.entry_id
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="api_disabled",
             ) from ex

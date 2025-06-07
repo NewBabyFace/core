@@ -7,10 +7,10 @@ import aiohttp
 from pyjuicenet import Api, TokenError
 import voluptuous as vol
 
-from homeassistant import core, exceptions
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai import core, exceptions
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -19,12 +19,12 @@ _LOGGER = logging.getLogger(__name__)
 DATA_SCHEMA = vol.Schema({vol.Required(CONF_ACCESS_TOKEN): str})
 
 
-async def validate_input(hass: core.HomeAssistant, data):
+async def validate_input(menuai: core.menuai, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     juicenet = Api(data[CONF_ACCESS_TOKEN], session)
 
     try:
@@ -55,7 +55,7 @@ class JuiceNetConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
                 return self.async_create_entry(title=info["title"], data=user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -74,9 +74,9 @@ class JuiceNetConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_user(import_data)
 
 
-class CannotConnect(exceptions.HomeAssistantError):
+class CannotConnect(exceptions.menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(exceptions.HomeAssistantError):
+class InvalidAuth(exceptions.menuaiError):
     """Error to indicate there is invalid auth."""

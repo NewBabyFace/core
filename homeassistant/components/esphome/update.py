@@ -13,18 +13,18 @@ from aioesphomeapi import (
     UpdateState,
 )
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util.enum import try_parse_enum
 
 from .const import DOMAIN
 from .coordinator import ESPHomeDashboardCoordinator
@@ -46,13 +46,13 @@ NO_FEATURES = UpdateEntityFeature(0)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ESPHomeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up ESPHome update based on a config entry."""
     await platform_async_setup_entry(
-        hass,
+        menuai,
         entry,
         async_add_entities,
         info_type=UpdateInfo,
@@ -60,7 +60,7 @@ async def async_setup_entry(
         state_type=UpdateState,
     )
 
-    if (dashboard := async_get_dashboard(hass)) is None:
+    if (dashboard := async_get_dashboard(menuai)) is None:
         return
     entry_data = entry.runtime_data
     assert entry_data.device_info is not None
@@ -185,9 +185,9 @@ class ESPHomeDashboardUpdateEntity(
         self._update_attrs()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Handle entity added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle entity added to MenuAI."""
+        await super().async_added_to_menuai()
         entry_data = self._entry_data
         self.async_on_remove(
             entry_data.async_subscribe_static_info_updated(self._handle_device_update)
@@ -196,8 +196,8 @@ class ESPHomeDashboardUpdateEntity(
             entry_data.async_subscribe_device_updated(self._handle_device_update)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Handle entity about to be removed from Home Assistant."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Handle entity about to be removed from MenuAI."""
         if self._available_future and not self._available_future.done():
             self._available_future.cancel()
             self._available_future = None
@@ -208,7 +208,7 @@ class ESPHomeDashboardUpdateEntity(
         # and connect to the network to be able to install the update.
         if self._entry_data.available:
             return
-        self._available_future = self.hass.loop.create_future()
+        self._available_future = self.menuai.loop.create_future()
         try:
             await self._available_future
         finally:
@@ -219,7 +219,7 @@ class ESPHomeDashboardUpdateEntity(
     ) -> None:
         """Install an update."""
         if self._install_lock.locked():
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="ota_in_progress",
                 translation_placeholders={
@@ -230,14 +230,14 @@ class ESPHomeDashboardUpdateEntity(
         # Ensure only one OTA per device at a time
         async with self._install_lock:
             # Ensure only one compile at a time for ALL devices
-            async with self.hass.data.setdefault(KEY_UPDATE_LOCK, asyncio.Lock()):
+            async with self.menuai.data.setdefault(KEY_UPDATE_LOCK, asyncio.Lock()):
                 coordinator = self.coordinator
                 api = coordinator.api
                 device = coordinator.data.get(self._device_info.name)
                 assert device is not None
                 configuration = device["configuration"]
                 if not await api.compile(configuration):
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="error_compiling",
                         translation_placeholders={
@@ -256,7 +256,7 @@ class ESPHomeDashboardUpdateEntity(
                     if await api.upload(configuration, "OTA"):
                         break
                     if attempt == attempts:
-                        raise HomeAssistantError(
+                        raise menuaiError(
                             translation_domain=DOMAIN,
                             translation_key="error_uploading",
                             translation_placeholders={

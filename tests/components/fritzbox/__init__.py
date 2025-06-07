@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import Mock
 
-from homeassistant.components.fritzbox.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.fritzbox.const import DOMAIN
+from menuai.core import menuai
 
 from .const import (
     CONF_FAKE_AIN,
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry
 
 
 async def setup_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, Any],
     unique_id: str = "any",
     device: Mock | None = None,
@@ -32,16 +32,16 @@ async def setup_config_entry(
         data=data,
         unique_id=unique_id,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     if device is not None and fritz is not None:
         fritz().get_devices.return_value = [device]
 
     if template is not None and fritz is not None:
         fritz().get_templates.return_value = [template]
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     if device is not None:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     return entry
 
 

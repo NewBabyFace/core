@@ -10,10 +10,10 @@ from pytradfri import Gateway, RequestError
 from pytradfri.api.aiocoap_api import APIFactory
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -57,7 +57,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
             host = cast(str, user_input.get(CONF_HOST, self._host))
             try:
                 auth = await authenticate(
-                    self.hass, host, user_input[KEY_SECURITY_CODE]
+                    self.menuai, host, user_input[KEY_SECURITY_CODE]
                 )
 
                 return await self._entry_from_data(auth)
@@ -95,7 +95,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
             # Backwards compat, we update old entries
             if not entry.unique_id:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry,
                     unique_id=discovery_info.properties[ATTR_PROPERTIES_ID],
                 )
@@ -120,7 +120,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         if same_hub_entries:
             await asyncio.wait(
                 [
-                    asyncio.create_task(self.hass.config_entries.async_remove(entry_id))
+                    asyncio.create_task(self.menuai.config_entries.async_remove(entry_id))
                     for entry_id in same_hub_entries
                 ]
             )
@@ -129,7 +129,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
 
 async def authenticate(
-    hass: HomeAssistant, host: str, security_code: str
+    menuai: menuai, host: str, security_code: str
 ) -> dict[str, str | bool]:
     """Authenticate with a Tradfri hub."""
 
@@ -148,11 +148,11 @@ async def authenticate(
         await api_factory.shutdown()
     if key is None:
         raise AuthError("cannot_authenticate")
-    return await get_gateway_info(hass, host, identity, key)
+    return await get_gateway_info(menuai, host, identity, key)
 
 
 async def get_gateway_info(
-    hass: HomeAssistant, host: str, identity: str, key: str
+    menuai: menuai, host: str, identity: str, key: str
 ) -> dict[str, str | bool]:
     """Return info for the gateway."""
 

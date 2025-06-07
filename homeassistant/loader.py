@@ -1,4 +1,4 @@
-"""The methods for loading Home Assistant integrations.
+"""The methods for loading MenuAI integrations.
 
 This module has quite some complex parts. I have tried to add as much
 documentation as possible to keep it understandable.
@@ -30,7 +30,7 @@ import voluptuous as vol
 
 from . import generated
 from .const import Platform
-from .core import HomeAssistant, callback
+from .core import menuai, callback
 from .generated.application_credentials import APPLICATION_CREDENTIALS
 from .generated.bluetooth import BLUETOOTH
 from .generated.config_flows import FLOWS
@@ -42,7 +42,7 @@ from .generated.zeroconf import HOMEKIT, ZEROCONF
 from .helpers.json import json_bytes, json_fragment
 from .helpers.typing import UNDEFINED, UndefinedType
 from .util.async_ import create_eager_task
-from .util.hass_dict import HassKey
+from .util.menuai_dict import menuaiKey
 from .util.json import JSON_DECODE_EXCEPTIONS, json_loads
 
 if TYPE_CHECKING:
@@ -93,16 +93,16 @@ class BlockedIntegration:
 
 BLOCKED_CUSTOM_INTEGRATIONS: dict[str, BlockedIntegration] = {
     # Added in 2024.3.0 because of https://github.com/home-assistant/core/issues/112464
-    "start_time": BlockedIntegration(AwesomeVersion("1.1.7"), "breaks Home Assistant"),
+    "start_time": BlockedIntegration(AwesomeVersion("1.1.7"), "breaks MenuAI"),
     # Added in 2024.5.1 because of
     # https://community.home-assistant.io/t/psa-2024-5-upgrade-failure-and-dreame-vacuum-custom-integration/724612
     "dreame_vacuum": BlockedIntegration(
-        AwesomeVersion("1.0.4"), "crashes Home Assistant"
+        AwesomeVersion("1.0.4"), "crashes MenuAI"
     ),
     # Added in 2024.5.5 because of
     # https://github.com/sh00t2kill/dolphin-robot/issues/185
     "mydolphin_plus": BlockedIntegration(
-        AwesomeVersion("1.0.13"), "crashes Home Assistant"
+        AwesomeVersion("1.0.13"), "crashes MenuAI"
     ),
     # Added in 2024.7.2 because of
     # https://github.com/gcobb321/icloud3/issues/349
@@ -117,36 +117,36 @@ BLOCKED_CUSTOM_INTEGRATIONS: dict[str, BlockedIntegration] = {
         AwesomeVersion("2.7.1"), "prevents recorder from working"
     ),
     # Added in 2024.7.2 because of
-    # https://github.com/enkama/hass-variables/issues/120
+    # https://github.com/enkama/menuai-variables/issues/120
     "variable": BlockedIntegration(
         AwesomeVersion("3.4.4"), "prevents recorder from working"
     ),
 }
 
-DATA_COMPONENTS: HassKey[dict[str, ModuleType | ComponentProtocol]] = HassKey(
+DATA_COMPONENTS: menuaiKey[dict[str, ModuleType | ComponentProtocol]] = menuaiKey(
     "components"
 )
-DATA_INTEGRATIONS: HassKey[
+DATA_INTEGRATIONS: menuaiKey[
     dict[str, Integration | asyncio.Future[Integration | IntegrationNotFound]]
-] = HassKey("integrations")
-DATA_MISSING_PLATFORMS: HassKey[dict[str, bool]] = HassKey("missing_platforms")
-DATA_CUSTOM_COMPONENTS: HassKey[
+] = menuaiKey("integrations")
+DATA_MISSING_PLATFORMS: menuaiKey[dict[str, bool]] = menuaiKey("missing_platforms")
+DATA_CUSTOM_COMPONENTS: menuaiKey[
     dict[str, Integration] | asyncio.Future[dict[str, Integration]]
-] = HassKey("custom_components")
-DATA_PRELOAD_PLATFORMS: HassKey[list[str]] = HassKey("preload_platforms")
+] = menuaiKey("custom_components")
+DATA_PRELOAD_PLATFORMS: menuaiKey[list[str]] = menuaiKey("preload_platforms")
 PACKAGE_CUSTOM_COMPONENTS = "custom_components"
-PACKAGE_BUILTIN = "homeassistant.components"
+PACKAGE_BUILTIN = "menuai.components"
 CUSTOM_WARNING = (
     "We found a custom integration %s which has not "
-    "been tested by Home Assistant. This component might "
+    "been tested by MenuAI. This component might "
     "cause stability problems, be sure to disable it if you "
-    "experience issues with Home Assistant"
+    "experience issues with MenuAI"
 )
 IMPORT_EVENT_LOOP_WARNING = (
     "We found an integration %s which is configured to "
     "to import its code in the event loop. This component might "
     "cause stability problems, be sure to disable it if you "
-    "experience issues with Home Assistant"
+    "experience issues with MenuAI"
 )
 
 MOVED_ZEROCONF_PROPS = ("macaddress", "model", "manufacturer")
@@ -265,13 +265,13 @@ class Manifest(TypedDict, total=False):
     single_config_entry: bool
 
 
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the necessary data structures."""
-    _async_mount_config_dir(hass)
-    hass.data[DATA_COMPONENTS] = {}
-    hass.data[DATA_INTEGRATIONS] = {}
-    hass.data[DATA_MISSING_PLATFORMS] = {}
-    hass.data[DATA_PRELOAD_PLATFORMS] = BASE_PRELOAD_PLATFORMS.copy()
+    _async_mount_config_dir(menuai)
+    menuai.data[DATA_COMPONENTS] = {}
+    menuai.data[DATA_INTEGRATIONS] = {}
+    menuai.data[DATA_MISSING_PLATFORMS] = {}
+    menuai.data[DATA_PRELOAD_PLATFORMS] = BASE_PRELOAD_PLATFORMS.copy()
 
 
 def manifest_from_legacy_module(domain: str, module: ModuleType) -> Manifest:
@@ -285,9 +285,9 @@ def manifest_from_legacy_module(domain: str, module: ModuleType) -> Manifest:
     }
 
 
-def _get_custom_components(hass: HomeAssistant) -> dict[str, Integration]:
+def _get_custom_components(menuai: menuai) -> dict[str, Integration]:
     """Return list of custom integrations."""
-    if hass.config.recovery_mode or hass.config.safe_mode:
+    if menuai.config.recovery_mode or menuai.config.safe_mode:
         return {}
 
     try:
@@ -303,7 +303,7 @@ def _get_custom_components(hass: HomeAssistant) -> dict[str, Integration]:
     ]
 
     integrations = _resolve_integrations_from_root(
-        hass,
+        menuai,
         custom_components,
         [comp.name for comp in dirs],
     )
@@ -315,17 +315,17 @@ def _get_custom_components(hass: HomeAssistant) -> dict[str, Integration]:
 
 
 async def async_get_custom_components(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, Integration]:
     """Return cached list of custom integrations."""
-    comps_or_future = hass.data.get(DATA_CUSTOM_COMPONENTS)
+    comps_or_future = menuai.data.get(DATA_CUSTOM_COMPONENTS)
 
     if comps_or_future is None:
-        future = hass.data[DATA_CUSTOM_COMPONENTS] = hass.loop.create_future()
+        future = menuai.data[DATA_CUSTOM_COMPONENTS] = menuai.loop.create_future()
 
-        comps = await hass.async_add_executor_job(_get_custom_components, hass)
+        comps = await menuai.async_add_executor_job(_get_custom_components, menuai)
 
-        hass.data[DATA_CUSTOM_COMPONENTS] = comps
+        menuai.data[DATA_CUSTOM_COMPONENTS] = comps
         future.set_result(comps)
         return comps
 
@@ -336,11 +336,11 @@ async def async_get_custom_components(
 
 
 async def async_get_config_flows(
-    hass: HomeAssistant,
+    menuai: menuai,
     type_filter: Literal["device", "helper", "hub", "service"] | None = None,
 ) -> set[str]:
     """Return cached list of config flows."""
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     flows: set[str] = set()
 
     if type_filter is not None:
@@ -366,55 +366,55 @@ class ComponentProtocol(Protocol):
     DOMAIN: str
 
     async def async_setup_entry(
-        self, hass: HomeAssistant, config_entry: ConfigEntry
+        self, menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up a config entry."""
 
     async def async_unload_entry(
-        self, hass: HomeAssistant, config_entry: ConfigEntry
+        self, menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload a config entry."""
 
     async def async_migrate_entry(
-        self, hass: HomeAssistant, config_entry: ConfigEntry
+        self, menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Migrate an old config entry."""
 
     async def async_remove_entry(
-        self, hass: HomeAssistant, config_entry: ConfigEntry
+        self, menuai: menuai, config_entry: ConfigEntry
     ) -> None:
         """Remove a config entry."""
 
     async def async_remove_config_entry_device(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         device_entry: dr.DeviceEntry,
     ) -> bool:
         """Remove a config entry device."""
 
     async def async_reset_platform(
-        self, hass: HomeAssistant, integration_name: str
+        self, menuai: menuai, integration_name: str
     ) -> None:
         """Release resources."""
 
-    async def async_setup(self, hass: HomeAssistant, config: ConfigType) -> bool:
+    async def async_setup(self, menuai: menuai, config: ConfigType) -> bool:
         """Set up integration."""
 
-    def setup(self, hass: HomeAssistant, config: ConfigType) -> bool:
+    def setup(self, menuai: menuai, config: ConfigType) -> bool:
         """Set up integration."""
 
 
 async def async_get_integration_descriptions(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, Any]:
     """Return cached list of integrations."""
     base = generated.__path__[0]
     config_flow_path = pathlib.Path(base) / "integrations.json"
 
-    flow = await hass.async_add_executor_job(config_flow_path.read_text)
+    flow = await menuai.async_add_executor_job(config_flow_path.read_text)
     core_flows = cast(dict[str, Any], json_loads(flow))
-    custom_integrations = await async_get_custom_components(hass)
+    custom_integrations = await async_get_custom_components(menuai)
     custom_flows: dict[str, Any] = {
         "integration": {},
         "helper": {},
@@ -452,9 +452,9 @@ async def async_get_integration_descriptions(
     return {"core": core_flows, "custom": custom_flows}
 
 
-async def async_get_application_credentials(hass: HomeAssistant) -> list[str]:
+async def async_get_application_credentials(menuai: menuai) -> list[str]:
     """Return cached list of application credentials."""
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
 
     return [
         *APPLICATION_CREDENTIALS,
@@ -492,12 +492,12 @@ def async_process_zeroconf_match_dict(entry: dict[str, Any]) -> ZeroconfMatcher:
 
 
 async def async_get_zeroconf(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, list[ZeroconfMatcher]]:
     """Return cached list of zeroconf types."""
     zeroconf: dict[str, list[ZeroconfMatcher]] = ZEROCONF.copy()  # type: ignore[assignment]
 
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     for integration in integrations.values():
         if not integration.zeroconf:
             continue
@@ -514,11 +514,11 @@ async def async_get_zeroconf(
     return zeroconf
 
 
-async def async_get_bluetooth(hass: HomeAssistant) -> list[BluetoothMatcher]:
+async def async_get_bluetooth(menuai: menuai) -> list[BluetoothMatcher]:
     """Return cached list of bluetooth types."""
     bluetooth = cast(list[BluetoothMatcher], BLUETOOTH.copy())
 
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     for integration in integrations.values():
         if not integration.bluetooth:
             continue
@@ -530,11 +530,11 @@ async def async_get_bluetooth(hass: HomeAssistant) -> list[BluetoothMatcher]:
     return bluetooth
 
 
-async def async_get_dhcp(hass: HomeAssistant) -> list[DHCPMatcher]:
+async def async_get_dhcp(menuai: menuai) -> list[DHCPMatcher]:
     """Return cached list of dhcp types."""
     dhcp = cast(list[DHCPMatcher], DHCP.copy())
 
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     for integration in integrations.values():
         if not integration.dhcp:
             continue
@@ -544,11 +544,11 @@ async def async_get_dhcp(hass: HomeAssistant) -> list[DHCPMatcher]:
     return dhcp
 
 
-async def async_get_usb(hass: HomeAssistant) -> list[USBMatcher]:
+async def async_get_usb(menuai: menuai) -> list[USBMatcher]:
     """Return cached list of usb types."""
     usb = cast(list[USBMatcher], USB.copy())
 
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     for integration in integrations.values():
         if not integration.usb:
             continue
@@ -581,7 +581,7 @@ def homekit_always_discover(iot_class: str | None) -> bool:
 
 
 async def async_get_homekit(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, HomeKitDiscoveredIntegration]:
     """Return cached list of homekit models."""
     homekit: dict[str, HomeKitDiscoveredIntegration] = {
@@ -591,7 +591,7 @@ async def async_get_homekit(
         for model, details in HOMEKIT.items()
     }
 
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     for integration in integrations.values():
         if (
             not integration.homekit
@@ -608,12 +608,12 @@ async def async_get_homekit(
     return homekit
 
 
-async def async_get_ssdp(hass: HomeAssistant) -> dict[str, list[dict[str, str]]]:
+async def async_get_ssdp(menuai: menuai) -> dict[str, list[dict[str, str]]]:
     """Return cached list of ssdp mappings."""
 
     ssdp: dict[str, list[dict[str, str]]] = SSDP.copy()
 
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     for integration in integrations.values():
         if not integration.ssdp:
             continue
@@ -623,12 +623,12 @@ async def async_get_ssdp(hass: HomeAssistant) -> dict[str, list[dict[str, str]]]
     return ssdp
 
 
-async def async_get_mqtt(hass: HomeAssistant) -> dict[str, list[str]]:
+async def async_get_mqtt(menuai: menuai) -> dict[str, list[str]]:
     """Return cached list of MQTT mappings."""
 
     mqtt: dict[str, list[str]] = MQTT.copy()
 
-    integrations = await async_get_custom_components(hass)
+    integrations = await async_get_custom_components(menuai)
     for integration in integrations.values():
         if not integration.mqtt:
             continue
@@ -639,20 +639,20 @@ async def async_get_mqtt(hass: HomeAssistant) -> dict[str, list[str]]:
 
 
 @callback
-def async_register_preload_platform(hass: HomeAssistant, platform_name: str) -> None:
+def async_register_preload_platform(menuai: menuai, platform_name: str) -> None:
     """Register a platform to be preloaded."""
-    preload_platforms = hass.data[DATA_PRELOAD_PLATFORMS]
+    preload_platforms = menuai.data[DATA_PRELOAD_PLATFORMS]
     if platform_name not in preload_platforms:
         preload_platforms.append(platform_name)
 
 
 @final  # Final to allow direct checking of the type instead of using isinstance
 class Integration:
-    """An integration in Home Assistant."""
+    """An integration in MenuAI."""
 
     @classmethod
     def resolve_from_root(
-        cls, hass: HomeAssistant, root_module: ModuleType, domain: str
+        cls, menuai: menuai, root_module: ModuleType, domain: str
     ) -> Integration | None:
         """Resolve an integration from a root module."""
         for base in root_module.__path__:
@@ -674,7 +674,7 @@ class Integration:
             # as they cannot have any platforms
             is_virtual = manifest.get("integration_type") == "virtual"
             integration = cls(
-                hass,
+                menuai,
                 f"{root_module.__name__}.{domain}",
                 file_path,
                 manifest,
@@ -746,14 +746,14 @@ class Integration:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         pkg_path: str,
         file_path: pathlib.Path,
         manifest: Manifest,
         top_level_files: set[str] | None = None,
     ) -> None:
         """Initialize an integration."""
-        self.hass = hass
+        self.menuai = menuai
         self.pkg_path = pkg_path
         self.file_path = file_path
         self.manifest = manifest
@@ -765,11 +765,11 @@ class Integration:
         else:
             self._all_dependencies = set()
 
-        self._platforms_to_preload = hass.data[DATA_PRELOAD_PLATFORMS]
+        self._platforms_to_preload = menuai.data[DATA_PRELOAD_PLATFORMS]
         self._component_future: asyncio.Future[ComponentProtocol] | None = None
         self._import_futures: dict[str, asyncio.Future[ModuleType]] = {}
-        self._cache = hass.data[DATA_COMPONENTS]
-        self._missing_platforms_cache = hass.data[DATA_MISSING_PLATFORMS]
+        self._cache = menuai.data[DATA_COMPONENTS]
+        self._missing_platforms_cache = menuai.data[DATA_MISSING_PLATFORMS]
         self._top_level_files = top_level_files or set()
         _LOGGER.info("Loaded %s from %s", self.domain, pkg_path)
 
@@ -951,7 +951,7 @@ class Integration:
                 return None
             return self._all_dependencies
 
-        result = await resolve_integrations_dependencies(self.hass, (self,))
+        result = await resolve_integrations_dependencies(self.menuai, (self,))
         return result.get(self.domain)
 
     async def async_get_component(self) -> ComponentProtocol:
@@ -987,10 +987,10 @@ class Integration:
                 )
             return comp
 
-        self._component_future = self.hass.loop.create_future()
+        self._component_future = self.menuai.loop.create_future()
         try:
             try:
-                comp = await self.hass.async_add_import_executor_job(
+                comp = await self.menuai.async_add_import_executor_job(
                     self._get_component, True
                 )
             except ModuleNotFoundError:
@@ -1111,14 +1111,14 @@ class Integration:
             full_name = f"{domain}.{platform_name}"
             if (
                 self.import_executor
-                and full_name not in self.hass.config.components
+                and full_name not in self.menuai.config.components
                 and f"{self.pkg_path}.{platform_name}" not in sys.modules
             ):
                 load_executor_platforms.append(platform_name)
             else:
                 load_event_loop_platforms.append(platform_name)
 
-            import_future = self.hass.loop.create_future()
+            import_future = self.menuai.loop.create_future()
             self._import_futures[platform_name] = import_future
             import_futures.append((platform_name, import_future))
 
@@ -1130,7 +1130,7 @@ class Integration:
                 if load_executor_platforms:
                     try:
                         platforms.update(
-                            await self.hass.async_add_import_executor_job(
+                            await self.menuai.async_add_import_executor_job(
                                 self._load_platforms, platform_names
                             )
                         )
@@ -1245,7 +1245,7 @@ class Integration:
         appropriate locks.
         """
         full_name = f"{self.domain}.{platform_name}"
-        cache = self.hass.data[DATA_COMPONENTS]
+        cache = self.menuai.data[DATA_COMPONENTS]
         try:
             cache[full_name] = self._import_platform(platform_name)
         except ModuleNotFoundError:
@@ -1301,13 +1301,13 @@ def _version_blocked(
 
 
 def _resolve_integrations_from_root(
-    hass: HomeAssistant, root_module: ModuleType, domains: Iterable[str]
+    menuai: menuai, root_module: ModuleType, domains: Iterable[str]
 ) -> dict[str, Integration]:
     """Resolve multiple integrations from root."""
     integrations: dict[str, Integration] = {}
     for domain in domains:
         try:
-            integration = Integration.resolve_from_root(hass, root_module, domain)
+            integration = Integration.resolve_from_root(menuai, root_module, domain)
         except Exception:
             _LOGGER.exception("Error loading integration: %s", domain)
         else:
@@ -1317,12 +1317,12 @@ def _resolve_integrations_from_root(
 
 
 @callback
-def async_get_loaded_integration(hass: HomeAssistant, domain: str) -> Integration:
+def async_get_loaded_integration(menuai: menuai, domain: str) -> Integration:
     """Get an integration which is already loaded.
 
     Raises IntegrationNotLoaded if the integration is not loaded.
     """
-    cache = hass.data[DATA_INTEGRATIONS]
+    cache = menuai.data[DATA_INTEGRATIONS]
     int_or_fut = cache.get(domain)
     # Integration is never subclassed, so we can check for type
     if type(int_or_fut) is Integration:
@@ -1330,12 +1330,12 @@ def async_get_loaded_integration(hass: HomeAssistant, domain: str) -> Integratio
     raise IntegrationNotLoaded(domain)
 
 
-async def async_get_integration(hass: HomeAssistant, domain: str) -> Integration:
+async def async_get_integration(menuai: menuai, domain: str) -> Integration:
     """Get integration."""
-    cache = hass.data[DATA_INTEGRATIONS]
+    cache = menuai.data[DATA_INTEGRATIONS]
     if type(int_or_fut := cache.get(domain)) is Integration:
         return int_or_fut
-    integrations_or_excs = await async_get_integrations(hass, [domain])
+    integrations_or_excs = await async_get_integrations(menuai, [domain])
     int_or_exc = integrations_or_excs[domain]
     if isinstance(int_or_exc, Integration):
         return int_or_exc
@@ -1343,10 +1343,10 @@ async def async_get_integration(hass: HomeAssistant, domain: str) -> Integration
 
 
 async def async_get_integrations(
-    hass: HomeAssistant, domains: Iterable[str]
+    menuai: menuai, domains: Iterable[str]
 ) -> dict[str, Integration | Exception]:
     """Get integrations."""
-    cache = hass.data[DATA_INTEGRATIONS]
+    cache = menuai.data[DATA_INTEGRATIONS]
     results: dict[str, Integration | Exception] = {}
     needed: dict[str, asyncio.Future[Integration | IntegrationNotFound]] = {}
     in_progress: dict[str, asyncio.Future[Integration | IntegrationNotFound]] = {}
@@ -1362,7 +1362,7 @@ async def async_get_integrations(
         elif "." in domain:
             results[domain] = ValueError(f"Invalid domain {domain}")
         else:
-            needed[domain] = cache[domain] = hass.loop.create_future()
+            needed[domain] = cache[domain] = menuai.loop.create_future()
 
     if in_progress:
         await asyncio.wait(in_progress.values())
@@ -1380,7 +1380,7 @@ async def async_get_integrations(
     # First we look for custom components
     # Instead of using resolve_from_root we use the cache of custom
     # components to find the integration.
-    custom = await async_get_custom_components(hass)
+    custom = await async_get_custom_components(menuai)
     for domain, future in needed.items():
         if integration := custom.get(domain):
             results[domain] = cache[domain] = integration
@@ -1394,8 +1394,8 @@ async def async_get_integrations(
     if needed:
         from . import components  # pylint: disable=import-outside-toplevel
 
-        integrations = await hass.async_add_executor_job(
-            _resolve_integrations_from_root, hass, components, needed
+        integrations = await menuai.async_add_executor_job(
+            _resolve_integrations_from_root, menuai, components, needed
         )
         for domain, future in needed.items():
             if integration := integrations.get(domain):
@@ -1441,14 +1441,14 @@ class _ResolveDependenciesCache(_ResolveDependenciesCacheProtocol):
 
 
 async def resolve_integrations_dependencies(
-    hass: HomeAssistant, integrations: Iterable[Integration]
+    menuai: menuai, integrations: Iterable[Integration]
 ) -> dict[str, set[str]]:
     """Resolve all dependencies for integrations.
 
     Detects circular dependencies and missing integrations.
     """
     return await _resolve_integrations_dependencies(
-        hass,
+        menuai,
         "resolve dependencies",
         integrations,
         cache=_ResolveDependenciesCache(),
@@ -1457,7 +1457,7 @@ async def resolve_integrations_dependencies(
 
 
 async def resolve_integrations_after_dependencies(
-    hass: HomeAssistant,
+    menuai: menuai,
     integrations: Iterable[Integration],
     possible_after_dependencies: set[str] | None = None,
     *,
@@ -1468,7 +1468,7 @@ async def resolve_integrations_after_dependencies(
     Detects circular dependencies and missing integrations.
     """
     return await _resolve_integrations_dependencies(
-        hass,
+        menuai,
         "resolve (after) dependencies",
         integrations,
         cache={},
@@ -1478,7 +1478,7 @@ async def resolve_integrations_after_dependencies(
 
 
 async def _resolve_integrations_dependencies(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     integrations: Iterable[Integration],
     *,
@@ -1507,7 +1507,7 @@ async def _resolve_integrations_dependencies(
         itg.domain: create_eager_task(
             _resolve_deps_catch_exceptions(itg),
             name=f"{name} {itg.domain}",
-            loop=hass.loop,
+            loop=menuai.loop,
         )
         for itg in integrations
     }
@@ -1573,7 +1573,7 @@ async def _resolve_integration_dependencies(
                     set(itg.after_dependencies) & possible_after_dependencies
                 )
             dependencies_domains.update(after_dependencies)
-        dependencies = await async_get_integrations(itg.hass, dependencies_domains)
+        dependencies = await async_get_integrations(itg.menuai, dependencies_domains)
 
         all_dependencies: set[str] = set()
         for dep_domain, dep_integration in dependencies.items():
@@ -1640,7 +1640,7 @@ class CircularDependency(LoaderError):
 
 
 def _load_file(
-    hass: HomeAssistant, comp_or_platform: str, base_paths: list[str]
+    menuai: menuai, comp_or_platform: str, base_paths: list[str]
 ) -> ComponentProtocol | None:
     """Try to load specified file.
 
@@ -1648,7 +1648,7 @@ def _load_file(
     Only returns it if also found to be valid.
     Async friendly.
     """
-    cache = hass.data[DATA_COMPONENTS]
+    cache = menuai.data[DATA_COMPONENTS]
     if module := cache.get(comp_or_platform):
         return cast(ComponentProtocol, module)
 
@@ -1692,85 +1692,85 @@ def _load_file(
 
 
 class ModuleWrapper:
-    """Class to wrap a Python module and auto fill in hass argument."""
+    """Class to wrap a Python module and auto fill in menuai argument."""
 
-    def __init__(self, hass: HomeAssistant, module: ComponentProtocol) -> None:
+    def __init__(self, menuai: menuai, module: ComponentProtocol) -> None:
         """Initialize the module wrapper."""
-        self._hass = hass
+        self._menuai = menuai
         self._module = module
 
     def __getattr__(self, attr: str) -> Any:
         """Fetch an attribute."""
         value = getattr(self._module, attr)
 
-        if hasattr(value, "__bind_hass"):
-            value = ft.partial(value, self._hass)
+        if hasattr(value, "__bind_menuai"):
+            value = ft.partial(value, self._menuai)
 
         setattr(self, attr, value)
         return value
 
 
-def bind_hass[_CallableT: Callable[..., Any]](func: _CallableT) -> _CallableT:
-    """Decorate function to indicate that first argument is hass.
+def bind_menuai[_CallableT: Callable[..., Any]](func: _CallableT) -> _CallableT:
+    """Decorate function to indicate that first argument is menuai.
 
     The use of this decorator is discouraged, and it should not be used
     for new functions.
     """
-    setattr(func, "__bind_hass", True)
+    setattr(func, "__bind_menuai", True)
     return func
 
 
-def _async_mount_config_dir(hass: HomeAssistant) -> None:
+def _async_mount_config_dir(menuai: menuai) -> None:
     """Mount config dir in order to load custom_component.
 
     Async friendly but not a coroutine.
     """
 
-    sys.path.insert(0, hass.config.config_dir)
+    sys.path.insert(0, menuai.config.config_dir)
     with suppress(ImportError):
         import custom_components  # pylint: disable=import-outside-toplevel  # noqa: F401
-    sys.path.remove(hass.config.config_dir)
-    sys.path_importer_cache.pop(hass.config.config_dir, None)
+    sys.path.remove(menuai.config.config_dir)
+    sys.path_importer_cache.pop(menuai.config.config_dir, None)
 
 
-def _lookup_path(hass: HomeAssistant) -> list[str]:
+def _lookup_path(menuai: menuai) -> list[str]:
     """Return the lookup paths for legacy lookups."""
-    if hass.config.recovery_mode or hass.config.safe_mode:
+    if menuai.config.recovery_mode or menuai.config.safe_mode:
         return [PACKAGE_BUILTIN]
     return [PACKAGE_CUSTOM_COMPONENTS, PACKAGE_BUILTIN]
 
 
-def is_component_module_loaded(hass: HomeAssistant, module: str) -> bool:
+def is_component_module_loaded(menuai: menuai, module: str) -> bool:
     """Test if a component module is loaded."""
-    return module in hass.data[DATA_COMPONENTS]
+    return module in menuai.data[DATA_COMPONENTS]
 
 
 @callback
 def async_get_issue_integration(
-    hass: HomeAssistant | None,
+    menuai: menuai | None,
     integration_domain: str | None,
 ) -> Integration | None:
     """Return details of an integration for issue reporting."""
     integration: Integration | None = None
-    if not hass or not integration_domain:
+    if not menuai or not integration_domain:
         # We are unable to get the integration
         return None
 
-    if (comps_or_future := hass.data.get(DATA_CUSTOM_COMPONENTS)) and not isinstance(
+    if (comps_or_future := menuai.data.get(DATA_CUSTOM_COMPONENTS)) and not isinstance(
         comps_or_future, asyncio.Future
     ):
         integration = comps_or_future.get(integration_domain)
 
     if not integration:
         with suppress(IntegrationNotLoaded):
-            integration = async_get_loaded_integration(hass, integration_domain)
+            integration = async_get_loaded_integration(menuai, integration_domain)
 
     return integration
 
 
 @callback
 def async_get_issue_tracker(
-    hass: HomeAssistant | None,
+    menuai: menuai | None,
     *,
     integration: Integration | None = None,
     integration_domain: str | None = None,
@@ -1785,7 +1785,7 @@ def async_get_issue_tracker(
         return issue_tracker
 
     if not integration:
-        integration = async_get_issue_integration(hass, integration_domain)
+        integration = async_get_issue_integration(menuai, integration_domain)
 
     if integration and not integration.is_built_in:
         return integration.issue_tracker
@@ -1803,7 +1803,7 @@ def async_get_issue_tracker(
 
 @callback
 def async_suggest_report_issue(
-    hass: HomeAssistant | None,
+    menuai: menuai | None,
     *,
     integration: Integration | None = None,
     integration_domain: str | None = None,
@@ -1811,7 +1811,7 @@ def async_suggest_report_issue(
 ) -> str:
     """Generate a blurb asking the user to file a bug report."""
     issue_tracker = async_get_issue_tracker(
-        hass,
+        menuai,
         integration=integration,
         integration_domain=integration_domain,
         module=module,

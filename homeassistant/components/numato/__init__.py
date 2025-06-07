@@ -6,21 +6,21 @@ import logging
 import numato_gpio as gpio
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_BINARY_SENSORS,
     CONF_ID,
     CONF_NAME,
     CONF_SENSORS,
     CONF_SWITCHES,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
     PERCENTAGE,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the numato integration.
 
     Discovers available Numato devices and loads the binary_sensor, sensor and
@@ -134,7 +134,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     No exceptions should occur, since the platforms are initialized on a best
     effort basis, which means, errors are handled locally.
     """
-    hass.data[DOMAIN] = config[DOMAIN]
+    menuai.data[DOMAIN] = config[DOMAIN]
 
     try:
         gpio.discover(config[DOMAIN][CONF_DISCOVER])
@@ -148,25 +148,25 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ", ".join(str(d) for d in gpio.devices),
     )
 
-    hass.data[DOMAIN][DATA_API] = NumatoAPI()
+    menuai.data[DOMAIN][DATA_API] = NumatoAPI()
 
     def cleanup_gpio(event: Event) -> None:
         """Stuff to do before stopping."""
         _LOGGER.debug("Clean up Numato GPIO")
         gpio.cleanup()
-        if DATA_API in hass.data[DOMAIN]:
-            hass.data[DOMAIN][DATA_API].ports_registered.clear()
+        if DATA_API in menuai.data[DOMAIN]:
+            menuai.data[DOMAIN][DATA_API].ports_registered.clear()
 
     def prepare_gpio(event: Event) -> None:
-        """Stuff to do when home assistant starts."""
+        """Stuff to do when MenuAI starts."""
         _LOGGER.debug("Setup cleanup at stop for Numato GPIO")
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, cleanup_gpio)
+        menuai.bus.listen_once(EVENT_menuai_STOP, cleanup_gpio)
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, prepare_gpio)
+    menuai.bus.listen_once(EVENT_menuai_START, prepare_gpio)
 
-    load_platform(hass, Platform.BINARY_SENSOR, DOMAIN, {}, config)
-    load_platform(hass, Platform.SENSOR, DOMAIN, {}, config)
-    load_platform(hass, Platform.SWITCH, DOMAIN, {}, config)
+    load_platform(menuai, Platform.BINARY_SENSOR, DOMAIN, {}, config)
+    load_platform(menuai, Platform.SENSOR, DOMAIN, {}, config)
+    load_platform(menuai, Platform.SWITCH, DOMAIN, {}, config)
     return True
 
 

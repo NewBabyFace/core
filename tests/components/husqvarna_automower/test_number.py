@@ -9,11 +9,11 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.husqvarna_automower.const import EXECUTION_TIME_DELAY
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.husqvarna_automower.const import EXECUTION_TIME_DELAY
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 from .const import TEST_MOWER_ID
@@ -23,14 +23,14 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_number_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test number commands."""
     entity_id = "number.test_mower_1_cutting_height"
-    await setup_integration(hass, mock_config_entry)
-    await hass.services.async_call(
+    await setup_integration(menuai, mock_config_entry)
+    await menuai.services.async_call(
         domain="number",
         service="set_value",
         target={"entity_id": entity_id},
@@ -42,10 +42,10 @@ async def test_number_commands(
 
     mocked_method.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain="number",
             service="set_value",
             target={"entity_id": entity_id},
@@ -56,7 +56,7 @@ async def test_number_commands(
 
 
 async def test_number_workarea_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -64,12 +64,12 @@ async def test_number_workarea_commands(
 ) -> None:
     """Test number commands."""
     entity_id = "number.test_mower_1_front_lawn_cutting_height"
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     values[TEST_MOWER_ID].work_areas[123456].cutting_height = 75
     mock_automower_client.get_status.return_value = values
     mocked_method = AsyncMock()
     mock_automower_client.commands.workarea_settings.return_value = mocked_method
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain="number",
         service="set_value",
         target={"entity_id": entity_id},
@@ -77,19 +77,19 @@ async def test_number_workarea_commands(
         blocking=False,
     )
     freezer.tick(timedelta(seconds=EXECUTION_TIME_DELAY))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     mocked_method.cutting_height.assert_called_once_with(cutting_height=75)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state is not None
     assert state.state == "75"
 
     mocked_method.cutting_height.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain="number",
             service="set_value",
             target={"entity_id": entity_id},
@@ -101,7 +101,7 @@ async def test_number_workarea_commands(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_number_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -109,10 +109,10 @@ async def test_number_snapshot(
 ) -> None:
     """Snapshot tests of the number entities."""
     with patch(
-        "homeassistant.components.husqvarna_automower.PLATFORMS",
+        "menuai.components.husqvarna_automower.PLATFORMS",
         [Platform.NUMBER],
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
         await snapshot_platform(
-            hass, entity_registry, snapshot, mock_config_entry.entry_id
+            menuai, entity_registry, snapshot, mock_config_entry.entry_id
         )

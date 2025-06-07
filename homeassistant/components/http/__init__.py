@@ -1,4 +1,4 @@
-"""Support to serve the Home Assistant API as WSGI application."""
+"""Support to serve the MenuAI API as WSGI application."""
 
 from __future__ import annotations
 
@@ -29,43 +29,43 @@ from cryptography.x509.oid import NameOID
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.components.network import async_get_source_ip
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.components.network import async_get_source_ip
+from menuai.const import (
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
     SERVER_PORT,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     frame,
     issue_registry as ir,
     storage,
 )
-from homeassistant.helpers.http import (
+from menuai.helpers.http import (
     KEY_ALLOW_CONFIGURED_CORS,
     KEY_AUTHENTICATED,  # noqa: F401
-    KEY_HASS,
-    HomeAssistantView,
+    KEY_menuai,
+    menuaiView,
     current_request,
 )
-from homeassistant.helpers.importlib import async_import_module
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.setup import (
+from menuai.helpers.importlib import async_import_module
+from menuai.helpers.network import NoURLAvailableError, get_url
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.setup import (
     SetupPhases,
     async_start_setup,
     async_when_setup_or_start,
 )
-from homeassistant.util import dt as dt_util, ssl as ssl_util
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.json import json_loads
+from menuai.util import dt as dt_util, ssl as ssl_util
+from menuai.util.async_ import create_eager_task
+from menuai.util.json import json_loads
 
 from .auth import async_setup_auth
 from .ban import setup_bans
-from .const import DOMAIN, KEY_HASS_REFRESH_TOKEN_ID, KEY_HASS_USER  # noqa: F401
+from .const import DOMAIN, KEY_menuai_REFRESH_TOKEN_ID, KEY_menuai_USER  # noqa: F401
 from .cors import setup_cors
 from .decorators import require_admin  # noqa: F401
 from .forwarded import async_setup_forwarded
@@ -73,7 +73,7 @@ from .headers import setup_headers
 from .request_context import setup_request_context
 from .security_filter import setup_security_filter
 from .static import CACHE_HEADERS, CachingStaticResource
-from .web_runner import HomeAssistantTCPSite
+from .web_runner import menuaiTCPSite
 
 CONF_SERVER_HOST: Final = "server_host"
 CONF_SERVER_PORT: Final = "server_port"
@@ -177,10 +177,10 @@ class ConfData(TypedDict, total=False):
     ssl_profile: str
 
 
-@bind_hass
-async def async_get_last_config(hass: HomeAssistant) -> dict[str, Any] | None:
+@bind_menuai
+async def async_get_last_config(menuai: menuai) -> dict[str, Any] | None:
     """Return the last known working config."""
-    store = storage.Store[dict[str, Any]](hass, STORAGE_VERSION, STORAGE_KEY)
+    store = storage.Store[dict[str, Any]](menuai, STORAGE_VERSION, STORAGE_KEY)
     return await store.async_load()
 
 
@@ -201,11 +201,11 @@ class ApiConfig:
         self.use_ssl = use_ssl
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the HTTP API and debug interface."""
     # Late import to ensure isal is updated before
     # we import aiohttp_fast_zlib
-    (await async_import_module(hass, "aiohttp_fast_zlib")).enable()
+    (await async_import_module(menuai, "aiohttp_fast_zlib")).enable()
 
     conf: ConfData | None = config.get(DOMAIN)
 
@@ -225,10 +225,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     login_threshold = conf[CONF_LOGIN_ATTEMPTS_THRESHOLD]
     ssl_profile = conf[CONF_SSL_PROFILE]
 
-    source_ip_task = create_eager_task(async_get_source_ip(hass))
+    source_ip_task = create_eager_task(async_get_source_ip(menuai))
 
-    server = HomeAssistantHTTP(
-        hass,
+    server = menuaiHTTP(
+        menuai,
         server_host=server_host,
         server_port=server_port,
         ssl_certificate=ssl_certificate,
@@ -251,15 +251,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     async def start_server(*_: Any) -> None:
         """Start the server."""
-        with async_start_setup(hass, integration="http", phase=SetupPhases.SETUP):
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_server)
+        with async_start_setup(menuai, integration="http", phase=SetupPhases.SETUP):
+            menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_server)
             # We already checked it's not None.
             assert conf is not None
-            await start_http_server_and_save_config(hass, dict(conf), server)
+            await start_http_server_and_save_config(menuai, dict(conf), server)
 
-    async_when_setup_or_start(hass, "frontend", start_server)
+    async_when_setup_or_start(menuai, "frontend", start_server)
 
-    hass.http = server
+    menuai.http = server
 
     local_ip = await source_ip_task
 
@@ -268,7 +268,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # Assume the first server host name provided as API host
         host = server_host[0]
 
-    hass.config.api = ApiConfig(
+    menuai.config.api = ApiConfig(
         local_ip, host, server_port, ssl_certificate is not None
     )
 
@@ -276,19 +276,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def _async_check_ssl_issue(_: Event) -> None:
         if (
             ssl_certificate is not None
-            and (hass.config.external_url or hass.config.internal_url) is None
+            and (menuai.config.external_url or menuai.config.internal_url) is None
         ):
             # pylint: disable-next=import-outside-toplevel
-            from homeassistant.components.cloud import (
+            from menuai.components.cloud import (
                 CloudNotAvailable,
                 async_remote_ui_url,
             )
 
             try:
-                async_remote_ui_url(hass)
+                async_remote_ui_url(menuai)
             except CloudNotAvailable:
                 ir.async_create_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     "ssl_configured_without_configured_urls",
                     is_fixable=False,
@@ -296,13 +296,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     translation_key="ssl_configured_without_configured_urls",
                 )
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_check_ssl_issue)
+    menuai.bus.async_listen_once(EVENT_menuai_START, _async_check_ssl_issue)
 
     return True
 
 
-class HomeAssistantRequest(web.Request):
-    """Home Assistant request object."""
+class menuaiRequest(web.Request):
+    """MenuAI request object."""
 
     async def json(self, *, loads: JSONDecoder = json_loads) -> Any:
         """Return body as JSON."""
@@ -311,8 +311,8 @@ class HomeAssistantRequest(web.Request):
         return json_loads(await self.read())
 
 
-class HomeAssistantApplication(web.Application):
-    """Home Assistant application."""
+class menuaiApplication(web.Application):
+    """MenuAI application."""
 
     def _make_request(
         self,
@@ -321,7 +321,7 @@ class HomeAssistantApplication(web.Application):
         protocol: RequestHandler,
         writer: AbstractStreamWriter,
         task: asyncio.Task[None],
-        _cls: type[web.Request] = HomeAssistantRequest,
+        _cls: type[web.Request] = menuaiRequest,
     ) -> web.Request:
         """Create request instance."""
         return _cls(
@@ -346,12 +346,12 @@ async def _serve_file(path: str, request: web.Request) -> web.FileResponse:
     return web.FileResponse(path)
 
 
-class HomeAssistantHTTP:
-    """HTTP server for Home Assistant."""
+class menuaiHTTP:
+    """HTTP server for MenuAI."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         ssl_certificate: str | None,
         ssl_peer_certificate: str | None,
         ssl_key: str | None,
@@ -360,8 +360,8 @@ class HomeAssistantHTTP:
         trusted_proxies: list[IPv4Network | IPv6Network],
         ssl_profile: str,
     ) -> None:
-        """Initialize the HTTP Home Assistant server."""
-        self.app = HomeAssistantApplication(
+        """Initialize the HTTP MenuAI server."""
+        self.app = menuaiApplication(
             middlewares=[],
             client_max_size=MAX_CLIENT_SIZE,
             handler_args={
@@ -369,7 +369,7 @@ class HomeAssistantHTTP:
                 "max_field_size": MAX_LINE_SIZE,
             },
         )
-        self.hass = hass
+        self.menuai = menuai
         self.ssl_certificate = ssl_certificate
         self.ssl_peer_certificate = ssl_peer_certificate
         self.ssl_key = ssl_key
@@ -378,7 +378,7 @@ class HomeAssistantHTTP:
         self.trusted_proxies = trusted_proxies
         self.ssl_profile = ssl_profile
         self.runner: web.AppRunner | None = None
-        self.site: HomeAssistantTCPSite | None = None
+        self.site: menuaiTCPSite | None = None
         self.context: ssl.SSLContext | None = None
 
     async def async_initialize(
@@ -391,8 +391,8 @@ class HomeAssistantHTTP:
         use_x_frame_options: bool,
     ) -> None:
         """Initialize the server."""
-        self.app[KEY_HASS] = self.hass
-        self.app["hass"] = self.hass  # For backwards compatibility
+        self.app[KEY_menuai] = self.menuai
+        self.app["menuai"] = self.menuai  # For backwards compatibility
 
         # Order matters, security filters middleware needs to go first,
         # forwarded middleware needs to go second.
@@ -403,22 +403,22 @@ class HomeAssistantHTTP:
         setup_request_context(self.app, current_request)
 
         if is_ban_enabled:
-            setup_bans(self.hass, self.app, login_threshold)
+            setup_bans(self.menuai, self.app, login_threshold)
 
-        await async_setup_auth(self.hass, self.app)
+        await async_setup_auth(self.menuai, self.app)
 
         setup_headers(self.app, use_x_frame_options)
         setup_cors(self.app, cors_origins)
 
         if self.ssl_certificate:
-            self.context = await self.hass.async_add_executor_job(
+            self.context = await self.menuai.async_add_executor_job(
                 self._create_ssl_context
             )
 
-    def register_view(self, view: HomeAssistantView | type[HomeAssistantView]) -> None:
+    def register_view(self, view: menuaiView | type[menuaiView]) -> None:
         """Register a view with the WSGI server.
 
-        The view argument must be a class that inherits from HomeAssistantView.
+        The view argument must be a class that inherits from menuaiView.
         It is optional to instantiate it before registering; this method will
         handle it either way.
         """
@@ -434,7 +434,7 @@ class HomeAssistantHTTP:
             class_name = view.__class__.__name__
             raise AttributeError(f'{class_name} missing required attribute "name"')
 
-        view.register(self.hass, self.app, self.app.router)
+        view.register(self.menuai, self.app, self.app.router)
 
     def register_redirect(
         self,
@@ -478,7 +478,7 @@ class HomeAssistantHTTP:
         self, configs: Collection[StaticPathConfig]
     ) -> None:
         """Register a folder or file to serve as a static path."""
-        resources = await self.hass.async_add_executor_job(
+        resources = await self.menuai.async_add_executor_job(
             self._make_static_resources, configs
         )
         self._async_register_static_paths(configs, resources)
@@ -511,9 +511,9 @@ class HomeAssistantHTTP:
     ) -> None:
         """Register a folder or file to serve as a static path."""
         frame.report_usage(
-            "calls hass.http.register_static_path which is deprecated because "
+            "calls menuai.http.register_static_path which is deprecated because "
             "it does blocking I/O in the event loop, instead "
-            "call `await hass.http.async_register_static_paths("
+            "call `await menuai.http.async_register_static_paths("
             f'[StaticPathConfig("{url_path}", "{path}", {cache_headers})])`',
             exclude_integrations={"http"},
             core_behavior=frame.ReportBehavior.LOG,
@@ -533,8 +533,8 @@ class HomeAssistantHTTP:
                 context = ssl_util.server_context_modern()
             context.load_cert_chain(self.ssl_certificate, self.ssl_key)
         except OSError as error:
-            if not self.hass.config.recovery_mode:
-                raise HomeAssistantError(
+            if not self.menuai.config.recovery_mode:
+                raise menuaiError(
                     f"Could not use SSL certificate from {self.ssl_certificate}:"
                     f" {error}"
                 ) from error
@@ -553,7 +553,7 @@ class HomeAssistantHTTP:
                 context = None
             else:
                 _LOGGER.critical(
-                    "Home Assistant is running in recovery mode with an emergency self"
+                    "MenuAI is running in recovery mode with an emergency self"
                     " signed ssl certificate because the configured SSL certificate was"
                     " not usable"
                 )
@@ -561,7 +561,7 @@ class HomeAssistantHTTP:
 
         if self.ssl_peer_certificate:
             if context is None:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Failed to create ssl context, no fallback available because a peer"
                     " certificate is required."
                 )
@@ -576,9 +576,9 @@ class HomeAssistantHTTP:
         context = ssl_util.server_context_modern()
         host: str
         try:
-            host = cast(str, URL(get_url(self.hass, prefer_external=True)).host)
+            host = cast(str, URL(get_url(self.menuai, prefer_external=True)).host)
         except NoURLAvailableError:
-            host = "homeassistant.local"
+            host = "menuai.local"
         key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
@@ -586,7 +586,7 @@ class HomeAssistantHTTP:
         subject = issuer = x509.Name(
             [
                 x509.NameAttribute(
-                    NameOID.ORGANIZATION_NAME, "Home Assistant Emergency Certificate"
+                    NameOID.ORGANIZATION_NAME, "MenuAI Emergency Certificate"
                 ),
                 x509.NameAttribute(NameOID.COMMON_NAME, host),
             ]
@@ -623,7 +623,7 @@ class HomeAssistantHTTP:
     async def start(self) -> None:
         """Start the aiohttp server."""
         # Aiohttp freezes apps after start so that no changes can be made.
-        # However in Home Assistant components can be discovered after boot.
+        # However in MenuAI components can be discovered after boot.
         # This will now raise a RunTimeError.
         # To work around this we now prevent the router from getting frozen
         self.app._router.freeze = lambda: None  # type: ignore[method-assign]  # noqa: SLF001
@@ -633,7 +633,7 @@ class HomeAssistantHTTP:
         )
         await self.runner.setup()
 
-        self.site = HomeAssistantTCPSite(
+        self.site = menuaiTCPSite(
             self.runner, self.server_host, self.server_port, ssl_context=self.context
         )
         try:
@@ -654,14 +654,14 @@ class HomeAssistantHTTP:
 
 
 async def start_http_server_and_save_config(
-    hass: HomeAssistant, conf: dict, server: HomeAssistantHTTP
+    menuai: menuai, conf: dict, server: menuaiHTTP
 ) -> None:
     """Startup the http server and save the config."""
     await server.start()
 
     # If we are set up successful, we store the HTTP settings for recovery mode.
     store: storage.Store[dict[str, Any]] = storage.Store(
-        hass, STORAGE_VERSION, STORAGE_KEY
+        menuai, STORAGE_VERSION, STORAGE_KEY
     )
 
     if CONF_TRUSTED_PROXIES in conf:

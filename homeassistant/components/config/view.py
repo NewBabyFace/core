@@ -1,4 +1,4 @@
-"""Component to configure Home Assistant via an API."""
+"""Component to configure MenuAI via an API."""
 
 from __future__ import annotations
 
@@ -11,19 +11,19 @@ from typing import Any, cast
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView, require_admin
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.file import write_utf8_file_atomic
-from homeassistant.util.yaml import dump, load_yaml
-from homeassistant.util.yaml.loader import JSON_TYPE
+from menuai.components.http import KEY_menuai, menuaiView, require_admin
+from menuai.const import CONF_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util.file import write_utf8_file_atomic
+from menuai.util.yaml import dump, load_yaml
+from menuai.util.yaml.loader import JSON_TYPE
 
 from .const import ACTION_CREATE_UPDATE, ACTION_DELETE
 
 
 class BaseEditConfigView[_DataT: (dict[str, dict[str, Any]], list[dict[str, Any]])](
-    HomeAssistantView
+    menuaiView
 ):
     """Configure a Group endpoint."""
 
@@ -37,7 +37,7 @@ class BaseEditConfigView[_DataT: (dict[str, dict[str, Any]], list[dict[str, Any]
         post_write_hook: Callable[[str, str], Coroutine[Any, Any, None]] | None = None,
         data_schema: Callable[[dict[str, Any]], Any] | None = None,
         data_validator: Callable[
-            [HomeAssistant, str, dict[str, Any]],
+            [menuai, str, dict[str, Any]],
             Coroutine[Any, Any, dict[str, Any] | None],
         ]
         | None = None,
@@ -63,14 +63,14 @@ class BaseEditConfigView[_DataT: (dict[str, dict[str, Any]], list[dict[str, Any]
         raise NotImplementedError
 
     def _get_value(
-        self, hass: HomeAssistant, data: _DataT, config_key: str
+        self, menuai: menuai, data: _DataT, config_key: str
     ) -> dict[str, Any] | None:
         """Get value."""
         raise NotImplementedError
 
     def _write_value(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         data: _DataT,
         config_key: str,
         new_value: dict[str, Any],
@@ -79,7 +79,7 @@ class BaseEditConfigView[_DataT: (dict[str, dict[str, Any]], list[dict[str, Any]
         raise NotImplementedError
 
     def _delete_value(
-        self, hass: HomeAssistant, data: _DataT, config_key: str
+        self, menuai: menuai, data: _DataT, config_key: str
     ) -> dict[str, Any] | None:
         """Delete value."""
         raise NotImplementedError
@@ -87,10 +87,10 @@ class BaseEditConfigView[_DataT: (dict[str, dict[str, Any]], list[dict[str, Any]
     @require_admin
     async def get(self, request: web.Request, config_key: str) -> web.Response:
         """Fetch device specific config."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         async with self.mutation_lock:
-            current = await self.read_config(hass)
-            value = self._get_value(hass, current, config_key)
+            current = await self.read_config(menuai)
+            value = self._get_value(menuai, current, config_key)
 
         if value is None:
             return self.json_message("Resource not found", HTTPStatus.NOT_FOUND)
@@ -110,31 +110,31 @@ class BaseEditConfigView[_DataT: (dict[str, dict[str, Any]], list[dict[str, Any]
         except vol.Invalid as err:
             return self.json_message(f"Key malformed: {err}", HTTPStatus.BAD_REQUEST)
 
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         try:
             # We just validate, we don't store that data because
             # we don't want to store the defaults.
             if self.data_validator:
-                await self.data_validator(hass, config_key, data)
+                await self.data_validator(menuai, config_key, data)
             else:
                 # We either have a data_schema or a data_validator, ignore mypy
                 self.data_schema(data)  # type: ignore[misc]
-        except (vol.Invalid, HomeAssistantError) as err:
+        except (vol.Invalid, menuaiError) as err:
             return self.json_message(
                 f"Message malformed: {err}", HTTPStatus.BAD_REQUEST
             )
 
-        path = hass.config.path(self.path)
+        path = menuai.config.path(self.path)
 
         async with self.mutation_lock:
-            current = await self.read_config(hass)
-            self._write_value(hass, current, config_key, data)
+            current = await self.read_config(menuai)
+            self._write_value(menuai, current, config_key, data)
 
-            await hass.async_add_executor_job(_write, path, current)
+            await menuai.async_add_executor_job(_write, path, current)
 
         if self.post_write_hook is not None:
-            hass.async_create_task(
+            menuai.async_create_task(
                 self.post_write_hook(ACTION_CREATE_UPDATE, config_key)
             )
 
@@ -143,26 +143,26 @@ class BaseEditConfigView[_DataT: (dict[str, dict[str, Any]], list[dict[str, Any]
     @require_admin
     async def delete(self, request: web.Request, config_key: str) -> web.Response:
         """Remove an entry."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         async with self.mutation_lock:
-            current = await self.read_config(hass)
-            value = self._get_value(hass, current, config_key)
-            path = hass.config.path(self.path)
+            current = await self.read_config(menuai)
+            value = self._get_value(menuai, current, config_key)
+            path = menuai.config.path(self.path)
 
             if value is None:
                 return self.json_message("Resource not found", HTTPStatus.BAD_REQUEST)
 
-            self._delete_value(hass, current, config_key)
-            await hass.async_add_executor_job(_write, path, current)
+            self._delete_value(menuai, current, config_key)
+            await menuai.async_add_executor_job(_write, path, current)
 
         if self.post_write_hook is not None:
-            hass.async_create_task(self.post_write_hook(ACTION_DELETE, config_key))
+            menuai.async_create_task(self.post_write_hook(ACTION_DELETE, config_key))
 
         return self.json({"result": "ok"})
 
-    async def read_config(self, hass: HomeAssistant) -> _DataT:
+    async def read_config(self, menuai: menuai) -> _DataT:
         """Read the config."""
-        current = await hass.async_add_executor_job(_read, hass.config.path(self.path))
+        current = await menuai.async_add_executor_job(_read, menuai.config.path(self.path))
         if not current:
             current = self._empty_config()
         return cast(_DataT, current)
@@ -176,14 +176,14 @@ class EditKeyBasedConfigView(BaseEditConfigView[dict[str, dict[str, Any]]]):
         return {}
 
     def _get_value(
-        self, hass: HomeAssistant, data: dict[str, dict[str, Any]], config_key: str
+        self, menuai: menuai, data: dict[str, dict[str, Any]], config_key: str
     ) -> dict[str, Any] | None:
         """Get value."""
         return data.get(config_key)
 
     def _write_value(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         data: dict[str, dict[str, Any]],
         config_key: str,
         new_value: dict[str, Any],
@@ -192,7 +192,7 @@ class EditKeyBasedConfigView(BaseEditConfigView[dict[str, dict[str, Any]]]):
         data.setdefault(config_key, {}).update(new_value)
 
     def _delete_value(
-        self, hass: HomeAssistant, data: dict[str, dict[str, Any]], config_key: str
+        self, menuai: menuai, data: dict[str, dict[str, Any]], config_key: str
     ) -> dict[str, Any]:
         """Delete value."""
         return data.pop(config_key)
@@ -206,27 +206,27 @@ class EditIdBasedConfigView(BaseEditConfigView[list[dict[str, Any]]]):
         return []
 
     def _get_value(
-        self, hass: HomeAssistant, data: list[dict[str, Any]], config_key: str
+        self, menuai: menuai, data: list[dict[str, Any]], config_key: str
     ) -> dict[str, Any] | None:
         """Get value."""
         return next((val for val in data if val.get(CONF_ID) == config_key), None)
 
     def _write_value(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         data: list[dict[str, Any]],
         config_key: str,
         new_value: dict[str, Any],
     ) -> None:
         """Set value."""
-        if (value := self._get_value(hass, data, config_key)) is None:
+        if (value := self._get_value(menuai, data, config_key)) is None:
             value = {CONF_ID: config_key}
             data.append(value)
 
         value.update(new_value)
 
     def _delete_value(
-        self, hass: HomeAssistant, data: list[dict[str, Any]], config_key: str
+        self, menuai: menuai, data: list[dict[str, Any]], config_key: str
     ) -> None:
         """Delete value."""
         index = next(

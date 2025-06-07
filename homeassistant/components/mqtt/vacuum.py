@@ -7,21 +7,21 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import vacuum
-from homeassistant.components.vacuum import (
+from menuai.components import vacuum
+from menuai.components.vacuum import (
     ENTITY_ID_FORMAT,
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_SUPPORTED_FEATURES, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.json import json_dumps
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, VolSchemaType
-from homeassistant.util.json import json_loads_object
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_SUPPORTED_FEATURES, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.json import json_dumps
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, VolSchemaType
+from menuai.util.json import json_loads_object
 
 from . import subscription
 from .config import MQTT_BASE_SCHEMA
@@ -173,13 +173,13 @@ DISCOVERY_SCHEMA = PLATFORM_SCHEMA_MODERN.extend({}, extra=vol.ALLOW_EXTRA)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT vacuum through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttStateVacuum,
         vacuum.DOMAIN,
@@ -203,7 +203,7 @@ class MqttStateVacuum(MqttEntity, StateVacuumEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         config_entry: ConfigEntry,
         discovery_data: DiscoveryInfoType | None,
@@ -211,7 +211,7 @@ class MqttStateVacuum(MqttEntity, StateVacuumEntity):
         """Initialize the vacuum."""
         self._state_attrs: dict[str, Any] = {}
 
-        MqttEntity.__init__(self, hass, config, config_entry, discovery_data)
+        MqttEntity.__init__(self, menuai, config, config_entry, discovery_data)
 
     @staticmethod
     def config_schema() -> VolSchemaType:
@@ -281,7 +281,7 @@ class MqttStateVacuum(MqttEntity, StateVacuumEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     async def _async_publish_command(self, feature: VacuumEntityFeature) -> None:
         """Publish a command."""

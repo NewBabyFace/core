@@ -1,40 +1,40 @@
-"""Test the Home Assistant Supervisor config flow."""
+"""Test the MenuAI Supervisor config flow."""
 
 from unittest.mock import patch
 
-from homeassistant.components.hassio import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.menuaiio import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
-async def test_config_flow(hass: HomeAssistant) -> None:
+async def test_config_flow(menuai: menuai) -> None:
     """Test we get the form."""
 
     with (
         patch(
-            "homeassistant.components.hassio.async_setup", return_value=True
+            "menuai.components.menuaiio.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.hassio.async_setup_entry",
+            "menuai.components.menuaiio.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": "system"}
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["title"] == "Supervisor"
         assert result["data"] == {}
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup.mock_calls) == 1
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_multiple_entries(hass: HomeAssistant) -> None:
-    """Test creating multiple hassio entries."""
-    await test_config_flow(hass)
-    result = await hass.config_entries.flow.async_init(
+async def test_multiple_entries(menuai: menuai) -> None:
+    """Test creating multiple menuaiio entries."""
+    await test_config_flow(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": "system"}
     )
     assert result["type"] is FlowResultType.ABORT

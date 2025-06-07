@@ -6,11 +6,11 @@ from pypalazzetti.exceptions import CommunicationError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -20,28 +20,28 @@ ENTITY_ID = "button.stove_silent"
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.palazzetti.PLATFORMS", [Platform.BUTTON]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.palazzetti.PLATFORMS", [Platform.BUTTON]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_async_press(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test pressing via service call."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -51,17 +51,17 @@ async def test_async_press(
 
 
 async def test_async_press_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test pressing with error via service call."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_palazzetti_client.set_fan_silent.side_effect = CommunicationError()
     error_message = "Could not connect to the device"
-    with pytest.raises(HomeAssistantError, match=error_message):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error_message):
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: ENTITY_ID},

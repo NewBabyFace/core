@@ -6,13 +6,13 @@ from unittest.mock import PropertyMock, patch
 import pytest
 from soco.exceptions import NotSupportedException
 
-from homeassistant.components.sensor import SCAN_INTERVAL
-from homeassistant.components.sonos.binary_sensor import ATTR_BATTERY_POWER_SOURCE
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.sensor import SCAN_INTERVAL
+from menuai.components.sonos.binary_sensor import ATTR_BATTERY_POWER_SOURCE
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from .conftest import SonosMockEvent
 
@@ -20,13 +20,13 @@ from tests.common import async_fire_time_changed
 
 
 async def test_entity_registry_unsupported(
-    hass: HomeAssistant, async_setup_sonos, soco, entity_registry: er.EntityRegistry
+    menuai: menuai, async_setup_sonos, soco, entity_registry: er.EntityRegistry
 ) -> None:
     """Test sonos device without battery registered in the device registry."""
     soco.get_battery_info.side_effect = NotSupportedException
 
     await async_setup_sonos()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "media_player.zone_a" in entity_registry.entities
     assert "sensor.zone_a_battery" not in entity_registry.entities
@@ -34,10 +34,10 @@ async def test_entity_registry_unsupported(
 
 
 async def test_entity_registry_supported(
-    hass: HomeAssistant, async_autosetup_sonos, soco, entity_registry: er.EntityRegistry
+    menuai: menuai, async_autosetup_sonos, soco, entity_registry: er.EntityRegistry
 ) -> None:
     """Test sonos device with battery registered in the device registry."""
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "media_player.zone_a" in entity_registry.entities
     assert "sensor.zone_a_battery" in entity_registry.entities
@@ -45,16 +45,16 @@ async def test_entity_registry_supported(
 
 
 async def test_battery_attributes(
-    hass: HomeAssistant, async_autosetup_sonos, soco, entity_registry: er.EntityRegistry
+    menuai: menuai, async_autosetup_sonos, soco, entity_registry: er.EntityRegistry
 ) -> None:
     """Test sonos device with battery state."""
     battery = entity_registry.entities["sensor.zone_a_battery"]
-    battery_state = hass.states.get(battery.entity_id)
+    battery_state = menuai.states.get(battery.entity_id)
     assert battery_state.state == "100"
     assert battery_state.attributes.get("unit_of_measurement") == "%"
 
     power = entity_registry.entities["binary_sensor.zone_a_charging"]
-    power_state = hass.states.get(power.entity_id)
+    power_state = menuai.states.get(power.entity_id)
     assert power_state.state == STATE_ON
     assert (
         power_state.attributes.get(ATTR_BATTERY_POWER_SOURCE) == "SONOS_CHARGING_RING"
@@ -62,7 +62,7 @@ async def test_battery_attributes(
 
 
 async def test_battery_on_s1(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_sonos,
     soco,
     device_properties_event,
@@ -72,7 +72,7 @@ async def test_battery_on_s1(
     soco.get_battery_info.return_value = {}
 
     await async_setup_sonos()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     subscription = soco.deviceProperties.subscribe.return_value
     sub_callback = subscription.callback
@@ -82,20 +82,20 @@ async def test_battery_on_s1(
 
     # Update the speaker with a callback event
     sub_callback(device_properties_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     battery = entity_registry.entities["sensor.zone_a_battery"]
-    battery_state = hass.states.get(battery.entity_id)
+    battery_state = menuai.states.get(battery.entity_id)
     assert battery_state.state == "100"
 
     power = entity_registry.entities["binary_sensor.zone_a_charging"]
-    power_state = hass.states.get(power.entity_id)
+    power_state = menuai.states.get(power.entity_id)
     assert power_state.state == STATE_OFF
     assert power_state.attributes.get(ATTR_BATTERY_POWER_SOURCE) == "BATTERY"
 
 
 async def test_device_payload_without_battery(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_sonos,
     soco,
     device_properties_event,
@@ -105,7 +105,7 @@ async def test_device_payload_without_battery(
     soco.get_battery_info.return_value = None
 
     await async_setup_sonos()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     subscription = soco.deviceProperties.subscribe.return_value
     sub_callback = subscription.callback
@@ -114,13 +114,13 @@ async def test_device_payload_without_battery(
     device_properties_event.variables["more_info"] = bad_payload
 
     sub_callback(device_properties_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert bad_payload in caplog.text
 
 
 async def test_device_payload_without_battery_and_ignored_keys(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_sonos,
     soco,
     device_properties_event,
@@ -130,7 +130,7 @@ async def test_device_payload_without_battery_and_ignored_keys(
     soco.get_battery_info.return_value = None
 
     await async_setup_sonos()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     subscription = soco.deviceProperties.subscribe.return_value
     sub_callback = subscription.callback
@@ -139,13 +139,13 @@ async def test_device_payload_without_battery_and_ignored_keys(
     device_properties_event.variables["more_info"] = ignored_payload
 
     sub_callback(device_properties_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert ignored_payload not in caplog.text
 
 
 async def test_audio_input_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_autosetup_sonos,
     soco,
     tv_event,
@@ -156,40 +156,40 @@ async def test_audio_input_sensor(
     subscription = soco.avTransport.subscribe.return_value
     sub_callback = subscription.callback
     sub_callback(tv_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     audio_input_sensor = entity_registry.entities["sensor.zone_a_audio_input_format"]
-    audio_input_state = hass.states.get(audio_input_sensor.entity_id)
+    audio_input_state = menuai.states.get(audio_input_sensor.entity_id)
     assert audio_input_state.state == "Dolby 5.1"
 
     # Set mocked input format to new value and ensure poll success
     no_input_mock = PropertyMock(return_value="No input")
     type(soco).soundbar_audio_input_format = no_input_mock
 
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     no_input_mock.assert_called_once()
-    audio_input_state = hass.states.get(audio_input_sensor.entity_id)
+    audio_input_state = menuai.states.get(audio_input_sensor.entity_id)
     assert audio_input_state.state == "No input"
 
     # Ensure state is not polled when source is not TV and state is already "No input"
     sub_callback(no_media_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     unpolled_mock = PropertyMock(return_value="Will not be polled")
     type(soco).soundbar_audio_input_format = unpolled_mock
 
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     unpolled_mock.assert_not_called()
-    audio_input_state = hass.states.get(audio_input_sensor.entity_id)
+    audio_input_state = menuai.states.get(audio_input_sensor.entity_id)
     assert audio_input_state.state == "No input"
 
 
 async def test_microphone_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_autosetup_sonos,
     soco,
     device_properties_event,
@@ -199,20 +199,20 @@ async def test_microphone_binary_sensor(
     assert "binary_sensor.zone_a_microphone" in entity_registry.entities
 
     mic_binary_sensor = entity_registry.entities["binary_sensor.zone_a_microphone"]
-    mic_binary_sensor_state = hass.states.get(mic_binary_sensor.entity_id)
+    mic_binary_sensor_state = menuai.states.get(mic_binary_sensor.entity_id)
     assert mic_binary_sensor_state.state == STATE_OFF
 
     # Update the speaker with a callback event
     subscription = soco.deviceProperties.subscribe.return_value
     subscription.callback(device_properties_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    mic_binary_sensor_state = hass.states.get(mic_binary_sensor.entity_id)
+    mic_binary_sensor_state = menuai.states.get(mic_binary_sensor.entity_id)
     assert mic_binary_sensor_state.state == STATE_ON
 
 
 async def test_favorites_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_autosetup_sonos,
     soco,
     fire_zgs_event,
@@ -220,25 +220,25 @@ async def test_favorites_sensor(
 ) -> None:
     """Test Sonos favorites sensor."""
     favorites = entity_registry.entities["sensor.sonos_favorites"]
-    assert hass.states.get(favorites.entity_id) is None
+    assert menuai.states.get(favorites.entity_id) is None
 
     # Enable disabled sensor
     entity_registry.async_update_entity(entity_id=favorites.entity_id, disabled_by=None)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Fire event to cancel poll timer and avoid triggering errors during time jump
     service = soco.contentDirectory
     empty_event = SonosMockEvent(soco, service, {})
     subscription = service.subscribe.return_value
     subscription.callback(event=empty_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Reload the integration to enable the sensor
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Trigger subscription callback for speaker discovery
     await fire_zgs_event()
@@ -247,8 +247,8 @@ async def test_favorites_sensor(
         soco, service, {"favorites_update_id": "2", "container_update_i_ds": "FV:2,2"}
     )
     with patch(
-        "homeassistant.components.sonos.favorites.SonosFavorites.update_cache",
+        "menuai.components.sonos.favorites.SonosFavorites.update_cache",
         return_value=True,
     ):
         subscription.callback(event=favorites_updated_event)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)

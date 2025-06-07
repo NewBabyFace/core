@@ -3,7 +3,7 @@
 from enum import IntFlag, StrEnum
 from functools import partial
 
-from homeassistant.helpers.deprecation import (
+from menuai.helpers.deprecation import (
     DeprecatedConstantEnum,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
@@ -87,7 +87,7 @@ class MediaClass(StrEnum):
     VIDEO = "video"
 
 
-# These MEDIA_CLASS_* constants are deprecated as of Home Assistant 2022.10.
+# These MEDIA_CLASS_* constants are deprecated as of MenuAI 2022.10.
 # Please use the MediaClass enum instead.
 _DEPRECATED_MEDIA_CLASS_ALBUM = DeprecatedConstantEnum(MediaClass.ALBUM, "2025.10")
 _DEPRECATED_MEDIA_CLASS_APP = DeprecatedConstantEnum(MediaClass.APP, "2025.10")
@@ -145,7 +145,7 @@ class MediaType(StrEnum):
     VIDEO = "video"
 
 
-# These MEDIA_TYPE_* constants are deprecated as of Home Assistant 2022.10.
+# These MEDIA_TYPE_* constants are deprecated as of MenuAI 2022.10.
 # Please use the MediaType enum instead.
 _DEPRECATED_MEDIA_TYPE_ALBUM = DeprecatedConstantEnum(MediaType.ALBUM, "2025.10")
 _DEPRECATED_MEDIA_TYPE_APP = DeprecatedConstantEnum(MediaType.APP, "2025.10")
@@ -190,7 +190,7 @@ class RepeatMode(StrEnum):
     ONE = "one"
 
 
-# These REPEAT_MODE_* constants are deprecated as of Home Assistant 2022.10.
+# These REPEAT_MODE_* constants are deprecated as of MenuAI 2022.10.
 # Please use the RepeatMode enum instead.
 _DEPRECATED_REPEAT_MODE_ALL = DeprecatedConstantEnum(RepeatMode.ALL, "2025.10")
 _DEPRECATED_REPEAT_MODE_OFF = DeprecatedConstantEnum(RepeatMode.OFF, "2025.10")
@@ -226,7 +226,7 @@ class MediaPlayerEntityFeature(IntFlag):
     SEARCH_MEDIA = 4194304
 
 
-# These SUPPORT_* constants are deprecated as of Home Assistant 2022.5.
+# These SUPPORT_* constants are deprecated as of MenuAI 2022.5.
 # Please use the MediaPlayerEntityFeature enum instead.
 _DEPRECATED_SUPPORT_PAUSE = DeprecatedConstantEnum(
     MediaPlayerEntityFeature.PAUSE, "2025.10"

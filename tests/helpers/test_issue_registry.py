@@ -5,13 +5,13 @@ from typing import Any
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
 
 from tests.common import async_capture_events, flush_store
 
 
-async def test_load_save_issues(hass: HomeAssistant) -> None:
+async def test_load_save_issues(menuai: menuai) -> None:
     """Make sure that we can load/save data correctly."""
     issues = [
         {
@@ -61,11 +61,11 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
         },
     ]
 
-    events = async_capture_events(hass, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
+    events = async_capture_events(menuai, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -77,7 +77,7 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
             translation_placeholders=issue["translation_placeholders"],
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 4
     assert events[0].data == {
@@ -101,8 +101,8 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
         "issue_id": "issue_4",
     }
 
-    ir.async_ignore_issue(hass, issues[0]["domain"], issues[0]["issue_id"], True)
-    await hass.async_block_till_done()
+    ir.async_ignore_issue(menuai, issues[0]["domain"], issues[0]["issue_id"], True)
+    await menuai.async_block_till_done()
 
     assert len(events) == 5
     assert events[4].data == {
@@ -114,7 +114,7 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
     # Update an issue by creating it again with the same value,
     # no update event should be fired, as nothing changed.
     ir.async_create_issue(
-        hass,
+        menuai,
         issues[2]["domain"],
         issues[2]["issue_id"],
         breaks_in_ha_version=issues[2]["breaks_in_ha_version"],
@@ -125,13 +125,13 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
         translation_key=issues[2]["translation_key"],
         translation_placeholders=issues[2]["translation_placeholders"],
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 5
 
     # Update an issue by creating it again, url changed
     ir.async_create_issue(
-        hass,
+        menuai,
         issues[2]["domain"],
         issues[2]["issue_id"],
         breaks_in_ha_version=issues[2]["breaks_in_ha_version"],
@@ -142,7 +142,7 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
         translation_key=issues[2]["translation_key"],
         translation_placeholders=issues[2]["translation_placeholders"],
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 6
     assert events[5].data == {
@@ -151,8 +151,8 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
         "issue_id": "issue_3",
     }
 
-    ir.async_delete_issue(hass, issues[2]["domain"], issues[2]["issue_id"])
-    await hass.async_block_till_done()
+    ir.async_delete_issue(menuai, issues[2]["domain"], issues[2]["issue_id"])
+    await menuai.async_block_till_done()
 
     assert len(events) == 7
     assert events[6].data == {
@@ -161,13 +161,13 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
         "issue_id": "issue_3",
     }
 
-    registry = hass.data[ir.DATA_REGISTRY]
+    registry = menuai.data[ir.DATA_REGISTRY]
     assert len(registry.issues) == 3
     issue1 = registry.async_get_issue("test", "issue_1")
     issue2 = registry.async_get_issue("test", "issue_2")
     issue4 = registry.async_get_issue("test", "issue_4")
 
-    registry2 = ir.IssueRegistry(hass)
+    registry2 = ir.IssueRegistry(menuai)
     await flush_store(registry._store)
     await registry2.async_load()
 
@@ -213,10 +213,10 @@ async def test_load_save_issues(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_load_save_issues_read_only(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Make sure that we don't save data when opened in read-only mode."""
-    hass_storage[ir.STORAGE_KEY] = {
+    menuai_storage[ir.STORAGE_KEY] = {
         "version": ir.STORAGE_VERSION_MAJOR,
         "minor_version": ir.STORAGE_VERSION_MINOR,
         "data": {
@@ -246,12 +246,12 @@ async def test_load_save_issues_read_only(
         },
     ]
 
-    events = async_capture_events(hass, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
-    await ir.async_load(hass, read_only=True)
+    events = async_capture_events(menuai, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
+    await ir.async_load(menuai, read_only=True)
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -263,7 +263,7 @@ async def test_load_save_issues_read_only(
             translation_placeholders=issue["translation_placeholders"],
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].data == {
@@ -272,10 +272,10 @@ async def test_load_save_issues_read_only(
         "issue_id": "issue_2",
     }
 
-    registry = ir.async_get(hass)
+    registry = ir.async_get(menuai)
     assert len(registry.issues) == 2
 
-    registry2 = ir.IssueRegistry(hass)
+    registry2 = ir.IssueRegistry(menuai)
     await flush_store(registry._store)
     await registry2.async_load()
 
@@ -284,10 +284,10 @@ async def test_load_save_issues_read_only(
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_loading_issues_from_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test loading stored issues on start."""
-    hass_storage[ir.STORAGE_KEY] = {
+    menuai_storage[ir.STORAGE_KEY] = {
         "version": ir.STORAGE_VERSION_MAJOR,
         "minor_version": ir.STORAGE_VERSION_MINOR,
         "data": {
@@ -325,16 +325,16 @@ async def test_loading_issues_from_storage(
         },
     }
 
-    await ir.async_load(hass)
+    await ir.async_load(menuai)
 
-    registry = hass.data[ir.DATA_REGISTRY]
+    registry = menuai.data[ir.DATA_REGISTRY]
     assert len(registry.issues) == 3
 
 
 @pytest.mark.parametrize("load_registries", [False])
-async def test_migration_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]) -> None:
+async def test_migration_1_1(menuai: menuai, menuai_storage: dict[str, Any]) -> None:
     """Test migration from version 1.1."""
-    hass_storage[ir.STORAGE_KEY] = {
+    menuai_storage[ir.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 1,
         "data": {
@@ -355,24 +355,24 @@ async def test_migration_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]) 
         },
     }
 
-    await ir.async_load(hass)
+    await ir.async_load(menuai)
 
-    registry = hass.data[ir.DATA_REGISTRY]
+    registry = menuai.data[ir.DATA_REGISTRY]
     assert len(registry.issues) == 2
 
 
 async def test_get_or_create_thread_safety(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test call async_get_or_create_from a thread."""
     with pytest.raises(
         RuntimeError,
         match="Detected code that calls issue_registry.async_get_or_create from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(
                 ir.async_create_issue,
-                hass,
+                menuai,
                 "any",
                 "any",
                 is_fixable=True,
@@ -383,11 +383,11 @@ async def test_get_or_create_thread_safety(
 
 
 async def test_async_delete_issue_thread_safety(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test call async_delete_issue from a thread."""
     ir.async_create_issue(
-        hass,
+        menuai,
         "any",
         "any",
         is_fixable=True,
@@ -399,20 +399,20 @@ async def test_async_delete_issue_thread_safety(
         RuntimeError,
         match="Detected code that calls issue_registry.async_delete from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             ir.async_delete_issue,
-            hass,
+            menuai,
             "any",
             "any",
         )
 
 
 async def test_async_ignore_issue_thread_safety(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test call async_ignore_issue from a thread."""
     ir.async_create_issue(
-        hass,
+        menuai,
         "any",
         "any",
         is_fixable=True,
@@ -424,6 +424,6 @@ async def test_async_ignore_issue_thread_safety(
         RuntimeError,
         match="Detected code that calls issue_registry.async_ignore from a thread.",
     ):
-        await hass.async_add_executor_job(
-            ir.async_ignore_issue, hass, "any", "any", True
+        await menuai.async_add_executor_job(
+            ir.async_ignore_issue, menuai, "any", "any", True
         )

@@ -6,15 +6,15 @@ from typing import Any
 
 from yarl import URL
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import REDACTED
+from menuai.const import CONF_URL
+from menuai.core import menuai
 
 from . import NtfyConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: NtfyConfigEntry
+    menuai: menuai, config_entry: NtfyConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 

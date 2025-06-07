@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     FLUME_TYPE_BRIDGE,
@@ -67,7 +67,7 @@ FLUME_BINARY_NOTIFICATION_SENSORS: tuple[FlumeBinarySensorEntityDescription, ...
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FlumeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -80,7 +80,7 @@ async def async_setup_entry(
     ] = []
 
     connection_coordinator = FlumeDeviceConnectionUpdateCoordinator(
-        hass=hass, config_entry=config_entry, flume_devices=flume_devices
+        menuai=menuai, config_entry=config_entry, flume_devices=flume_devices
     )
     notification_coordinator = flume_domain_data.notifications_coordinator
     flume_devices = get_valid_flume_devices(flume_devices)

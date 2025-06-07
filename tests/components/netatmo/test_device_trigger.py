@@ -3,20 +3,20 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.netatmo import DOMAIN
-from homeassistant.components.netatmo.const import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.netatmo import DOMAIN
+from menuai.components.netatmo.const import (
     CLIMATE_TRIGGERS,
     INDOOR_CAMERA_TRIGGERS,
     NETATMO_EVENT,
     OUTDOOR_CAMERA_TRIGGERS,
 )
-from homeassistant.components.netatmo.device_trigger import SUBTYPES
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.netatmo.device_trigger import SUBTYPES
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -35,7 +35,7 @@ from tests.common import (
     ],
 )
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     platform,
@@ -44,7 +44,7 @@ async def test_get_triggers(
 ) -> None:
     """Test we get the expected triggers from a netatmo devices."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -82,7 +82,7 @@ async def test_get_triggers(
     triggers = [
         trigger
         for trigger in await async_get_device_automations(
-            hass, DeviceAutomationType.TRIGGER, device_entry.id
+            menuai, DeviceAutomationType.TRIGGER, device_entry.id
         )
         if trigger["domain"] == DOMAIN
     ]
@@ -105,7 +105,7 @@ async def test_get_triggers(
     ],
 )
 async def test_if_fires_on_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -117,7 +117,7 @@ async def test_if_fires_on_event(
     mac_address = "12:34:56:AB:CD:EF"
     connection = (dr.CONNECTION_NETWORK_MAC, mac_address)
     config_entry = MockConfigEntry(domain=DOMAIN, data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={connection},
@@ -127,10 +127,10 @@ async def test_if_fires_on_event(
     entity_entry = entity_registry.async_get_or_create(
         platform, DOMAIN, "5678", device_id=device_entry.id
     )
-    events = async_capture_events(hass, "netatmo_event")
+    events = async_capture_events(menuai, "netatmo_event")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -159,14 +159,14 @@ async def test_if_fires_on_event(
     assert device is not None
 
     # Fake that the entity is turning on.
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         event_type=NETATMO_EVENT,
         event_data={
             "type": event_type,
             ATTR_DEVICE_ID: device.id,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == f"{event_type} - device - {device.id}"
@@ -188,7 +188,7 @@ async def test_if_fires_on_event(
     ],
 )
 async def test_if_fires_on_event_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -200,7 +200,7 @@ async def test_if_fires_on_event_legacy(
     mac_address = "12:34:56:AB:CD:EF"
     connection = (dr.CONNECTION_NETWORK_MAC, mac_address)
     config_entry = MockConfigEntry(domain=DOMAIN, data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={connection},
@@ -210,10 +210,10 @@ async def test_if_fires_on_event_legacy(
     entity_entry = entity_registry.async_get_or_create(
         platform, DOMAIN, "5678", device_id=device_entry.id
     )
-    events = async_capture_events(hass, "netatmo_event")
+    events = async_capture_events(menuai, "netatmo_event")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -242,14 +242,14 @@ async def test_if_fires_on_event_legacy(
     assert device is not None
 
     # Fake that the entity is turning on.
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         event_type=NETATMO_EVENT,
         event_data={
             "type": event_type,
             ATTR_DEVICE_ID: device.id,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == f"{event_type} - device - {device.id}"
@@ -267,7 +267,7 @@ async def test_if_fires_on_event_legacy(
     ],
 )
 async def test_if_fires_on_event_with_subtype(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -280,7 +280,7 @@ async def test_if_fires_on_event_with_subtype(
     mac_address = "12:34:56:AB:CD:EF"
     connection = (dr.CONNECTION_NETWORK_MAC, mac_address)
     config_entry = MockConfigEntry(domain=DOMAIN, data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={connection},
@@ -290,10 +290,10 @@ async def test_if_fires_on_event_with_subtype(
     entity_entry = entity_registry.async_get_or_create(
         platform, DOMAIN, "5678", device_id=device_entry.id
     )
-    events = async_capture_events(hass, "netatmo_event")
+    events = async_capture_events(menuai, "netatmo_event")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -324,7 +324,7 @@ async def test_if_fires_on_event_with_subtype(
     assert device is not None
 
     # Fake that the entity is turning on.
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         event_type=NETATMO_EVENT,
         event_data={
             "type": event_type,
@@ -334,7 +334,7 @@ async def test_if_fires_on_event_with_subtype(
             ATTR_DEVICE_ID: device.id,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert len(service_calls) == 1
     assert (
@@ -348,7 +348,7 @@ async def test_if_fires_on_event_with_subtype(
     [("climate", "NAPlug", trigger) for trigger in CLIMATE_TRIGGERS],
 )
 async def test_if_invalid_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     platform,
@@ -359,7 +359,7 @@ async def test_if_invalid_device(
     mac_address = "12:34:56:AB:CD:EF"
     connection = (dr.CONNECTION_NETWORK_MAC, mac_address)
     config_entry = MockConfigEntry(domain=DOMAIN, data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={connection},
@@ -371,7 +371,7 @@ async def test_if_invalid_device(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [

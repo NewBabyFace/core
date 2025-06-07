@@ -5,7 +5,7 @@ from unittest.mock import ANY, patch
 
 import pytest
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_HVAC_MODE,
     ATTR_HVAC_MODES,
@@ -17,10 +17,10 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
@@ -30,7 +30,7 @@ uid = "3WRRJR6RCZQZSND8VP0YTO3YXCSOFPKBMW8T51TU-LQ*TWMYQKL3UVED4HSIIB9GXJWJZBQCX
 
 
 async def test_climate_get_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -44,7 +44,7 @@ async def test_climate_get_state(
     assert device.model == "thermostat"
 
     entity_id = "climate.thermostat"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == "thermostat"
 
@@ -69,13 +69,13 @@ async def test_climate_get_state(
     states_response[0]["state"]["currentTemperature"] = 20
     states_response[0]["state"]["targetTemperature"] = 21
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes.get("friendly_name") == "thermostat"
 
@@ -88,14 +88,14 @@ async def test_climate_get_state(
 
 
 async def test_climate_set_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test set off climate."""
 
     entity_id = "climate.thermostat"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == "thermostat"
 
@@ -104,9 +104,9 @@ async def test_climate_set_off(
     assert entry.unique_id == uid
 
     with patch(
-        "homeassistant.components.freedompro.climate.put_state"
+        "menuai.components.freedompro.climate.put_state"
     ) as mock_put_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: [entity_id], ATTR_HVAC_MODE: HVACMode.OFF},
@@ -114,20 +114,20 @@ async def test_climate_set_off(
         )
     mock_put_state.assert_called_once_with(ANY, ANY, ANY, '{"heatingCoolingState": 0}')
 
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == HVACMode.HEAT
 
 
 async def test_climate_set_unsupported_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test set unsupported hvac mode climate."""
 
     entity_id = "climate.thermostat"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == "thermostat"
 
@@ -136,7 +136,7 @@ async def test_climate_set_unsupported_hvac_mode(
     assert entry.unique_id == uid
 
     with pytest.raises(ValueError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: [entity_id], ATTR_HVAC_MODE: HVACMode.AUTO},
@@ -145,14 +145,14 @@ async def test_climate_set_unsupported_hvac_mode(
 
 
 async def test_climate_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test set temperature climate."""
 
     entity_id = "climate.thermostat"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == "thermostat"
 
@@ -161,9 +161,9 @@ async def test_climate_set_temperature(
     assert entry.unique_id == uid
 
     with patch(
-        "homeassistant.components.freedompro.climate.put_state"
+        "menuai.components.freedompro.climate.put_state"
     ) as mock_put_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -181,25 +181,25 @@ async def test_climate_set_temperature(
     states_response[0]["state"]["currentTemperature"] = 20
     states_response[0]["state"]["targetTemperature"] = 21
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_TEMPERATURE] == 21
 
 
 async def test_climate_set_temperature_unsupported_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test set temperature climate unsupported hvac mode."""
 
     entity_id = "climate.thermostat"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == "thermostat"
 
@@ -207,7 +207,7 @@ async def test_climate_set_temperature_unsupported_hvac_mode(
     assert entry
     assert entry.unique_id == uid
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {

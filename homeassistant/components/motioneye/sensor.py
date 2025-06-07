@@ -9,12 +9,12 @@ from typing import Any
 from motioneye_client.client import MotionEyeClient
 from motioneye_client.const import KEY_ACTIONS
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import get_camera_from_cameras, listen_for_new_cameras
 from .const import CONF_CLIENT, CONF_COORDINATOR, DOMAIN, TYPE_MOTIONEYE_ACTION_SENSOR
@@ -24,12 +24,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up motionEye from a config entry."""
-    entry_data = hass.data[DOMAIN][entry.entry_id]
+    entry_data = menuai.data[DOMAIN][entry.entry_id]
 
     @callback
     def camera_add(camera: dict[str, Any]) -> None:
@@ -46,7 +46,7 @@ async def async_setup_entry(
             ]
         )
 
-    listen_for_new_cameras(hass, entry, camera_add)
+    listen_for_new_cameras(menuai, entry, camera_add)
 
 
 class MotionEyeActionSensor(MotionEyeEntity, SensorEntity):

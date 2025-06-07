@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from homeassistant.const import WEEKDAYS
+from menuai.const import WEEKDAYS
 
 
 def next_weekday(fromdate: date, weekday: int) -> date:

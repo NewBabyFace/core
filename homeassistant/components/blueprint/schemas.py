@@ -4,7 +4,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEFAULT,
     CONF_DESCRIPTION,
     CONF_DOMAIN,
@@ -13,14 +13,14 @@ from homeassistant.const import (
     CONF_PATH,
     CONF_SELECTOR,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv, selector
+from menuai.core import callback
+from menuai.helpers import config_validation as cv, selector
 
 from .const import (
     CONF_AUTHOR,
     CONF_BLUEPRINT,
     CONF_COLLAPSED,
-    CONF_HOMEASSISTANT,
+    CONF_menuai,
     CONF_INPUT,
     CONF_MIN_VERSION,
     CONF_SOURCE_URL,
@@ -29,7 +29,7 @@ from .const import (
 
 
 def version_validator(value: Any) -> str:
-    """Validate a Home Assistant version."""
+    """Validate a MenuAI version."""
     if not isinstance(value, str):
         raise vol.Invalid("Version needs to be a string")
 
@@ -110,7 +110,7 @@ BLUEPRINT_SCHEMA = vol.Schema(
                 vol.Required(CONF_DOMAIN): str,
                 vol.Optional(CONF_SOURCE_URL): cv.url,
                 vol.Optional(CONF_AUTHOR): str,
-                vol.Optional(CONF_HOMEASSISTANT): {
+                vol.Optional(CONF_menuai): {
                     vol.Optional(CONF_MIN_VERSION): version_validator
                 },
                 vol.Optional(CONF_INPUT, default=dict): vol.All(

@@ -22,9 +22,9 @@ from aiodiscover.discovery import (
 )
 from cached_ipaddress import cached_ip_addresses
 
-from homeassistant import config_entries
-from homeassistant.components import network
-from homeassistant.components.device_tracker import (
+from menuai import config_entries
+from menuai.components import network
+from menuai.components.device_tracker import (
     ATTR_HOST_NAME,
     ATTR_IP,
     ATTR_MAC,
@@ -33,39 +33,39 @@ from homeassistant.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     SourceType,
 )
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.const import (
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     STATE_HOME,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     discovery_flow,
 )
-from homeassistant.helpers.deprecation import (
+from menuai.helpers.deprecation import (
     DeprecatedConstant,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
-from homeassistant.helpers.discovery_flow import DiscoveryKey
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.event import (
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from menuai.helpers.discovery_flow import DiscoveryKey
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.event import (
     async_track_state_added_domain,
     async_track_time_interval,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo as _DhcpServiceInfo
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import DHCPMatcher, async_get_dhcp
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo as _DhcpServiceInfo
+from menuai.helpers.typing import ConfigType
+from menuai.loader import DHCPMatcher, async_get_dhcp
 
 from . import websocket_api
 from .const import DOMAIN, HOSTNAME, IP_ADDRESS, MAC_ADDRESS
@@ -82,7 +82,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _DEPRECATED_DhcpServiceInfo = DeprecatedConstant(
     _DhcpServiceInfo,
-    "homeassistant.helpers.service_info.dhcp.DhcpServiceInfo",
+    "menuai.helpers.service_info.dhcp.DhcpServiceInfo",
     "2026.2",
 )
 
@@ -122,36 +122,36 @@ def async_index_integration_matchers(
     )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the dhcp component."""
-    integration_matchers = async_index_integration_matchers(await async_get_dhcp(hass))
+    integration_matchers = async_index_integration_matchers(await async_get_dhcp(menuai))
     dhcp_data = DHCPData(integration_matchers=integration_matchers)
-    hass.data[DATA_DHCP] = dhcp_data
-    websocket_api.async_setup(hass)
+    menuai.data[DATA_DHCP] = dhcp_data
+    websocket_api.async_setup(menuai)
     watchers: list[WatcherBase] = []
     # For the passive classes we need to start listening
     # for state changes and connect the dispatchers before
     # everything else starts up or we will miss events
-    device_watcher = DeviceTrackerWatcher(hass, dhcp_data)
+    device_watcher = DeviceTrackerWatcher(menuai, dhcp_data)
     device_watcher.async_start()
     watchers.append(device_watcher)
 
-    device_tracker_registered_watcher = DeviceTrackerRegisteredWatcher(hass, dhcp_data)
+    device_tracker_registered_watcher = DeviceTrackerRegisteredWatcher(menuai, dhcp_data)
     device_tracker_registered_watcher.async_start()
     watchers.append(device_tracker_registered_watcher)
 
     async def _async_initialize(event: Event) -> None:
         await aiodhcpwatcher.async_init()
 
-        network_watcher = NetworkWatcher(hass, dhcp_data)
+        network_watcher = NetworkWatcher(menuai, dhcp_data)
         network_watcher.async_start()
         watchers.append(network_watcher)
 
-        dhcp_watcher = DHCPWatcher(hass, dhcp_data)
+        dhcp_watcher = DHCPWatcher(menuai, dhcp_data)
         await dhcp_watcher.async_start()
         watchers.append(dhcp_watcher)
 
-        rediscovery_watcher = RediscoveryWatcher(hass, dhcp_data)
+        rediscovery_watcher = RediscoveryWatcher(menuai, dhcp_data)
         rediscovery_watcher.async_start()
         watchers.append(rediscovery_watcher)
 
@@ -160,19 +160,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             for watcher in watchers:
                 watcher.async_stop()
 
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_stop)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_initialize)
+    menuai.bus.async_listen_once(EVENT_menuai_STARTED, _async_initialize)
     return True
 
 
 class WatcherBase:
     """Base class for dhcp and device tracker watching."""
 
-    def __init__(self, hass: HomeAssistant, dhcp_data: DHCPData) -> None:
+    def __init__(self, menuai: menuai, dhcp_data: DHCPData) -> None:
         """Initialize class."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self._callbacks = dhcp_data.callbacks
         self._integration_matchers = dhcp_data.integration_matchers
         self._address_data = dhcp_data.address_data
@@ -242,13 +242,13 @@ class WatcherBase:
         matchers = self._integration_matchers
         registered_devices_domains = matchers.registered_devices_domains
 
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         if device := dev_reg.async_get_device(
             connections={(CONNECTION_NETWORK_MAC, formatted_mac)}
         ):
             for entry_id in device.config_entries:
                 if (
-                    entry := self.hass.config_entries.async_get_entry(entry_id)
+                    entry := self.menuai.config_entries.async_get_entry(entry_id)
                 ) and entry.domain in registered_devices_domains:
                     matched_domains.add(entry.domain)
 
@@ -291,7 +291,7 @@ class WatcherBase:
         )
         for domain in matched_domains:
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 domain,
                 {"source": config_entries.SOURCE_DHCP},
                 service_info,
@@ -304,11 +304,11 @@ class NetworkWatcher(WatcherBase):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         dhcp_data: DHCPData,
     ) -> None:
         """Initialize class."""
-        super().__init__(hass, dhcp_data)
+        super().__init__(menuai, dhcp_data)
         self._discover_hosts: DiscoverHosts | None = None
         self._discover_task: asyncio.Task | None = None
 
@@ -325,7 +325,7 @@ class NetworkWatcher(WatcherBase):
         """Start scanning for new devices on the network."""
         self._discover_hosts = DiscoverHosts()
         self._unsub = async_track_time_interval(
-            self.hass,
+            self.menuai,
             self.async_start_discover,
             SCAN_INTERVAL,
             name="DHCP network watcher",
@@ -337,7 +337,7 @@ class NetworkWatcher(WatcherBase):
         """Start a new discovery task if one is not running."""
         if self._discover_task and not self._discover_task.done():
             return
-        self._discover_task = self.hass.async_create_background_task(
+        self._discover_task = self.menuai.async_create_background_task(
             self.async_discover(), name="dhcp discovery", eager_start=True
         )
 
@@ -359,9 +359,9 @@ class DeviceTrackerWatcher(WatcherBase):
     def async_start(self) -> None:
         """Stop watching for new device trackers."""
         self._unsub = async_track_state_added_domain(
-            self.hass, [DEVICE_TRACKER_DOMAIN], self._async_process_device_event
+            self.menuai, [DEVICE_TRACKER_DOMAIN], self._async_process_device_event
         )
-        for state in self.hass.states.async_all(DEVICE_TRACKER_DOMAIN):
+        for state in self.menuai.states.async_all(DEVICE_TRACKER_DOMAIN):
             self._async_process_device_state(state)
 
     @callback
@@ -397,7 +397,7 @@ class DeviceTrackerRegisteredWatcher(WatcherBase):
     def async_start(self) -> None:
         """Stop watching for device tracker registrations."""
         self._unsub = async_dispatcher_connect(
-            self.hass, CONNECTED_DEVICE_REGISTERED, self._async_process_device_data
+            self.menuai, CONNECTED_DEVICE_REGISTERED, self._async_process_device_data
         )
 
     @callback
@@ -425,7 +425,7 @@ class DHCPWatcher(WatcherBase):
 
     async def async_get_adapter_indexes(self) -> list[int] | None:
         """Get the adapter indexes."""
-        adapters = await network.async_get_adapters(self.hass)
+        adapters = await network.async_get_adapters(self.menuai)
         if network.async_only_default_interface_enabled(adapters):
             return None
         return [
@@ -478,7 +478,7 @@ class RediscoveryWatcher(WatcherBase):
     def async_start(self) -> None:
         """Start watching for config entry removals."""
         self._unsub = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             config_entries.signal_discovered_config_entry_removed(DOMAIN),
             self._handle_config_entry_removed,
         )

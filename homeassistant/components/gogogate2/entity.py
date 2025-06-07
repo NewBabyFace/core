@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from ismartgate.common import AbstractDoor, get_door_by_id
 
-from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_IP_ADDRESS
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import DeviceDataUpdateCoordinator, GogoGateConfigEntry

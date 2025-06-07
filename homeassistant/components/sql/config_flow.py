@@ -13,26 +13,26 @@ import sqlparse
 from sqlparse.exceptions import SQLParseError
 import voluptuous as vol
 
-from homeassistant.components.recorder import CONF_DB_URL, get_instance
-from homeassistant.components.sensor import (
+from menuai.components.recorder import CONF_DB_URL, get_instance
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import selector
+from menuai.core import callback
+from menuai.helpers import selector
 
 from .const import CONF_COLUMN_NAME, CONF_QUERY, DOMAIN
 from .util import resolve_db_url
@@ -161,8 +161,8 @@ class SQLConfigFlow(ConfigFlow, domain=DOMAIN):
 
             try:
                 query = validate_sql_select(query)
-                db_url_for_validation = resolve_db_url(self.hass, db_url)
-                await self.hass.async_add_executor_job(
+                db_url_for_validation = resolve_db_url(self.menuai, db_url)
+                await self.menuai.async_add_executor_job(
                     validate_query, db_url_for_validation, query, column
                 )
             except NoSuchColumnError:
@@ -191,7 +191,7 @@ class SQLConfigFlow(ConfigFlow, domain=DOMAIN):
                 options[CONF_DEVICE_CLASS] = device_class
             if state_class := user_input.get(CONF_STATE_CLASS):
                 options[CONF_STATE_CLASS] = state_class
-            if db_url_for_validation != get_instance(self.hass).db_url:
+            if db_url_for_validation != get_instance(self.menuai).db_url:
                 options[CONF_DB_URL] = db_url_for_validation
 
             if not errors:
@@ -227,8 +227,8 @@ class SQLOptionsFlowHandler(OptionsFlow):
 
             try:
                 query = validate_sql_select(query)
-                db_url_for_validation = resolve_db_url(self.hass, db_url)
-                await self.hass.async_add_executor_job(
+                db_url_for_validation = resolve_db_url(self.menuai, db_url)
+                await self.menuai.async_add_executor_job(
                     validate_query, db_url_for_validation, query, column
                 )
             except NoSuchColumnError:
@@ -244,7 +244,7 @@ class SQLOptionsFlowHandler(OptionsFlow):
                 _LOGGER.debug("Invalid query: %s", err)
                 errors["query"] = "query_invalid"
             else:
-                recorder_db = get_instance(self.hass).db_url
+                recorder_db = get_instance(self.menuai).db_url
                 _LOGGER.debug(
                     "db_url: %s, resolved db_url: %s, recorder: %s",
                     db_url,
@@ -265,7 +265,7 @@ class SQLOptionsFlowHandler(OptionsFlow):
                     options[CONF_DEVICE_CLASS] = device_class
                 if state_class := user_input.get(CONF_STATE_CLASS):
                     options[CONF_STATE_CLASS] = state_class
-                if db_url_for_validation != get_instance(self.hass).db_url:
+                if db_url_for_validation != get_instance(self.menuai).db_url:
                     options[CONF_DB_URL] = db_url_for_validation
 
                 return self.async_create_entry(

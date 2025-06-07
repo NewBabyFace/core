@@ -6,13 +6,13 @@ from unittest.mock import patch
 from elkm1_lib.discovery import ElkSystem
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.elkm1.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries
+from menuai.components.elkm1.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import (
     ELK_DISCOVERY,
@@ -33,10 +33,10 @@ DHCP_DISCOVERY = DhcpServiceInfo(
 ELK_DISCOVERY_INFO = asdict(ELK_DISCOVERY)
 ELK_DISCOVERY_INFO_NON_STANDARD_PORT = asdict(ELK_DISCOVERY_NON_STANDARD_PORT)
 
-MODULE = "homeassistant.components.elkm1"
+MODULE = "menuai.components.elkm1"
 
 
-async def test_discovery_ignored_entry(hass: HomeAssistant) -> None:
+async def test_discovery_ignored_entry(menuai: menuai) -> None:
     """Test we abort on ignored entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -44,27 +44,27 @@ async def test_discovery_ignored_entry(hass: HomeAssistant) -> None:
         unique_id="aa:bb:cc:dd:ee:ff",
         source=config_entries.SOURCE_IGNORE,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=ELK_DISCOVERY_INFO,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_form_user_with_secure_elk_no_discovery(hass: HomeAssistant) -> None:
+async def test_form_user_with_secure_elk_no_discovery(menuai: menuai) -> None:
     """Test we can setup a secure elk."""
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -76,14 +76,14 @@ async def test_form_user_with_secure_elk_no_discovery(hass: HomeAssistant) -> No
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "secure",
@@ -93,7 +93,7 @@ async def test_form_user_with_secure_elk_no_discovery(hass: HomeAssistant) -> No
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1"
@@ -108,20 +108,20 @@ async def test_form_user_with_secure_elk_no_discovery(hass: HomeAssistant) -> No
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_with_insecure_elk_skip_discovery(hass: HomeAssistant) -> None:
+async def test_form_user_with_insecure_elk_skip_discovery(menuai: menuai) -> None:
     """Test we can setup a insecure elk with skipping discovery."""
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -133,14 +133,14 @@ async def test_form_user_with_insecure_elk_skip_discovery(hass: HomeAssistant) -
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "non-secure",
@@ -150,7 +150,7 @@ async def test_form_user_with_insecure_elk_skip_discovery(hass: HomeAssistant) -
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1"
@@ -165,20 +165,20 @@ async def test_form_user_with_insecure_elk_skip_discovery(hass: HomeAssistant) -
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_with_insecure_elk_no_discovery(hass: HomeAssistant) -> None:
+async def test_form_user_with_insecure_elk_no_discovery(menuai: menuai) -> None:
     """Test we can setup a insecure elk."""
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -190,14 +190,14 @@ async def test_form_user_with_insecure_elk_no_discovery(hass: HomeAssistant) -> 
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "non-secure",
@@ -207,7 +207,7 @@ async def test_form_user_with_insecure_elk_no_discovery(hass: HomeAssistant) -> 
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1"
@@ -222,20 +222,20 @@ async def test_form_user_with_insecure_elk_no_discovery(hass: HomeAssistant) -> 
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_with_insecure_elk_times_out(hass: HomeAssistant) -> None:
+async def test_form_user_with_insecure_elk_times_out(menuai: menuai) -> None:
     """Test we can setup a insecure elk that times out."""
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -245,14 +245,14 @@ async def test_form_user_with_insecure_elk_times_out(hass: HomeAssistant) -> Non
 
     with (
         patch(
-            "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
+            "menuai.components.elkm1.config_flow.VALIDATE_TIMEOUT",
             0,
         ),
-        patch("homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT", 0),
+        patch("menuai.components.elkm1.config_flow.LOGIN_TIMEOUT", 0),
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "non-secure",
@@ -262,14 +262,14 @@ async def test_form_user_with_insecure_elk_times_out(hass: HomeAssistant) -> Non
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
 async def test_form_user_with_secure_elk_no_discovery_ip_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we abort when we try to configure the same ip."""
     config_entry = MockConfigEntry(
@@ -277,13 +277,13 @@ async def test_form_user_with_secure_elk_no_discovery_ip_already_configured(
         data={CONF_HOST: f"elks://{MOCK_IP_ADDRESS}"},
         unique_id="cc:cc:cc:cc:cc:cc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -292,7 +292,7 @@ async def test_form_user_with_secure_elk_no_discovery_ip_already_configured(
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "secure",
@@ -302,20 +302,20 @@ async def test_form_user_with_secure_elk_no_discovery_ip_already_configured(
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "address_already_configured"
 
 
-async def test_form_user_with_secure_elk_with_discovery(hass: HomeAssistant) -> None:
+async def test_form_user_with_secure_elk_with_discovery(menuai: menuai) -> None:
     """Test we can setup a secure elk."""
 
     with _patch_discovery():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -324,31 +324,31 @@ async def test_form_user_with_secure_elk_with_discovery(hass: HomeAssistant) -> 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device": MOCK_MAC},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ElkM1 ddeeff"
@@ -365,15 +365,15 @@ async def test_form_user_with_secure_elk_with_discovery(hass: HomeAssistant) -> 
 
 
 async def test_form_user_with_secure_elk_with_discovery_pick_manual(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can setup a secure elk with discovery but user picks manual and directed discovery fails."""
 
     with _patch_discovery():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -382,24 +382,24 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual(
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device": None},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "protocol": "secure",
@@ -409,7 +409,7 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual(
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ElkM1"
@@ -426,15 +426,15 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual(
 
 
 async def test_form_user_with_secure_elk_with_discovery_pick_manual_direct_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can setup a secure elk with discovery but user picks manual and directed discovery succeeds."""
 
     with _patch_discovery():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -443,24 +443,24 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual_direct_disco
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device": None},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "protocol": "secure",
@@ -470,7 +470,7 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual_direct_disco
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ElkM1 ddeeff"
@@ -486,14 +486,14 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual_direct_disco
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_with_tls_elk_no_discovery(hass: HomeAssistant) -> None:
+async def test_form_user_with_tls_elk_no_discovery(menuai: menuai) -> None:
     """Test we can setup a secure elk."""
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -505,14 +505,14 @@ async def test_form_user_with_tls_elk_no_discovery(hass: HomeAssistant) -> None:
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "TLS 1.2",
@@ -522,7 +522,7 @@ async def test_form_user_with_tls_elk_no_discovery(hass: HomeAssistant) -> None:
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1"
@@ -537,14 +537,14 @@ async def test_form_user_with_tls_elk_no_discovery(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_with_non_secure_elk_no_discovery(hass: HomeAssistant) -> None:
+async def test_form_user_with_non_secure_elk_no_discovery(menuai: menuai) -> None:
     """Test we can setup a non-secure elk."""
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -556,14 +556,14 @@ async def test_form_user_with_non_secure_elk_no_discovery(hass: HomeAssistant) -
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "non-secure",
@@ -571,7 +571,7 @@ async def test_form_user_with_non_secure_elk_no_discovery(hass: HomeAssistant) -
                 "prefix": "guest_house",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "guest_house"
@@ -586,14 +586,14 @@ async def test_form_user_with_non_secure_elk_no_discovery(hass: HomeAssistant) -
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_with_serial_elk_no_discovery(hass: HomeAssistant) -> None:
+async def test_form_user_with_serial_elk_no_discovery(menuai: menuai) -> None:
     """Test we can setup a serial elk."""
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -605,14 +605,14 @@ async def test_form_user_with_serial_elk_no_discovery(hass: HomeAssistant) -> No
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "serial",
@@ -620,7 +620,7 @@ async def test_form_user_with_serial_elk_no_discovery(hass: HomeAssistant) -> No
                 "prefix": "",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1"
@@ -635,10 +635,10 @@ async def test_form_user_with_serial_elk_no_discovery(hass: HomeAssistant) -> No
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -648,15 +648,15 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
+            "menuai.components.elkm1.config_flow.VALIDATE_TIMEOUT",
             0,
         ),
         patch(
-            "homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT",
+            "menuai.components.elkm1.config_flow.LOGIN_TIMEOUT",
             0,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "secure",
@@ -671,10 +671,10 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_unknown_exception(hass: HomeAssistant) -> None:
+async def test_unknown_exception(menuai: menuai) -> None:
     """Test we handle an unknown exception during connecting."""
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -684,15 +684,15 @@ async def test_unknown_exception(hass: HomeAssistant) -> None:
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
+            "menuai.components.elkm1.config_flow.VALIDATE_TIMEOUT",
             0,
         ),
         patch(
-            "homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT",
+            "menuai.components.elkm1.config_flow.LOGIN_TIMEOUT",
             0,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "secure",
@@ -707,19 +707,19 @@ async def test_unknown_exception(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "unknown"}
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mocked_elk = mock_elk(invalid_auth=True, sync_complete=True)
 
     with patch(
-        "homeassistant.components.elkm1.config_flow.Elk",
+        "menuai.components.elkm1.config_flow.Elk",
         return_value=mocked_elk,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "secure",
@@ -734,19 +734,19 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result2["errors"] == {CONF_PASSWORD: "invalid_auth"}
 
 
-async def test_form_invalid_auth_no_password(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth_no_password(menuai: menuai) -> None:
     """Test we handle invalid auth error when no password is provided."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mocked_elk = mock_elk(invalid_auth=True, sync_complete=True)
 
     with patch(
-        "homeassistant.components.elkm1.config_flow.Elk",
+        "menuai.components.elkm1.config_flow.Elk",
         return_value=mocked_elk,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "secure",
@@ -761,7 +761,7 @@ async def test_form_invalid_auth_no_password(hass: HomeAssistant) -> None:
     assert result2["errors"] == {CONF_PASSWORD: "invalid_auth"}
 
 
-async def test_form_import(hass: HomeAssistant) -> None:
+async def test_form_import(menuai: menuai) -> None:
     """Test we get the form with import source."""
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
@@ -769,14 +769,14 @@ async def test_form_import(hass: HomeAssistant) -> None:
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={
@@ -805,7 +805,7 @@ async def test_form_import(hass: HomeAssistant) -> None:
                 },
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "ohana"
@@ -831,7 +831,7 @@ async def test_form_import(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_import_device_discovered(hass: HomeAssistant) -> None:
+async def test_form_import_device_discovered(menuai: menuai) -> None:
     """Test we can import with discovery."""
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
@@ -839,14 +839,14 @@ async def test_form_import_device_discovered(hass: HomeAssistant) -> None:
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={
@@ -875,7 +875,7 @@ async def test_form_import_device_discovered(hass: HomeAssistant) -> None:
                 },
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "ohana"
@@ -901,7 +901,7 @@ async def test_form_import_device_discovered(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_import_non_secure_device_discovered(hass: HomeAssistant) -> None:
+async def test_form_import_non_secure_device_discovered(menuai: menuai) -> None:
     """Test we can import non-secure with discovery."""
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
@@ -909,14 +909,14 @@ async def test_form_import_non_secure_device_discovered(hass: HomeAssistant) -> 
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={
@@ -927,7 +927,7 @@ async def test_form_import_non_secure_device_discovered(hass: HomeAssistant) -> 
                 "prefix": "ohana",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "ohana"
@@ -944,7 +944,7 @@ async def test_form_import_non_secure_device_discovered(hass: HomeAssistant) -> 
 
 
 async def test_form_import_non_secure_non_stanadard_port_device_discovered(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can import non-secure non standard port with discovery."""
 
@@ -953,14 +953,14 @@ async def test_form_import_non_secure_non_stanadard_port_device_discovered(
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={
@@ -971,7 +971,7 @@ async def test_form_import_non_secure_non_stanadard_port_device_discovered(
                 "prefix": "ohana",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "ohana"
@@ -988,13 +988,13 @@ async def test_form_import_non_secure_non_stanadard_port_device_discovered(
 
 
 async def test_form_import_non_secure_device_discovered_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we abort import with invalid auth."""
 
     mocked_elk = mock_elk(invalid_auth=True, sync_complete=False)
     with _patch_discovery(), _patch_elk(elk=mocked_elk):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={
@@ -1005,22 +1005,22 @@ async def test_form_import_non_secure_device_discovered_invalid_auth(
                 "prefix": "ohana",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "invalid_auth"
 
 
-async def test_form_import_existing(hass: HomeAssistant) -> None:
+async def test_form_import_existing(menuai: menuai) -> None:
     """Test we abort on existing import."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: f"elks://{MOCK_IP_ADDRESS}"},
         unique_id="cc:cc:cc:cc:cc:cc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={
@@ -1049,7 +1049,7 @@ async def test_form_import_existing(hass: HomeAssistant) -> None:
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "address_already_configured"
@@ -1063,7 +1063,7 @@ async def test_form_import_existing(hass: HomeAssistant) -> None:
     ],
 )
 async def test_discovered_by_dhcp_or_discovery_mac_address_mismatch_host_already_configured(
-    hass: HomeAssistant, source, data
+    menuai: menuai, source, data
 ) -> None:
     """Test we abort if the host is already configured but the mac does not match."""
     config_entry = MockConfigEntry(
@@ -1071,13 +1071,13 @@ async def test_discovered_by_dhcp_or_discovery_mac_address_mismatch_host_already
         data={CONF_HOST: f"elks://{MOCK_IP_ADDRESS}"},
         unique_id="cc:cc:cc:cc:cc:cc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": source}, data=data
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -1093,20 +1093,20 @@ async def test_discovered_by_dhcp_or_discovery_mac_address_mismatch_host_already
     ],
 )
 async def test_discovered_by_dhcp_or_discovery_adds_missing_unique_id(
-    hass: HomeAssistant, source, data
+    menuai: menuai, source, data
 ) -> None:
     """Test we add a missing unique id to the config entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: f"elks://{MOCK_IP_ADDRESS}"},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": source}, data=data
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -1114,31 +1114,31 @@ async def test_discovered_by_dhcp_or_discovery_adds_missing_unique_id(
     assert config_entry.unique_id == MOCK_MAC
 
 
-async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
+async def test_discovered_by_discovery_and_dhcp(menuai: menuai) -> None:
     """Test we get the form with discovery and abort for dhcp source when we get both."""
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=ELK_DISCOVERY_INFO,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with _patch_discovery(), _patch_elk():
-        result2 = await hass.config_entries.flow.async_init(
+        result2 = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_DHCP},
             data=DHCP_DISCOVERY,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_in_progress"
 
     with _patch_discovery(), _patch_elk():
-        result3 = await hass.config_entries.flow.async_init(
+        result3 = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -1147,21 +1147,21 @@ async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
                 macaddress="00:00:00:00:00:00",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result3["type"] is FlowResultType.ABORT
     assert result3["reason"] == "already_in_progress"
 
 
-async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
+async def test_discovered_by_discovery(menuai: menuai) -> None:
     """Test we can setup when discovered from discovery."""
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=ELK_DISCOVERY_INFO,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
@@ -1173,21 +1173,21 @@ async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1 ddeeff"
@@ -1202,16 +1202,16 @@ async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_discovered_by_discovery_non_standard_port(hass: HomeAssistant) -> None:
+async def test_discovered_by_discovery_non_standard_port(menuai: menuai) -> None:
     """Test we can setup when discovered from discovery with a non-standard port."""
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=ELK_DISCOVERY_INFO_NON_STANDARD_PORT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
@@ -1223,21 +1223,21 @@ async def test_discovered_by_discovery_non_standard_port(hass: HomeAssistant) ->
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1 ddeeff"
@@ -1253,7 +1253,7 @@ async def test_discovered_by_discovery_non_standard_port(hass: HomeAssistant) ->
 
 
 async def test_discovered_by_discovery_url_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we abort when we discover a device that is already setup."""
     config_entry = MockConfigEntry(
@@ -1261,28 +1261,28 @@ async def test_discovered_by_discovery_url_already_configured(
         data={CONF_HOST: f"elks://{MOCK_IP_ADDRESS}"},
         unique_id="cc:cc:cc:cc:cc:cc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=ELK_DISCOVERY_INFO,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
+async def test_discovered_by_dhcp_udp_responds(menuai: menuai) -> None:
     """Test we can setup when discovered from dhcp but with udp response."""
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
@@ -1294,21 +1294,21 @@ async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1 ddeeff"
@@ -1324,15 +1324,15 @@ async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
 
 
 async def test_discovered_by_dhcp_udp_responds_with_nonsecure_port(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can setup when discovered from dhcp but with udp response using the non-secure port."""
 
     with _patch_discovery(device=ELK_NON_SECURE_DISCOVERY), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
@@ -1344,20 +1344,20 @@ async def test_discovered_by_dhcp_udp_responds_with_nonsecure_port(
         _patch_discovery(device=ELK_NON_SECURE_DISCOVERY),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "non-secure",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1 ddeeff"
@@ -1373,7 +1373,7 @@ async def test_discovered_by_dhcp_udp_responds_with_nonsecure_port(
 
 
 async def test_discovered_by_dhcp_udp_responds_existing_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can setup when discovered from dhcp but with udp response with an existing config entry."""
     config_entry = MockConfigEntry(
@@ -1381,13 +1381,13 @@ async def test_discovered_by_dhcp_udp_responds_existing_config_entry(
         data={CONF_HOST: "elks://6.6.6.6"},
         unique_id="cc:cc:cc:cc:cc:cc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
@@ -1399,18 +1399,18 @@ async def test_discovered_by_dhcp_udp_responds_existing_config_entry(
         _patch_discovery(),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": "test-username", "password": "test-password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ElkM1 ddeeff"
@@ -1425,30 +1425,30 @@ async def test_discovered_by_dhcp_udp_responds_existing_config_entry(
     assert len(mock_setup_entry.mock_calls) == 2
 
 
-async def test_discovered_by_dhcp_no_udp_response(hass: HomeAssistant) -> None:
+async def test_discovered_by_dhcp_no_udp_response(menuai: menuai) -> None:
     """Test we can setup when discovered from dhcp but no udp response."""
 
     with _patch_discovery(no_device=True), _patch_elk():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
 
 
-async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
+async def test_multiple_instances_with_discovery(menuai: menuai) -> None:
     """Test we can setup a secure elk."""
 
     elk_discovery_1 = ElkSystem("aa:bb:cc:dd:ee:ff", "127.0.0.1", 2601)
     elk_discovery_2 = ElkSystem("aa:bb:cc:dd:ee:fe", "127.0.0.2", 2601)
 
     with _patch_discovery(device=elk_discovery_1):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
@@ -1457,31 +1457,31 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device": elk_discovery_1.mac_address},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         _patch_discovery(device=elk_discovery_1),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ElkM1 ddeeff"
@@ -1497,10 +1497,10 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
 
     # Now try to add another instance with the different discovery info
     with _patch_discovery(device=elk_discovery_2):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
@@ -1509,28 +1509,28 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device": elk_discovery_2.mac_address},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         _patch_discovery(device=elk_discovery_2),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ElkM1 ddeefe"
@@ -1546,10 +1546,10 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
     # Finally, try to add another instance manually with no discovery info
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -1561,11 +1561,11 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "non-secure",
@@ -1573,7 +1573,7 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
                 "prefix": "guest_house",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "guest_house"
@@ -1587,17 +1587,17 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
+async def test_multiple_instances_with_tls_v12(menuai: menuai) -> None:
     """Test we can setup a secure elk with tls v1_2."""
 
     elk_discovery_1 = ElkSystem("aa:bb:cc:dd:ee:ff", "127.0.0.1", 2601)
     elk_discovery_2 = ElkSystem("aa:bb:cc:dd:ee:fe", "127.0.0.2", 2601)
 
     with _patch_discovery(device=elk_discovery_1):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
@@ -1606,11 +1606,11 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device": elk_discovery_1.mac_address},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert not result["errors"]
@@ -1619,14 +1619,14 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         _patch_discovery(device=elk_discovery_1),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
+            "menuai.components.elkm1.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "protocol": "TLS 1.2",
@@ -1634,7 +1634,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ElkM1 ddeeff"
@@ -1650,10 +1650,10 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
 
     # Now try to add another instance with the different discovery info
     with _patch_discovery(device=elk_discovery_2):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
@@ -1662,21 +1662,21 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
     with _patch_elk(elk=mocked_elk):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device": elk_discovery_2.mac_address},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with (
         _patch_discovery(device=elk_discovery_2),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "protocol": "TLS 1.2",
@@ -1684,7 +1684,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ElkM1 ddeefe"
@@ -1700,10 +1700,10 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
     # Finally, try to add another instance manually with no discovery info
 
     with _patch_discovery(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -1715,11 +1715,11 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         _patch_discovery(no_device=True),
         _patch_elk(elk=mocked_elk),
         patch(
-            "homeassistant.components.elkm1.async_setup_entry",
+            "menuai.components.elkm1.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "protocol": "TLS 1.2",
@@ -1729,7 +1729,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
                 "username": "test-username",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "guest_house"

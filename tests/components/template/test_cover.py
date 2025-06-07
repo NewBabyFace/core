@@ -4,15 +4,15 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components import cover, template
-from homeassistant.components.cover import (
+from menuai.components import cover, template
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     DOMAIN as COVER_DOMAIN,
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_COVER,
     SERVICE_CLOSE_COVER_TILT,
@@ -28,9 +28,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import ConfigurationStyle
 
@@ -105,87 +105,87 @@ UNIQUE_ID_CONFIG = {
 
 
 async def async_setup_legacy_format(
-    hass: HomeAssistant, count: int, cover_config: dict[str, Any]
+    menuai: menuai, count: int, cover_config: dict[str, Any]
 ) -> None:
     """Do setup of cover integration via legacy format."""
     config = {"cover": {"platform": "template", "covers": cover_config}}
 
     with assert_setup_component(count, cover.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             cover.DOMAIN,
             config,
         )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_modern_format(
-    hass: HomeAssistant, count: int, cover_config: dict[str, Any]
+    menuai: menuai, count: int, cover_config: dict[str, Any]
 ) -> None:
     """Do setup of cover integration via modern format."""
     config = {"template": {"cover": cover_config}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_trigger_format(
-    hass: HomeAssistant, count: int, cover_config: dict[str, Any]
+    menuai: menuai, count: int, cover_config: dict[str, Any]
 ) -> None:
     """Do setup of cover integration via trigger format."""
     config = {"template": {**TEST_STATE_TRIGGER, "cover": cover_config}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_cover_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     cover_config: dict[str, Any],
 ) -> None:
     """Do setup of cover integration."""
     if style == ConfigurationStyle.LEGACY:
-        await async_setup_legacy_format(hass, count, cover_config)
+        await async_setup_legacy_format(menuai, count, cover_config)
     elif style == ConfigurationStyle.MODERN:
-        await async_setup_modern_format(hass, count, cover_config)
+        await async_setup_modern_format(menuai, count, cover_config)
     elif style == ConfigurationStyle.TRIGGER:
-        await async_setup_trigger_format(hass, count, cover_config)
+        await async_setup_trigger_format(menuai, count, cover_config)
 
 
 @pytest.fixture
 async def setup_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     cover_config: dict[str, Any],
 ) -> None:
     """Do setup of cover integration."""
-    await async_setup_cover_config(hass, count, style, cover_config)
+    await async_setup_cover_config(menuai, count, style, cover_config)
 
 
 @pytest.fixture
 async def setup_state_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -193,7 +193,7 @@ async def setup_state_cover(
     """Do setup of cover integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -204,7 +204,7 @@ async def setup_state_cover(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_COVER_ACTIONS,
@@ -213,7 +213,7 @@ async def setup_state_cover(
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_COVER_ACTIONS,
@@ -224,7 +224,7 @@ async def setup_state_cover(
 
 @pytest.fixture
 async def setup_position_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     position_template: str,
@@ -232,7 +232,7 @@ async def setup_position_cover(
     """Do setup of cover integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -243,7 +243,7 @@ async def setup_position_cover(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_COVER_ACTIONS,
@@ -252,7 +252,7 @@ async def setup_position_cover(
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_COVER_ACTIONS,
@@ -263,7 +263,7 @@ async def setup_position_cover(
 
 @pytest.fixture
 async def setup_single_attribute_state_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -274,7 +274,7 @@ async def setup_single_attribute_state_cover(
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -286,7 +286,7 @@ async def setup_single_attribute_state_cover(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_COVER_ACTIONS,
@@ -296,7 +296,7 @@ async def setup_single_attribute_state_cover(
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_COVER_ACTIONS,
@@ -308,7 +308,7 @@ async def setup_single_attribute_state_cover(
 
 @pytest.fixture
 async def setup_empty_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     script: str,
@@ -321,19 +321,19 @@ async def setup_empty_action(
     }
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {TEST_OBJECT_ID: empty},
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {"name": TEST_OBJECT_ID, **empty},
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {"name": TEST_OBJECT_ID, **empty},
         )
@@ -360,20 +360,20 @@ async def setup_empty_action(
 )
 @pytest.mark.usefixtures("setup_state_cover")
 async def test_template_state_text(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_state: str,
     test_state: str,
     text: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the state text of a template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_UNKNOWN
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, set_state)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, set_state)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == test_state
     assert text in caplog.text
 
@@ -396,15 +396,15 @@ async def test_template_state_text(
 )
 @pytest.mark.usefixtures("setup_state_cover")
 async def test_template_state_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected: str,
 ) -> None:
     """Test state template states."""
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, None)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, None)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == expected
 
 
@@ -463,21 +463,21 @@ async def test_template_state_states(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
 async def test_template_state_text_with_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: list[tuple[str, str, str, int | None]],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the state of a position template in order."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_UNKNOWN
 
     for test_entity, set_state, test_state, text, position in states:
         attrs = {"position": position} if position is not None else {}
 
-        hass.states.async_set(test_entity, set_state, attrs)
-        await hass.async_block_till_done()
+        menuai.states.async_set(test_entity, set_state, attrs)
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(TEST_ENTITY_ID)
+        state = menuai.states.get(TEST_ENTITY_ID)
         assert state.state == test_state
         if position is not None:
             assert state.attributes.get("current_position") == position
@@ -511,16 +511,16 @@ async def test_template_state_text_with_position(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
 async def test_template_state_text_ignored_if_none_or_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_state: str,
 ) -> None:
     """Test ignoring an empty state text of a template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_UNKNOWN
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, set_state)
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, set_state)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_UNKNOWN
 
 
@@ -530,13 +530,13 @@ async def test_template_state_text_ignored_if_none_or_empty(
     [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN, ConfigurationStyle.TRIGGER],
 )
 @pytest.mark.usefixtures("setup_state_cover")
-async def test_template_state_boolean(hass: HomeAssistant) -> None:
+async def test_template_state_boolean(menuai: menuai) -> None:
     """Test the value_template attribute."""
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, None)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, None)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == CoverState.OPEN
 
 
@@ -558,22 +558,22 @@ async def test_template_state_boolean(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_position_cover")
 async def test_template_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_state: str,
     position: int | None,
     expected: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the position_template attribute."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, CoverState.OPEN)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, CoverState.OPEN)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         TEST_STATE_ENTITY_ID, test_state, attributes={"position": position}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") == position
     assert state.state == expected
     assert "ValueError" not in caplog.text
@@ -609,9 +609,9 @@ async def test_template_position(
     ],
 )
 @pytest.mark.usefixtures("setup_cover")
-async def test_template_not_optimistic(hass: HomeAssistant) -> None:
+async def test_template_not_optimistic(menuai: menuai) -> None:
     """Test the is_closed attribute."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_UNKNOWN
 
 
@@ -646,13 +646,13 @@ async def test_template_not_optimistic(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
-async def test_template_tilt(hass: HomeAssistant, tilt_position: float | None) -> None:
+async def test_template_tilt(menuai: menuai, tilt_position: float | None) -> None:
     """Test tilt in and out-of-bound conditions."""
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, None)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, None)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_tilt_position") == tilt_position
 
 
@@ -684,13 +684,13 @@ async def test_template_tilt(hass: HomeAssistant, tilt_position: float | None) -
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
-async def test_position_out_of_bounds(hass: HomeAssistant) -> None:
+async def test_position_out_of_bounds(menuai: menuai) -> None:
     """Test position out-of-bounds condition."""
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, None)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, None)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") is None
 
 
@@ -754,7 +754,7 @@ async def test_position_out_of_bounds(hass: HomeAssistant) -> None:
     ],
 )
 async def test_template_open_or_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     cover_config: dict[str, Any],
@@ -762,8 +762,8 @@ async def test_template_open_or_position(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that at least one of open_cover or set_position is used."""
-    await async_setup_cover_config(hass, count, style, cover_config)
-    assert hass.states.async_all("cover") == []
+    await async_setup_cover_config(menuai, count, style, cover_config)
+    assert menuai.states.async_all("cover") == []
     assert error in caplog.text
 
 
@@ -776,23 +776,23 @@ async def test_template_open_or_position(
     [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN, ConfigurationStyle.TRIGGER],
 )
 @pytest.mark.usefixtures("setup_position_cover")
-async def test_open_action(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_open_action(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test the open_cover command."""
 
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, None)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, None)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == CoverState.CLOSED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == "open_cover"
@@ -850,30 +850,30 @@ async def test_open_action(hass: HomeAssistant, calls: list[ServiceCall]) -> Non
     ],
 )
 @pytest.mark.usefixtures("setup_cover")
-async def test_close_stop_action(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_close_stop_action(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test the close-cover and stop_cover commands."""
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, None)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, None)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == CoverState.OPEN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 2
     assert calls[0].data["action"] == "close_cover"
@@ -911,69 +911,69 @@ async def test_close_stop_action(hass: HomeAssistant, calls: list[ServiceCall]) 
     ],
 )
 @pytest.mark.usefixtures("setup_cover")
-async def test_set_position(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_position(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test the set_position command."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") == 100.0
     assert len(calls) == 1
     assert calls[-1].data["action"] == "set_cover_position"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
     assert calls[-1].data["position"] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") == 0.0
     assert len(calls) == 2
     assert calls[-1].data["action"] == "set_cover_position"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
     assert calls[-1].data["position"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN, SERVICE_TOGGLE, {ATTR_ENTITY_ID: TEST_ENTITY_ID}, blocking=True
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") == 100.0
     assert len(calls) == 3
     assert calls[-1].data["action"] == "set_cover_position"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
     assert calls[-1].data["position"] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN, SERVICE_TOGGLE, {ATTR_ENTITY_ID: TEST_ENTITY_ID}, blocking=True
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") == 0.0
     assert len(calls) == 4
     assert calls[-1].data["action"] == "set_cover_position"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
     assert calls[-1].data["position"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_POSITION: 25},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") == 25.0
     assert len(calls) == 5
     assert calls[-1].data["action"] == "set_cover_position"
@@ -1024,20 +1024,20 @@ async def test_set_position(hass: HomeAssistant, calls: list[ServiceCall]) -> No
 )
 @pytest.mark.usefixtures("setup_cover")
 async def test_set_tilt_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     service,
     attr,
     tilt_position,
     calls: list[ServiceCall],
 ) -> None:
     """Test the set_tilt_position command."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         service,
         attr,
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[-1].data["action"] == "set_cover_tilt_position"
@@ -1075,20 +1075,20 @@ async def test_set_tilt_position(
 )
 @pytest.mark.usefixtures("setup_cover")
 async def test_set_position_optimistic(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test optimistic position mode."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_POSITION: 42},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_position") == 42.0
 
     for service, test_state in (
@@ -1097,11 +1097,11 @@ async def test_set_position_optimistic(
         (SERVICE_TOGGLE, CoverState.CLOSED),
         (SERVICE_TOGGLE, CoverState.OPEN),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN, service, {ATTR_ENTITY_ID: TEST_ENTITY_ID}, blocking=True
         )
-        await hass.async_block_till_done()
-        state = hass.states.get(TEST_ENTITY_ID)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(TEST_ENTITY_ID)
         assert state.state == test_state
 
 
@@ -1121,29 +1121,29 @@ async def test_set_position_optimistic(
 )
 @pytest.mark.usefixtures("setup_cover")
 async def test_non_optimistic_template_with_optimistic_state(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test optimistic state with non-optimistic template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert "entity_picture" not in state.attributes
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_POSITION: 42},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == CoverState.OPEN
     assert state.attributes["current_position"] == 42.0
     assert "entity_picture" not in state.attributes
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, CoverState.OPEN)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, CoverState.OPEN)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == CoverState.OPEN
     assert state.attributes["current_position"] == 42.0
     assert state.attributes["entity_picture"] == "foo.png"
@@ -1185,20 +1185,20 @@ async def test_non_optimistic_template_with_optimistic_state(
 )
 @pytest.mark.usefixtures("setup_cover")
 async def test_set_tilt_position_optimistic(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test the optimistic tilt_position mode."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_tilt_position") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_TILT_POSITION,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_TILT_POSITION: 42},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("current_tilt_position") == 42.0
 
     for service, pos in (
@@ -1207,11 +1207,11 @@ async def test_set_tilt_position_optimistic(
         (SERVICE_TOGGLE_COVER_TILT, 0.0),
         (SERVICE_TOGGLE_COVER_TILT, 100.0),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN, service, {ATTR_ENTITY_ID: TEST_ENTITY_ID}, blocking=True
         )
-        await hass.async_block_till_done()
-        state = hass.states.get(TEST_ENTITY_ID)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(TEST_ENTITY_ID)
         assert state.attributes.get("current_tilt_position") == pos
 
 
@@ -1235,16 +1235,16 @@ async def test_set_tilt_position_optimistic(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
 async def test_icon_template(
-    hass: HomeAssistant, initial_expected_state: str | None
+    menuai: menuai, initial_expected_state: str | None
 ) -> None:
     """Test icon template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("icon") == initial_expected_state
 
-    state = hass.states.async_set("cover.test_state", CoverState.OPEN)
-    await hass.async_block_till_done()
+    state = menuai.states.async_set("cover.test_state", CoverState.OPEN)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
 
     assert state.attributes["icon"] == "mdi:check"
 
@@ -1269,16 +1269,16 @@ async def test_icon_template(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
 async def test_entity_picture_template(
-    hass: HomeAssistant, initial_expected_state: str | None
+    menuai: menuai, initial_expected_state: str | None
 ) -> None:
     """Test icon template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("entity_picture") == initial_expected_state
 
-    state = hass.states.async_set("cover.test_state", CoverState.OPEN)
-    await hass.async_block_till_done()
+    state = menuai.states.async_set("cover.test_state", CoverState.OPEN)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
 
     assert state.attributes["entity_picture"] == "/local/cover.png"
 
@@ -1302,21 +1302,21 @@ async def test_entity_picture_template(
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
-async def test_availability_template(hass: HomeAssistant) -> None:
+async def test_availability_template(menuai: menuai) -> None:
     """Test availability template."""
-    hass.states.async_set("availability_state.state", STATE_OFF)
+    menuai.states.async_set("availability_state.state", STATE_OFF)
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID).state == STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID).state == STATE_UNAVAILABLE
 
-    hass.states.async_set("availability_state.state", STATE_ON)
+    menuai.states.async_set("availability_state.state", STATE_ON)
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("count", [1])
@@ -1367,15 +1367,15 @@ async def test_availability_template(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_invalid_availability_template_keeps_component_available(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, caplog_setup_text
+    menuai: menuai, caplog: pytest.LogCaptureFixture, caplog_setup_text
 ) -> None:
     """Test that an invalid availability keeps the device available."""
 
     # This forces a trigger for trigger based entities
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID) != STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID) != STATE_UNAVAILABLE
 
     err = "UndefinedError: 'x' is undefined"
     assert err in caplog_setup_text or err in caplog.text
@@ -1390,9 +1390,9 @@ async def test_invalid_availability_template_keeps_component_available(
     [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN, ConfigurationStyle.TRIGGER],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
-async def test_device_class(hass: HomeAssistant) -> None:
+async def test_device_class(menuai: menuai) -> None:
     """Test device class."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("device_class") == "door"
 
 
@@ -1405,9 +1405,9 @@ async def test_device_class(hass: HomeAssistant) -> None:
     [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN, ConfigurationStyle.TRIGGER],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
-async def test_invalid_device_class(hass: HomeAssistant) -> None:
+async def test_invalid_device_class(menuai: menuai) -> None:
     """Test device class."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert not state
 
 
@@ -1451,18 +1451,18 @@ async def test_invalid_device_class(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_cover")
-async def test_unique_id(hass: HomeAssistant) -> None:
+async def test_unique_id(menuai: menuai) -> None:
     """Test unique_id option only creates one cover per id."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
 
 async def test_nested_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a template unique_id propagates to switch unique_ids."""
     with assert_setup_component(1, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             {
                 "template": {
@@ -1485,11 +1485,11 @@ async def test_nested_unique_id(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("cover")) == 2
+    assert len(menuai.states.async_all("cover")) == 2
 
     entry = entity_registry.async_get("cover.test_a")
     assert entry
@@ -1533,18 +1533,18 @@ async def test_nested_unique_id(
     ],
 )
 @pytest.mark.usefixtures("setup_cover")
-async def test_state_gets_lowercased(hass: HomeAssistant) -> None:
+async def test_state_gets_lowercased(menuai: menuai) -> None:
     """Test True/False is lowercased."""
 
-    hass.states.async_set("binary_sensor.garage_door_sensor", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.garage_door_sensor", "off")
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
-    assert hass.states.get("cover.garage_door").state == CoverState.OPEN
-    hass.states.async_set("binary_sensor.garage_door_sensor", "on")
-    await hass.async_block_till_done()
-    assert hass.states.get("cover.garage_door").state == CoverState.CLOSED
+    assert menuai.states.get("cover.garage_door").state == CoverState.OPEN
+    menuai.states.async_set("binary_sensor.garage_door_sensor", "on")
+    await menuai.async_block_till_done()
+    assert menuai.states.get("cover.garage_door").state == CoverState.CLOSED
 
 
 @pytest.mark.parametrize(
@@ -1567,10 +1567,10 @@ async def test_state_gets_lowercased(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_cover")
 async def test_self_referencing_icon_with_no_template_is_not_a_loop(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test a self referencing icon with no value template is not a loop."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     assert "Template loop detected" not in caplog.text
 
@@ -1596,10 +1596,10 @@ async def test_self_referencing_icon_with_no_template_is_not_a_loop(
 )
 @pytest.mark.usefixtures("setup_empty_action")
 async def test_empty_action_config(
-    hass: HomeAssistant, supported_feature: CoverEntityFeature
+    menuai: menuai, supported_feature: CoverEntityFeature
 ) -> None:
     """Test configuration with empty script."""
-    state = hass.states.get("cover.test_template_cover")
+    state = menuai.states.get("cover.test_template_cover")
     assert (
         state.attributes["supported_features"]
         == CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | supported_feature

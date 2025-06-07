@@ -9,10 +9,10 @@ from aiohue.v2.controllers.events import EventType
 from aiohue.v2.models.resource import ResourceTypes
 from aiohue.v2.models.zigbee_connectivity import ConnectivityServiceStatus
 
-from homeassistant.core import callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from ..bridge import HueBridge
 from ..const import CONF_IGNORE_AVAILABILITY, DOMAIN
@@ -28,13 +28,13 @@ if TYPE_CHECKING:
 
 
 RESOURCE_TYPE_NAMES = {
-    # a simple mapping of hue resource type to Hass name
+    # a simple mapping of hue resource type to menuai name
     ResourceTypes.LIGHT_LEVEL: "Illuminance",
     ResourceTypes.DEVICE_POWER: "Battery",
 }
 
 
-class HueBaseEntity(Entity):  # pylint: disable=hass-enforce-class-module
+class HueBaseEntity(Entity):  # pylint: disable=menuai-enforce-class-module
     """Generic Entity Class for a Hue resource."""
 
     _attr_should_poll = False
@@ -70,7 +70,7 @@ class HueBaseEntity(Entity):  # pylint: disable=hass-enforce-class-module
         self._ignore_availability = None
         self._last_state = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
         self._check_availability()
         # Add value_changed callbacks.
@@ -128,7 +128,7 @@ class HueBaseEntity(Entity):  # pylint: disable=hass-enforce-class-module
         if event_type == EventType.RESOURCE_DELETED:
             # cleanup entities that are not strictly device-bound and have the bridge as parent
             if self.device is None and resource.id == self.resource.id:
-                ent_reg = er.async_get(self.hass)
+                ent_reg = er.async_get(self.menuai)
                 ent_reg.async_remove(self.entity_id)
             return
 

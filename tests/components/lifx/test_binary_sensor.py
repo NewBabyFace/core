@@ -6,9 +6,9 @@ from datetime import timedelta
 
 import pytest
 
-from homeassistant.components import lifx
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.const import (
+from menuai.components import lifx
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     CONF_HOST,
     STATE_OFF,
@@ -16,10 +16,10 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     DEFAULT_ENTRY_TITLE,
@@ -36,7 +36,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("mock_discovery")
 async def test_hev_cycle_state(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test HEV cycle state binary sensor."""
     config_entry = MockConfigEntry(
@@ -45,19 +45,19 @@ async def test_hev_cycle_state(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_clean_bulb()
     with (
         _patch_discovery(device=bulb),
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     entity_id = "binary_sensor.my_bulb_clean_cycle"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_DEVICE_CLASS) == BinarySensorDeviceClass.RUNNING
@@ -69,12 +69,12 @@ async def test_hev_cycle_state(
 
     bulb.hev_cycle = {"duration": 7200, "remaining": 0, "last_power": False}
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(entity_id).state == STATE_OFF
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=30))
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     bulb.hev_cycle = None
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(entity_id).state == STATE_UNKNOWN
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=30))
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get(entity_id).state == STATE_UNKNOWN

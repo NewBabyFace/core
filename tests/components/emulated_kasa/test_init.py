@@ -5,21 +5,21 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components import emulated_kasa
-from homeassistant.components.emulated_kasa.const import (
+from menuai.components import emulated_kasa
+from menuai.components.emulated_kasa.const import (
     CONF_POWER,
     CONF_POWER_ENTITY,
     DOMAIN,
 )
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PERCENTAGE,
     DOMAIN as FAN_DOMAIN,
     SERVICE_SET_PERCENTAGE,
 )
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_ENTITIES,
     CONF_NAME,
@@ -27,8 +27,8 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 ENTITY_SWITCH = "switch.ac"
 ENTITY_SWITCH_NAME = "A/C"
@@ -136,9 +136,9 @@ CONFIG_SENSOR = {
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant(hass: HomeAssistant):
-    """Set up the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def setup_menuai(menuai: menuai):
+    """Set up the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
 def nested_value(ndict, *keys):
@@ -151,20 +151,20 @@ def nested_value(ndict, *keys):
     return nested_value(ndict[key], *keys[1:])
 
 
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(menuai: menuai) -> None:
     """Test that devices are reported correctly."""
     with patch(
         "sense_energy.SenseLink",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await async_setup_component(hass, DOMAIN, CONFIG) is True
+        assert await async_setup_component(menuai, DOMAIN, CONFIG) is True
 
 
-async def test_float(hass: HomeAssistant) -> None:
+async def test_float(menuai: menuai) -> None:
     """Test a configuration using a simple float."""
     config = CONFIG_SWITCH[DOMAIN][CONF_ENTITIES]
     assert await async_setup_component(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         {SWITCH_DOMAIN: {"platform": "demo"}},
     )
@@ -172,19 +172,19 @@ async def test_float(hass: HomeAssistant) -> None:
         "sense_energy.SenseLink",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await async_setup_component(hass, DOMAIN, CONFIG_SWITCH) is True
-    await hass.async_block_till_done()
-    await emulated_kasa.validate_configs(hass, config)
+        assert await async_setup_component(menuai, DOMAIN, CONFIG_SWITCH) is True
+    await menuai.async_block_till_done()
+    await emulated_kasa.validate_configs(menuai, config)
 
     # Turn switch on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_SWITCH}, blocking=True
     )
 
-    switch = hass.states.get(ENTITY_SWITCH)
+    switch = menuai.states.get(ENTITY_SWITCH)
     assert switch.state == STATE_ON
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
 
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_SWITCH_NAME
@@ -192,22 +192,22 @@ async def test_float(hass: HomeAssistant) -> None:
     assert math.isclose(power, ENTITY_SWITCH_POWER)
 
     # Turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: ENTITY_SWITCH}, blocking=True
     )
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_SWITCH_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 0)
 
 
-async def test_switch_power(hass: HomeAssistant) -> None:
+async def test_switch_power(menuai: menuai) -> None:
     """Test a configuration using a simple float."""
     config = CONFIG_SWITCH_NO_POWER[DOMAIN][CONF_ENTITIES]
     assert await async_setup_component(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         {SWITCH_DOMAIN: {"platform": "demo"}},
     )
@@ -215,94 +215,94 @@ async def test_switch_power(hass: HomeAssistant) -> None:
         "sense_energy.SenseLink",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await async_setup_component(hass, DOMAIN, CONFIG_SWITCH_NO_POWER) is True
-    await hass.async_block_till_done()
-    await emulated_kasa.validate_configs(hass, config)
+        assert await async_setup_component(menuai, DOMAIN, CONFIG_SWITCH_NO_POWER) is True
+    await menuai.async_block_till_done()
+    await emulated_kasa.validate_configs(menuai, config)
 
     # Turn switch on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_SWITCH}, blocking=True
     )
 
     # Turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: ENTITY_SWITCH}, blocking=True
     )
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == "AC"
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 0)
 
 
-async def test_template(hass: HomeAssistant) -> None:
+async def test_template(menuai: menuai) -> None:
     """Test a configuration using a complex template."""
     config = CONFIG_FAN[DOMAIN][CONF_ENTITIES]
     assert await async_setup_component(
-        hass, FAN_DOMAIN, {FAN_DOMAIN: {"platform": "demo"}}
+        menuai, FAN_DOMAIN, {FAN_DOMAIN: {"platform": "demo"}}
     )
     with patch(
         "sense_energy.SenseLink",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await async_setup_component(hass, DOMAIN, CONFIG_FAN) is True
-    await hass.async_block_till_done()
-    await emulated_kasa.validate_configs(hass, config)
+        assert await async_setup_component(menuai, DOMAIN, CONFIG_FAN) is True
+    await menuai.async_block_till_done()
+    await emulated_kasa.validate_configs(menuai, config)
 
     # Turn all devices on to known state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_FAN}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: ENTITY_FAN, ATTR_PERCENTAGE: 33},
         blocking=True,
     )
 
-    fan = hass.states.get(ENTITY_FAN)
+    fan = menuai.states.get(ENTITY_FAN)
     assert fan.state == STATE_ON
 
     # Fan low:
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_FAN_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, ENTITY_FAN_SPEED_LOW)
 
     # Fan High:
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: ENTITY_FAN, ATTR_PERCENTAGE: 100},
         blocking=True,
     )
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_FAN_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, ENTITY_FAN_SPEED_HIGH)
 
     # Fan off:
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: ENTITY_FAN}, blocking=True
     )
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_FAN_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 0)
 
 
-async def test_sensor(hass: HomeAssistant) -> None:
+async def test_sensor(menuai: menuai) -> None:
     """Test a configuration using a sensor in a template."""
     config = CONFIG_LIGHT[DOMAIN][CONF_ENTITIES]
     assert await async_setup_component(
-        hass, LIGHT_DOMAIN, {LIGHT_DOMAIN: {"platform": "demo"}}
+        menuai, LIGHT_DOMAIN, {LIGHT_DOMAIN: {"platform": "demo"}}
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         SENSOR_DOMAIN,
         {SENSOR_DOMAIN: {"platform": "demo"}},
     )
@@ -310,53 +310,53 @@ async def test_sensor(hass: HomeAssistant) -> None:
         "sense_energy.SenseLink",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await async_setup_component(hass, DOMAIN, CONFIG_LIGHT) is True
-    await hass.async_block_till_done()
-    await emulated_kasa.validate_configs(hass, config)
+        assert await async_setup_component(menuai, DOMAIN, CONFIG_LIGHT) is True
+    await menuai.async_block_till_done()
+    await emulated_kasa.validate_configs(menuai, config)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_LIGHT}, blocking=True
     )
-    hass.states.async_set(ENTITY_SENSOR, 35)
+    menuai.states.async_set(ENTITY_SENSOR, 35)
 
-    light = hass.states.get(ENTITY_LIGHT)
+    light = menuai.states.get(ENTITY_LIGHT)
     assert light.state == STATE_ON
-    sensor = hass.states.get(ENTITY_SENSOR)
+    sensor = menuai.states.get(ENTITY_SENSOR)
     assert sensor.state == "35"
 
     # light
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_LIGHT_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 35)
 
     # change power sensor
-    hass.states.async_set(ENTITY_SENSOR, 40)
+    menuai.states.async_set(ENTITY_SENSOR, 40)
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_LIGHT_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 40)
 
     # report 0 if device is off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: ENTITY_LIGHT}, blocking=True
     )
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_LIGHT_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 0)
 
 
-async def test_sensor_state(hass: HomeAssistant) -> None:
+async def test_sensor_state(menuai: menuai) -> None:
     """Test a configuration using a sensor in a template."""
     config = CONFIG_SENSOR[DOMAIN][CONF_ENTITIES]
     assert await async_setup_component(
-        hass,
+        menuai,
         SENSOR_DOMAIN,
         {SENSOR_DOMAIN: {"platform": "demo"}},
     )
@@ -364,55 +364,55 @@ async def test_sensor_state(hass: HomeAssistant) -> None:
         "sense_energy.SenseLink",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await async_setup_component(hass, DOMAIN, CONFIG_SENSOR) is True
-    await hass.async_block_till_done()
-    await emulated_kasa.validate_configs(hass, config)
+        assert await async_setup_component(menuai, DOMAIN, CONFIG_SENSOR) is True
+    await menuai.async_block_till_done()
+    await emulated_kasa.validate_configs(menuai, config)
 
-    hass.states.async_set(ENTITY_SENSOR, 35)
+    menuai.states.async_set(ENTITY_SENSOR, 35)
 
-    sensor = hass.states.get(ENTITY_SENSOR)
+    sensor = menuai.states.get(ENTITY_SENSOR)
     assert sensor.state == "35"
 
     # sensor
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_SENSOR_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 35)
 
     # change power sensor
-    hass.states.async_set(ENTITY_SENSOR, 40)
+    menuai.states.async_set(ENTITY_SENSOR, 40)
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_SENSOR_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 40)
 
     # report 0 if device is off
-    hass.states.async_set(ENTITY_SENSOR, 0)
+    menuai.states.async_set(ENTITY_SENSOR, 0)
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_SENSOR_NAME
     power = nested_value(plug, "emeter", "get_realtime", "power")
     assert math.isclose(power, 0)
 
 
-async def test_multiple_devices(hass: HomeAssistant) -> None:
+async def test_multiple_devices(menuai: menuai) -> None:
     """Test that devices are reported correctly."""
     config = CONFIG[DOMAIN][CONF_ENTITIES]
     assert await async_setup_component(
-        hass, SWITCH_DOMAIN, {SWITCH_DOMAIN: {"platform": "demo"}}
+        menuai, SWITCH_DOMAIN, {SWITCH_DOMAIN: {"platform": "demo"}}
     )
     assert await async_setup_component(
-        hass, LIGHT_DOMAIN, {LIGHT_DOMAIN: {"platform": "demo"}}
+        menuai, LIGHT_DOMAIN, {LIGHT_DOMAIN: {"platform": "demo"}}
     )
     assert await async_setup_component(
-        hass, FAN_DOMAIN, {FAN_DOMAIN: {"platform": "demo"}}
+        menuai, FAN_DOMAIN, {FAN_DOMAIN: {"platform": "demo"}}
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         SENSOR_DOMAIN,
         {SENSOR_DOMAIN: {"platform": "demo"}},
     )
@@ -420,22 +420,22 @@ async def test_multiple_devices(hass: HomeAssistant) -> None:
         "sense_energy.SenseLink",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await emulated_kasa.async_setup(hass, CONFIG) is True
-    await hass.async_block_till_done()
-    await emulated_kasa.validate_configs(hass, config)
+        assert await emulated_kasa.async_setup(menuai, CONFIG) is True
+    await menuai.async_block_till_done()
+    await emulated_kasa.validate_configs(menuai, config)
 
     # Turn all devices on to known state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_SWITCH}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_LIGHT}, blocking=True
     )
-    hass.states.async_set(ENTITY_SENSOR, 35)
-    await hass.services.async_call(
+    menuai.states.async_set(ENTITY_SENSOR, 35)
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_FAN}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: ENTITY_FAN, ATTR_PERCENTAGE: 66},
@@ -443,16 +443,16 @@ async def test_multiple_devices(hass: HomeAssistant) -> None:
     )
 
     # All of them should now be on
-    switch = hass.states.get(ENTITY_SWITCH)
+    switch = menuai.states.get(ENTITY_SWITCH)
     assert switch.state == STATE_ON
-    light = hass.states.get(ENTITY_LIGHT)
+    light = menuai.states.get(ENTITY_LIGHT)
     assert light.state == STATE_ON
-    sensor = hass.states.get(ENTITY_SENSOR)
+    sensor = menuai.states.get(ENTITY_SENSOR)
     assert sensor.state == "35"
-    fan = hass.states.get(ENTITY_FAN)
+    fan = menuai.states.get(ENTITY_FAN)
     assert fan.state == STATE_ON
 
-    plug_it = emulated_kasa.get_plug_devices(hass, config)
+    plug_it = emulated_kasa.get_plug_devices(menuai, config)
     # switch
     plug = next(plug_it).generate_response()
     assert nested_value(plug, "system", "get_sysinfo", "alias") == ENTITY_SWITCH_NAME

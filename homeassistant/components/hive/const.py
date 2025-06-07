@@ -1,6 +1,6 @@
 """Constants for Hive."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 ATTR_MODE = "mode"
 ATTR_TIME_PERIOD = "time_period"

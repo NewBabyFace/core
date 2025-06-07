@@ -1,6 +1,6 @@
 """Constants for dnsip integration."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "dnsip"
 PLATFORMS = [Platform.SENSOR]

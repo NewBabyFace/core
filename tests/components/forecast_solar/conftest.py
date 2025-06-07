@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from forecast_solar import models
 import pytest
 
-from homeassistant.components.forecast_solar.const import (
+from menuai.components.forecast_solar.const import (
     CONF_AZIMUTH,
     CONF_DAMPING_EVENING,
     CONF_DAMPING_MORNING,
@@ -16,9 +16,9 @@ from homeassistant.components.forecast_solar.const import (
     CONF_MODULES_POWER,
     DOMAIN,
 )
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -27,7 +27,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.forecast_solar.async_setup_entry", return_value=True
+        "menuai.components.forecast_solar.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -57,13 +57,13 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_forecast_solar(hass: HomeAssistant) -> Generator[MagicMock]:
+def mock_forecast_solar(menuai: menuai) -> Generator[MagicMock]:
     """Return a mocked Forecast.Solar client.
 
-    hass fixture included because it sets the time zone.
+    menuai fixture included because it sets the time zone.
     """
     with patch(
-        "homeassistant.components.forecast_solar.coordinator.ForecastSolar",
+        "menuai.components.forecast_solar.coordinator.ForecastSolar",
         autospec=True,
     ) as forecast_solar_mock:
         forecast_solar = forecast_solar_mock.return_value
@@ -114,14 +114,14 @@ def mock_forecast_solar(hass: HomeAssistant) -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_forecast_solar: MagicMock,
 ) -> MockConfigEntry:
     """Set up the Forecast.Solar integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

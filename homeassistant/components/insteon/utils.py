@@ -13,12 +13,12 @@ from pyinsteon.device_types.device_base import Device
 from pyinsteon.events import OFF_EVENT, OFF_FAST_EVENT, ON_EVENT, ON_FAST_EVENT, Event
 from serial.tools import list_ports
 
-from homeassistant.components import usb
-from homeassistant.const import CONF_ADDRESS, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import usb
+from menuai.const import CONF_ADDRESS, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DOMAIN,
@@ -48,7 +48,7 @@ def _register_event(event: Event, listener: Callable) -> None:
     event.subscribe(listener, force_strong_ref=True)
 
 
-def add_insteon_events(hass: HomeAssistant, device: Device) -> None:
+def add_insteon_events(menuai: menuai, device: Device) -> None:
     """Register Insteon device events."""
 
     @callback
@@ -75,7 +75,7 @@ def add_insteon_events(hass: HomeAssistant, device: Device) -> None:
         else:
             event = f"insteon.{name}"
         _LOGGER.debug("Firing event %s with %s", event, schema)
-        hass.bus.async_fire(event, schema)
+        menuai.bus.async_fire(event, schema)
 
     if str(device.address).startswith("X10"):
         return
@@ -88,28 +88,28 @@ def add_insteon_events(hass: HomeAssistant, device: Device) -> None:
             _register_event(event, async_fire_insteon_event)
 
 
-def register_new_device_callback(hass: HomeAssistant) -> None:
+def register_new_device_callback(menuai: menuai) -> None:
     """Register callback for new Insteon device."""
 
     @callback
     def async_new_insteon_device(address, action: DeviceAction):
         """Detect device from transport to be delegated to platform."""
         if action == DeviceAction.ADDED:
-            hass.async_create_task(async_create_new_entities(address))
+            menuai.async_create_task(async_create_new_entities(address))
 
     async def async_create_new_entities(address):
         _LOGGER.debug(
-            "Adding new INSTEON device to Home Assistant with address %s", address
+            "Adding new INSTEON device to MenuAI with address %s", address
         )
-        await devices.async_save(workdir=hass.config.config_dir)
+        await devices.async_save(workdir=menuai.config.config_dir)
         device = devices[address]
         await device.async_status()
         platforms = get_device_platforms(device)
         for platform in platforms:
             groups = get_device_platform_groups(device, platform)
             signal = f"{SIGNAL_ADD_ENTITIES}_{platform}"
-            dispatcher_send(hass, signal, {"address": device.address, "groups": groups})
-        add_insteon_events(hass, device)
+            dispatcher_send(menuai, signal, {"address": device.address, "groups": groups})
+        add_insteon_events(menuai, device)
 
     devices.subscribe(async_new_insteon_device, force_strong_ref=True)
 
@@ -140,7 +140,7 @@ def print_aldb_to_log(aldb):
 
 @callback
 def async_add_insteon_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform: Platform,
     entity_type: type[InsteonEntity],
     async_add_entities: AddConfigEntryEntitiesCallback,
@@ -157,7 +157,7 @@ def async_add_insteon_entities(
 
 @callback
 def async_add_insteon_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform: Platform,
     entity_type: type[InsteonEntity],
     async_add_entities: AddConfigEntryEntitiesCallback,
@@ -168,7 +168,7 @@ def async_add_insteon_devices(
         groups = get_device_platform_groups(device, platform)
         discovery_info = {"address": address, "groups": groups}
         async_add_insteon_entities(
-            hass, platform, entity_type, async_add_entities, discovery_info
+            menuai, platform, entity_type, async_add_entities, discovery_info
         )
 
 
@@ -196,9 +196,9 @@ def get_usb_ports() -> dict[str, str]:
     return port_descriptions
 
 
-async def async_get_usb_ports(hass: HomeAssistant) -> dict[str, str]:
+async def async_get_usb_ports(menuai: menuai) -> dict[str, str]:
     """Return a dict of USB ports and their friendly names."""
-    return await hass.async_add_executor_job(get_usb_ports)
+    return await menuai.async_add_executor_job(get_usb_ports)
 
 
 def compute_device_name(ha_device) -> str:

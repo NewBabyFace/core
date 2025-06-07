@@ -11,7 +11,7 @@ from aiopvapi.resources.room import Room
 from aiopvapi.resources.scene import Scene
 from aiopvapi.resources.shade import BaseShade
 
-from homeassistant.config_entries import ConfigEntry
+from menuai.config_entries import ConfigEntry
 
 if TYPE_CHECKING:
     from .coordinator import PowerviewShadeUpdateCoordinator

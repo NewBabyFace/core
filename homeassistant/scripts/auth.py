@@ -1,4 +1,4 @@
-"""Script to manage users for the Home Assistant auth provider."""
+"""Script to manage users for the MenuAI auth provider."""
 
 import argparse
 import asyncio
@@ -7,25 +7,25 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from homeassistant import runner
-from homeassistant.auth import auth_manager_from_config
-from homeassistant.auth.providers import homeassistant as hass_auth
-from homeassistant.config import get_default_config_dir
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai import runner
+from menuai.auth import auth_manager_from_config
+from menuai.auth.providers import menuai as menuai_auth
+from menuai.config import get_default_config_dir
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 # mypy: allow-untyped-calls, allow-untyped-defs
 
 
 def run(args: Sequence[str] | None) -> None:
-    """Handle Home Assistant auth provider script."""
-    parser = argparse.ArgumentParser(description="Manage Home Assistant users")
+    """Handle MenuAI auth provider script."""
+    parser = argparse.ArgumentParser(description="Manage MenuAI users")
     parser.add_argument("--script", choices=["auth"])
     parser.add_argument(
         "-c",
         "--config",
         default=get_default_config_dir(),
-        help="Directory that contains the Home Assistant configuration",
+        help="Directory that contains the MenuAI configuration",
     )
 
     subparsers = parser.add_subparsers(dest="func")
@@ -48,27 +48,27 @@ def run(args: Sequence[str] | None) -> None:
     parser_change_pw.add_argument("new_password", type=str)
     parser_change_pw.set_defaults(func=change_password)
 
-    asyncio.set_event_loop_policy(runner.HassEventLoopPolicy(False))
+    asyncio.set_event_loop_policy(runner.menuaiEventLoopPolicy(False))
     asyncio.run(run_command(parser.parse_args(args)))
 
 
 async def run_command(args: argparse.Namespace) -> None:
     """Run the command."""
-    hass = HomeAssistant(os.path.join(os.getcwd(), args.config))
-    await asyncio.gather(dr.async_load(hass), er.async_load(hass))
-    hass.auth = await auth_manager_from_config(hass, [{"type": "homeassistant"}], [])
-    provider = hass.auth.auth_providers[0]
+    menuai = menuai(os.path.join(os.getcwd(), args.config))
+    await asyncio.gather(dr.async_load(menuai), er.async_load(menuai))
+    menuai.auth = await auth_manager_from_config(menuai, [{"type": "menuai"}], [])
+    provider = menuai.auth.auth_providers[0]
     await provider.async_initialize()
-    await args.func(hass, provider, args)
+    await args.func(menuai, provider, args)
 
     # Triggers save on used storage helpers with delay (core auth)
-    logging.getLogger("homeassistant.core").setLevel(logging.WARNING)
+    logging.getLogger("menuai.core").setLevel(logging.WARNING)
 
-    await hass.async_stop()
+    await menuai.async_stop()
 
 
 async def list_users(
-    hass: HomeAssistant, provider: hass_auth.HassAuthProvider, args: argparse.Namespace
+    menuai: menuai, provider: menuai_auth.menuaiAuthProvider, args: argparse.Namespace
 ) -> None:
     """List the users."""
     count = 0
@@ -83,14 +83,14 @@ async def list_users(
 
 
 async def add_user(
-    hass: HomeAssistant, provider: hass_auth.HassAuthProvider, args: argparse.Namespace
+    menuai: menuai, provider: menuai_auth.menuaiAuthProvider, args: argparse.Namespace
 ) -> None:
     """Create a user."""
     if TYPE_CHECKING:
         assert provider.data
     try:
         provider.data.add_auth(args.username, args.password)
-    except hass_auth.InvalidUser:
+    except menuai_auth.InvalidUser:
         print("Username already exists!")
         return
 
@@ -100,7 +100,7 @@ async def add_user(
 
 
 async def validate_login(
-    hass: HomeAssistant, provider: hass_auth.HassAuthProvider, args: argparse.Namespace
+    menuai: menuai, provider: menuai_auth.menuaiAuthProvider, args: argparse.Namespace
 ) -> None:
     """Validate a login."""
     if TYPE_CHECKING:
@@ -108,12 +108,12 @@ async def validate_login(
     try:
         provider.data.validate_login(args.username, args.password)
         print("Auth valid")
-    except hass_auth.InvalidAuth:
+    except menuai_auth.InvalidAuth:
         print("Auth invalid")
 
 
 async def change_password(
-    hass: HomeAssistant, provider: hass_auth.HassAuthProvider, args: argparse.Namespace
+    menuai: menuai, provider: menuai_auth.menuaiAuthProvider, args: argparse.Namespace
 ) -> None:
     """Change password."""
     if TYPE_CHECKING:
@@ -122,5 +122,5 @@ async def change_password(
         provider.data.change_password(args.username, args.new_password)
         await provider.data.async_save()
         print("Password changed")
-    except hass_auth.InvalidUser:
+    except menuai_auth.InvalidUser:
         print("User not found")

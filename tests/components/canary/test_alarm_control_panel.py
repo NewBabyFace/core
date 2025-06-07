@@ -4,26 +4,26 @@ from unittest.mock import PropertyMock, patch
 
 from canary.const import LOCATION_MODE_AWAY, LOCATION_MODE_HOME, LOCATION_MODE_NIGHT
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN as ALARM_DOMAIN,
     AlarmControlPanelState,
 )
-from homeassistant.const import (
+from menuai.const import (
     SERVICE_ALARM_ARM_AWAY,
     SERVICE_ALARM_ARM_HOME,
     SERVICE_ALARM_ARM_NIGHT,
     SERVICE_ALARM_DISARM,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
 
 from . import init_integration, mock_device, mock_location, mock_mode
 
 
 async def test_alarm_control_panel(
-    hass: HomeAssistant, canary, entity_registry: er.EntityRegistry
+    menuai: menuai, canary, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the creation and values of the alarm_control_panel for Canary."""
 
@@ -41,15 +41,15 @@ async def test_alarm_control_panel(
     instance = canary.return_value
     instance.get_locations.return_value = [mocked_location]
 
-    with patch("homeassistant.components.canary.PLATFORMS", ["alarm_control_panel"]):
-        await init_integration(hass)
+    with patch("menuai.components.canary.PLATFORMS", ["alarm_control_panel"]):
+        await init_integration(menuai)
 
     entity_id = "alarm_control_panel.home"
     entity_entry = entity_registry.async_get(entity_id)
     assert entity_entry
     assert entity_entry.unique_id == "100"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
     assert not state.attributes["private"]
@@ -57,10 +57,10 @@ async def test_alarm_control_panel(
     # test private system
     type(mocked_location).is_private = PropertyMock(return_value=True)
 
-    await async_update_entity(hass, entity_id)
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == AlarmControlPanelState.DISARMED
     assert state.attributes["private"]
@@ -72,10 +72,10 @@ async def test_alarm_control_panel(
         return_value=mock_mode(4, LOCATION_MODE_HOME)
     )
 
-    await async_update_entity(hass, entity_id)
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == AlarmControlPanelState.ARMED_HOME
 
@@ -84,10 +84,10 @@ async def test_alarm_control_panel(
         return_value=mock_mode(5, LOCATION_MODE_AWAY)
     )
 
-    await async_update_entity(hass, entity_id)
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == AlarmControlPanelState.ARMED_AWAY
 
@@ -96,15 +96,15 @@ async def test_alarm_control_panel(
         return_value=mock_mode(6, LOCATION_MODE_NIGHT)
     )
 
-    await async_update_entity(hass, entity_id)
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == AlarmControlPanelState.ARMED_NIGHT
 
 
-async def test_alarm_control_panel_services(hass: HomeAssistant, canary) -> None:
+async def test_alarm_control_panel_services(menuai: menuai, canary) -> None:
     """Test the services of the alarm_control_panel for Canary."""
 
     online_device_at_home = mock_device(20, "Dining Room", True, "Canary Pro")
@@ -120,13 +120,13 @@ async def test_alarm_control_panel_services(hass: HomeAssistant, canary) -> None
     instance = canary.return_value
     instance.get_locations.return_value = [mocked_location]
 
-    with patch("homeassistant.components.canary.PLATFORMS", ["alarm_control_panel"]):
-        await init_integration(hass)
+    with patch("menuai.components.canary.PLATFORMS", ["alarm_control_panel"]):
+        await init_integration(menuai)
 
     entity_id = "alarm_control_panel.home"
 
     # test arm away
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_DOMAIN,
         SERVICE_ALARM_ARM_AWAY,
         service_data={"entity_id": entity_id},
@@ -135,7 +135,7 @@ async def test_alarm_control_panel_services(hass: HomeAssistant, canary) -> None
     instance.set_location_mode.assert_called_with(100, LOCATION_MODE_AWAY)
 
     # test arm home
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_DOMAIN,
         SERVICE_ALARM_ARM_HOME,
         service_data={"entity_id": entity_id},
@@ -144,7 +144,7 @@ async def test_alarm_control_panel_services(hass: HomeAssistant, canary) -> None
     instance.set_location_mode.assert_called_with(100, LOCATION_MODE_HOME)
 
     # test arm night
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_DOMAIN,
         SERVICE_ALARM_ARM_NIGHT,
         service_data={"entity_id": entity_id},
@@ -153,7 +153,7 @@ async def test_alarm_control_panel_services(hass: HomeAssistant, canary) -> None
     instance.set_location_mode.assert_called_with(100, LOCATION_MODE_NIGHT)
 
     # test disarm
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_DOMAIN,
         SERVICE_ALARM_DISARM,
         service_data={"entity_id": entity_id},

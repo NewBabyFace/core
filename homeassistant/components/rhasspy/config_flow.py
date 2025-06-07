@@ -1,4 +1,4 @@
-"""Config flow for Rhasspy integration."""
+"""Config flow for Rmenuaipy integration."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import DOMAIN
 
 
-class RhasspyConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Rhasspy."""
+class RmenuaipyConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Rmenuaipy."""
 
     VERSION = 1
 
@@ -23,4 +23,4 @@ class RhasspyConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
 
-        return self.async_create_entry(title="Rhasspy", data={})
+        return self.async_create_entry(title="Rmenuaipy", data={})

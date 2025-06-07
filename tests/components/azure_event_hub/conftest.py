@@ -10,16 +10,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from azure.eventhub.aio import EventHubProducerClient
 import pytest
 
-from homeassistant.components.azure_event_hub.const import (
+from menuai.components.azure_event_hub.const import (
     CONF_FILTER,
     CONF_SEND_INTERVAL,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .const import AZURE_EVENT_HUB_PATH, BASIC_OPTIONS, PRODUCER_PATH, SAS_CONFIG_FULL
 
@@ -44,7 +44,7 @@ def mock_filter_schema() -> dict[str, Any]:
 
 @pytest.fixture(name="entry")
 async def mock_entry_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     filter_schema: dict[str, Any],
     mock_create_batch: MagicMock,
     mock_send_batch: AsyncMock,
@@ -56,32 +56,32 @@ async def mock_entry_fixture(
         title="test-instance",
         options=BASIC_OPTIONS,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     assert await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {CONF_FILTER: filter_schema}}
+        menuai, DOMAIN, {DOMAIN: {CONF_FILTER: filter_schema}}
     )
     assert entry.state is ConfigEntryState.LOADED
 
     # Clear the component_loaded event from the queue.
     async_fire_time_changed(
-        hass,
+        menuai,
         utcnow() + timedelta(seconds=entry.options[CONF_SEND_INTERVAL]),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     yield entry
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
 
 # fixtures for init tests
 @pytest.fixture(name="entry_with_one_event")
 def mock_entry_with_one_event(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> MockConfigEntry:
     """Use the entry and add a single test event to the queue."""
     assert entry.state is ConfigEntryState.LOADED
-    hass.states.async_set("sensor.test", STATE_ON)
+    menuai.states.async_set("sensor.test", STATE_ON)
     return entry
 
 

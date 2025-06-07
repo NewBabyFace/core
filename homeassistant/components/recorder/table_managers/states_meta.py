@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, cast
 
 from sqlalchemy.orm.session import Session
 
-from homeassistant.core import Event, EventStateChangedData
-from homeassistant.util.collection import chunked_or_all
+from menuai.core import Event, EventStateChangedData
+from menuai.util.collection import chunked_or_all
 
 from ..db_schema import StatesMeta
 from ..queries import find_all_states_metadata_ids, find_states_metadata_ids

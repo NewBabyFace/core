@@ -2,12 +2,12 @@
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.components.arcam_fmj.const import DOMAIN
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.arcam_fmj.const import DOMAIN
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
@@ -18,13 +18,13 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected triggers from a arcam_fmj."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={(DOMAIN, "host", 1234)},
@@ -43,12 +43,12 @@ async def test_get_triggers(
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
 
     # Test triggers are either arcam_fmj specific or media_player entity triggers
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     for expected_trigger in expected_triggers:
         assert expected_trigger in triggers
@@ -57,7 +57,7 @@ async def test_get_triggers(
 
 
 async def test_if_fires_on_turn_on_request(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
     player_setup,
@@ -69,7 +69,7 @@ async def test_if_fires_on_turn_on_request(
     state.get_power.return_value = None
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -93,21 +93,21 @@ async def test_if_fires_on_turn_on_request(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "turn_on",
         {"entity_id": player_setup},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == player_setup
     assert service_calls[1].data["id"] == 0
 
 
 async def test_if_fires_on_turn_on_request_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
     player_setup,
@@ -119,7 +119,7 @@ async def test_if_fires_on_turn_on_request_legacy(
     state.get_power.return_value = None
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -143,14 +143,14 @@ async def test_if_fires_on_turn_on_request_legacy(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "turn_on",
         {"entity_id": player_setup},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == player_setup
     assert service_calls[1].data["id"] == 0

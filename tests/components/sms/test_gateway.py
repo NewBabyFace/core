@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.sms.gateway import Gateway
-from homeassistant.core import HomeAssistant
+from menuai.components.sms.gateway import Gateway
+from menuai.core import menuai
 
 from .const import (
     NEXT_SMS_MULTIPLE_1,
@@ -14,7 +14,7 @@ from .const import (
 )
 
 
-async def test_get_and_delete_all_sms_single_message(hass: HomeAssistant) -> None:
+async def test_get_and_delete_all_sms_single_message(menuai: menuai) -> None:
     """Test that a single message produces a list of entries containing the single message."""
 
     # Mock the Gammu state_machine
@@ -23,7 +23,7 @@ async def test_get_and_delete_all_sms_single_message(hass: HomeAssistant) -> Non
     state_machine.GetNextSMS = MagicMock(return_value=NEXT_SMS_SINGLE)
     state_machine.DeleteSMS = MagicMock()
 
-    response = Gateway({"Connection": None}, hass).get_and_delete_all_sms(state_machine)
+    response = Gateway({"Connection": None}, menuai).get_and_delete_all_sms(state_machine)
 
     # Assert the length of the list
     assert len(response) == 1
@@ -33,7 +33,7 @@ async def test_get_and_delete_all_sms_single_message(hass: HomeAssistant) -> Non
     assert response[0][0]["Text"] == "Short message"
 
 
-async def test_get_and_delete_all_sms_two_part_message(hass: HomeAssistant) -> None:
+async def test_get_and_delete_all_sms_two_part_message(menuai: menuai) -> None:
     """Test that a two-part message produces a list of entries containing one combined message."""
 
     state_machine = MagicMock()
@@ -43,7 +43,7 @@ async def test_get_and_delete_all_sms_two_part_message(hass: HomeAssistant) -> N
     )
     state_machine.DeleteSMS = MagicMock()
 
-    response = Gateway({"Connection": None}, hass).get_and_delete_all_sms(state_machine)
+    response = Gateway({"Connection": None}, menuai).get_and_delete_all_sms(state_machine)
 
     assert len(response) == 1
     assert len(response[0]) == 2

@@ -8,9 +8,9 @@ from aioambient import API
 from aioambient.errors import AmbientError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.helpers import aiohttp_client
 
 from .const import CONF_APP_KEY, DOMAIN
 
@@ -44,7 +44,7 @@ class AmbientStationFlowHandler(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(user_input[CONF_APP_KEY])
         self._abort_if_unique_id_configured()
 
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
         api = API(user_input[CONF_APP_KEY], user_input[CONF_API_KEY], session=session)
 
         try:

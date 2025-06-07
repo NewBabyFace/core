@@ -7,11 +7,11 @@ from pydanfossair.commands import ReadCommand
 from pydanfossair.danfossclient import DanfossClient
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,14 +25,14 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Danfoss Air component."""
     conf = config[DOMAIN]
 
-    hass.data[DOMAIN] = DanfossAir(conf[CONF_HOST])
+    menuai.data[DOMAIN] = DanfossAir(conf[CONF_HOST])
 
     for platform in PLATFORMS:
-        discovery.load_platform(hass, platform, DOMAIN, {}, config)
+        discovery.load_platform(menuai, platform, DOMAIN, {}, config)
 
     return True
 

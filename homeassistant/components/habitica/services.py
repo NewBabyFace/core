@@ -27,19 +27,19 @@ from habiticalib import (
 )
 import voluptuous as vol
 
-from homeassistant.components.todo import ATTR_RENAME
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_DATE, ATTR_NAME
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.components.todo import ATTR_RENAME
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_DATE, ATTR_NAME
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import ConfigEntrySelector
-from homeassistant.util import dt as dt_util
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import ConfigEntrySelector
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_ADD_CHECKLIST_ITEM,
@@ -234,9 +234,9 @@ SERVICE_TASK_TYPE_MAP = {
 }
 
 
-def get_config_entry(hass: HomeAssistant, entry_id: str) -> HabiticaConfigEntry:
+def get_config_entry(menuai: menuai, entry_id: str) -> HabiticaConfigEntry:
     """Return config entry or raise if not found or not loaded."""
-    if not (entry := hass.config_entries.async_get_entry(entry_id)):
+    if not (entry := menuai.config_entries.async_get_entry(entry_id)):
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="entry_not_found",
@@ -249,12 +249,12 @@ def get_config_entry(hass: HomeAssistant, entry_id: str) -> HabiticaConfigEntry:
     return entry
 
 
-def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
+def async_setup_services(menuai: menuai) -> None:  # noqa: C901
     """Set up services for Habitica integration."""
 
     async def cast_skill(call: ServiceCall) -> ServiceResponse:
         """Skill action."""
-        entry = get_config_entry(hass, call.data[ATTR_CONFIG_ENTRY])
+        entry = get_config_entry(menuai, call.data[ATTR_CONFIG_ENTRY])
         coordinator = entry.runtime_data
 
         skill = SKILL_MAP[call.data[ATTR_SKILL]]
@@ -276,7 +276,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         try:
             response = await coordinator.habitica.cast_skill(skill, task_id)
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -300,13 +300,13 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                 translation_placeholders={"skill": call.data[ATTR_SKILL]},
             ) from e
         except HabiticaException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e.error.message)},
             ) from e
         except ClientError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e)},
@@ -317,7 +317,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
 
     async def manage_quests(call: ServiceCall) -> ServiceResponse:
         """Accept, reject, start, leave or cancel quests."""
-        entry = get_config_entry(hass, call.data[ATTR_CONFIG_ENTRY])
+        entry = get_config_entry(menuai, call.data[ATTR_CONFIG_ENTRY])
         coordinator = entry.runtime_data
 
         FUNC_MAP = {
@@ -334,7 +334,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         try:
             response = await func()
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -348,13 +348,13 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                 translation_domain=DOMAIN, translation_key="quest_not_found"
             ) from e
         except HabiticaException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e.error.message)},
             ) from e
         except ClientError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e)},
@@ -370,7 +370,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         SERVICE_REJECT_QUEST,
         SERVICE_START_QUEST,
     ):
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             service,
             manage_quests,
@@ -380,7 +380,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
 
     async def score_task(call: ServiceCall) -> ServiceResponse:
         """Score a task action."""
-        entry = get_config_entry(hass, call.data[ATTR_CONFIG_ENTRY])
+        entry = get_config_entry(menuai, call.data[ATTR_CONFIG_ENTRY])
         coordinator = entry.runtime_data
 
         direction = (
@@ -404,7 +404,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         try:
             response = await coordinator.habitica.update_score(task_id, direction)
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -419,19 +419,19 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                         "cost": f"{task_value:.2f} GP",
                     },
                 ) from e
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": e.error.message},
             ) from e
         except HabiticaException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e.error.message)},
             ) from e
         except ClientError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e)},
@@ -443,7 +443,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
     async def transformation(call: ServiceCall) -> ServiceResponse:
         """User a transformation item on a player character."""
 
-        entry = get_config_entry(hass, call.data[ATTR_CONFIG_ENTRY])
+        entry = get_config_entry(menuai, call.data[ATTR_CONFIG_ENTRY])
         coordinator = entry.runtime_data
 
         item = ITEMID_MAP[call.data[ATTR_ITEM]]
@@ -464,13 +464,13 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                     translation_key="party_not_found",
                 ) from e
             except HabiticaException as e:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="service_call_exception",
                     translation_placeholders={"reason": str(e.error.message)},
                 ) from e
             except ClientError as e:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="service_call_exception",
                     translation_placeholders={"reason": str(e)},
@@ -496,7 +496,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         try:
             response = await coordinator.habitica.cast_skill(item, target_id)
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -508,13 +508,13 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                 translation_placeholders={"item": call.data[ATTR_ITEM]},
             ) from e
         except HabiticaException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e.error.message)},
             ) from e
         except ClientError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e)},
@@ -525,7 +525,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
     async def get_tasks(call: ServiceCall) -> ServiceResponse:
         """Get tasks action."""
 
-        entry = get_config_entry(hass, call.data[ATTR_CONFIG_ENTRY])
+        entry = get_config_entry(menuai, call.data[ATTR_CONFIG_ENTRY])
         coordinator = entry.runtime_data
         response: list[TaskData] = coordinator.data.tasks
 
@@ -573,7 +573,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
 
     async def create_or_update_task(call: ServiceCall) -> ServiceResponse:  # noqa: C901
         """Create or update task action."""
-        entry = get_config_entry(hass, call.data[ATTR_CONFIG_ENTRY])
+        entry = get_config_entry(menuai, call.data[ATTR_CONFIG_ENTRY])
         coordinator = entry.runtime_data
         await coordinator.async_refresh()
         is_update = call.service in (
@@ -639,19 +639,19 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                         }
                     )
                 except TooManyRequestsError as e:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="setup_rate_limit_exception",
                         translation_placeholders={"retry_after": str(e.retry_after)},
                     ) from e
                 except HabiticaException as e:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="service_call_exception",
                         translation_placeholders={"reason": str(e.error.message)},
                     ) from e
                 except ClientError as e:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="service_call_exception",
                         translation_placeholders={"reason": str(e)},
@@ -828,19 +828,19 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
             else:
                 response = await coordinator.habitica.create_task(data)
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
             ) from e
         except HabiticaException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e.error.message)},
             ) from e
         except ClientError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e)},
@@ -854,7 +854,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         SERVICE_UPDATE_REWARD,
         SERVICE_UPDATE_TODO,
     ):
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             service,
             create_or_update_task,
@@ -867,7 +867,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         SERVICE_CREATE_REWARD,
         SERVICE_CREATE_TODO,
     ):
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             service,
             create_or_update_task,
@@ -875,7 +875,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
             supports_response=SupportsResponse.ONLY,
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CAST_SKILL,
         cast_skill,
@@ -883,14 +883,14 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SCORE_HABIT,
         score_task,
         schema=SERVICE_SCORE_TASK_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SCORE_REWARD,
         score_task,
@@ -898,14 +898,14 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_TRANSFORMATION,
         transformation,
         schema=SERVICE_TRANSFORMATION_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_TASKS,
         get_tasks,

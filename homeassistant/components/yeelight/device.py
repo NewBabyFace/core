@@ -8,10 +8,10 @@ from typing import Any
 from yeelight import BulbException
 from yeelight.aio import KEY_CONNECTED, AsyncBulb
 
-from homeassistant.const import CONF_ID, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
+from menuai.const import CONF_ID, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later
 
 from .const import (
     ACTIVE_COLOR_FLOWING,
@@ -65,10 +65,10 @@ class YeelightDevice:
     """Represents single Yeelight device."""
 
     def __init__(
-        self, hass: HomeAssistant, host: str, config: dict[str, Any], bulb: AsyncBulb
+        self, menuai: menuai, host: str, config: dict[str, Any], bulb: AsyncBulb
     ) -> None:
         """Initialize device."""
-        self._hass = hass
+        self._menuai = menuai
         self._config = config
         self._host = host
         self._bulb_device = bulb
@@ -196,7 +196,7 @@ class YeelightDevice:
 
     async def async_setup(self):
         """Fetch capabilities and setup name if available."""
-        scanner = YeelightScanner.async_get(self._hass)
+        scanner = YeelightScanner.async_get(self._menuai)
         self.capabilities = await scanner.async_get_capabilities(self._host) or {}
         if self.capabilities:
             self._bulb_device.set_capabilities(self.capabilities)
@@ -217,7 +217,7 @@ class YeelightDevice:
             # No need to poll unless force, already connected
             return
         await self._async_update_properties()
-        async_dispatcher_send(self._hass, DATA_UPDATED.format(self._host))
+        async_dispatcher_send(self._menuai, DATA_UPDATED.format(self._host))
 
     async def _async_forced_update(self, _now):
         """Call a forced update."""
@@ -239,5 +239,5 @@ class YeelightDevice:
             # to be called when async_setup_entry reaches the end of the
             # function
             #
-            async_call_later(self._hass, STATE_CHANGE_TIME, self._async_forced_update)
-        async_dispatcher_send(self._hass, DATA_UPDATED.format(self._host))
+            async_call_later(self._menuai, STATE_CHANGE_TIME, self._async_forced_update)
+        async_dispatcher_send(self._menuai, DATA_UPDATED.format(self._host))

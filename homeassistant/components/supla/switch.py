@@ -6,10 +6,10 @@ import logging
 from pprint import pformat
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, SUPLA_COORDINATORS, SUPLA_SERVERS
 from .entity import SuplaEntity
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -36,8 +36,8 @@ async def async_setup_platform(
         entities.append(
             SuplaSwitchEntity(
                 device,
-                hass.data[DOMAIN][SUPLA_SERVERS][server_name],
-                hass.data[DOMAIN][SUPLA_COORDINATORS][server_name],
+                menuai.data[DOMAIN][SUPLA_SERVERS][server_name],
+                menuai.data[DOMAIN][SUPLA_COORDINATORS][server_name],
             )
         )
 

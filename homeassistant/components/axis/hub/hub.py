@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any
 
 import axis
 
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from ..const import ATTR_MANUFACTURER, DOMAIN
 from .config import AxisConfig
@@ -24,13 +24,13 @@ class AxisHub:
     """Manages a Axis device."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: AxisConfigEntry, api: axis.AxisDevice
+        self, menuai: menuai, config_entry: AxisConfigEntry, api: axis.AxisDevice
     ) -> None:
         """Initialize the device."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = AxisConfig.from_config_entry(config_entry)
         self.entity_loader = AxisEntityLoader(self)
-        self.event_source = AxisEventSource(hass, config_entry, api)
+        self.event_source = AxisEventSource(menuai, config_entry, api)
         self.api = api
 
         self.fw_version = api.vapix.firmware_version
@@ -58,7 +58,7 @@ class AxisHub:
 
     @staticmethod
     async def async_new_address_callback(
-        hass: HomeAssistant, config_entry: AxisConfigEntry
+        menuai: menuai, config_entry: AxisConfigEntry
     ) -> None:
         """Handle signals of device getting new address.
 
@@ -70,11 +70,11 @@ class AxisHub:
         hub.config = AxisConfig.from_config_entry(config_entry)
         hub.event_source.config_entry = config_entry
         hub.api.config.host = hub.config.host
-        async_dispatcher_send(hass, hub.signal_new_address)
+        async_dispatcher_send(menuai, hub.signal_new_address)
 
     async def async_update_device_registry(self) -> None:
         """Update device registry."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_registry.async_get_or_create(
             config_entry_id=self.config.entry.entry_id,
             configuration_url=self.api.config.url,

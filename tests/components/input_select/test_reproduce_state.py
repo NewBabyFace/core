@@ -2,10 +2,10 @@
 
 import pytest
 
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.state import async_reproduce_state
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, State
+from menuai.exceptions import menuaiError
+from menuai.helpers.state import async_reproduce_state
+from menuai.setup import async_setup_component
 
 VALID_OPTION1 = "Option A"
 VALID_OPTION2 = "Option B"
@@ -20,13 +20,13 @@ ENTITY = "input_select.test_select"
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Input select states."""
 
     # Setup entity
     assert await async_setup_component(
-        hass,
+        menuai,
         "input_select",
         {
             "input_select": {
@@ -37,7 +37,7 @@ async def test_reproducing_states(
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State(ENTITY, VALID_OPTION1),
             # Should not raise
@@ -46,11 +46,11 @@ async def test_reproducing_states(
     )
 
     # Test that entity is in desired state
-    assert hass.states.get(ENTITY).state == VALID_OPTION1
+    assert menuai.states.get(ENTITY).state == VALID_OPTION1
 
     # Try reproducing with different state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State(ENTITY, VALID_OPTION3),
             # Should not raise
@@ -59,20 +59,20 @@ async def test_reproducing_states(
     )
 
     # Test that we got the desired result
-    assert hass.states.get(ENTITY).state == VALID_OPTION3
+    assert menuai.states.get(ENTITY).state == VALID_OPTION3
 
     # Test setting state to invalid state
-    with pytest.raises(HomeAssistantError):
-        await async_reproduce_state(hass, [State(ENTITY, INVALID_OPTION)])
+    with pytest.raises(menuaiError):
+        await async_reproduce_state(menuai, [State(ENTITY, INVALID_OPTION)])
 
     # The entity state should be unchanged
-    assert hass.states.get(ENTITY).state == VALID_OPTION3
+    assert menuai.states.get(ENTITY).state == VALID_OPTION3
 
     # Test setting a different option set
     await async_reproduce_state(
-        hass, [State(ENTITY, VALID_OPTION5, {"options": VALID_OPTION_SET2})]
+        menuai, [State(ENTITY, VALID_OPTION5, {"options": VALID_OPTION_SET2})]
     )
 
     # These should fail if options weren't changed to VALID_OPTION_SET2
-    assert hass.states.get(ENTITY).attributes["options"] == VALID_OPTION_SET2
-    assert hass.states.get(ENTITY).state == VALID_OPTION5
+    assert menuai.states.get(ENTITY).attributes["options"] == VALID_OPTION_SET2
+    assert menuai.states.get(ENTITY).state == VALID_OPTION5

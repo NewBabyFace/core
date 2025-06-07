@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from datetime import timedelta
 import logging
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import Plenticore, SelectDataUpdateCoordinator
@@ -42,16 +42,16 @@ SELECT_SETTINGS_DATA = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add kostal plenticore Select widget."""
-    plenticore: Plenticore = hass.data[DOMAIN][entry.entry_id]
+    plenticore: Plenticore = menuai.data[DOMAIN][entry.entry_id]
 
     available_settings_data = await plenticore.client.get_settings()
     select_data_update_coordinator = SelectDataUpdateCoordinator(
-        hass, entry, _LOGGER, "Settings Data", timedelta(seconds=30), plenticore
+        menuai, entry, _LOGGER, "Settings Data", timedelta(seconds=30), plenticore
     )
 
     entities = []
@@ -116,19 +116,19 @@ class PlenticoreDataSelect(
             and self.data_id in self.coordinator.data[self.module_id]
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register this entity on the Update Coordinator."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.start_fetch_data(
                 self.module_id, self.data_id, self.options
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unregister this entity from the Update Coordinator."""
         self.coordinator.stop_fetch_data(self.module_id, self.data_id, self.options)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     async def async_select_option(self, option: str) -> None:
         """Update the current selected option."""

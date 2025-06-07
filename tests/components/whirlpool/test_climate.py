@@ -6,7 +6,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import whirlpool
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_HUMIDITY,
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
@@ -27,7 +27,7 @@ from homeassistant.components.climate import (
     SWING_OFF,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     SERVICE_TURN_OFF,
@@ -35,9 +35,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import init_integration, snapshot_whirlpool_entities, trigger_attr_callback
 
@@ -55,86 +55,86 @@ def multiple_climate_entities(request: pytest.FixtureRequest) -> tuple[str, str]
 
 
 async def update_ac_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     mock_aircon_api_instance: MagicMock,
 ):
     """Simulate an update trigger from the API."""
-    await trigger_attr_callback(hass, mock_aircon_api_instance)
-    return hass.states.get(entity_id)
+    await trigger_attr_callback(menuai, mock_aircon_api_instance)
+    return menuai.states.get(entity_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await init_integration(hass)
-    snapshot_whirlpool_entities(hass, entity_registry, snapshot, Platform.CLIMATE)
+    await init_integration(menuai)
+    snapshot_whirlpool_entities(menuai, entity_registry, snapshot, Platform.CLIMATE)
 
 
 async def test_dynamic_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     multiple_climate_entities: tuple[str, str],
     request: pytest.FixtureRequest,
 ) -> None:
     """Test dynamic attributes."""
     entity_id, mock_fixture = multiple_climate_entities
     mock_instance = request.getfixturevalue(mock_fixture)
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == HVACMode.COOL
 
     mock_instance.get_power_on.return_value = False
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.state == HVACMode.OFF
 
     mock_instance.get_online.return_value = False
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.state == STATE_UNAVAILABLE
 
     mock_instance.get_power_on.return_value = True
     mock_instance.get_online.return_value = True
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.state == HVACMode.COOL
 
     mock_instance.get_mode.return_value = whirlpool.aircon.Mode.Heat
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.state == HVACMode.HEAT
 
     mock_instance.get_mode.return_value = whirlpool.aircon.Mode.Fan
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.state == HVACMode.FAN_ONLY
 
     mock_instance.get_fanspeed.return_value = whirlpool.aircon.FanSpeed.Auto
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.attributes[ATTR_FAN_MODE] == HVACMode.AUTO
 
     mock_instance.get_fanspeed.return_value = whirlpool.aircon.FanSpeed.Low
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.attributes[ATTR_FAN_MODE] == FAN_LOW
 
     mock_instance.get_fanspeed.return_value = whirlpool.aircon.FanSpeed.Medium
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.attributes[ATTR_FAN_MODE] == FAN_MEDIUM
 
     mock_instance.get_fanspeed.return_value = whirlpool.aircon.FanSpeed.High
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.attributes[ATTR_FAN_MODE] == FAN_HIGH
 
     mock_instance.get_fanspeed.return_value = whirlpool.aircon.FanSpeed.Off
-    state = await update_ac_state(hass, entity_id, mock_instance)
+    state = await update_ac_state(menuai, entity_id, mock_instance)
     assert state.attributes[ATTR_FAN_MODE] == FAN_OFF
 
     mock_instance.get_current_temp.return_value = 15
     mock_instance.get_temp.return_value = 20
     mock_instance.get_current_humidity.return_value = 80
     mock_instance.get_h_louver_swing.return_value = True
-    attributes = (await update_ac_state(hass, entity_id, mock_instance)).attributes
+    attributes = (await update_ac_state(menuai, entity_id, mock_instance)).attributes
     assert attributes[ATTR_CURRENT_TEMPERATURE] == 15
     assert attributes[ATTR_TEMPERATURE] == 20
     assert attributes[ATTR_CURRENT_HUMIDITY] == 80
@@ -144,7 +144,7 @@ async def test_dynamic_attributes(
     mock_instance.get_temp.return_value = 21
     mock_instance.get_current_humidity.return_value = 70
     mock_instance.get_h_louver_swing.return_value = False
-    attributes = (await update_ac_state(hass, entity_id, mock_instance)).attributes
+    attributes = (await update_ac_state(menuai, entity_id, mock_instance)).attributes
     assert attributes[ATTR_CURRENT_TEMPERATURE] == 16
     assert attributes[ATTR_TEMPERATURE] == 21
     assert attributes[ATTR_CURRENT_HUMIDITY] == 70
@@ -220,7 +220,7 @@ async def test_dynamic_attributes(
     ],
 )
 async def test_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     service_data: dict,
     expected_call: str,
@@ -229,11 +229,11 @@ async def test_service_calls(
     request: pytest.FixtureRequest,
 ) -> None:
     """Test controlling the entity through service calls."""
-    await init_integration(hass)
+    await init_integration(menuai)
     entity_id, mock_fixture = multiple_climate_entities
     mock_instance = request.getfixturevalue(mock_fixture)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         service,
         {ATTR_ENTITY_ID: entity_id, **service_data},
@@ -261,19 +261,19 @@ async def test_service_calls(
     ],
 )
 async def test_service_hvac_mode_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     service_data: dict,
     multiple_climate_entities: tuple[str, str],
     request: pytest.FixtureRequest,
 ) -> None:
     """Test that the HVAC mode service call turns on the entity, if it is off."""
-    await init_integration(hass)
+    await init_integration(menuai)
     entity_id, mock_fixture = multiple_climate_entities
     mock_instance = request.getfixturevalue(mock_fixture)
 
     mock_instance.get_power_on.return_value = False
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         service,
         {ATTR_ENTITY_ID: entity_id, **service_data},
@@ -285,7 +285,7 @@ async def test_service_hvac_mode_turn_on(
     mock_instance.set_power_on.reset_mock()
     mock_instance.get_power_on.return_value = True
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         service,
         {ATTR_ENTITY_ID: entity_id, **service_data},
@@ -310,18 +310,18 @@ async def test_service_hvac_mode_turn_on(
     ],
 )
 async def test_service_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     service_data: dict,
     exception: type[Exception],
     multiple_climate_entities: tuple[str, str],
 ) -> None:
     """Test that unsupported service calls are handled properly."""
-    await init_integration(hass)
+    await init_integration(menuai)
     entity_id, _ = multiple_climate_entities
 
     with pytest.raises(exception):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             service,
             {ATTR_ENTITY_ID: entity_id, **service_data},

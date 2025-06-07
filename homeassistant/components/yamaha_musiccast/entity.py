@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from aiomusiccast.capabilities import Capability
 
-from homeassistant.const import ATTR_CONNECTIONS, ATTR_VIA_DEVICE
-from homeassistant.helpers.device_registry import (
+from menuai.const import ATTR_CONNECTIONS, ATTR_VIA_DEVICE
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import BRAND, DEFAULT_ZONE, DOMAIN, ENTITY_CATEGORY_MAPPING
 from .coordinator import MusicCastDataUpdateCoordinator
@@ -78,15 +78,15 @@ class MusicCastDeviceEntity(MusicCastEntity):
 
         return device_info
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when this Entity has been added to HA."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         # All entities should register callbacks to update HA when their state changes
         self.coordinator.musiccast.register_callback(self.async_write_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Entity being removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Entity being removed from menuai."""
+        await super().async_will_remove_from_menuai()
         self.coordinator.musiccast.remove_callback(self.async_write_ha_state)
 
 

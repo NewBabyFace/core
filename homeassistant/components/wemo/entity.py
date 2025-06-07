@@ -8,8 +8,8 @@ import logging
 
 from pywemo.exceptions import ActionException
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import DeviceCoordinator
 
@@ -19,9 +19,9 @@ _LOGGER = logging.getLogger(__name__)
 class WemoEntity(CoordinatorEntity[DeviceCoordinator]):
     """Common methods for Wemo entities."""
 
-    # Most pyWeMo devices are associated with a single Home Assistant entity. When
+    # Most pyWeMo devices are associated with a single MenuAI entity. When
     # that is not the case, name_suffix & unique_id_suffix can be used to provide
-    # names and unique ids for additional Home Assistant entities.
+    # names and unique ids for additional MenuAI entities.
     _name_suffix: str | None = None
     _unique_id_suffix: str | None = None
 
@@ -80,7 +80,7 @@ class WemoEntity(CoordinatorEntity[DeviceCoordinator]):
             self.coordinator.last_exception = err
             self.coordinator.last_update_success = False  # Used for self.available.
         finally:
-            self.hass.add_job(self.coordinator.async_update_listeners)
+            self.menuai.add_job(self.coordinator.async_update_listeners)
 
 
 class WemoBinaryStateEntity(WemoEntity):

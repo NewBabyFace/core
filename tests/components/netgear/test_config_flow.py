@@ -5,24 +5,24 @@ from unittest.mock import Mock, patch
 from pynetgear import DEFAULT_USER
 import pytest
 
-from homeassistant.components.netgear.const import (
+from menuai.components.netgear.const import (
     CONF_CONSIDER_HOME,
     DOMAIN,
     MODELS_PORT_5555,
     PORT_80,
     PORT_5555,
 )
-from homeassistant.config_entries import SOURCE_SSDP, SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_SSDP, SOURCE_USER
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MODEL_NUMBER,
     ATTR_UPNP_PRESENTATION_URL,
     ATTR_UPNP_SERIAL,
@@ -74,8 +74,8 @@ SSDP_URL_SLL = f"https://{HOST}:{PORT}/rootDesc.xml"
 def mock_controller_service():
     """Mock a successful service."""
     with (
-        patch("homeassistant.components.netgear.async_setup_entry", return_value=True),
-        patch("homeassistant.components.netgear.router.Netgear") as service_mock,
+        patch("menuai.components.netgear.async_setup_entry", return_value=True),
+        patch("menuai.components.netgear.router.Netgear") as service_mock,
     ):
         service_mock.return_value.get_info = Mock(return_value=ROUTER_INFOS)
         service_mock.return_value.port = 80
@@ -83,16 +83,16 @@ def mock_controller_service():
         yield service_mock
 
 
-async def test_user(hass: HomeAssistant, service) -> None:
+async def test_user(menuai: menuai, service) -> None:
     """Test user step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     # Have to provide all config
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: HOST,
@@ -110,9 +110,9 @@ async def test_user(hass: HomeAssistant, service) -> None:
     assert result["data"][CONF_PASSWORD] == PASSWORD
 
 
-async def test_user_connect_error(hass: HomeAssistant, service) -> None:
+async def test_user_connect_error(menuai: menuai, service) -> None:
     """Test user step with connection failure."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -121,7 +121,7 @@ async def test_user_connect_error(hass: HomeAssistant, service) -> None:
     service.return_value.get_info = Mock(return_value=None)
 
     # Have to provide all config
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: HOST,
@@ -135,7 +135,7 @@ async def test_user_connect_error(hass: HomeAssistant, service) -> None:
 
     service.return_value.login_try_port = Mock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: HOST,
@@ -148,9 +148,9 @@ async def test_user_connect_error(hass: HomeAssistant, service) -> None:
     assert result["errors"] == {"base": "config"}
 
 
-async def test_user_incomplete_info(hass: HomeAssistant, service) -> None:
+async def test_user_incomplete_info(menuai: menuai, service) -> None:
     """Test user step with incomplete device info."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -161,7 +161,7 @@ async def test_user_incomplete_info(hass: HomeAssistant, service) -> None:
     service.return_value.get_info = Mock(return_value=router_infos)
 
     # Have to provide all config
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: HOST,
@@ -179,22 +179,22 @@ async def test_user_incomplete_info(hass: HomeAssistant, service) -> None:
     assert result["data"][CONF_PASSWORD] == PASSWORD
 
 
-async def test_abort_if_already_setup(hass: HomeAssistant, service) -> None:
+async def test_abort_if_already_setup(menuai: menuai, service) -> None:
     """Test we abort if the router is already setup."""
     MockConfigEntry(
         domain=DOMAIN,
         data={CONF_PASSWORD: PASSWORD},
         unique_id=SERIAL,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     # Should fail, same SERIAL (flow)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: PASSWORD},
     )
@@ -202,15 +202,15 @@ async def test_abort_if_already_setup(hass: HomeAssistant, service) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_ssdp_already_configured(hass: HomeAssistant) -> None:
+async def test_ssdp_already_configured(menuai: menuai) -> None:
     """Test ssdp abort when the router is already configured."""
     MockConfigEntry(
         domain=DOMAIN,
         data={CONF_PASSWORD: PASSWORD},
         unique_id=SERIAL,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -228,9 +228,9 @@ async def test_ssdp_already_configured(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_ssdp_no_serial(hass: HomeAssistant) -> None:
+async def test_ssdp_no_serial(menuai: menuai) -> None:
     """Test ssdp abort when the ssdp info does not include a serial number."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -247,15 +247,15 @@ async def test_ssdp_no_serial(hass: HomeAssistant) -> None:
     assert result["reason"] == "no_serial"
 
 
-async def test_ssdp_ipv6(hass: HomeAssistant) -> None:
+async def test_ssdp_ipv6(menuai: menuai) -> None:
     """Test ssdp abort when using a ipv6 address."""
     MockConfigEntry(
         domain=DOMAIN,
         data={CONF_PASSWORD: PASSWORD},
         unique_id=SERIAL,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -273,9 +273,9 @@ async def test_ssdp_ipv6(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_ipv4_address"
 
 
-async def test_ssdp(hass: HomeAssistant, service) -> None:
+async def test_ssdp(menuai: menuai, service) -> None:
     """Test ssdp step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -292,7 +292,7 @@ async def test_ssdp(hass: HomeAssistant, service) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_PASSWORD: PASSWORD}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -305,9 +305,9 @@ async def test_ssdp(hass: HomeAssistant, service) -> None:
     assert result["data"][CONF_PASSWORD] == PASSWORD
 
 
-async def test_ssdp_port_5555(hass: HomeAssistant, service) -> None:
+async def test_ssdp_port_5555(menuai: menuai, service) -> None:
     """Test ssdp step with port 5555."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -327,7 +327,7 @@ async def test_ssdp_port_5555(hass: HomeAssistant, service) -> None:
     service.return_value.port = 5555
     service.return_value.ssl = True
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_PASSWORD: PASSWORD}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -340,7 +340,7 @@ async def test_ssdp_port_5555(hass: HomeAssistant, service) -> None:
     assert result["data"][CONF_PASSWORD] == PASSWORD
 
 
-async def test_options_flow(hass: HomeAssistant, service) -> None:
+async def test_options_flow(menuai: menuai, service) -> None:
     """Test specifying non default settings using options flow."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -348,17 +348,17 @@ async def test_options_flow(hass: HomeAssistant, service) -> None:
         unique_id=SERIAL,
         title=TITLE,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_CONSIDER_HOME: 1800,

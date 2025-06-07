@@ -7,12 +7,12 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import automation, script
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.components.smartthings.const import DOMAIN, MAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components import automation, script
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.components.smartthings.const import DOMAIN, MAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -21,9 +21,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.setup import async_setup_component
 
 from . import (
     setup_integration,
@@ -36,16 +36,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.SWITCH)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.SWITCH)
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_arlo_pro_3_switch"])
@@ -57,16 +57,16 @@ async def test_all_entities(
     ],
 )
 async def test_switch_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     command: Command,
 ) -> None:
     """Test switch turn on and off command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "switch.2nd_floor_hallway"},
@@ -86,16 +86,16 @@ async def test_switch_turn_on_off(
     ],
 )
 async def test_command_switch_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     argument: str,
 ) -> None:
     """Test switch turn on and off command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "switch.dryer_wrinkle_prevent"},
@@ -119,16 +119,16 @@ async def test_command_switch_turn_on_off(
     ],
 )
 async def test_custom_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     command: Command,
 ) -> None:
     """Test switch turn on and off command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "switch.refrigerator_power_cool"},
@@ -144,17 +144,17 @@ async def test_custom_commands(
 
 @pytest.mark.parametrize("device_fixture", ["c2c_arlo_pro_3_switch"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("switch.2nd_floor_hallway").state == STATE_ON
+    assert menuai.states.get("switch.2nd_floor_hallway").state == STATE_ON
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "10e06a70-ee7d-4832-85e9-a0a06a7a05bd",
         Capability.SWITCH,
@@ -162,7 +162,7 @@ async def test_state_update(
         "off",
     )
 
-    assert hass.states.get("switch.2nd_floor_hallway").state == STATE_OFF
+    assert menuai.states.get("switch.2nd_floor_hallway").state == STATE_OFF
 
 
 @pytest.mark.parametrize(
@@ -225,7 +225,7 @@ async def test_state_update(
     ],
 )
 async def test_create_issue_with_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -247,7 +247,7 @@ async def test_create_issue_with_items(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -264,7 +264,7 @@ async def test_create_issue_with_items(
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         script.DOMAIN,
         {
             script.DOMAIN: {
@@ -281,12 +281,12 @@ async def test_create_issue_with_items(
         },
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get(entity_id).state in [STATE_OFF, STATE_ON]
+    assert menuai.states.get(entity_id).state in [STATE_OFF, STATE_ON]
 
-    assert automations_with_entity(hass, entity_id)[0] == "automation.test"
-    assert scripts_with_entity(hass, entity_id)[0] == "script.test"
+    assert automations_with_entity(menuai, entity_id)[0] == "automation.test"
+    assert scripts_with_entity(menuai, entity_id)[0] == "script.test"
 
     issue = issue_registry.async_get_issue(DOMAIN, issue_id)
     assert issue is not None
@@ -302,8 +302,8 @@ async def test_create_issue_with_items(
         disabled_by=er.RegistryEntryDisabler.USER,
     )
 
-    await hass.config_entries.async_reload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert the issue is no longer present
     assert not issue_registry.async_get_issue(DOMAIN, issue_id)
@@ -385,7 +385,7 @@ async def test_create_issue_with_items(
     ],
 )
 async def test_create_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -407,9 +407,9 @@ async def test_create_issue(
         original_name=suggested_object_id,
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get(entity_id).state in [STATE_OFF, STATE_ON]
+    assert menuai.states.get(entity_id).state in [STATE_OFF, STATE_ON]
 
     issue = issue_registry.async_get_issue(DOMAIN, issue_id)
     assert issue is not None
@@ -425,8 +425,8 @@ async def test_create_issue(
         disabled_by=er.RegistryEntryDisabler.USER,
     )
 
-    await hass.config_entries.async_reload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert the issue is no longer present
     assert not issue_registry.async_get_issue(DOMAIN, issue_id)
@@ -434,34 +434,34 @@ async def test_create_issue(
 
 @pytest.mark.parametrize("device_fixture", ["c2c_arlo_pro_3_switch"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("switch.2nd_floor_hallway").state == STATE_ON
-
-    await trigger_health_update(
-        hass, devices, "10e06a70-ee7d-4832-85e9-a0a06a7a05bd", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("switch.2nd_floor_hallway").state == STATE_UNAVAILABLE
+    assert menuai.states.get("switch.2nd_floor_hallway").state == STATE_ON
 
     await trigger_health_update(
-        hass, devices, "10e06a70-ee7d-4832-85e9-a0a06a7a05bd", HealthStatus.ONLINE
+        menuai, devices, "10e06a70-ee7d-4832-85e9-a0a06a7a05bd", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("switch.2nd_floor_hallway").state == STATE_ON
+    assert menuai.states.get("switch.2nd_floor_hallway").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "10e06a70-ee7d-4832-85e9-a0a06a7a05bd", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("switch.2nd_floor_hallway").state == STATE_ON
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_arlo_pro_3_switch"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("switch.2nd_floor_hallway").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("switch.2nd_floor_hallway").state == STATE_UNAVAILABLE

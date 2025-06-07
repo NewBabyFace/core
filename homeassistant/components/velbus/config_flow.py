@@ -9,9 +9,9 @@ import velbusaio.controller
 from velbusaio.exceptions import VelbusConnectionFailed
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .const import CONF_TLS, DOMAIN
 
@@ -95,7 +95,7 @@ class VelbusConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle usb select step."""
-        ports = await self.hass.async_add_executor_job(serial.tools.list_ports.comports)
+        ports = await self.menuai.async_add_executor_job(serial.tools.list_ports.comports)
         list_of_ports = [
             f"{p}{', s/n: ' + p.serial_number if p.serial_number else ''}"
             + (f" - {p.manufacturer}" if p.manufacturer else "")

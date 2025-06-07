@@ -9,8 +9,8 @@ import aiohttp
 from geniushubclient import GeniusHub
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     CONF_HOST,
@@ -20,12 +20,12 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.service import verify_domain_control
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.service import verify_domain_control
 
 from .const import DOMAIN
 
@@ -73,10 +73,10 @@ PLATFORMS = [
 type GeniusHubConfigEntry = ConfigEntry[GeniusBroker]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GeniusHubConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GeniusHubConfigEntry) -> bool:
     """Create a Genius Hub system."""
     if CONF_TOKEN in entry.data and CONF_MAC in entry.data:
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         registry_entries = er.async_entries_for_config_entry(
             entity_registry, entry.entry_id
         )
@@ -89,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GeniusHubConfigEntry) ->
                     ),
                 )
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     if CONF_HOST in entry.data:
         client = GeniusHub(
             entry.data[CONF_HOST],
@@ -102,7 +102,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GeniusHubConfigEntry) ->
 
     unique_id = entry.unique_id or entry.entry_id
 
-    broker = entry.runtime_data = GeniusBroker(hass, client, unique_id)
+    broker = entry.runtime_data = GeniusBroker(menuai, client, unique_id)
 
     try:
         await client.update()
@@ -111,25 +111,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: GeniusHubConfigEntry) ->
         return False
     broker.make_debug_log_entries()
 
-    async_track_time_interval(hass, broker.async_update, SCAN_INTERVAL)
+    async_track_time_interval(menuai, broker.async_update, SCAN_INTERVAL)
 
-    setup_service_functions(hass, broker)
+    setup_service_functions(menuai, broker)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 @callback
-def setup_service_functions(hass: HomeAssistant, broker):
+def setup_service_functions(menuai: menuai, broker):
     """Set up the service functions."""
 
-    @verify_domain_control(hass, DOMAIN)
+    @verify_domain_control(menuai, DOMAIN)
     async def set_zone_mode(call: ServiceCall) -> None:
         """Set the system mode."""
         entity_id = call.data[ATTR_ENTITY_ID]
 
-        registry = er.async_get(hass)
+        registry = er.async_get(menuai)
         registry_entry = registry.async_get(entity_id)
 
         if registry_entry is None or registry_entry.platform != DOMAIN:
@@ -144,12 +144,12 @@ def setup_service_functions(hass: HomeAssistant, broker):
             "data": call.data,
         }
 
-        async_dispatcher_send(hass, DOMAIN, payload)
+        async_dispatcher_send(menuai, DOMAIN, payload)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SVC_SET_ZONE_MODE, set_zone_mode, schema=SET_ZONE_MODE_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SVC_SET_ZONE_OVERRIDE, set_zone_mode, schema=SET_ZONE_OVERRIDE_SCHEMA
     )
 
@@ -157,9 +157,9 @@ def setup_service_functions(hass: HomeAssistant, broker):
 class GeniusBroker:
     """Container for geniushub client and data."""
 
-    def __init__(self, hass: HomeAssistant, client: GeniusHub, hub_uid: str) -> None:
+    def __init__(self, menuai: menuai, client: GeniusHub, hub_uid: str) -> None:
         """Initialize the geniushub client."""
-        self.hass = hass
+        self.menuai = menuai
         self.client = client
         self.hub_uid = hub_uid
         self._connect_error = False
@@ -184,7 +184,7 @@ class GeniusBroker:
             return
         self.make_debug_log_entries()
 
-        async_dispatcher_send(self.hass, DOMAIN)
+        async_dispatcher_send(self.menuai, DOMAIN)
 
     def make_debug_log_entries(self) -> None:
         """Make any useful debug log entries."""

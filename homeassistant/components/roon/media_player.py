@@ -8,7 +8,7 @@ from typing import Any, cast
 from roonapi import split_media_path
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -16,18 +16,18 @@ from homeassistant.components.media_player import (
     MediaType,
     RepeatMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import DEVICE_DEFAULT_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import DEVICE_DEFAULT_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import convert
-from homeassistant.util.dt import utcnow
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import convert
+from menuai.util.dt import utcnow
 
 from .const import DOMAIN
 from .media_browser import browse_media
@@ -50,12 +50,12 @@ REPEAT_MODE_MAPPING_TO_ROON = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Roon MediaPlayer from Config Entry."""
-    roon_server = hass.data[DOMAIN][config_entry.entry_id]
+    roon_server = menuai.data[DOMAIN][config_entry.entry_id]
     media_players = set()
 
     # Register entity services
@@ -78,11 +78,11 @@ async def async_setup_entry(
         else:
             # update existing player
             async_dispatcher_send(
-                hass, f"room_media_player_update_{dev_id}", player_data
+                menuai, f"room_media_player_update_{dev_id}", player_data
             )
 
     # start listening for players to be added or changed by the server component
-    async_dispatcher_connect(hass, "roon_media_player", async_update_media_player)
+    async_dispatcher_connect(menuai, "roon_media_player", async_update_media_player)
 
 
 class RoonDevice(MediaPlayerEntity):
@@ -127,11 +127,11 @@ class RoonDevice(MediaPlayerEntity):
         self._volume_incremental = False
         self.update_data(player_data)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"room_media_player_update_{self.unique_id}",
                 self.async_update_callback,
             )
@@ -524,7 +524,7 @@ class RoonDevice(MediaPlayerEntity):
             )
 
         _LOGGER.debug("Transferring from %s to %s", self.name, name)
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._server.roonapi.transfer_zone, self._zone_id, transfer_id
         )
 
@@ -534,7 +534,7 @@ class RoonDevice(MediaPlayerEntity):
         media_content_id: str | None = None,
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             browse_media,
             self.zone_id,
             self._server,

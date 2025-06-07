@@ -14,8 +14,8 @@ from goslideapi.goslideapi import (
     GoSlideLocal as SlideLocalApi,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_VERSION,
     CONF_HOST,
     CONF_MAC,
@@ -25,8 +25,8 @@ from homeassistant.const import (
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_OFFSET, DOMAIN
 
@@ -40,10 +40,10 @@ class SlideCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     config_entry: SlideConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: SlideConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: SlideConfigEntry) -> None:
         """Initialize the data object."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Slide",

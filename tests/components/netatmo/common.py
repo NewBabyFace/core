@@ -8,12 +8,12 @@ from unittest.mock import patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.netatmo.const import DOMAIN
-from homeassistant.components.webhook import async_handle_webhook
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.aiohttp import MockRequest
+from menuai.components.netatmo.const import DOMAIN
+from menuai.components.webhook import async_handle_webhook
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util.aiohttp import MockRequest
 
 from tests.common import MockConfigEntry, async_load_fixture
 from tests.test_util.aiohttp import AiohttpClientMockResponse
@@ -31,7 +31,7 @@ FAKE_WEBHOOK_ACTIVATION = {
 
 
 async def snapshot_platform_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     platform: Platform,
     entity_registry: er.EntityRegistry,
@@ -39,9 +39,9 @@ async def snapshot_platform_entities(
 ) -> None:
     """Snapshot entities and their states."""
     with selected_platforms([platform]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     entity_entries = er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id
     )
@@ -49,12 +49,12 @@ async def snapshot_platform_entities(
     assert entity_entries
     for entity_entry in entity_entries:
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
-        assert hass.states.get(entity_entry.entity_id) == snapshot(
+        assert menuai.states.get(entity_entry.entity_id) == snapshot(
             name=f"{entity_entry.entity_id}-state"
         )
 
 
-async def fake_post_request(hass: HomeAssistant, *args: Any, **kwargs: Any):
+async def fake_post_request(menuai: menuai, *args: Any, **kwargs: Any):
     """Return fake data."""
     if "endpoint" not in kwargs:
         return "{}"
@@ -77,11 +77,11 @@ async def fake_post_request(hass: HomeAssistant, *args: Any, **kwargs: Any):
     elif endpoint == "homestatus":
         home_id = kwargs.get("params", {}).get("home_id")
         payload = json.loads(
-            await async_load_fixture(hass, f"{endpoint}_{home_id}.json", DOMAIN)
+            await async_load_fixture(menuai, f"{endpoint}_{home_id}.json", DOMAIN)
         )
 
     else:
-        payload = json.loads(await async_load_fixture(hass, f"{endpoint}.json", DOMAIN))
+        payload = json.loads(await async_load_fixture(menuai, f"{endpoint}.json", DOMAIN))
 
     return AiohttpClientMockResponse(
         method="POST",
@@ -102,27 +102,27 @@ async def fake_get_image(*args: Any, **kwargs: Any) -> bytes | str | None:
     return None
 
 
-async def simulate_webhook(hass: HomeAssistant, webhook_id: str, response) -> None:
+async def simulate_webhook(menuai: menuai, webhook_id: str, response) -> None:
     """Simulate a webhook event."""
     request = MockRequest(
         method="POST",
         content=bytes(json.dumps({**COMMON_RESPONSE, **response}), "utf-8"),
         mock_source="test",
     )
-    await async_handle_webhook(hass, webhook_id, request)
-    await hass.async_block_till_done()
+    await async_handle_webhook(menuai, webhook_id, request)
+    await menuai.async_block_till_done()
 
 
 @contextmanager
 def selected_platforms(platforms: list[Platform]) -> Iterator[None]:
     """Restrict loaded platforms to list given."""
     with (
-        patch("homeassistant.components.netatmo.data_handler.PLATFORMS", platforms),
+        patch("menuai.components.netatmo.data_handler.PLATFORMS", platforms),
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.netatmo.webhook_generate_url",
+            "menuai.components.netatmo.webhook_generate_url",
         ),
     ):
         yield

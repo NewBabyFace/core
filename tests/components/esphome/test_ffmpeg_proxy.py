@@ -13,10 +13,10 @@ from aiohttp import client_exceptions
 import mutagen
 import pytest
 
-from homeassistant.components import esphome
-from homeassistant.components.esphome.ffmpeg_proxy import async_create_proxy_url
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import esphome
+from menuai.components.esphome.ffmpeg_proxy import async_create_proxy_url
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -44,9 +44,9 @@ def _write_silence(filename: str, length: int) -> None:
         wav_file.writeframes(bytes(16000 * 2 * length))  # length s
 
 
-async def test_async_create_proxy_url(hass: HomeAssistant) -> None:
+async def test_async_create_proxy_url(menuai: menuai) -> None:
     """Test that async_create_proxy_url returns the correct format."""
-    assert await async_setup_component(hass, "esphome", {})
+    assert await async_setup_component(menuai, "esphome", {})
 
     device_id = "test-device"
     convert_id = "test-id"
@@ -55,25 +55,25 @@ async def test_async_create_proxy_url(hass: HomeAssistant) -> None:
     proxy_url = f"/api/esphome/ffmpeg_proxy/{device_id}/{convert_id}.{media_format}"
 
     with patch(
-        "homeassistant.components.esphome.ffmpeg_proxy.secrets.token_urlsafe",
+        "menuai.components.esphome.ffmpeg_proxy.secrets.token_urlsafe",
         return_value=convert_id,
     ):
         assert (
-            async_create_proxy_url(hass, device_id, media_url, media_format)
+            async_create_proxy_url(menuai, device_id, media_url, media_format)
             == proxy_url
         )
 
 
 async def test_proxy_view(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     wav_file: str,
 ) -> None:
     """Test proxy HTTP view for converting audio."""
     device_id = "1234"
 
-    await async_setup_component(hass, esphome.DOMAIN, {esphome.DOMAIN: {}})
-    client = await hass_client()
+    await async_setup_component(menuai, esphome.DOMAIN, {esphome.DOMAIN: {}})
+    client = await menuai_client()
 
     wav_url = pathname2url(wav_file)
     convert_id = "test-id"
@@ -85,12 +85,12 @@ async def test_proxy_view(
 
     # Allow the URL
     with patch(
-        "homeassistant.components.esphome.ffmpeg_proxy.secrets.token_urlsafe",
+        "menuai.components.esphome.ffmpeg_proxy.secrets.token_urlsafe",
         return_value=convert_id,
     ):
         assert (
             async_create_proxy_url(
-                hass, device_id, wav_url, media_format="mp3", rate=22050, channels=2
+                menuai, device_id, wav_url, media_format="mp3", rate=22050, channels=2
             )
             == url
         )
@@ -117,17 +117,17 @@ async def test_proxy_view(
 
 
 async def test_ffmpeg_file_doesnt_exist(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test ffmpeg conversion with a file that doesn't exist."""
     device_id = "1234"
 
-    await async_setup_component(hass, esphome.DOMAIN, {esphome.DOMAIN: {}})
-    client = await hass_client()
+    await async_setup_component(menuai, esphome.DOMAIN, {esphome.DOMAIN: {}})
+    client = await menuai_client()
 
     # Try to convert a file that doesn't exist
-    url = async_create_proxy_url(hass, device_id, "missing-file", media_format="mp3")
+    url = async_create_proxy_url(menuai, device_id, "missing-file", media_format="mp3")
     req = await client.get(url)
 
     # The HTTP status is OK because the ffmpeg process started, but no data is
@@ -138,19 +138,19 @@ async def test_ffmpeg_file_doesnt_exist(
 
 
 async def test_lingering_process(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     wav_file: str,
 ) -> None:
     """Test that a new request stops the old ffmpeg process."""
     device_id = "1234"
 
-    await async_setup_component(hass, esphome.DOMAIN, {esphome.DOMAIN: {}})
-    client = await hass_client()
+    await async_setup_component(menuai, esphome.DOMAIN, {esphome.DOMAIN: {}})
+    client = await menuai_client()
 
     wav_url = pathname2url(wav_file)
     url1 = async_create_proxy_url(
-        hass,
+        menuai,
         device_id,
         wav_url,
         media_format="wav",
@@ -168,7 +168,7 @@ async def test_lingering_process(
 
     # Allow another URL
     url2 = async_create_proxy_url(
-        hass,
+        menuai,
         device_id,
         wav_url,
         media_format="wav",
@@ -198,19 +198,19 @@ async def test_lingering_process(
 
 @pytest.mark.parametrize("wav_file_length", [10])
 async def test_request_same_url_multiple_times(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     wav_file: str,
 ) -> None:
     """Test that the ffmpeg process is restarted if the same URL is requested multiple times."""
     device_id = "1234"
 
-    await async_setup_component(hass, esphome.DOMAIN, {esphome.DOMAIN: {}})
-    client = await hass_client()
+    await async_setup_component(menuai, esphome.DOMAIN, {esphome.DOMAIN: {}})
+    client = await menuai_client()
 
     wav_url = pathname2url(wav_file)
     url = async_create_proxy_url(
-        hass,
+        menuai,
         device_id,
         wav_url,
         media_format="wav",
@@ -242,15 +242,15 @@ async def test_request_same_url_multiple_times(
 
 
 async def test_max_conversions_per_device(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test that each device has a maximum number of conversions (currently 2)."""
     max_conversions = 2
     device_ids = ["1234", "5678"]
 
-    await async_setup_component(hass, esphome.DOMAIN, {esphome.DOMAIN: {}})
-    client = await hass_client()
+    await async_setup_component(menuai, esphome.DOMAIN, {esphome.DOMAIN: {}})
+    client = await menuai_client()
 
     with tempfile.TemporaryDirectory() as temp_dir:
         wav_paths = [
@@ -265,7 +265,7 @@ async def test_max_conversions_per_device(
         device_urls = {
             device_id: [
                 async_create_proxy_url(
-                    hass,
+                    menuai,
                     device_id,
                     wav_url,
                     media_format="wav",
@@ -290,14 +290,14 @@ async def test_max_conversions_per_device(
 
 
 async def test_abort_on_shutdown(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
-    """Test we abort on Home Assistant shutdown."""
+    """Test we abort on MenuAI shutdown."""
     device_id = "1234"
 
-    await async_setup_component(hass, esphome.DOMAIN, {esphome.DOMAIN: {}})
-    client = await hass_client()
+    await async_setup_component(menuai, esphome.DOMAIN, {esphome.DOMAIN: {}})
+    client = await menuai_client()
 
     with tempfile.NamedTemporaryFile(mode="wb+", suffix=".wav") as temp_file:
         with wave.open(temp_file.name, "wb") as wav_file:
@@ -312,7 +312,7 @@ async def test_abort_on_shutdown(
 
         wav_url = pathname2url(temp_file.name)
         url = async_create_proxy_url(
-            hass,
+            menuai,
             device_id,
             wav_url,
             media_format="wav",
@@ -327,8 +327,8 @@ async def test_abort_on_shutdown(
         initial_mp3_data = await req.content.read(4)
         assert initial_mp3_data == b"RIFF"
 
-        # Shut down Home Assistant
-        await hass.async_stop()
+        # Shut down MenuAI
+        await menuai.async_stop()
 
         with pytest.raises(client_exceptions.ClientPayloadError):
             await req.content.read()

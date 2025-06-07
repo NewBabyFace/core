@@ -11,11 +11,11 @@ from pynuki.device import NukiDevice
 from requests.exceptions import RequestException
 import voluptuous as vol
 
-from homeassistant.components.lock import LockEntity, LockEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity, LockEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import NukiEntryData
 from .const import ATTR_ENABLE, ATTR_UNLATCH, DOMAIN, ERROR_STATES
@@ -24,12 +24,12 @@ from .helpers import CannotConnect
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Nuki lock platform."""
-    entry_data: NukiEntryData = hass.data[DOMAIN][entry.entry_id]
+    entry_data: NukiEntryData = menuai.data[DOMAIN][entry.entry_id]
     coordinator = entry_data.coordinator
 
     entities: list[NukiDeviceEntity] = [

@@ -8,9 +8,9 @@ from typing import Any
 from pushover_complete import BadAPIRequestError, PushoverAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_NAME
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_NAME
+from menuai.core import menuai
 
 from .const import CONF_USER_KEY, DEFAULT_NAME, DOMAIN
 
@@ -23,12 +23,12 @@ USER_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate user input."""
     errors = {}
     pushover_api = PushoverAPI(data[CONF_API_KEY])
     try:
-        await hass.async_add_executor_job(pushover_api.validate, data[CONF_USER_KEY])
+        await menuai.async_add_executor_job(pushover_api.validate, data[CONF_USER_KEY])
     except BadAPIRequestError as err:
         if "application token is invalid" in str(err):
             errors[CONF_API_KEY] = "invalid_api_key"
@@ -48,7 +48,7 @@ class PushBulletConfigFlow(ConfigFlow, domain=DOMAIN):
         self, entry_data: Mapping[str, Any]
     ) -> ConfigFlowResult:
         """Perform reauth upon an API authentication error."""
-        self._reauth_entry = self.hass.config_entries.async_get_entry(
+        self._reauth_entry = self.menuai.config_entries.async_get_entry(
             self.context["entry_id"]
         )
         return await self.async_step_reauth_confirm()
@@ -66,12 +66,12 @@ class PushBulletConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_API_KEY: user_input[CONF_API_KEY],
                 }
             )
-            errors = await validate_input(self.hass, user_input)
+            errors = await validate_input(self.menuai, user_input)
             if not errors:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self._reauth_entry, data=user_input
                 )
-                await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
+                await self.menuai.config_entries.async_reload(self._reauth_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
@@ -99,7 +99,7 @@ class PushBulletConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             self._async_abort_entries_match({CONF_NAME: user_input[CONF_NAME]})
 
-            errors = await validate_input(self.hass, user_input)
+            errors = await validate_input(self.menuai, user_input)
             if not errors:
                 return self.async_create_entry(
                     title=user_input[CONF_NAME],

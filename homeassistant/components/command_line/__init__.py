@@ -9,29 +9,29 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
     DOMAIN as BINARY_SENSOR_DOMAIN,
     SCAN_INTERVAL as BINARY_SENSOR_DEFAULT_SCAN_INTERVAL,
 )
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
     DOMAIN as COVER_DOMAIN,
     SCAN_INTERVAL as COVER_DEFAULT_SCAN_INTERVAL,
 )
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.components.sensor import (
+from menuai.components.notify import DOMAIN as NOTIFY_DOMAIN
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
     DOMAIN as SENSOR_DOMAIN,
     SCAN_INTERVAL as SENSOR_DEFAULT_SCAN_INTERVAL,
     STATE_CLASSES_SCHEMA as SENSOR_STATE_CLASSES_SCHEMA,
 )
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SCAN_INTERVAL as SWITCH_DEFAULT_SCAN_INTERVAL,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_COMMAND,
     CONF_COMMAND_CLOSE,
     CONF_COMMAND_OFF,
@@ -51,16 +51,16 @@ from homeassistant.const import (
     SERVICE_RELOAD,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.entity_platform import async_get_platforms
-from homeassistant.helpers.reload import async_integration_yaml_config
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import Event, menuai, ServiceCall
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.entity_platform import async_get_platforms
+from menuai.helpers.reload import async_integration_yaml_config
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_COMMAND_TIMEOUT,
@@ -191,29 +191,29 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Command Line from yaml config."""
 
     async def _reload_config(call: Event | ServiceCall) -> None:
         """Reload Command Line."""
-        reload_config = await async_integration_yaml_config(hass, DOMAIN)
-        reset_platforms = async_get_platforms(hass, DOMAIN)
+        reload_config = await async_integration_yaml_config(menuai, DOMAIN)
+        reset_platforms = async_get_platforms(menuai, DOMAIN)
         for reset_platform in reset_platforms:
             _LOGGER.debug("Reload resetting platform: %s", reset_platform.domain)
             await reset_platform.async_reset()
         if not reload_config:
             return
-        await async_load_platforms(hass, reload_config.get(DOMAIN, []), reload_config)
+        await async_load_platforms(menuai, reload_config.get(DOMAIN, []), reload_config)
 
-    async_register_admin_service(hass, DOMAIN, SERVICE_RELOAD, _reload_config)
+    async_register_admin_service(menuai, DOMAIN, SERVICE_RELOAD, _reload_config)
 
-    await async_load_platforms(hass, config.get(DOMAIN, []), config)
+    await async_load_platforms(menuai, config.get(DOMAIN, []), config)
 
     return True
 
 
 async def async_load_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_line_config: list[dict[str, dict[str, Any]]],
     config: ConfigType,
 ) -> None:
@@ -238,7 +238,7 @@ async def async_load_platforms(
             reload_configs.append((PLATFORM_MAPPING[platform], _config))
             load_coroutines.append(
                 discovery.async_load_platform(
-                    hass,
+                    menuai,
                     PLATFORM_MAPPING[platform],
                     DOMAIN,
                     _config,

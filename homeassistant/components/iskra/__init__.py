@@ -6,7 +6,7 @@ from pyiskra.adapters import Modbus, RestAPI
 from pyiskra.devices import Device
 from pyiskra.exceptions import DeviceConnectionError, DeviceNotSupported, NotAuthorised
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_HOST,
     CONF_PASSWORD,
@@ -15,9 +15,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import IskraConfigEntry, IskraDataUpdateCoordinator
@@ -25,7 +25,7 @@ from .coordinator import IskraConfigEntry, IskraDataUpdateCoordinator
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: IskraConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: IskraConfigEntry) -> bool:
     """Set up iskra device from a config entry."""
     conf = entry.data
     adapter = None
@@ -64,7 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: IskraConfigEntry) -> boo
     # if the device is a gateway, add all child devices, otherwise add the device itself.
     if base_device.is_gateway:
         # Add the gateway device to the device registry
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, base_device.serial)},
@@ -75,22 +75,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: IskraConfigEntry) -> boo
         )
 
         coordinators = [
-            IskraDataUpdateCoordinator(hass, entry, child_device)
+            IskraDataUpdateCoordinator(menuai, entry, child_device)
             for child_device in base_device.get_child_devices()
         ]
     else:
-        coordinators = [IskraDataUpdateCoordinator(hass, entry, base_device)]
+        coordinators = [IskraDataUpdateCoordinator(menuai, entry, base_device)]
 
     for coordinator in coordinators:
         await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: IskraConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: IskraConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

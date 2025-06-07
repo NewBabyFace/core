@@ -1,14 +1,14 @@
 """Initialization of ATAG One sensor platform."""
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import (
     PERCENTAGE,
     UnitOfPressure,
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AtagConfigEntry, AtagDataUpdateCoordinator
 from .entity import AtagEntity
@@ -26,7 +26,7 @@ SENSORS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AtagConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

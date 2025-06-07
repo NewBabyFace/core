@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 
 from pybalboa import EVENT_UPDATE, SpaClient
 
-from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.components.event import EventEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
 
 from . import BalboaConfigEntry
 from .entity import BalboaEntity
@@ -43,7 +43,7 @@ FAULT_EVENT_TYPES = sorted(set(FAULT_MESSAGE_CODE_MAP.values()))
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BalboaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -74,9 +74,9 @@ class BalboaEventEntity(BalboaEntity, EventEntity):
             )
             self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(self._client.on(EVENT_UPDATE, self._async_handle_event))
 
         async def request_fault_log(now: datetime | None = None) -> None:
@@ -86,6 +86,6 @@ class BalboaEventEntity(BalboaEntity, EventEntity):
         await request_fault_log()
         self.async_on_remove(
             async_track_time_interval(
-                self.hass, request_fault_log, REQUEST_FAULT_LOG_INTERVAL
+                self.menuai, request_fault_log, REQUEST_FAULT_LOG_INTERVAL
             )
         )

@@ -8,13 +8,13 @@ import zoneinfo
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_NAME, CONF_TIME_ZONE
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.const import CONF_NAME, CONF_TIME_ZONE
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -49,7 +49,7 @@ async def validate_duplicate(
 async def get_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
     """Get available timezones."""
     get_timezones: list[str] = list(
-        await handler.parent_handler.hass.async_add_executor_job(
+        await handler.parent_handler.menuai.async_add_executor_job(
             zoneinfo.available_timezones
         )
     )

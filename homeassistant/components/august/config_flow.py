@@ -12,9 +12,9 @@ from yalexs.authenticator_common import ValidationResult
 from yalexs.const import BRANDS_WITHOUT_OAUTH, DEFAULT_BRAND, Brand
 from yalexs.manager.exceptions import CannotConnect, InvalidAuth, RequireValidation
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
 
 from .const import (
     CONF_ACCESS_TOKEN_CACHE_FILE,
@@ -169,9 +169,9 @@ class AugustConfigFlow(ConfigFlow, domain=DOMAIN):
         """Set up the gateway."""
         if self._august_gateway is not None:
             return self._august_gateway
-        self._aiohttp_session = async_create_august_clientsession(self.hass)
+        self._aiohttp_session = async_create_august_clientsession(self.menuai)
         self._august_gateway = AugustGateway(
-            Path(self.hass.config.config_dir), self._aiohttp_session
+            Path(self.menuai.config.config_dir), self._aiohttp_session
         )
         return self._august_gateway
 

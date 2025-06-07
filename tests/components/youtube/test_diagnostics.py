@@ -2,8 +2,8 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.youtube.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.youtube.const import DOMAIN
+from menuai.core import menuai
 
 from .conftest import ComponentSetup
 
@@ -12,13 +12,13 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup_integration: ComponentSetup,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
     await setup_integration()
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == snapshot
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, entry) == snapshot

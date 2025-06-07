@@ -6,11 +6,11 @@ from functools import partial
 
 import anthropic
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
 
 from .const import CONF_CHAT_MODEL, DOMAIN, LOGGER, RECOMMENDED_CHAT_MODEL
 
@@ -20,9 +20,9 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 type AnthropicConfigEntry = ConfigEntry[anthropic.AsyncClient]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AnthropicConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AnthropicConfigEntry) -> bool:
     """Set up Anthropic from a config entry."""
-    client = await hass.async_add_executor_job(
+    client = await menuai.async_add_executor_job(
         partial(anthropic.AsyncAnthropic, api_key=entry.data[CONF_API_KEY])
     )
     try:
@@ -37,11 +37,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: AnthropicConfigEntry) ->
 
     entry.runtime_data = client
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload Anthropic."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

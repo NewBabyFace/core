@@ -6,21 +6,21 @@ from unittest.mock import AsyncMock
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     DOMAIN as LIGHT_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.components.linear_garage_door import DOMAIN
-from homeassistant.const import (
+from menuai.components.linear_garage_door import DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_BRIGHTNESS,
     STATE_OFF,
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -33,7 +33,7 @@ from tests.common import (
 
 
 async def test_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_linear: AsyncMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -41,19 +41,19 @@ async def test_data(
 ) -> None:
     """Test that data gets parsed and returned appropriately."""
 
-    await setup_integration(hass, mock_config_entry, [Platform.LIGHT])
+    await setup_integration(menuai, mock_config_entry, [Platform.LIGHT])
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_turn_on(
-    hass: HomeAssistant, mock_linear: AsyncMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_linear: AsyncMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that turning on the light works as intended."""
 
-    await setup_integration(hass, mock_config_entry, [Platform.LIGHT])
+    await setup_integration(menuai, mock_config_entry, [Platform.LIGHT])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_garage_2_light"},
@@ -64,13 +64,13 @@ async def test_turn_on(
 
 
 async def test_turn_on_with_brightness(
-    hass: HomeAssistant, mock_linear: AsyncMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_linear: AsyncMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that turning on the light works as intended."""
 
-    await setup_integration(hass, mock_config_entry, [Platform.LIGHT])
+    await setup_integration(menuai, mock_config_entry, [Platform.LIGHT])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_garage_2_light", CONF_BRIGHTNESS: 50},
@@ -83,13 +83,13 @@ async def test_turn_on_with_brightness(
 
 
 async def test_turn_off(
-    hass: HomeAssistant, mock_linear: AsyncMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_linear: AsyncMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that turning off the light works as intended."""
 
-    await setup_integration(hass, mock_config_entry, [Platform.LIGHT])
+    await setup_integration(menuai, mock_config_entry, [Platform.LIGHT])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_garage_1_light"},
@@ -100,27 +100,27 @@ async def test_turn_off(
 
 
 async def test_update_light_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_linear: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test that turning off the light works as intended."""
 
-    await setup_integration(hass, mock_config_entry, [Platform.LIGHT])
+    await setup_integration(menuai, mock_config_entry, [Platform.LIGHT])
 
-    assert hass.states.get("light.test_garage_1_light").state == STATE_ON
-    assert hass.states.get("light.test_garage_2_light").state == STATE_OFF
+    assert menuai.states.get("light.test_garage_1_light").state == STATE_ON
+    assert menuai.states.get("light.test_garage_2_light").state == STATE_OFF
 
     device_states = await async_load_json_object_fixture(
-        hass, "get_device_state_1.json", DOMAIN
+        menuai, "get_device_state_1.json", DOMAIN
     )
     mock_linear.get_device_state.side_effect = lambda device_id: device_states[
         device_id
     ]
 
     freezer.tick(timedelta(seconds=60))
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
-    assert hass.states.get("light.test_garage_1_light").state == STATE_OFF
-    assert hass.states.get("light.test_garage_2_light").state == STATE_ON
+    assert menuai.states.get("light.test_garage_1_light").state == STATE_OFF
+    assert menuai.states.get("light.test_garage_2_light").state == STATE_ON

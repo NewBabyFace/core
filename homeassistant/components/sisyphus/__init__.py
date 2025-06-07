@@ -6,12 +6,12 @@ import logging
 from sisyphus_control import Table
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, CONF_NAME, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_NAME, EVENT_menuai_STOP, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,23 +36,23 @@ logging.getLogger("socketio.client").setLevel(logging.CRITICAL + 1)
 logging.getLogger("engineio.client").setLevel(logging.CRITICAL + 1)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the sisyphus component."""
 
-    tables = hass.data.setdefault(DATA_SISYPHUS, {})
+    tables = menuai.data.setdefault(DATA_SISYPHUS, {})
     table_configs = config[DOMAIN]
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     async def add_table(host, name=None):
         """Add platforms for a single table with the given hostname."""
-        tables[host] = TableHolder(hass, session, host, name)
+        tables[host] = TableHolder(menuai, session, host, name)
 
-        hass.async_create_task(
-            async_load_platform(hass, Platform.LIGHT, DOMAIN, {CONF_HOST: host}, config)
+        menuai.async_create_task(
+            async_load_platform(menuai, Platform.LIGHT, DOMAIN, {CONF_HOST: host}, config)
         )
-        hass.async_create_task(
+        menuai.async_create_task(
             async_load_platform(
-                hass, Platform.MEDIA_PLAYER, DOMAIN, {CONF_HOST: host}, config
+                menuai, Platform.MEDIA_PLAYER, DOMAIN, {CONF_HOST: host}, config
             )
         )
 
@@ -69,7 +69,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if tasks:
             await asyncio.wait(tasks)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, close_tables)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, close_tables)
 
     return True
 
@@ -77,9 +77,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class TableHolder:
     """Holds table objects and makes them available to platforms."""
 
-    def __init__(self, hass, session, host, name):
+    def __init__(self, menuai, session, host, name):
         """Initialize the table holder."""
-        self._hass = hass
+        self._menuai = menuai
         self._session = session
         self._host = host
         self._name = name
@@ -104,7 +104,7 @@ class TableHolder:
             return self._table
 
         if not self._table_task:
-            self._table_task = self._hass.async_create_task(self._connect_table())
+            self._table_task = self._menuai.async_create_task(self._connect_table())
 
         return await self._table_task
 

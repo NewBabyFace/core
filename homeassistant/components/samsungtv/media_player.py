@@ -21,19 +21,19 @@ from async_upnp_client.profiles.dlna import DmrDevice
 from async_upnp_client.utils import async_get_local_ip
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.async_ import create_eager_task
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.async_ import create_eager_task
 
 from .bridge import SamsungTVWSBridge
 from .const import CONF_SSDP_RENDERING_CONTROL_LOCATION, DOMAIN, LOGGER
@@ -65,7 +65,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SamsungTVConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -126,9 +126,9 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
         self._update_sources()
         self._app_list_event.set()
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         self._bridge.register_app_list_callback(self._app_list_callback)
         await self._async_extra_update()
@@ -140,7 +140,7 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
         else:
             self._attr_state = MediaPlayerState.OFF
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Handle removal."""
         self.coordinator.async_extra_update = None
         await self._async_shutdown_dmr()
@@ -216,7 +216,7 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
     async def _async_startup_dmr(self) -> None:
         assert self._ssdp_rendering_control_location is not None
         if self._dmr_device is None:
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             upnp_requester = AiohttpSessionRequester(session)
             # Set non_strict to avoid invalid data sent by Samsung TV:
             # Got invalid value for <UpnpStateVariable(PlaybackStorageMedium, string)>:
@@ -231,14 +231,14 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
                 LOGGER.debug("Unable to create Upnp DMR device: %r", err, exc_info=True)
                 return
             _, event_ip = await async_get_local_ip(
-                self._ssdp_rendering_control_location, self.hass.loop
+                self._ssdp_rendering_control_location, self.menuai.loop
             )
             source = (event_ip or "0.0.0.0", 0)
             self._upnp_server = AiohttpNotifyServer(
                 requester=upnp_requester,
                 source=source,
                 callback_url=None,
-                loop=self.hass.loop,
+                loop=self.menuai.loop,
             )
             await self._upnp_server.async_start_server()
             self._dmr_device = DmrDevice(upnp_device, self._upnp_server.event_handler)
@@ -281,7 +281,7 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
     ) -> None:
         """State variable(s) changed, let home-assistant know."""
-        # Ensure the entity has been added to hass to avoid race condition
+        # Ensure the entity has been added to menuai to avoid race condition
         if self._update_from_upnp() and self.entity_id:
             self.async_write_ha_state()
 
@@ -310,7 +310,7 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
             await dmr_device.async_set_volume_level(volume)
         except UpnpActionResponseError as err:
             assert self._host
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="error_set_volume",
                 translation_placeholders={"error": repr(err), "host": self._host},
@@ -386,7 +386,7 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
             await self._async_send_keys([SOURCES[source]])
             return
 
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="source_unsupported",
             translation_placeholders={"entity": self.entity_id, "source": source},

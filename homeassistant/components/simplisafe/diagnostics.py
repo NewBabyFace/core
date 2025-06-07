@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_ADDRESS,
     CONF_CODE,
     CONF_LOCATION,
@@ -14,7 +14,7 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import SimpliSafe
 from .const import DOMAIN
@@ -53,10 +53,10 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    simplisafe: SimpliSafe = hass.data[DOMAIN][entry.entry_id]
+    simplisafe: SimpliSafe = menuai.data[DOMAIN][entry.entry_id]
 
     return async_redact_data(
         {

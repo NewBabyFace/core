@@ -11,17 +11,17 @@ import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_COLOR,
@@ -52,17 +52,17 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> NFAndroidTVNotificationService | None:
     """Get the NFAndroidTV notification service."""
     if discovery_info is None:
         return None
-    notify = await hass.async_add_executor_job(Notifications, discovery_info[CONF_HOST])
+    notify = await menuai.async_add_executor_job(Notifications, discovery_info[CONF_HOST])
     return NFAndroidTVNotificationService(
         notify,
-        hass.config.is_allowed_path,
+        menuai.config.is_allowed_path,
     )
 
 

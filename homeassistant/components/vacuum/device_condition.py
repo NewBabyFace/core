@@ -4,21 +4,21 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_CONDITION,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from . import DOMAIN, VacuumActivity
 
@@ -33,10 +33,10 @@ CONDITION_SCHEMA = DEVICE_CONDITION_BASE_SCHEMA.extend(
 
 
 async def async_get_conditions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device conditions for Vacuum devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     conditions = []
 
     # Get all the integrations entities for this device
@@ -58,7 +58,7 @@ async def async_get_conditions(
 
 @callback
 def async_condition_from_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> condition.ConditionCheckerType:
     """Create a function to test a device condition."""
     if config[CONF_TYPE] == "is_docked":
@@ -66,14 +66,14 @@ def async_condition_from_config(
     else:
         test_states = [VacuumActivity.CLEANING, VacuumActivity.RETURNING]
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_resolve_entity_id(registry, config[CONF_ENTITY_ID])
 
-    def test_is_state(hass: HomeAssistant, variables: TemplateVarsType) -> bool:
+    def test_is_state(menuai: menuai, variables: TemplateVarsType) -> bool:
         """Test if an entity is a certain state."""
         return (
             entity_id is not None
-            and (state := hass.states.get(entity_id)) is not None
+            and (state := menuai.states.get(entity_id)) is not None
             and state.state in test_states
         )
 

@@ -2,9 +2,9 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.recorder import Recorder
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.recorder import Recorder
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .test_common import mock_get_homes
 
@@ -14,8 +14,8 @@ from tests.typing import ClientSessionGenerator
 
 async def test_entry_diagnostics(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry,
 ) -> None:
     """Test config entry diagnostics."""
@@ -23,15 +23,15 @@ async def test_entry_diagnostics(
         "tibber.Tibber.update_info",
         return_value=None,
     ):
-        assert await async_setup_component(hass, "tibber", {})
+        assert await async_setup_component(menuai, "tibber", {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch(
         "tibber.Tibber.get_homes",
         return_value=[],
     ):
-        result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert result == {
         "homes": [],
@@ -41,7 +41,7 @@ async def test_entry_diagnostics(
         "tibber.Tibber.get_homes",
         side_effect=mock_get_homes,
     ):
-        result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert result == {
         "homes": [

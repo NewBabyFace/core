@@ -4,10 +4,10 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.cover import CoverEntityFeature, CoverState
-from homeassistant.components.knx.schema import CoverSchema
-from homeassistant.const import CONF_NAME, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.cover import CoverEntityFeature, CoverState
+from menuai.components.knx.schema import CoverSchema
+from menuai.const import CONF_NAME, STATE_UNKNOWN, Platform
+from menuai.core import menuai
 
 from . import KnxEntityGenerator
 from .conftest import KNXTestKit
@@ -15,7 +15,7 @@ from .conftest import KNXTestKit
 from tests.common import async_capture_events
 
 
-async def test_cover_basic(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_cover_basic(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX cover basic."""
     await knx.setup_integration(
         {
@@ -28,7 +28,7 @@ async def test_cover_basic(hass: HomeAssistant, knx: KNXTestKit) -> None:
             }
         }
     )
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
 
     # read position state address and angle state address
     await knx.assert_read("1/0/2")
@@ -37,7 +37,7 @@ async def test_cover_basic(hass: HomeAssistant, knx: KNXTestKit) -> None:
     events.clear()
 
     # open cover
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover", target={"entity_id": "cover.test"}, blocking=True
     )
     await knx.assert_write("1/0/0", False)
@@ -46,7 +46,7 @@ async def test_cover_basic(hass: HomeAssistant, knx: KNXTestKit) -> None:
     events.pop()
 
     # close cover
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover", target={"entity_id": "cover.test"}, blocking=True
     )
     await knx.assert_write("1/0/0", True)
@@ -55,7 +55,7 @@ async def test_cover_basic(hass: HomeAssistant, knx: KNXTestKit) -> None:
     events.pop()
 
     # stop cover
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover", target={"entity_id": "cover.test"}, blocking=True
     )
     await knx.assert_write("1/0/1", True)
@@ -64,7 +64,7 @@ async def test_cover_basic(hass: HomeAssistant, knx: KNXTestKit) -> None:
     events.pop()
 
     # set cover position
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_position",
         {"position": 25},
@@ -85,7 +85,7 @@ async def test_cover_basic(hass: HomeAssistant, knx: KNXTestKit) -> None:
     events.pop()
 
 
-async def test_cover_tilt_absolute(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_cover_tilt_absolute(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX cover tilt."""
     await knx.setup_integration(
         {
@@ -100,7 +100,7 @@ async def test_cover_tilt_absolute(hass: HomeAssistant, knx: KNXTestKit) -> None
             }
         }
     )
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
 
     # read position state address and angle state address
     await knx.assert_read("1/0/2")
@@ -111,7 +111,7 @@ async def test_cover_tilt_absolute(hass: HomeAssistant, knx: KNXTestKit) -> None
     events.clear()
 
     # set cover tilt position
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_tilt_position",
         {"tilt_position": 25},
@@ -127,7 +127,7 @@ async def test_cover_tilt_absolute(hass: HomeAssistant, knx: KNXTestKit) -> None
     events.pop()
 
     # close cover tilt
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover_tilt", target={"entity_id": "cover.test"}, blocking=True
     )
     await knx.assert_write("1/0/5", (0xFF,))
@@ -136,13 +136,13 @@ async def test_cover_tilt_absolute(hass: HomeAssistant, knx: KNXTestKit) -> None
     events.pop()
 
     # open cover tilt
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover_tilt", target={"entity_id": "cover.test"}, blocking=True
     )
     await knx.assert_write("1/0/5", (0x00,))
 
 
-async def test_cover_tilt_move_short(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_cover_tilt_move_short(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX cover tilt."""
     await knx.setup_integration(
         {
@@ -155,13 +155,13 @@ async def test_cover_tilt_move_short(hass: HomeAssistant, knx: KNXTestKit) -> No
     )
 
     # close cover tilt
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover_tilt", target={"entity_id": "cover.test"}, blocking=True
     )
     await knx.assert_write("1/0/1", 1)
 
     # open cover tilt
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover_tilt", target={"entity_id": "cover.test"}, blocking=True
     )
     await knx.assert_write("1/0/1", 0)

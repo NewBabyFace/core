@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.habitica.const import (
+from menuai.components.habitica.const import (
     CONF_API_USER,
     DEFAULT_URL,
     DOMAIN,
@@ -13,8 +13,8 @@ from homeassistant.components.habitica.const import (
     SECTION_REAUTH_API_KEY,
     SECTION_REAUTH_LOGIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_API_KEY,
     CONF_NAME,
     CONF_PASSWORD,
@@ -22,8 +22,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import ERROR_BAD_REQUEST, ERROR_NOT_AUTHORIZED
 
@@ -65,10 +65,10 @@ USER_INPUT_RECONFIGURE = {
 
 
 @pytest.mark.usefixtures("habitica")
-async def test_form_login(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form_login(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the login form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -76,7 +76,7 @@ async def test_form_login(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> N
     assert "login" in result["menu_options"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "login"},
     )
@@ -84,11 +84,11 @@ async def test_form_login(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> N
     assert result["errors"] == {}
     assert result["step_id"] == "login"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LOGIN_STEP,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "test-user"
@@ -113,24 +113,24 @@ async def test_form_login(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> N
     ],
 )
 async def test_form_login_errors(
-    hass: HomeAssistant, habitica: AsyncMock, raise_error, text_error
+    menuai: menuai, habitica: AsyncMock, raise_error, text_error
 ) -> None:
     """Test we handle invalid credentials error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "login"},
     )
 
     habitica.login.side_effect = raise_error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LOGIN_STEP,
     )
@@ -140,7 +140,7 @@ async def test_form_login_errors(
 
     # recover from errors
     habitica.login.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LOGIN_STEP,
     )
@@ -159,26 +159,26 @@ async def test_form_login_errors(
 
 @pytest.mark.usefixtures("habitica")
 async def test_form_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort form login when entry is already configured."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "login"},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LOGIN_STEP,
     )
@@ -188,10 +188,10 @@ async def test_form_already_configured(
 
 
 @pytest.mark.usefixtures("habitica")
-async def test_form_advanced(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form_advanced(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -199,7 +199,7 @@ async def test_form_advanced(hass: HomeAssistant, mock_setup_entry: AsyncMock) -
     assert "advanced" in result["menu_options"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "advanced"},
     )
@@ -207,11 +207,11 @@ async def test_form_advanced(hass: HomeAssistant, mock_setup_entry: AsyncMock) -
     assert result["errors"] == {}
     assert result["step_id"] == "advanced"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_ADVANCED_STEP,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "test-user"
@@ -236,25 +236,25 @@ async def test_form_advanced(hass: HomeAssistant, mock_setup_entry: AsyncMock) -
     ],
 )
 async def test_form_advanced_errors(
-    hass: HomeAssistant, habitica: AsyncMock, raise_error, text_error
+    menuai: menuai, habitica: AsyncMock, raise_error, text_error
 ) -> None:
     """Test we handle invalid credentials error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "advanced"},
     )
 
     habitica.get_user.side_effect = raise_error
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_ADVANCED_STEP,
     )
@@ -264,7 +264,7 @@ async def test_form_advanced_errors(
 
     # recover from errors
     habitica.get_user.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_ADVANCED_STEP,
     )
@@ -283,26 +283,26 @@ async def test_form_advanced_errors(
 
 @pytest.mark.usefixtures("habitica")
 async def test_form_advanced_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort user data set when entry is already configured."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "advanced"},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_ADVANCED_STEP,
     )
@@ -321,26 +321,26 @@ async def test_form_advanced_already_configured(
 )
 @pytest.mark.usefixtures("habitica")
 async def test_flow_reauth(
-    hass: HomeAssistant, config_entry: MockConfigEntry, user_input: dict[str, Any]
+    menuai: menuai, config_entry: MockConfigEntry, user_input: dict[str, Any]
 ) -> None:
     """Test reauth flow."""
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert config_entry.data[CONF_API_KEY] == "cd0e5985-17de-4b4f-849e-5d506c5e4382"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -385,7 +385,7 @@ async def test_flow_reauth(
     ],
 )
 async def test_flow_reauth_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     habitica: AsyncMock,
     config_entry: MockConfigEntry,
     raise_error: Exception,
@@ -393,18 +393,18 @@ async def test_flow_reauth_errors(
     text_error: str,
 ) -> None:
     """Test reauth flow with invalid credentials."""
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     habitica.get_user.side_effect = raise_error
     habitica.login.side_effect = raise_error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": text_error}
@@ -412,22 +412,22 @@ async def test_flow_reauth_errors(
     habitica.get_user.side_effect = None
     habitica.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT_REAUTH_API_KEY,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert config_entry.data[CONF_API_KEY] == "cd0e5985-17de-4b4f-849e-5d506c5e4382"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.usefixtures("habitica")
-async def test_flow_reauth_unique_id_mismatch(hass: HomeAssistant) -> None:
+async def test_flow_reauth_unique_id_mismatch(menuai: menuai) -> None:
     """Test reauth flow."""
 
     config_entry = MockConfigEntry(
@@ -441,40 +441,40 @@ async def test_flow_reauth_unique_id_mismatch(hass: HomeAssistant) -> None:
         unique_id="371fcad5-0f9c-4211-931c-034a5d2a6213",
     )
 
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         USER_INPUT_REAUTH_LOGIN,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "unique_id_mismatch"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.usefixtures("habitica")
 async def test_flow_reconfigure(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test reconfigure flow."""
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reconfigure_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         USER_INPUT_RECONFIGURE,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -482,7 +482,7 @@ async def test_flow_reconfigure(
     assert config_entry.data[CONF_URL] == DEFAULT_URL
     assert config_entry.data[CONF_VERIFY_SSL] is True
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -494,37 +494,37 @@ async def test_flow_reconfigure(
     ],
 )
 async def test_flow_reconfigure_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     habitica: AsyncMock,
     config_entry: MockConfigEntry,
     raise_error: Exception,
     text_error: str,
 ) -> None:
     """Test reconfigure flow errors."""
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reconfigure_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     habitica.get_user.side_effect = raise_error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         USER_INPUT_RECONFIGURE,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": text_error}
 
     habitica.get_user.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT_RECONFIGURE,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -532,4 +532,4 @@ async def test_flow_reconfigure_errors(
     assert config_entry.data[CONF_URL] == DEFAULT_URL
     assert config_entry.data[CONF_VERIFY_SSL] is True
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1

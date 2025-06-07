@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import datetime
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.components.manual.alarm_control_panel import ManualAlarm
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ARMING_TIME, CONF_DELAY_TIME, CONF_TRIGGER_TIME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.components.manual.alarm_control_panel import ManualAlarm
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ARMING_TIME, CONF_DELAY_TIME, CONF_TRIGGER_TIME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -21,7 +21,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             ManualAlarm(
-                hass,
+                menuai,
                 "Security",
                 "demo_alarm_control_panel",
                 "1234",

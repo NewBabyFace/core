@@ -7,13 +7,13 @@ from typing import Any
 from brother import Brother, SnmpError, UnsupportedModelError
 import voluptuous as vol
 
-from homeassistant.components.snmp import async_get_snmp_engine
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.util.network import is_host_valid
+from menuai.components.snmp import async_get_snmp_engine
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_TYPE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.util.network import is_host_valid
 
 from .const import DOMAIN, PRINTER_TYPES
 
@@ -27,13 +27,13 @@ RECONFIGURE_SCHEMA = vol.Schema({vol.Required(CONF_HOST): str})
 
 
 async def validate_input(
-    hass: HomeAssistant, user_input: dict[str, Any], expected_mac: str | None = None
+    menuai: menuai, user_input: dict[str, Any], expected_mac: str | None = None
 ) -> tuple[str, str]:
     """Validate the user input."""
     if not is_host_valid(user_input[CONF_HOST]):
         raise InvalidHost
 
-    snmp_engine = await async_get_snmp_engine(hass)
+    snmp_engine = await async_get_snmp_engine(menuai)
 
     brother = await Brother.create(user_input[CONF_HOST], snmp_engine=snmp_engine)
     await brother.async_update()
@@ -62,7 +62,7 @@ class BrotherConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                model, serial = await validate_input(self.hass, user_input)
+                model, serial = await validate_input(self.menuai, user_input)
             except InvalidHost:
                 errors[CONF_HOST] = "wrong_host"
             except (ConnectionError, TimeoutError):
@@ -91,7 +91,7 @@ class BrotherConfigFlow(ConfigFlow, domain=DOMAIN):
         # Do not probe the device if the host is already configured
         self._async_abort_entries_match({CONF_HOST: self.host})
 
-        snmp_engine = await async_get_snmp_engine(self.hass)
+        snmp_engine = await async_get_snmp_engine(self.menuai)
         model = discovery_info.properties.get("product")
 
         try:
@@ -148,7 +148,7 @@ class BrotherConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await validate_input(self.hass, user_input, entry.unique_id)
+                await validate_input(self.menuai, user_input, entry.unique_id)
             except InvalidHost:
                 errors[CONF_HOST] = "wrong_host"
             except (ConnectionError, TimeoutError):
@@ -174,9 +174,9 @@ class BrotherConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidHost(HomeAssistantError):
+class InvalidHost(menuaiError):
     """Error to indicate that hostname/IP address is invalid."""
 
 
-class AnotherDevice(HomeAssistantError):
+class AnotherDevice(menuaiError):
     """Error to indicate that hostname/IP address belongs to another device."""

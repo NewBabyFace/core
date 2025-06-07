@@ -9,8 +9,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,  # noqa: F401
     ATTR_ICON,
     ATTR_NAME,
@@ -20,15 +20,15 @@ from homeassistant.const import (
     SERVICE_RELOAD,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.group import (
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.group import (
     expand_entity_ids as _expand_entity_ids,
     get_entity_ids as _get_entity_ids,
 )
-from homeassistant.helpers.reload import async_reload_integration_platforms
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
+from menuai.helpers.reload import async_reload_integration_platforms
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
 
 #
 # Below we ensure the config_flow is imported so it does not need the import
@@ -102,65 +102,65 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Test if the group state is in its ON-state."""
-    if REG_KEY not in hass.data:
+    if REG_KEY not in menuai.data:
         # Integration not setup yet, it cannot be on
         return False
 
-    if (state := hass.states.get(entity_id)) is not None:
-        return state.state in hass.data[REG_KEY].on_off_mapping
+    if (state := menuai.states.get(entity_id)) is not None:
+        return state.state in menuai.data[REG_KEY].on_off_mapping
 
     return False
 
 
 # expand_entity_ids and get_entity_ids are for backwards compatibility only
-expand_entity_ids = bind_hass(_expand_entity_ids)
-get_entity_ids = bind_hass(_get_entity_ids)
+expand_entity_ids = bind_menuai(_expand_entity_ids)
+get_entity_ids = bind_menuai(_get_entity_ids)
 
 
-@bind_hass
-def groups_with_entity(hass: HomeAssistant, entity_id: str) -> list[str]:
+@bind_menuai
+def groups_with_entity(menuai: menuai, entity_id: str) -> list[str]:
     """Get all groups that contain this entity.
 
     Async friendly.
     """
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         return []
 
     return [
         group.entity_id
-        for group in hass.data[DATA_COMPONENT].entities
+        for group in menuai.data[DATA_COMPONENT].entities
         if entity_id in group.tracking
     ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, (entry.options["group_type"],)
     )
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
     return True
 
 
-async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def config_entry_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Update listener, called when the config entry options are changed."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, (entry.options["group_type"],)
     )
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Remove a config entry."""
     # Unhide the group members
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
 
     if not entry.options[CONF_HIDE_MEMBERS]:
         return
@@ -176,13 +176,13 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         registry.async_update_entity(entity_id, hidden_by=None)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up all groups found defined in the configuration."""
-    component = async_get_component(hass)
+    component = async_get_component(menuai)
 
-    await async_setup_registry(hass)
+    await async_setup_registry(menuai)
 
-    await _async_process_config(hass, config)
+    await _async_process_config(menuai, config)
 
     async def reload_service_handler(service: ServiceCall) -> None:
         """Group reload handler.
@@ -209,11 +209,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         component.config = None
 
-        await _async_process_config(hass, conf)
+        await _async_process_config(menuai, conf)
 
-        await async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
+        await async_reload_integration_platforms(menuai, DOMAIN, PLATFORMS)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_RELOAD, reload_service_handler, schema=vol.Schema({})
     )
 
@@ -239,7 +239,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
 
             await Group.async_create_group(
-                hass,
+                menuai,
                 service.data.get(ATTR_NAME, object_id),
                 created_by_service=True,
                 entity_ids=entity_ids,
@@ -293,7 +293,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if service.service == SERVICE_REMOVE:
             await component.async_remove_entity(entity_id)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET,
         locked_service_handler,
@@ -312,7 +312,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ),
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_REMOVE,
         groups_service_handler,
@@ -322,9 +322,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def _async_process_config(hass: HomeAssistant, config: ConfigType) -> None:
+async def _async_process_config(menuai: menuai, config: ConfigType) -> None:
     """Process group configuration."""
-    hass.data.setdefault(GROUP_ORDER, 0)
+    menuai.data.setdefault(GROUP_ORDER, 0)
 
     entities = []
     domain_config: dict[str, dict[str, Any]] = config.get(DOMAIN, {})
@@ -334,7 +334,7 @@ async def _async_process_config(hass: HomeAssistant, config: ConfigType) -> None
         entity_ids: Collection[str] = conf.get(CONF_ENTITIES) or []
         icon: str | None = conf.get(CONF_ICON)
         mode = bool(conf.get(CONF_ALL))
-        order = hass.data[GROUP_ORDER]
+        order = menuai.data[GROUP_ORDER]
 
         # We keep track of the order when we are creating the tasks
         # in the same way that async_create_group does to make
@@ -342,7 +342,7 @@ async def _async_process_config(hass: HomeAssistant, config: ConfigType) -> None
         # the problem with concurrently creating the groups
         entities.append(
             Group.async_create_group_entity(
-                hass,
+                menuai,
                 name,
                 created_by_service=False,
                 entity_ids=entity_ids,
@@ -356,7 +356,7 @@ async def _async_process_config(hass: HomeAssistant, config: ConfigType) -> None
         # Keep track of the group order without iterating
         # every state in the state machine every time
         # we setup a new group
-        hass.data[GROUP_ORDER] += 1
+        menuai.data[GROUP_ORDER] += 1
 
     # If called before the platform async_setup is called (test cases)
-    await async_get_component(hass).async_add_entities(entities)
+    await async_get_component(menuai).async_add_entities(entities)

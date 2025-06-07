@@ -8,11 +8,11 @@ from typing import Any
 
 from aio_geojson_generic_client.feed_entry import GenericFeedEntry
 
-from homeassistant.components.geo_location import GeolocationEvent
-from homeassistant.const import UnitOfLength
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.geo_location import GeolocationEvent
+from menuai.const import UnitOfLength
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_EXTERNAL_ID, SIGNAL_DELETE_ENTITY, SIGNAL_UPDATE_ENTITY, SOURCE
 from .manager import GeoJsonConfigEntry, GeoJsonFeedEntityManager
@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GeoJsonConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -39,11 +39,11 @@ async def async_setup_entry(
         async_add_entities([new_entity], True)
 
     manager.listeners.append(
-        async_dispatcher_connect(hass, manager.signal_new_entity, async_add_geolocation)
+        async_dispatcher_connect(menuai, manager.signal_new_entity, async_add_geolocation)
     )
     # Do not wait for update here so that the setup can be completed and because an
     # update will fetch data from the feed via HTTP and then process that data.
-    entry.async_create_task(hass, manager.async_update())
+    entry.async_create_task(menuai, manager.async_update())
     _LOGGER.debug("Geolocation setup done")
 
 
@@ -66,15 +66,15 @@ class GeoJsonLocationEvent(GeolocationEvent):
         self._remove_signal_delete: Callable[[], None]
         self._remove_signal_update: Callable[[], None]
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self._remove_signal_delete = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_DELETE_ENTITY.format(self._external_id),
             self._delete_callback,
         )
         self._remove_signal_update = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_UPDATE_ENTITY.format(self._external_id),
             self._update_callback,
         )
@@ -84,7 +84,7 @@ class GeoJsonLocationEvent(GeolocationEvent):
         """Remove this entity."""
         self._remove_signal_delete()
         self._remove_signal_update()
-        self.hass.async_create_task(self.async_remove(force_remove=True))
+        self.menuai.async_create_task(self.async_remove(force_remove=True))
 
     @callback
     def _update_callback(self) -> None:

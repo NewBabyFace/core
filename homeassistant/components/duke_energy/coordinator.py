@@ -7,23 +7,23 @@ from typing import Any, cast
 from aiodukeenergy import DukeEnergy
 from aiohttp import ClientError
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
     statistics_during_period,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, UnitOfEnergy, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, UnitOfEnergy, UnitOfVolume
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -40,11 +40,11 @@ class DukeEnergyCoordinator(DataUpdateCoordinator[None]):
     config_entry: DukeEnergyConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: DukeEnergyConfigEntry
+        self, menuai: menuai, config_entry: DukeEnergyConfigEntry
     ) -> None:
         """Initialize the data handler."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Duke Energy",
@@ -55,7 +55,7 @@ class DukeEnergyCoordinator(DataUpdateCoordinator[None]):
         self.api = DukeEnergy(
             config_entry.data[CONF_USERNAME],
             config_entry.data[CONF_PASSWORD],
-            async_get_clientsession(hass),
+            async_get_clientsession(menuai),
         )
         self._statistic_ids: set = set()
 
@@ -72,7 +72,7 @@ class DukeEnergyCoordinator(DataUpdateCoordinator[None]):
 
     def _clear_statistics(self) -> None:
         """Clear statistics."""
-        get_instance(self.hass).async_clear_statistics(list(self._statistic_ids))
+        get_instance(self.menuai).async_clear_statistics(list(self._statistic_ids))
 
     async def _async_update_data(self) -> None:
         """Insert Duke Energy statistics."""
@@ -95,8 +95,8 @@ class DukeEnergyCoordinator(DataUpdateCoordinator[None]):
                 consumption_statistic_id,
             )
 
-            last_stat = await get_instance(self.hass).async_add_executor_job(
-                get_last_statistics, self.hass, 1, consumption_statistic_id, True, set()
+            last_stat = await get_instance(self.menuai).async_add_executor_job(
+                get_last_statistics, self.menuai, 1, consumption_statistic_id, True, set()
             )
             if not last_stat:
                 _LOGGER.debug("Updating statistic for the first time")
@@ -111,9 +111,9 @@ class DukeEnergyCoordinator(DataUpdateCoordinator[None]):
                 if not usage:
                     _LOGGER.debug("No recent usage data. Skipping update")
                     continue
-                stats = await get_instance(self.hass).async_add_executor_job(
+                stats = await get_instance(self.menuai).async_add_executor_job(
                     statistics_during_period,
-                    self.hass,
+                    self.menuai,
                     min(usage.keys()),
                     None,
                     {consumption_statistic_id},
@@ -157,7 +157,7 @@ class DukeEnergyCoordinator(DataUpdateCoordinator[None]):
                 consumption_statistic_id,
             )
             async_add_external_statistics(
-                self.hass, consumption_metadata, consumption_statistics
+                self.menuai, consumption_metadata, consumption_statistics
             )
 
     async def _async_get_energy_usage(

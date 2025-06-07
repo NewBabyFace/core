@@ -8,7 +8,7 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -22,8 +22,8 @@ from homeassistant.components.light import (
     DOMAIN as LIGHT_DOMAIN,
     ColorMode,
 )
-from homeassistant.components.smartthings.const import MAIN
-from homeassistant.const import (
+from menuai.components.smartthings.const import MAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -32,8 +32,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er
 
 from . import (
     set_attribute_value,
@@ -47,16 +47,16 @@ from tests.common import MockConfigEntry, mock_restore_cache_with_extra_data
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.LIGHT)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.LIGHT)
 
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
@@ -137,16 +137,16 @@ async def test_all_entities(
     ],
 )
 async def test_turn_on_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     data: dict[str, Any],
     calls: list[call],
 ) -> None:
     """Test light turn on command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.standing_light"} | data,
@@ -185,16 +185,16 @@ async def test_turn_on_light(
     ],
 )
 async def test_turn_off_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     data: dict[str, Any],
     calls: list[call],
 ) -> None:
     """Test light turn off command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.standing_light"} | data,
@@ -205,17 +205,17 @@ async def test_turn_off_light(
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("light.standing_light").state == STATE_OFF
+    assert menuai.states.get("light.standing_light").state == STATE_OFF
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.SWITCH,
@@ -223,21 +223,21 @@ async def test_state_update(
         "on",
     )
 
-    assert hass.states.get("light.standing_light").state == STATE_ON
+    assert menuai.states.get("light.standing_light").state == STATE_ON
 
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_updating_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test brightness update."""
     set_attribute_value(devices, Capability.SWITCH, Attribute.SWITCH, "on")
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.COLOR_CONTROL,
@@ -245,10 +245,10 @@ async def test_updating_brightness(
         40,
     )
 
-    assert hass.states.get("light.standing_light").attributes[ATTR_BRIGHTNESS] == 178
+    assert menuai.states.get("light.standing_light").attributes[ATTR_BRIGHTNESS] == 178
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.SWITCH_LEVEL,
@@ -256,21 +256,21 @@ async def test_updating_brightness(
         20,
     )
 
-    assert hass.states.get("light.standing_light").attributes[ATTR_BRIGHTNESS] == 51
+    assert menuai.states.get("light.standing_light").attributes[ATTR_BRIGHTNESS] == 51
 
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_updating_hs(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test hue/saturation update."""
     set_attribute_value(devices, Capability.SWITCH, Attribute.SWITCH, "on")
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.COLOR_CONTROL,
@@ -278,13 +278,13 @@ async def test_updating_hs(
         40,
     )
 
-    assert hass.states.get("light.standing_light").attributes[ATTR_HS_COLOR] == (
+    assert menuai.states.get("light.standing_light").attributes[ATTR_HS_COLOR] == (
         144.0,
         60,
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.COLOR_CONTROL,
@@ -292,7 +292,7 @@ async def test_updating_hs(
         20,
     )
 
-    assert hass.states.get("light.standing_light").attributes[ATTR_HS_COLOR] == (
+    assert menuai.states.get("light.standing_light").attributes[ATTR_HS_COLOR] == (
         72.0,
         60,
     )
@@ -300,16 +300,16 @@ async def test_updating_hs(
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_updating_color_temp(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test color temperature update."""
     set_attribute_value(devices, Capability.SWITCH, Attribute.SWITCH, "on")
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.COLOR_TEMPERATURE,
@@ -318,16 +318,16 @@ async def test_updating_color_temp(
     )
 
     assert (
-        hass.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
+        menuai.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
         is ColorMode.COLOR_TEMP
     )
     assert (
-        hass.states.get("light.standing_light").attributes[ATTR_COLOR_TEMP_KELVIN]
+        menuai.states.get("light.standing_light").attributes[ATTR_COLOR_TEMP_KELVIN]
         == 3000
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.COLOR_TEMPERATURE,
@@ -336,29 +336,29 @@ async def test_updating_color_temp(
     )
 
     assert (
-        hass.states.get("light.standing_light").attributes[ATTR_COLOR_TEMP_KELVIN]
+        menuai.states.get("light.standing_light").attributes[ATTR_COLOR_TEMP_KELVIN]
         == 2000
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_color_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test color mode changes."""
     set_attribute_value(devices, Capability.SWITCH, Attribute.SWITCH, "on")
     set_attribute_value(devices, Capability.COLOR_CONTROL, Attribute.SATURATION, 50)
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
-        hass.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
+        menuai.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
         is ColorMode.HS
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.COLOR_TEMPERATURE,
@@ -367,12 +367,12 @@ async def test_color_modes(
     )
 
     assert (
-        hass.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
+        menuai.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
         is ColorMode.COLOR_TEMP
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "cb958955-b015-498c-9e62-fc0c51abd054",
         Capability.COLOR_CONTROL,
@@ -381,14 +381,14 @@ async def test_color_modes(
     )
 
     assert (
-        hass.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
+        menuai.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
         is ColorMode.HS
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_color_mode_after_startup(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -408,46 +408,46 @@ async def test_color_mode_after_startup(
     }
 
     mock_restore_cache_with_extra_data(
-        hass, ((State("light.standing_light", STATE_ON), RESTORE_DATA),)
+        menuai, ((State("light.standing_light", STATE_ON), RESTORE_DATA),)
     )
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
-        hass.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
+        menuai.states.get("light.standing_light").attributes[ATTR_COLOR_MODE]
         is ColorMode.COLOR_TEMP
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("light.standing_light").state == STATE_OFF
-
-    await trigger_health_update(
-        hass, devices, "cb958955-b015-498c-9e62-fc0c51abd054", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("light.standing_light").state == STATE_UNAVAILABLE
+    assert menuai.states.get("light.standing_light").state == STATE_OFF
 
     await trigger_health_update(
-        hass, devices, "cb958955-b015-498c-9e62-fc0c51abd054", HealthStatus.ONLINE
+        menuai, devices, "cb958955-b015-498c-9e62-fc0c51abd054", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("light.standing_light").state == STATE_OFF
+    assert menuai.states.get("light.standing_light").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "cb958955-b015-498c-9e62-fc0c51abd054", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("light.standing_light").state == STATE_OFF
 
 
 @pytest.mark.parametrize("device_fixture", ["hue_rgbw_color_bulb"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("light.standing_light").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("light.standing_light").state == STATE_UNAVAILABLE

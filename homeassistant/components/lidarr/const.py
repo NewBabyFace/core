@@ -3,7 +3,7 @@
 import logging
 from typing import Final
 
-from homeassistant.const import UnitOfInformation
+from menuai.const import UnitOfInformation
 
 BYTE_SIZES = [
     UnitOfInformation.BYTES,

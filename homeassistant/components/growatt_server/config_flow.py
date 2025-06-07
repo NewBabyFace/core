@@ -5,9 +5,9 @@ from typing import Any
 import growattServer
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import callback
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_NAME, CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import callback
 
 from .const import (
     CONF_PLANT_ID,
@@ -57,7 +57,7 @@ class GrowattServerConfigFlow(ConfigFlow, domain=DOMAIN):
             add_random_user_id=True, agent_identifier=user_input[CONF_USERNAME]
         )
         self.api.server_url = user_input[CONF_URL]
-        login_response = await self.hass.async_add_executor_job(
+        login_response = await self.menuai.async_add_executor_job(
             self.api.login, user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
         )
 
@@ -74,8 +74,8 @@ class GrowattServerConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_plant(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Handle adding a "plant" to Home Assistant."""
-        plant_info = await self.hass.async_add_executor_job(
+        """Handle adding a "plant" to MenuAI."""
+        plant_info = await self.menuai.async_add_executor_job(
             self.api.plant_list, self.user_id
         )
 

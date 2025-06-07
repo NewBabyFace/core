@@ -8,14 +8,14 @@ from typing import Any, Final
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_CLASS,
     CONF_ENTITY_ID,
@@ -23,22 +23,22 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     callback,
 )
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_HYSTERESIS,
@@ -91,19 +91,19 @@ PLATFORM_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize threshold config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     device_class = None
     entity_id = er.async_validate_entity_id(
         registry, config_entry.options[CONF_ENTITY_ID]
     )
 
     device_info = async_device_info_to_link_from_entity(
-        hass,
+        menuai,
         entity_id,
     )
 
@@ -130,7 +130,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -196,8 +196,8 @@ class ThresholdSensor(BinarySensorEntity):
         self._state_position = POSITION_UNKNOWN
         self.sensor_value: float | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self._async_setup_sensor()
 
     @callback
@@ -206,7 +206,7 @@ class ThresholdSensor(BinarySensorEntity):
 
         def _update_sensor_state() -> None:
             """Handle sensor state changes."""
-            if (new_state := self.hass.states.get(self._entity_id)) is None:
+            if (new_state := self.menuai.states.get(self._entity_id)) is None:
                 return
 
             try:
@@ -240,7 +240,7 @@ class ThresholdSensor(BinarySensorEntity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [self._entity_id], async_threshold_sensor_state_listener
+                self.menuai, [self._entity_id], async_threshold_sensor_state_listener
             )
         )
         _update_sensor_state()

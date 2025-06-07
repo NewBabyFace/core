@@ -21,21 +21,21 @@ from fritzconnection.lib.fritzstatus import FritzStatus
 from fritzconnection.lib.fritzwlan import FritzGuestWLAN
 import xmltodict
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     DEFAULT_CONSIDER_HOME,
     DOMAIN as DEVICE_TRACKER_DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     CONF_OLD_DISCOVERY,
@@ -51,7 +51,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-FRITZ_DATA_KEY: HassKey[FritzData] = HassKey(DOMAIN)
+FRITZ_DATA_KEY: menuaiKey[FritzData] = menuaiKey(DOMAIN)
 
 type FritzConfigEntry = ConfigEntry[AvmWrapper]
 
@@ -82,7 +82,7 @@ def device_filter_out_from_trackers(
 
 def _ha_is_stopping(activity: str) -> None:
     """Inform that HA is stopping."""
-    _LOGGER.warning("Cannot execute %s: HomeAssistant is shutting down", activity)
+    _LOGGER.warning("Cannot execute %s: menuai is shutting down", activity)
 
 
 class ClassSetupMissing(Exception):
@@ -169,7 +169,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: FritzConfigEntry,
         password: str,
         port: int,
@@ -180,7 +180,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
     ) -> None:
         """Initialize FritzboxTools class."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             config_entry=config_entry,
             logger=_LOGGER,
             name=f"{DOMAIN}-{host}-coordinator",
@@ -194,7 +194,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
         self.fritz_guest_wifi: FritzGuestWLAN = None
         self.fritz_hosts: FritzHosts = None
         self.fritz_status: FritzStatus = None
-        self.hass = hass
+        self.menuai = menuai
         self.host = host
         self.mesh_role = MeshRoles.NONE
         self.mesh_wifi_uplink = False
@@ -218,9 +218,9 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
     async def async_setup(self, options: Mapping[str, Any] | None = None) -> None:
         """Wrap up FritzboxTools class setup."""
         self._options = options
-        await self.hass.async_add_executor_job(self.setup)
+        await self.menuai.async_add_executor_job(self.setup)
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             configuration_url=f"http://{self.host}",
@@ -312,7 +312,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
             if self.fritz_status:
                 self.data["entity_states"][
                     key
-                ] = await self.hass.async_add_executor_job(
+                ] = await self.menuai.async_add_executor_job(
                     update_fn, self.fritz_status, self.data["entity_states"].get(key)
                 )
         return unregister_entity_updates
@@ -340,7 +340,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
             if self.device_discovery_enabled:
                 await self.async_scan_devices()
 
-            entity_data["entity_states"] = await self.hass.async_add_executor_job(
+            entity_data["entity_states"] = await self.menuai.async_add_executor_job(
                 self._entity_states_update
             )
 
@@ -419,7 +419,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
     async def _async_get_wan_access(self, ip_address: str) -> bool | None:
         """Get WAN access rule for given IP address."""
         try:
-            wan_access = await self.hass.async_add_executor_job(
+            wan_access = await self.menuai.async_add_executor_job(
                 partial(
                     self.connection.call_action,
                     "X_AVM-DE_HostFilter:1",
@@ -445,16 +445,16 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
         hosts_info: list[HostInfo] = []
         try:
             try:
-                hosts_attributes = await self.hass.async_add_executor_job(
+                hosts_attributes = await self.menuai.async_add_executor_job(
                     self.fritz_hosts.get_hosts_attributes
                 )
             except FritzActionError:
-                hosts_info = await self.hass.async_add_executor_job(
+                hosts_info = await self.menuai.async_add_executor_job(
                     self.fritz_hosts.get_hosts_info
                 )
         except Exception as ex:
-            if not self.hass.is_stopping:
-                raise HomeAssistantError(
+            if not self.menuai.is_stopping:
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="error_refresh_hosts_info",
                 ) from ex
@@ -509,13 +509,13 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
 
     async def _async_update_device_info(self) -> tuple[bool, str | None, str | None]:
         """Retrieve latest device information from the FRITZ!Box."""
-        return await self.hass.async_add_executor_job(self._update_device_info)
+        return await self.menuai.async_add_executor_job(self._update_device_info)
 
     async def async_update_call_deflections(
         self,
     ) -> dict[int, dict[str, Any]]:
         """Call GetDeflections action from X_AVM-DE_OnTel service."""
-        raw_data = await self.hass.async_add_executor_job(
+        raw_data = await self.menuai.async_add_executor_job(
             partial(self.connection.call_action, "X_AVM-DE_OnTel1", "GetDeflections")
         )
         if not raw_data:
@@ -543,7 +543,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
         self._devices[dev_mac] = device
 
         # manually register device entry for new connected device
-        dr.async_get(self.hass).async_get_or_create(
+        dr.async_get(self.menuai).async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(CONNECTION_NETWORK_MAC, dev_mac)},
             default_manufacturer="AVM",
@@ -555,9 +555,9 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
 
     async def async_send_signal_device_update(self, new_device: bool) -> None:
         """Signal device data updated."""
-        async_dispatcher_send(self.hass, self.signal_device_update)
+        async_dispatcher_send(self.menuai, self.signal_device_update)
         if new_device:
-            async_dispatcher_send(self.hass, self.signal_device_new)
+            async_dispatcher_send(self.menuai, self.signal_device_new)
 
     async def async_update_device_info(self, now: datetime | None = None) -> None:
         """Update own device information."""
@@ -572,7 +572,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
     async def async_scan_devices(self, now: datetime | None = None) -> None:
         """Scan for new network devices."""
 
-        if self.hass.is_stopping:
+        if self.menuai.is_stopping:
             _ha_is_stopping("scan devices")
             return
 
@@ -604,7 +604,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
 
         try:
             if not (
-                topology := await self.hass.async_add_executor_job(
+                topology := await self.menuai.async_add_executor_job(
                     self.fritz_hosts.get_mesh_topology
                 )
             ):
@@ -671,24 +671,24 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
 
     async def async_trigger_firmware_update(self) -> bool:
         """Trigger firmware update."""
-        results = await self.hass.async_add_executor_job(
+        results = await self.menuai.async_add_executor_job(
             self.connection.call_action, "UserInterface:1", "X_AVM-DE_DoUpdate"
         )
         return cast(bool, results["NewX_AVM-DE_UpdateState"])
 
     async def async_trigger_reboot(self) -> None:
         """Trigger device reboot."""
-        await self.hass.async_add_executor_job(self.connection.reboot)
+        await self.menuai.async_add_executor_job(self.connection.reboot)
 
     async def async_trigger_reconnect(self) -> None:
         """Trigger device reconnect."""
-        await self.hass.async_add_executor_job(self.connection.reconnect)
+        await self.menuai.async_add_executor_job(self.connection.reconnect)
 
     async def async_trigger_set_guest_password(
         self, password: str | None, length: int
     ) -> None:
         """Trigger service to set a new guest wifi password."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.fritz_guest_wifi.set_password, password, length
         )
 
@@ -698,7 +698,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
         device_hosts = {self.mac: Device(True, "", "", "", "", None)}
         if self.device_discovery_enabled:
             device_hosts = await self._async_update_hosts_info()
-        entity_reg: er.EntityRegistry = er.async_get(self.hass)
+        entity_reg: er.EntityRegistry = er.async_get(self.menuai)
         config_entry = self.config_entry
 
         entities: list[er.RegistryEntry] = er.async_entries_for_config_entry(
@@ -713,7 +713,7 @@ class FritzBoxTools(DataUpdateCoordinator[UpdateCoordinatorDataType]):
                 _LOGGER.debug("Removing orphan entity entry %s", entity.entity_id)
                 entity_reg.async_remove(entity.entity_id)
 
-        device_reg = dr.async_get(self.hass)
+        device_reg = dr.async_get(self.menuai)
         valid_connections = {
             (CONNECTION_NETWORK_MAC, dr.format_mac(mac)) for mac in device_hosts
         }
@@ -739,7 +739,7 @@ class AvmWrapper(FritzBoxTools):
     ) -> dict:
         """Return service details."""
 
-        if self.hass.is_stopping:
+        if self.menuai.is_stopping:
             _ha_is_stopping(f"{service_name}/{action_name}")
             return {}
 
@@ -747,7 +747,7 @@ class AvmWrapper(FritzBoxTools):
             return {}
 
         try:
-            result: dict = await self.hass.async_add_executor_job(
+            result: dict = await self.menuai.async_add_executor_job(
                 partial(
                     self.connection.call_action,
                     f"{service_name}:{service_suffix}",
@@ -799,7 +799,7 @@ class AvmWrapper(FritzBoxTools):
         if not self.device_is_router:
             return False
 
-        return bool(await self.hass.async_add_executor_job(wrap_external_ipv6))
+        return bool(await self.menuai.async_add_executor_job(wrap_external_ipv6))
 
     async def async_get_connection_info(self) -> ConnectionInfo:
         """Return ConnectionInfo data."""

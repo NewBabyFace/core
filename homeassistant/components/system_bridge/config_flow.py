@@ -16,13 +16,13 @@ from systembridgeconnector.websocket_client import WebSocketClient
 from systembridgemodels.modules import GetData, Module
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT, CONF_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DATA_WAIT_TIMEOUT, DOMAIN
 
@@ -39,7 +39,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 
 async def _validate_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, Any],
 ) -> dict[str, str]:
     """Validate the user input allows us to connect.
@@ -51,7 +51,7 @@ async def _validate_input(
         data[CONF_HOST],
         data[CONF_PORT],
         data[CONF_TOKEN],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
 
     try:
@@ -91,13 +91,13 @@ async def _validate_input(
 
 
 async def _async_get_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_input: dict[str, Any],
 ) -> tuple[dict[str, str], dict[str, str] | None]:
     errors = {}
 
     try:
-        info = await _validate_input(hass, user_input)
+        info = await _validate_input(menuai, user_input)
     except CannotConnect:
         errors["base"] = "cannot_connect"
     except InvalidAuth:
@@ -135,7 +135,7 @@ class SystemBridgeConfigFlow(
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
 
-        errors, info = await _async_get_info(self.hass, user_input)
+        errors, info = await _async_get_info(self.menuai, user_input)
         if not errors and info is not None:
             # Check if already configured
             await self.async_set_unique_id(info["uuid"], raise_on_progress=False)
@@ -155,7 +155,7 @@ class SystemBridgeConfigFlow(
 
         if user_input is not None:
             user_input = {**self._input, **user_input}
-            errors, info = await _async_get_info(self.hass, user_input)
+            errors, info = await _async_get_info(self.menuai, user_input)
             if not errors and info is not None:
                 await self.async_set_unique_id(info["uuid"])
 
@@ -213,9 +213,9 @@ class SystemBridgeConfigFlow(
         return await self.async_step_authenticate()
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

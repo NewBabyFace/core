@@ -10,23 +10,23 @@ from awesomeversion import AwesomeVersion
 from pyenphase import AUTH_TOKEN_MIN_VERSION, Envoy, EnvoyError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_TOKEN,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import VolDictType
+from menuai.core import menuai, callback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     DOMAIN,
@@ -55,7 +55,7 @@ def without_avoid_reflect_keys(dictionary: Mapping[str, Any]) -> dict[str, Any]:
 
 
 async def validate_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     host: str,
     username: str,
     password: str,
@@ -63,7 +63,7 @@ async def validate_input(
     description_placeholders: dict[str, str],
 ) -> Envoy:
     """Validate the user input allows us to connect."""
-    envoy = Envoy(host, get_async_client(hass, verify_ssl=False))
+    envoy = Envoy(host, get_async_client(menuai, verify_ssl=False))
     try:
         await envoy.setup()
         await envoy.authenticate(username=username, password=password)
@@ -197,7 +197,7 @@ class EnphaseConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             await validate_input(
-                self.hass,
+                self.menuai,
                 reauth_entry.data[CONF_HOST],
                 user_input[CONF_USERNAME],
                 user_input[CONF_PASSWORD],
@@ -240,7 +240,7 @@ class EnphaseConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             envoy = await validate_input(
-                self.hass,
+                self.menuai,
                 host,
                 user_input[CONF_USERNAME],
                 user_input[CONF_PASSWORD],
@@ -298,7 +298,7 @@ class EnphaseConfigFlow(ConfigFlow, domain=DOMAIN):
             username: str = user_input[CONF_USERNAME]
             password: str = user_input[CONF_PASSWORD]
             envoy = await validate_input(
-                self.hass,
+                self.menuai,
                 host,
                 username,
                 password,

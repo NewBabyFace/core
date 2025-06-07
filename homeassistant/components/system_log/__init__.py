@@ -12,12 +12,12 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant import __path__ as HOMEASSISTANT_PATH
-from homeassistant.components import websocket_api
-from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai import __path__ as menuai_PATH
+from menuai.components import websocket_api
+from menuai.const import EVENT_menuai_CLOSE
+from menuai.core import Event, menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 type KeyType = tuple[str, tuple[str, int], tuple[str, int, str] | None]
 
@@ -86,9 +86,9 @@ def _figure_out_source(
                 stack = stack[0 : i + 1]
                 break
         # Iterate through the stack call (in reverse) and find the last call from
-        # a file in Home Assistant. Try to figure out where error happened.
+        # a file in MenuAI. Try to figure out where error happened.
         for path, line_number in reversed(stack):
-            # Try to match with a file within Home Assistant
+            # Try to match with a file within MenuAI
             if match := paths_re.match(path):
                 return (cast(str, match.group(1)), line_number)
     else:
@@ -99,7 +99,7 @@ def _figure_out_source(
         # We do this by walking up the stack until we find the first
         # frame match the record pathname so the code below
         # can be used to reverse the remaining stack frames
-        # and find the first one that is from a file within Home Assistant.
+        # and find the first one that is from a file within MenuAI.
         #
         # We do not call traceback.extract_stack() because it is
         # it makes many stat() syscalls calls which do blocking I/O,
@@ -124,7 +124,7 @@ def _figure_out_source(
         # support other python implementations.
         #
         # Iterate through the stack call (in reverse) and find the last call from
-        # a file in Home Assistant. Try to figure out where error happened.
+        # a file in MenuAI. Try to figure out where error happened.
         while back := frame.f_back:
             if match := paths_re.match(frame.f_code.co_filename):
                 return (cast(str, match.group(1)), frame.f_lineno)
@@ -265,14 +265,14 @@ class LogErrorHandler(logging.Handler):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         maxlen: int,
         fire_event: bool,
         paths_re: re.Pattern[str],
     ) -> None:
         """Initialize a new LogErrorHandler."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self.records = DedupStore(maxlen=maxlen)
         self.fire_event = fire_event
         self.paths_re = paths_re
@@ -289,35 +289,35 @@ class LogErrorHandler(logging.Handler):
         )
         self.records.add_entry(entry)
         if self.fire_event:
-            self.hass.bus.fire(EVENT_SYSTEM_LOG, entry.to_dict())
+            self.menuai.bus.fire(EVENT_SYSTEM_LOG, entry.to_dict())
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the logger component."""
     if (conf := config.get(DOMAIN)) is None:
         conf = CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
 
-    hass_path: str = HOMEASSISTANT_PATH[0]
-    config_dir = hass.config.config_dir
-    paths_re = re.compile(rf"(?:{re.escape(hass_path)}|{re.escape(config_dir)})/(.*)")
+    menuai_path: str = menuai_PATH[0]
+    config_dir = menuai.config.config_dir
+    paths_re = re.compile(rf"(?:{re.escape(menuai_path)}|{re.escape(config_dir)})/(.*)")
     handler = LogErrorHandler(
-        hass, conf[CONF_MAX_ENTRIES], conf[CONF_FIRE_EVENT], paths_re
+        menuai, conf[CONF_MAX_ENTRIES], conf[CONF_FIRE_EVENT], paths_re
     )
     handler.setLevel(logging.WARNING)
 
-    hass.data[DOMAIN] = handler
+    menuai.data[DOMAIN] = handler
 
     @callback
     def _async_stop_handler(_: Event) -> None:
         """Cleanup handler."""
         logging.root.removeHandler(handler)
-        del hass.data[DOMAIN]
+        del menuai.data[DOMAIN]
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _async_stop_handler)
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, _async_stop_handler)
 
     logging.root.addHandler(handler)
 
-    websocket_api.async_register_command(hass, list_errors)
+    websocket_api.async_register_command(menuai, list_errors)
 
     @callback
     def _async_clear_service_handler(service: ServiceCall) -> None:
@@ -330,10 +330,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         level = service.data[CONF_LEVEL]
         getattr(logger, level)(service.data[CONF_MESSAGE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_CLEAR, _async_clear_service_handler, schema=SERVICE_CLEAR_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_WRITE, _async_write_service_handler, schema=SERVICE_WRITE_SCHEMA
     )
 
@@ -344,10 +344,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 @websocket_api.websocket_command({vol.Required("type"): "system_log/list"})
 @callback
 def list_errors(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """List all possible diagnostic handlers."""
     connection.send_result(
         msg["id"],
-        hass.data[DOMAIN].records.to_list(),
+        menuai.data[DOMAIN].records.to_list(),
     )

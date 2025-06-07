@@ -29,10 +29,10 @@ from aioqsw.const import (
     QSD_VERSION,
 )
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.components.qnap_qsw.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import REDACTED
+from menuai.components.qnap_qsw.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
 
 from .util import (
     CONFIG,
@@ -49,14 +49,14 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test config entry diagnostics."""
-    await async_init_integration(hass)
-    assert hass.data[DOMAIN]
+    await async_init_integration(menuai)
+    assert menuai.data[DOMAIN]
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert (
         diag["config_entry"].items()

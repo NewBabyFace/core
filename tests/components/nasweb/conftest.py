@@ -10,14 +10,14 @@ import pytest
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.nasweb.async_setup_entry", return_value=True
+        "menuai.components.nasweb.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
-BASE_CONFIG_FLOW = "homeassistant.components.nasweb.config_flow."
-BASE_NASWEB_DATA = "homeassistant.components.nasweb.nasweb_data."
-BASE_COORDINATOR = "homeassistant.components.nasweb.coordinator."
+BASE_CONFIG_FLOW = "menuai.components.nasweb.config_flow."
+BASE_NASWEB_DATA = "menuai.components.nasweb.nasweb_data."
+BASE_COORDINATOR = "menuai.components.nasweb.coordinator."
 TEST_SERIAL_NUMBER = "0011223344556677"
 
 

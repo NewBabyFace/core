@@ -7,11 +7,11 @@ from aiohue.discovery import is_v2_bridge
 from aiohue.v2.models.device import DeviceArchetypes
 from aiohue.v2.models.resource import ResourceTypes
 
-from homeassistant import core
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import CONF_API_KEY, CONF_API_VERSION, CONF_HOST, CONF_USERNAME
-from homeassistant.helpers import (
+from menuai import core
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import CONF_API_KEY, CONF_API_VERSION, CONF_HOST, CONF_USERNAME
+from menuai.helpers import (
     aiohttp_client,
     device_registry as dr,
     entity_registry as er,
@@ -23,7 +23,7 @@ from .const import DOMAIN
 LOGGER = logging.getLogger(__name__)
 
 
-async def check_migration(hass: core.HomeAssistant, entry: HueConfigEntry) -> None:
+async def check_migration(menuai: core.menuai, entry: HueConfigEntry) -> None:
     """Check if config entry needs any migration actions."""
     host = entry.data[CONF_HOST]
 
@@ -32,12 +32,12 @@ async def check_migration(hass: core.HomeAssistant, entry: HueConfigEntry) -> No
         LOGGER.info("Migrate %s to %s in schema", CONF_USERNAME, CONF_API_KEY)
         data = dict(entry.data)
         data[CONF_API_KEY] = data.pop(CONF_USERNAME)
-        hass.config_entries.async_update_entry(entry, data=data)
+        menuai.config_entries.async_update_entry(entry, data=data)
 
     if (conf_api_version := entry.data.get(CONF_API_VERSION, 1)) == 1:
         # a bridge might have upgraded firmware since last run so
         # we discover its capabilities at every startup
-        websession = aiohttp_client.async_get_clientsession(hass)
+        websession = aiohttp_client.async_get_clientsession(menuai)
         if await is_v2_bridge(host, websession):
             supported_api_version = 2
         else:
@@ -54,7 +54,7 @@ async def check_migration(hass: core.HomeAssistant, entry: HueConfigEntry) -> No
 
         if conf_api_version == 1 and supported_api_version == 2:
             # run entity/device schema migration for v2
-            await handle_v2_migration(hass, entry)
+            await handle_v2_migration(menuai, entry)
 
         # store api version in entry data
         if (
@@ -63,27 +63,27 @@ async def check_migration(hass: core.HomeAssistant, entry: HueConfigEntry) -> No
         ):
             data = dict(entry.data)
             data[CONF_API_VERSION] = supported_api_version
-            hass.config_entries.async_update_entry(entry, data=data)
+            menuai.config_entries.async_update_entry(entry, data=data)
 
 
-async def handle_v2_migration(hass: core.HomeAssistant, entry: HueConfigEntry) -> None:
+async def handle_v2_migration(menuai: core.menuai, entry: HueConfigEntry) -> None:
     """Perform migration of devices and entities to V2 Id's."""
     host = entry.data[CONF_HOST]
     api_key = entry.data[CONF_API_KEY]
-    dev_reg = dr.async_get(hass)
-    ent_reg = er.async_get(hass)
+    dev_reg = dr.async_get(menuai)
+    ent_reg = er.async_get(menuai)
     LOGGER.info("Start of migration of devices and entities to support API schema 2")
 
     # Create mapping of mac address to HA device id's.
     # Identifier in dev reg should be mac-address,
     # but in some cases it has a postfix like `-0b` or `-01`.
     dev_ids = {}
-    for hass_dev in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
-        for domain, mac in hass_dev.identifiers:
+    for menuai_dev in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
+        for domain, mac in menuai_dev.identifiers:
             if domain != DOMAIN:
                 continue
             normalized_mac = mac.split("-")[0]
-            dev_ids[normalized_mac] = hass_dev.id
+            dev_ids[normalized_mac] = menuai_dev.id
 
     # initialize bridge connection just for the migration
     async with HueBridgeV2(host, api_key) as api:
@@ -103,10 +103,10 @@ async def handle_v2_migration(hass: core.HomeAssistant, entry: HueConfigEntry) -
 
             # get existing device by V1 identifier (mac address)
             if hue_dev.product_data.product_archetype == DeviceArchetypes.BRIDGE_V2:
-                hass_dev_id = dev_ids.get(api.config.bridge_id.upper())
+                menuai_dev_id = dev_ids.get(api.config.bridge_id.upper())
             else:
-                hass_dev_id = dev_ids.get(zigbee.mac_address)
-            if hass_dev_id is None:
+                menuai_dev_id = dev_ids.get(zigbee.mac_address)
+            if menuai_dev_id is None:
                 # can be safely ignored, this device does not exist in current config
                 LOGGER.debug(
                     (
@@ -118,12 +118,12 @@ async def handle_v2_migration(hass: core.HomeAssistant, entry: HueConfigEntry) -
                 )
                 continue
             dev_reg.async_update_device(
-                hass_dev_id, new_identifiers={(DOMAIN, hue_dev.id)}
+                menuai_dev_id, new_identifiers={(DOMAIN, hue_dev.id)}
             )
-            LOGGER.info("Migrated device %s (%s)", hue_dev.metadata.name, hass_dev_id)
+            LOGGER.info("Migrated device %s (%s)", hue_dev.metadata.name, menuai_dev_id)
 
             # loop through all entities for device and find match
-            for ent in er.async_entries_for_device(ent_reg, hass_dev_id, True):
+            for ent in er.async_entries_for_device(ent_reg, menuai_dev_id, True):
                 if ent.entity_id.startswith("light"):
                     # migrate light
                     # should always return one lightid here

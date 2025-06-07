@@ -20,11 +20,11 @@ from pysnmp.proto.rfc1902 import Opaque
 from pysnmp.proto.rfc1905 import NoSuchObject
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_HOST,
     CONF_ICON,
@@ -36,18 +36,18 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.template import Template
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
     TEMPLATE_SENSOR_BASE_SCHEMA,
     ManualTriggerSensorEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_ACCEPT_ERRORS,
@@ -113,7 +113,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -158,7 +158,7 @@ async def async_setup_platform(
     else:
         auth_data = CommunityData(community, mpModel=SNMP_VERSIONS[version])
 
-    request_args = await async_create_request_cmd_args(hass, auth_data, target, baseoid)
+    request_args = await async_create_request_cmd_args(menuai, auth_data, target, baseoid)
     get_result = await getCmd(*request_args)
     errindication, _, _, _ = get_result
 
@@ -169,7 +169,7 @@ async def async_setup_platform(
         )
         return
 
-    name = config.get(CONF_NAME, Template(DEFAULT_NAME, hass))
+    name = config.get(CONF_NAME, Template(DEFAULT_NAME, menuai))
     trigger_entity_config = {CONF_NAME: name}
     for key in TRIGGER_ENTITY_OPTIONS:
         if key not in config:
@@ -179,7 +179,7 @@ async def async_setup_platform(
     value_template: ValueTemplate | None = config.get(CONF_VALUE_TEMPLATE)
 
     data = SnmpData(request_args, baseoid, accept_errors, default_value)
-    async_add_entities([SnmpSensor(hass, data, trigger_entity_config, value_template)])
+    async_add_entities([SnmpSensor(menuai, data, trigger_entity_config, value_template)])
 
 
 class SnmpSensor(ManualTriggerSensorEntity):
@@ -189,20 +189,20 @@ class SnmpSensor(ManualTriggerSensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         data: SnmpData,
         config: ConfigType,
         value_template: ValueTemplate | None,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(hass, config)
+        super().__init__(menuai, config)
         self.data = data
         self._state = None
         self._value_template = value_template
 
-    async def async_added_to_hass(self) -> None:
-        """Handle adding to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle adding to MenuAI."""
+        await super().async_added_to_menuai()
         await self.async_update()
 
     async def async_update(self) -> None:

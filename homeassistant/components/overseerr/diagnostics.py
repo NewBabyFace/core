@@ -5,14 +5,14 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import CONF_CLOUDHOOK_URL
 from .coordinator import OverseerrConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: OverseerrConfigEntry
+    menuai: menuai, entry: OverseerrConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 

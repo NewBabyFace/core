@@ -6,19 +6,19 @@ from unittest import mock
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant import const
-from homeassistant.components.climate import ClimateEntityFeature
-from homeassistant.components.ecobee.climate import (
+from menuai import const
+from menuai.components.climate import ClimateEntityFeature
+from menuai.components.ecobee.climate import (
     ATTR_PRESET_MODE,
     ATTR_SENSOR_LIST,
     PRESET_AWAY_INDEFINITELY,
     Thermostat,
 )
-from homeassistant.components.ecobee.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES, STATE_OFF
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
+from menuai.components.ecobee.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES, STATE_OFF
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import device_registry as dr
 
 from .common import setup_platform
 
@@ -107,10 +107,10 @@ def data_fixture(ecobee_fixture):
 
 
 @pytest.fixture(name="thermostat")
-def thermostat_fixture(data, hass: HomeAssistant):
+def thermostat_fixture(data, menuai: menuai):
     """Set up ecobee thermostat object."""
     thermostat = data.ecobee.get_thermostat(1)
-    return Thermostat(data, 1, thermostat, hass)
+    return Thermostat(data, 1, thermostat, menuai)
 
 
 async def test_name(thermostat) -> None:
@@ -118,10 +118,10 @@ async def test_name(thermostat) -> None:
     assert thermostat.device_info["name"] == "Ecobee"
 
 
-async def test_aux_heat_not_supported_by_default(hass: HomeAssistant) -> None:
+async def test_aux_heat_not_supported_by_default(menuai: menuai) -> None:
     """Default setup should not support Aux heat."""
-    await setup_platform(hass, const.Platform.CLIMATE)
-    state = hass.states.get(ENTITY_ID)
+    await setup_platform(menuai, const.Platform.CLIMATE)
+    state = menuai.states.get(ENTITY_ID)
     assert (
         state.attributes.get(ATTR_SUPPORTED_FEATURES)
         == ClimateEntityFeature.PRESET_MODE
@@ -420,10 +420,10 @@ async def test_set_preset_mode(ecobee_fixture, thermostat, data) -> None:
     )
 
 
-async def test_remote_sensors(hass: HomeAssistant) -> None:
+async def test_remote_sensors(menuai: menuai) -> None:
     """Test remote sensors."""
-    await setup_platform(hass, [const.Platform.CLIMATE, const.Platform.SENSOR])
-    platform = hass.data[const.Platform.CLIMATE].entities
+    await setup_platform(menuai, [const.Platform.CLIMATE, const.Platform.SENSOR])
+    platform = menuai.data[const.Platform.CLIMATE].entities
     for entity in platform:
         if entity.entity_id == "climate.ecobee":
             thermostat = entity
@@ -436,14 +436,14 @@ async def test_remote_sensors(hass: HomeAssistant) -> None:
 
 
 async def test_remote_sensor_devices(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test remote sensor devices."""
-    await setup_platform(hass, [const.Platform.CLIMATE, const.Platform.SENSOR])
+    await setup_platform(menuai, [const.Platform.CLIMATE, const.Platform.SENSOR])
     freezer.tick(100)
-    async_fire_time_changed(hass)
-    state = hass.states.get(ENTITY_ID)
-    device_registry = dr.async_get(hass)
+    async_fire_time_changed(menuai)
+    state = menuai.states.get(ENTITY_ID)
+    device_registry = dr.async_get(menuai)
     for device in device_registry.devices.values():
         if device.name == "Remote Sensor 1":
             remote_sensor_1_id = device.id
@@ -454,10 +454,10 @@ async def test_remote_sensor_devices(
     )
 
 
-async def test_active_sensors_in_preset_mode(hass: HomeAssistant) -> None:
+async def test_active_sensors_in_preset_mode(menuai: menuai) -> None:
     """Test active sensors in preset mode property."""
-    await setup_platform(hass, [const.Platform.CLIMATE, const.Platform.SENSOR])
-    platform = hass.data[const.Platform.CLIMATE].entities
+    await setup_platform(menuai, [const.Platform.CLIMATE, const.Platform.SENSOR])
+    platform = menuai.data[const.Platform.CLIMATE].entities
     for entity in platform:
         if entity.entity_id == "climate.ecobee":
             thermostat = entity
@@ -469,18 +469,18 @@ async def test_active_sensors_in_preset_mode(hass: HomeAssistant) -> None:
     assert sorted(remote_sensors) == sorted(["ecobee"])
 
 
-async def test_active_sensor_devices_in_preset_mode(hass: HomeAssistant) -> None:
+async def test_active_sensor_devices_in_preset_mode(menuai: menuai) -> None:
     """Test active sensor devices in preset mode."""
-    await setup_platform(hass, [const.Platform.CLIMATE, const.Platform.SENSOR])
-    state = hass.states.get(ENTITY_ID)
+    await setup_platform(menuai, [const.Platform.CLIMATE, const.Platform.SENSOR])
+    state = menuai.states.get(ENTITY_ID)
 
     assert state.attributes.get("active_sensors") == ["ecobee"]
 
 
-async def test_remote_sensor_ids_names(hass: HomeAssistant) -> None:
+async def test_remote_sensor_ids_names(menuai: menuai) -> None:
     """Test getting ids and names_by_user for thermostat."""
-    await setup_platform(hass, [const.Platform.CLIMATE, const.Platform.SENSOR])
-    platform = hass.data[const.Platform.CLIMATE].entities
+    await setup_platform(menuai, [const.Platform.CLIMATE, const.Platform.SENSOR])
+    platform = menuai.data[const.Platform.CLIMATE].entities
     for entity in platform:
         if entity.entity_id == "climate.ecobee":
             thermostat = entity
@@ -496,11 +496,11 @@ async def test_remote_sensor_ids_names(hass: HomeAssistant) -> None:
     assert sorted(name_by_user_list) == sorted(["Remote Sensor 1", "ecobee"])
 
 
-async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
+async def test_set_sensors_used_in_climate(menuai: menuai) -> None:
     """Test set sensors used in climate."""
     # Get device_id of remote sensor from the device registry.
-    await setup_platform(hass, [const.Platform.CLIMATE, const.Platform.SENSOR])
-    device_registry = dr.async_get(hass)
+    await setup_platform(menuai, [const.Platform.CLIMATE, const.Platform.SENSOR])
+    device_registry = dr.async_get(menuai)
     for device in device_registry.devices.values():
         if device.name == "Remote Sensor 1":
             remote_sensor_1_id = device.id
@@ -510,14 +510,14 @@ async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
             remote_sensor_2_id = device.id
 
     entry = MockConfigEntry(domain="test")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     device_from_other_integration = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={("test", "unique")}
     )
 
     # Test that the function call works in its entirety.
     with mock.patch("pyecobee.Ecobee.update_climate_sensors") as mock_sensors:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_sensors_used_in_climate",
             {
@@ -527,12 +527,12 @@ async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
             },
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_sensors.assert_called_once_with(0, "Climate1", sensor_ids=["rs:100"])
 
     # Update sensors without preset mode.
     with mock.patch("pyecobee.Ecobee.update_climate_sensors") as mock_sensors:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_sensors_used_in_climate",
             {
@@ -541,13 +541,13 @@ async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
             },
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         # `temp` is the preset running because of a hold.
         mock_sensors.assert_called_once_with(0, "temp", sensor_ids=["rs:100"])
 
     # Check that sensors are not updated when the sent sensors are the currently set sensors.
     with mock.patch("pyecobee.Ecobee.update_climate_sensors") as mock_sensors:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_sensors_used_in_climate",
             {
@@ -561,7 +561,7 @@ async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
 
     # Error raised because invalid climate name.
     with pytest.raises(ServiceValidationError) as execinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_sensors_used_in_climate",
             {
@@ -576,7 +576,7 @@ async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
 
     ## Error raised because invalid sensor.
     with pytest.raises(ServiceValidationError) as execinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_sensors_used_in_climate",
             {
@@ -591,7 +591,7 @@ async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
 
     ## Error raised because sensor not available on device.
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_sensors_used_in_climate",
             {
@@ -603,7 +603,7 @@ async def test_set_sensors_used_in_climate(hass: HomeAssistant) -> None:
         )
 
     with pytest.raises(ServiceValidationError) as execinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_sensors_used_in_climate",
             {

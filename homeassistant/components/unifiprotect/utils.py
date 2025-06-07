@@ -19,16 +19,16 @@ from uiprotect.data import (
     ProtectAdoptableDeviceModel,
 )
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.storage import STORAGE_DIR
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.storage import STORAGE_DIR
 
 from .const import (
     CONF_ALL_UPDATES,
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 
 @callback
-def _async_unifi_mac_from_hass(mac: str) -> str:
+def _async_unifi_mac_from_menuai(mac: str) -> str:
     # MAC addresses in UFP are always caps
     return mac.replace(":", "").upper()
 
@@ -50,16 +50,16 @@ def _async_unifi_mac_from_hass(mac: str) -> str:
 @callback
 def _async_short_mac(mac: str) -> str:
     """Get the short mac address from the full mac."""
-    return _async_unifi_mac_from_hass(mac)[-6:]
+    return _async_unifi_mac_from_menuai(mac)[-6:]
 
 
-async def _async_resolve(hass: HomeAssistant, host: str) -> str | None:
+async def _async_resolve(menuai: menuai, host: str) -> str | None:
     """Resolve a hostname to an ip."""
     with contextlib.suppress(OSError):
         return next(
             iter(
                 raw[0]
-                for family, _, _, _, raw in await hass.loop.getaddrinfo(
+                for family, _, _, _, raw in await menuai.loop.getaddrinfo(
                     host, None, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP
                 )
                 if family == socket.AF_INET
@@ -105,11 +105,11 @@ def async_get_light_motion_current(obj: Light) -> str:
 
 @callback
 def async_create_api_client(
-    hass: HomeAssistant, entry: UFPConfigEntry
+    menuai: menuai, entry: UFPConfigEntry
 ) -> ProtectApiClient:
     """Create ProtectApiClient from config entry."""
 
-    session = async_create_clientsession(hass, cookie_jar=CookieJar(unsafe=True))
+    session = async_create_clientsession(menuai, cookie_jar=CookieJar(unsafe=True))
     return ProtectApiClient(
         host=entry.data[CONF_HOST],
         port=entry.data[CONF_PORT],
@@ -121,8 +121,8 @@ def async_create_api_client(
         override_connection_host=entry.options.get(CONF_OVERRIDE_CHOST, False),
         ignore_stats=not entry.options.get(CONF_ALL_UPDATES, False),
         ignore_unadopted=False,
-        cache_dir=Path(hass.config.path(STORAGE_DIR, "unifiprotect")),
-        config_dir=Path(hass.config.path(STORAGE_DIR, "unifiprotect")),
+        cache_dir=Path(menuai.config.path(STORAGE_DIR, "unifiprotect")),
+        config_dir=Path(menuai.config.path(STORAGE_DIR, "unifiprotect")),
     )
 
 

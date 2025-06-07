@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING
 import switchbot
 from switchbot import SwitchbotModel
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.active_update_coordinator import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth.active_update_coordinator import (
     ActiveBluetoothDataUpdateCoordinator,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CoreState, HomeAssistant, callback
+from menuai.config_entries import ConfigEntry
+from menuai.core import CoreState, menuai, callback
 
 if TYPE_CHECKING:
     from bleak.backends.device import BLEDevice
@@ -33,7 +33,7 @@ class SwitchbotDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None])
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         ble_device: BLEDevice,
         device: switchbot.SwitchbotDevice,
@@ -44,7 +44,7 @@ class SwitchbotDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None])
     ) -> None:
         """Initialize global switchbot data updater."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             address=ble_device.address,
             needs_poll_method=self._needs_poll,
@@ -66,14 +66,14 @@ class SwitchbotDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None])
         service_info: bluetooth.BluetoothServiceInfoBleak,
         seconds_since_last_poll: float | None,
     ) -> bool:
-        # Only poll if hass is running, we need to poll,
+        # Only poll if menuai is running, we need to poll,
         # and we actually have a way to connect to the device
         return (
-            self.hass.state is CoreState.running
+            self.menuai.state is CoreState.running
             and self.device.poll_needed(seconds_since_last_poll)
             and bool(
                 bluetooth.async_ble_device_from_address(
-                    self.hass, service_info.device.address, connectable=True
+                    self.menuai, service_info.device.address, connectable=True
                 )
             )
         )

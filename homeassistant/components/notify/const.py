@@ -4,7 +4,7 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 ATTR_DATA = "data"
 

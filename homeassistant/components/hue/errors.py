@@ -1,9 +1,9 @@
 """Errors for the Hue component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class HueException(HomeAssistantError):
+class HueException(menuaiError):
     """Base class for Hue exceptions."""
 
 

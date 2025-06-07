@@ -4,16 +4,16 @@ import dataclasses
 
 from bsblan import BSBLAN, BSBLANConfig, Device, Info, StaticState
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_PASSKEY
 from .coordinator import BSBLanUpdateCoordinator
@@ -25,7 +25,7 @@ type BSBLanConfigEntry = ConfigEntry[BSBLanData]
 
 @dataclasses.dataclass
 class BSBLanData:
-    """BSBLan data stored in the Home Assistant data object."""
+    """BSBLan data stored in the MenuAI data object."""
 
     coordinator: BSBLanUpdateCoordinator
     client: BSBLAN
@@ -34,7 +34,7 @@ class BSBLanData:
     static: StaticState
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BSBLanConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BSBLanConfigEntry) -> bool:
     """Set up BSB-Lan from a config entry."""
 
     # create config using BSBLANConfig
@@ -47,11 +47,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: BSBLanConfigEntry) -> bo
     )
 
     # create BSBLAN client
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     bsblan = BSBLAN(config, session)
 
     # Create and perform first refresh of the coordinator
-    coordinator = BSBLanUpdateCoordinator(hass, entry, bsblan)
+    coordinator = BSBLanUpdateCoordinator(menuai, entry, bsblan)
     await coordinator.async_config_entry_first_refresh()
 
     # Fetch all required data concurrently
@@ -67,11 +67,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: BSBLanConfigEntry) -> bo
         static=static,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BSBLanConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BSBLanConfigEntry) -> bool:
     """Unload BSBLAN config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -1,8 +1,8 @@
 """Test the HTML5 setup."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -20,25 +20,25 @@ NOTIFY_CONF = {
 
 
 async def test_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test setup of a good config entry."""
     config_entry = MockConfigEntry(domain="html5", data={})
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, "html5", {})
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, "html5", {})
 
     assert len(issue_registry.issues) == 0
 
 
 async def test_setup_entry_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test setup of an imported config entry with deprecated YAML."""
     config_entry = MockConfigEntry(domain="html5", data={})
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, "notify", NOTIFY_CONF)
-    assert await async_setup_component(hass, "html5", NOTIFY_CONF)
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, "notify", NOTIFY_CONF)
+    assert await async_setup_component(menuai, "html5", NOTIFY_CONF)
 
     assert len(issue_registry.issues) == 1

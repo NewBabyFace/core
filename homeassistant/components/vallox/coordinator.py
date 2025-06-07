@@ -6,10 +6,10 @@ import logging
 
 from vallox_websocket_api import MetricData, Vallox, ValloxApiException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import STATE_SCAN_INTERVAL
 
@@ -23,13 +23,13 @@ class ValloxDataUpdateCoordinator(DataUpdateCoordinator[MetricData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         client: Vallox,
     ) -> None:
         """Initialize Vallox data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{config_entry.data[CONF_NAME]} DataUpdateCoordinator",

@@ -10,31 +10,31 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant import config as conf_util
-from homeassistant.components import websocket_api
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DISCOVERY, CONF_PLATFORM, SERVICE_RELOAD
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import (
+from menuai import config as conf_util
+from menuai.components import websocket_api
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DISCOVERY, CONF_PLATFORM, SERVICE_RELOAD
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import (
     ConfigValidationError,
     ServiceValidationError,
     Unauthorized,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     config_validation as cv,
     entity_registry as er,
     event as ev,
     issue_registry as ir,
 )
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import async_get_platforms
-from homeassistant.helpers.reload import async_integration_yaml_config
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration, async_get_loaded_integration
-from homeassistant.setup import SetupPhases, async_pause_setup
-from homeassistant.util.async_ import create_eager_task
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import async_get_platforms
+from menuai.helpers.reload import async_integration_yaml_config
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_get_integration, async_get_loaded_integration
+from menuai.setup import SetupPhases, async_pause_setup
+from menuai.util.async_ import create_eager_task
 
 # Loading the config flow file will register the flow
 from . import debug_info, discovery
@@ -246,32 +246,32 @@ MQTT_PUBLISH_SCHEMA = vol.Schema(
 )
 
 
-async def _async_config_entry_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_config_entry_updated(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle signals of config entry being updated.
 
     Causes for this is config entry options changing.
     """
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 @callback
-def _async_remove_mqtt_issues(hass: HomeAssistant, mqtt_data: MqttData) -> None:
+def _async_remove_mqtt_issues(menuai: menuai, mqtt_data: MqttData) -> None:
     """Unregister open config issues."""
-    issue_registry = ir.async_get(hass)
+    issue_registry = ir.async_get(menuai)
     open_issues = [
         issue_id
         for (domain, issue_id), issue_entry in issue_registry.issues.items()
         if domain == DOMAIN and issue_entry.translation_key == "invalid_platform_config"
     ]
     for issue in open_issues:
-        ir.async_delete_issue(hass, DOMAIN, issue)
+        ir.async_delete_issue(menuai, DOMAIN, issue)
 
 
 async def async_check_config_schema(
-    hass: HomeAssistant, config_yaml: ConfigType
+    menuai: menuai, config_yaml: ConfigType
 ) -> None:
     """Validate manually configured MQTT items."""
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     mqtt_config: list[dict[str, list[ConfigType]]] = config_yaml.get(DOMAIN, {})
     for mqtt_config_item in mqtt_config:
         for domain, config_items in mqtt_config_item.items():
@@ -280,9 +280,9 @@ async def async_check_config_schema(
                 try:
                     schema(config)
                 except vol.Invalid as exc:
-                    integration = await async_get_integration(hass, DOMAIN)
+                    integration = await async_get_integration(menuai, DOMAIN)
                     message = conf_util.format_schema_error(
-                        hass, exc, domain, config, integration.documentation
+                        menuai, exc, domain, config, integration.documentation
                     )
                     raise ServiceValidationError(
                         message,
@@ -294,12 +294,12 @@ async def async_check_config_schema(
                     ) from exc
 
 
-def _platforms_in_use(hass: HomeAssistant, entry: ConfigEntry) -> set[str | Platform]:
+def _platforms_in_use(menuai: menuai, entry: ConfigEntry) -> set[str | Platform]:
     """Return a set of platforms in use."""
     domains: set[str | Platform] = {
         entry.domain
         for entry in er.async_entries_for_config_entry(
-            er.async_get(hass), entry.entry_id
+            er.async_get(menuai), entry.entry_id
         )
     }
     # Update with domains from subentries
@@ -309,24 +309,24 @@ def _platforms_in_use(hass: HomeAssistant, entry: ConfigEntry) -> set[str | Plat
     return domains
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the actions and websocket API for the MQTT component."""
 
-    websocket_api.async_register_command(hass, websocket_subscribe)
-    websocket_api.async_register_command(hass, websocket_mqtt_info)
+    websocket_api.async_register_command(menuai, websocket_subscribe)
+    websocket_api.async_register_command(menuai, websocket_mqtt_info)
 
     async def async_publish_service(call: ServiceCall) -> None:
         """Handle MQTT publish service calls."""
         msg_topic: str = call.data[ATTR_TOPIC]
 
-        if not mqtt_config_entry_enabled(hass):
+        if not mqtt_config_entry_enabled(menuai):
             raise ServiceValidationError(
                 translation_key="mqtt_not_setup_cannot_publish",
                 translation_domain=DOMAIN,
                 translation_placeholders={"topic": msg_topic},
             )
 
-        mqtt_data = hass.data[DATA_MQTT]
+        mqtt_data = menuai.data[DATA_MQTT]
         payload: PublishPayloadType = call.data[ATTR_PAYLOAD]
         evaluate_payload: bool = call.data.get(ATTR_EVALUATE_PAYLOAD, False)
         qos: int = call.data[ATTR_QOS]
@@ -338,7 +338,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         await mqtt_data.client.async_publish(msg_topic, payload, qos, retain)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_PUBLISH, async_publish_service, schema=MQTT_PUBLISH_SCHEMA
     )
 
@@ -350,21 +350,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         def collect_msg(msg: ReceiveMessage) -> None:
             messages.append((msg.topic, str(msg.payload).replace("\n", "")))
 
-        unsub = async_subscribe_internal(hass, call.data["topic"], collect_msg)
+        unsub = async_subscribe_internal(menuai, call.data["topic"], collect_msg)
 
         def write_dump() -> None:
-            with open(hass.config.path("mqtt_dump.txt"), "w", encoding="utf8") as fp:
+            with open(menuai.config.path("mqtt_dump.txt"), "w", encoding="utf8") as fp:
                 for msg in messages:
                     fp.write(",".join(msg) + "\n")
 
         async def finish_dump(_: datetime) -> None:
             """Write dump to file."""
             unsub()
-            await hass.async_add_executor_job(write_dump)
+            await menuai.async_add_executor_job(write_dump)
 
-        ev.async_call_later(hass, call.data["duration"], finish_dump)
+        ev.async_call_later(menuai, call.data["duration"], finish_dump)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_DUMP,
         async_dump_service,
@@ -378,7 +378,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate the options from config entry data."""
     _LOGGER.debug("Migrating from version %s:%s", entry.version, entry.minor_version)
     data: dict[str, Any] = dict(entry.data)
@@ -395,7 +395,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if key not in data:
                 continue
             options[key] = data.pop(key)
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data=data,
             options=options,
@@ -409,7 +409,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Load a config entry."""
     mqtt_data: MqttData
 
@@ -417,17 +417,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Set up the MQTT client."""
         # Fetch configuration
         conf = dict(entry.data | entry.options)
-        hass_config = await conf_util.async_hass_config_yaml(hass)
-        mqtt_yaml = CONFIG_SCHEMA(hass_config).get(DOMAIN, [])
-        await async_create_certificate_temp_files(hass, conf)
-        client = MQTT(hass, entry, conf)
-        if DOMAIN in hass.data:
-            mqtt_data = hass.data[DATA_MQTT]
+        menuai_config = await conf_util.async_menuai_config_yaml(menuai)
+        mqtt_yaml = CONFIG_SCHEMA(menuai_config).get(DOMAIN, [])
+        await async_create_certificate_temp_files(menuai, conf)
+        client = MQTT(menuai, entry, conf)
+        if DOMAIN in menuai.data:
+            mqtt_data = menuai.data[DATA_MQTT]
             mqtt_data.config = mqtt_yaml
             mqtt_data.client = client
         else:
             # Initial setup
-            hass.data[DATA_MQTT] = mqtt_data = MqttData(config=mqtt_yaml, client=client)
+            menuai.data[DATA_MQTT] = mqtt_data = MqttData(config=mqtt_yaml, client=client)
         await client.async_start(mqtt_data)
 
         # Restore saved subscriptions
@@ -443,21 +443,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return (mqtt_data, conf)
 
     client_available: asyncio.Future[bool]
-    if DATA_MQTT_AVAILABLE not in hass.data:
-        client_available = hass.data[DATA_MQTT_AVAILABLE] = hass.loop.create_future()
+    if DATA_MQTT_AVAILABLE not in menuai.data:
+        client_available = menuai.data[DATA_MQTT_AVAILABLE] = menuai.loop.create_future()
     else:
-        client_available = hass.data[DATA_MQTT_AVAILABLE]
+        client_available = menuai.data[DATA_MQTT_AVAILABLE]
 
     mqtt_data, conf = await _setup_client()
     platforms_used = platforms_from_config(mqtt_data.config)
-    platforms_used.update(_platforms_in_use(hass, entry))
-    integration = async_get_loaded_integration(hass, DOMAIN)
+    platforms_used.update(_platforms_in_use(menuai, entry))
+    integration = async_get_loaded_integration(menuai, DOMAIN)
     # Preload platforms we know we are going to use so
     # discovery can setup each platform synchronously
     # and avoid creating a flood of tasks at startup
     # while waiting for the the imports to complete
     if not integration.platforms_are_loaded(platforms_used):
-        with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
+        with async_pause_setup(menuai, SetupPhases.WAIT_IMPORT_PLATFORMS):
             await integration.async_get_platforms(platforms_used)
 
     # Wait to connect until the platforms are loaded so
@@ -472,7 +472,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Fetch updated manually configured items and validate
         try:
             config_yaml = await async_integration_yaml_config(
-                hass, DOMAIN, raise_on_failure=True
+                menuai, DOMAIN, raise_on_failure=True
             )
         except ConfigValidationError as ex:
             raise ServiceValidationError(
@@ -484,17 +484,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         new_config: list[ConfigType] = config_yaml.get(DOMAIN, [])
         platforms_used = platforms_from_config(new_config)
         new_platforms = platforms_used - mqtt_data.platforms_loaded
-        await async_forward_entry_setup_and_setup_discovery(hass, entry, new_platforms)
+        await async_forward_entry_setup_and_setup_discovery(menuai, entry, new_platforms)
         # Check the schema before continuing reload
-        await async_check_config_schema(hass, config_yaml)
+        await async_check_config_schema(menuai, config_yaml)
 
         # Remove repair issues
-        _async_remove_mqtt_issues(hass, mqtt_data)
+        _async_remove_mqtt_issues(menuai, mqtt_data)
 
         mqtt_data.config = new_config
 
         # Reload the modern yaml platforms
-        mqtt_platforms = async_get_platforms(hass, DOMAIN)
+        mqtt_platforms = async_get_platforms(menuai, DOMAIN)
         tasks = [
             create_eager_task(entity.async_remove())
             for mqtt_platform in mqtt_platforms
@@ -509,16 +509,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             component()
 
         # Fire event
-        hass.bus.async_fire(f"event_{DOMAIN}_reloaded", context=call.context)
+        menuai.bus.async_fire(f"event_{DOMAIN}_reloaded", context=call.context)
 
-    await async_forward_entry_setup_and_setup_discovery(hass, entry, platforms_used)
+    await async_forward_entry_setup_and_setup_discovery(menuai, entry, platforms_used)
     # Setup reload service after all platforms have loaded
-    if not hass.services.has_service(DOMAIN, SERVICE_RELOAD):
-        async_register_admin_service(hass, DOMAIN, SERVICE_RELOAD, _reload_config)
+    if not menuai.services.has_service(DOMAIN, SERVICE_RELOAD):
+        async_register_admin_service(menuai, DOMAIN, SERVICE_RELOAD, _reload_config)
     # Setup discovery
     if conf.get(CONF_DISCOVERY, DEFAULT_DISCOVERY):
         await discovery.async_start(
-            hass, conf.get(CONF_DISCOVERY_PREFIX, DEFAULT_PREFIX), entry
+            menuai, conf.get(CONF_DISCOVERY_PREFIX, DEFAULT_PREFIX), entry
         )
 
     return True
@@ -529,11 +529,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 )
 @callback
 def websocket_mqtt_info(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Get MQTT debug info for device."""
     device_id = msg["device_id"]
-    mqtt_info = debug_info.info_for_device(hass, device_id)
+    mqtt_info = debug_info.info_for_device(menuai, device_id)
 
     connection.send_result(msg["id"], mqtt_info)
 
@@ -547,7 +547,7 @@ def websocket_mqtt_info(
 )
 @websocket_api.async_response
 async def websocket_subscribe(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Subscribe to a MQTT topic."""
     if not connection.user.is_admin:
@@ -579,7 +579,7 @@ async def websocket_subscribe(
     # Perform UTF-8 decoding directly in callback routine
     qos: int = msg.get("qos", DEFAULT_QOS)
     connection.subscriptions[msg["id"]] = async_subscribe_internal(
-        hass, msg["topic"], forward_messages, encoding=None, qos=qos
+        menuai, msg["topic"], forward_messages, encoding=None, qos=qos
     )
 
     connection.send_message(websocket_api.result_message(msg["id"]))
@@ -590,40 +590,40 @@ type ConnectionStatusCallback = Callable[[bool], None]
 
 @callback
 def async_subscribe_connection_status(
-    hass: HomeAssistant, connection_status_callback: ConnectionStatusCallback
+    menuai: menuai, connection_status_callback: ConnectionStatusCallback
 ) -> Callable[[], None]:
     """Subscribe to MQTT connection changes."""
     return async_dispatcher_connect(
-        hass, MQTT_CONNECTION_STATE, connection_status_callback
+        menuai, MQTT_CONNECTION_STATE, connection_status_callback
     )
 
 
-def is_connected(hass: HomeAssistant) -> bool:
+def is_connected(menuai: menuai) -> bool:
     """Return if MQTT client is connected."""
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     return mqtt_data.client.connected
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove MQTT config entry from a device."""
     # pylint: disable-next=import-outside-toplevel
     from . import device_automation
 
-    await device_automation.async_removed_from_device(hass, device_entry.id)
+    await device_automation.async_removed_from_device(menuai, device_entry.id)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload MQTT dump and publish service when the config entry is unloaded."""
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     mqtt_client = mqtt_data.client
 
     # Stop the discovery
-    await discovery.async_stop(hass)
+    await discovery.async_stop(menuai)
     # Unload the platforms
-    await hass.config_entries.async_unload_platforms(entry, mqtt_data.platforms_loaded)
+    await menuai.config_entries.async_unload_platforms(entry, mqtt_data.platforms_loaded)
     mqtt_data.platforms_loaded = set()
     await asyncio.sleep(0)
     # Unsubscribe reload dispatchers
@@ -640,13 +640,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await mqtt_client.async_disconnect(disconnect_paho_client=True)
 
     # Cleanup MQTT client availability
-    hass.data.pop(DATA_MQTT_AVAILABLE, None)
+    menuai.data.pop(DATA_MQTT_AVAILABLE, None)
     # Store remaining subscriptions to be able to restore or reload them
     # when the entry is set up again
     if subscriptions := mqtt_client.subscriptions:
         mqtt_data.subscriptions_to_restore = subscriptions
 
     # Remove repair issues
-    _async_remove_mqtt_issues(hass, mqtt_data)
+    _async_remove_mqtt_issues(menuai, mqtt_data)
 
     return True

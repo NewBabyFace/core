@@ -6,15 +6,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import DEVICE_DEFAULT_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import DEVICE_DEFAULT_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_PORTS, DATA_GC100, GC100Device
 
@@ -26,7 +26,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -36,7 +36,7 @@ def setup_platform(
     ports: list[dict[str, str]] = config[CONF_PORTS]
     for port in ports:
         for port_addr, port_name in port.items():
-            switches.append(GC100Switch(port_name, port_addr, hass.data[DATA_GC100]))
+            switches.append(GC100Switch(port_name, port_addr, menuai.data[DATA_GC100]))
     add_entities(switches, True)
 
 

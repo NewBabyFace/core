@@ -19,12 +19,12 @@ from webrtc_models import (
     RTCIceServer,
 )
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.ulid import ulid
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.ulid import ulid
 
 from .const import DATA_COMPONENT, DOMAIN, StreamType
 from .helper import get_camera_from_entity_id
@@ -35,10 +35,10 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-DATA_WEBRTC_PROVIDERS: HassKey[set[CameraWebRTCProvider]] = HassKey(
+DATA_WEBRTC_PROVIDERS: menuaiKey[set[CameraWebRTCProvider]] = menuaiKey(
     "camera_webrtc_providers"
 )
-DATA_ICE_SERVERS: HassKey[list[Callable[[], Iterable[RTCIceServer]]]] = HassKey(
+DATA_ICE_SERVERS: menuaiKey[list[Callable[[], Iterable[RTCIceServer]]]] = menuaiKey(
     "camera_webrtc_ice_servers"
 )
 
@@ -159,34 +159,34 @@ class CameraWebRTCProvider(ABC):
 
 @callback
 def async_register_webrtc_provider(
-    hass: HomeAssistant,
+    menuai: menuai,
     provider: CameraWebRTCProvider,
 ) -> Callable[[], None]:
     """Register a WebRTC provider.
 
     The first provider to satisfy the offer will be used.
     """
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         raise ValueError("Unexpected state, camera not loaded")
 
-    providers = hass.data.setdefault(DATA_WEBRTC_PROVIDERS, set())
+    providers = menuai.data.setdefault(DATA_WEBRTC_PROVIDERS, set())
 
     @callback
     def remove_provider() -> None:
         providers.remove(provider)
-        hass.async_create_task(_async_refresh_providers(hass))
+        menuai.async_create_task(_async_refresh_providers(menuai))
 
     if provider in providers:
         raise ValueError("Provider already registered")
 
     providers.add(provider)
-    hass.async_create_task(_async_refresh_providers(hass))
+    menuai.async_create_task(_async_refresh_providers(menuai))
     return remove_provider
 
 
-async def _async_refresh_providers(hass: HomeAssistant) -> None:
+async def _async_refresh_providers(menuai: menuai) -> None:
     """Check all cameras for any state changes for registered providers."""
-    component = hass.data[DATA_COMPONENT]
+    component = menuai.data[DATA_COMPONENT]
     await asyncio.gather(
         *(camera.async_refresh_providers() for camera in component.entities)
     )
@@ -210,13 +210,13 @@ def require_webrtc_support(
 
         @wraps(func)
         async def validate(
-            hass: HomeAssistant,
+            menuai: menuai,
             connection: websocket_api.ActiveConnection,
             msg: dict[str, Any],
         ) -> None:
             """Validate that the camera supports WebRTC."""
             entity_id = msg["entity_id"]
-            camera = get_camera_from_entity_id(hass, entity_id)
+            camera = get_camera_from_entity_id(menuai, entity_id)
             if StreamType.WEB_RTC not in (
                 stream_types := camera.camera_capabilities.frontend_stream_types
             ):
@@ -281,7 +281,7 @@ async def ws_webrtc_offer(
 
     try:
         await camera.async_handle_async_webrtc_offer(offer, session_id, send_message)
-    except HomeAssistantError as ex:
+    except menuaiError as ex:
         _LOGGER.error("Error handling WebRTC offer: %s", ex)
         send_message(
             WebRTCError(
@@ -337,19 +337,19 @@ async def ws_candidate(
 
 
 @callback
-def async_register_ws(hass: HomeAssistant) -> None:
+def async_register_ws(menuai: menuai) -> None:
     """Register camera webrtc ws endpoints."""
 
-    websocket_api.async_register_command(hass, ws_webrtc_offer)
-    websocket_api.async_register_command(hass, ws_get_client_config)
-    websocket_api.async_register_command(hass, ws_candidate)
+    websocket_api.async_register_command(menuai, ws_webrtc_offer)
+    websocket_api.async_register_command(menuai, ws_get_client_config)
+    websocket_api.async_register_command(menuai, ws_candidate)
 
 
 async def async_get_supported_provider(
-    hass: HomeAssistant, camera: Camera
+    menuai: menuai, camera: Camera
 ) -> CameraWebRTCProvider | None:
     """Return the first supported provider for the camera."""
-    providers = hass.data.get(DATA_WEBRTC_PROVIDERS)
+    providers = menuai.data.get(DATA_WEBRTC_PROVIDERS)
     if not providers or not (stream_source := await camera.stream_source()):
         return None
 
@@ -362,14 +362,14 @@ async def async_get_supported_provider(
 
 @callback
 def async_register_ice_servers(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_ice_server_fn: Callable[[], Iterable[RTCIceServer]],
 ) -> Callable[[], None]:
     """Register a ICE server.
 
     The registering integration is responsible to implement caching if needed.
     """
-    servers = hass.data.setdefault(DATA_ICE_SERVERS, [])
+    servers = menuai.data.setdefault(DATA_ICE_SERVERS, [])
 
     def remove() -> None:
         servers.remove(get_ice_server_fn)

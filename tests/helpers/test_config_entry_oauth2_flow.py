@@ -10,10 +10,10 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from homeassistant import config_entries, data_entry_flow, setup
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.network import NoURLAvailableError
+from menuai import config_entries, data_entry_flow, setup
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.network import NoURLAvailableError
 
 from tests.common import MockConfigEntry, MockModule, mock_integration, mock_platform
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -36,38 +36,38 @@ MOCK_SECRET_TOKEN_URLSAFE = (
 
 @pytest.fixture
 async def local_impl(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> config_entry_oauth2_flow.LocalOAuth2Implementation:
     """Local implementation."""
-    assert await setup.async_setup_component(hass, "auth", {})
+    assert await setup.async_setup_component(menuai, "auth", {})
     return config_entry_oauth2_flow.LocalOAuth2Implementation(
-        hass, TEST_DOMAIN, CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL
+        menuai, TEST_DOMAIN, CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL
     )
 
 
 @pytest.fixture
 async def local_impl_pkce(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> AsyncGenerator[config_entry_oauth2_flow.LocalOAuth2ImplementationWithPkce]:
     """Local implementation."""
-    assert await setup.async_setup_component(hass, "auth", {})
+    assert await setup.async_setup_component(menuai, "auth", {})
     with patch(
-        "homeassistant.helpers.config_entry_oauth2_flow.secrets.token_urlsafe",
+        "menuai.helpers.config_entry_oauth2_flow.secrets.token_urlsafe",
         return_value=MOCK_SECRET_TOKEN_URLSAFE
         + "bbbbbb",  # Add some characters that should be removed by the logic.
     ):
         yield config_entry_oauth2_flow.LocalOAuth2ImplementationWithPkce(
-            hass, TEST_DOMAIN, CLIENT_ID, AUTHORIZE_URL, TOKEN_URL
+            menuai, TEST_DOMAIN, CLIENT_ID, AUTHORIZE_URL, TOKEN_URL
         )
 
 
 @pytest.fixture
 def flow_handler(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> Generator[type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler]]:
     """Return a registered config flow."""
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     class TestFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler):
         """Test flow handler."""
@@ -138,26 +138,26 @@ def test_inherit_enforces_domain_set() -> None:
 
 
 async def test_abort_if_no_implementation(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
 ) -> None:
     """Check flow abort when no implementations."""
     flow = flow_handler()
-    flow.hass = hass
+    flow.menuai = menuai
     result = await flow.async_step_user()
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "missing_configuration"
 
 
 async def test_missing_credentials_for_domain(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
 ) -> None:
     """Check flow abort for integration supporting application credentials."""
     flow = flow_handler()
-    flow.hass = hass
+    flow.menuai = menuai
 
-    with patch("homeassistant.loader.APPLICATION_CREDENTIALS", [TEST_DOMAIN]):
+    with patch("menuai.loader.APPLICATION_CREDENTIALS", [TEST_DOMAIN]):
         result = await flow.async_step_user()
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "missing_credentials"
@@ -165,18 +165,18 @@ async def test_missing_credentials_for_domain(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_if_authorization_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
 ) -> None:
     """Check timeout generating authorization url."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
 
     flow = flow_handler()
-    flow.hass = hass
+    flow.menuai = menuai
 
     with patch(
-        "homeassistant.helpers.config_entry_oauth2_flow.asyncio.timeout",
+        "menuai.helpers.config_entry_oauth2_flow.asyncio.timeout",
         side_effect=TimeoutError,
     ):
         result = await flow.async_step_user()
@@ -187,15 +187,15 @@ async def test_abort_if_authorization_timeout(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_if_no_url_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
 ) -> None:
     """Check no_url_available generating authorization url."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
 
     flow = flow_handler()
-    flow.hass = hass
+    flow.menuai = menuai
 
     with patch.object(
         local_impl, "async_generate_authorize_url", side_effect=NoURLAvailableError
@@ -209,20 +209,20 @@ async def test_abort_if_no_url_available(
 @pytest.mark.parametrize("expires_in_dict", [{}, {"expires_in": "badnumber"}])
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_if_oauth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     expires_in_dict: dict[str, str],
 ) -> None:
     """Check bad oauth token."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -230,12 +230,12 @@ async def test_abort_if_oauth_error(
     assert result["step_id"] == "pick_implementation"
 
     # Pick implementation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"implementation": TEST_DOMAIN}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -249,7 +249,7 @@ async def test_abort_if_oauth_error(
         f"&state={state}&scope=read+write"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -264,7 +264,7 @@ async def test_abort_if_oauth_error(
         | expires_in_dict,
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "oauth_error"
@@ -272,18 +272,18 @@ async def test_abort_if_oauth_error(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_if_oauth_rejected(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check bad oauth token."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -291,12 +291,12 @@ async def test_abort_if_oauth_rejected(
     assert result["step_id"] == "pick_implementation"
 
     # Pick implementation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"implementation": TEST_DOMAIN}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -310,14 +310,14 @@ async def test_abort_if_oauth_rejected(
         f"&state={state}&scope=read+write"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(
         f"/auth/external/callback?error=access_denied&state={state}"
     )
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "user_rejected_authorize"
@@ -326,19 +326,19 @@ async def test_abort_if_oauth_rejected(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_on_oauth_timeout_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Check timeout during oauth token exchange."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -346,12 +346,12 @@ async def test_abort_on_oauth_timeout_error(
     assert result["step_id"] == "pick_implementation"
 
     # Pick implementation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"implementation": TEST_DOMAIN}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -365,33 +365,33 @@ async def test_abort_on_oauth_timeout_error(
         f"&state={state}&scope=read+write"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     with patch(
-        "homeassistant.helpers.config_entry_oauth2_flow.asyncio.timeout",
+        "menuai.helpers.config_entry_oauth2_flow.asyncio.timeout",
         side_effect=TimeoutError,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "oauth_timeout"
 
 
 async def test_step_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
 ) -> None:
     """Check flow triggers from discovery."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=data_entry_flow.BaseServiceInfo(),
@@ -400,7 +400,7 @@ async def test_step_discovery(
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "oauth_discovery"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -410,23 +410,23 @@ async def test_step_discovery(
 
 
 async def test_abort_discovered_multiple(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
 ) -> None:
     """Test if aborts when discovered multiple times."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=data_entry_flow.BaseServiceInfo(),
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -434,7 +434,7 @@ async def test_abort_discovered_multiple(
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "pick_implementation"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=data_entry_flow.BaseServiceInfo(),
@@ -479,10 +479,10 @@ async def test_abort_discovered_multiple(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_if_oauth_token_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     status_code: HTTPStatus,
     error_body: dict[str, Any],
@@ -491,12 +491,12 @@ async def test_abort_if_oauth_token_error(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Check error when obtaining an oauth token."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -504,12 +504,12 @@ async def test_abort_if_oauth_token_error(
     assert result["step_id"] == "pick_implementation"
 
     # Pick implementation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"implementation": TEST_DOMAIN}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -523,7 +523,7 @@ async def test_abort_if_oauth_token_error(
         f"&state={state}&scope=read+write"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -534,7 +534,7 @@ async def test_abort_if_oauth_token_error(
         json=error_body,
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == error_reason
@@ -543,20 +543,20 @@ async def test_abort_if_oauth_token_error(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_if_oauth_token_closing_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Check error when obtaining an oauth token."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -564,12 +564,12 @@ async def test_abort_if_oauth_token_closing_error(
     assert result["step_id"] == "pick_implementation"
 
     # Pick implementation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"implementation": TEST_DOMAIN}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -583,7 +583,7 @@ async def test_abort_if_oauth_token_closing_error(
         f"&state={state}&scope=read+write"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -595,7 +595,7 @@ async def test_abort_if_oauth_token_closing_error(
     )
 
     with caplog.at_level(logging.DEBUG):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert "Token request for oauth2_test failed (unknown): unknown" in caplog.text
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
@@ -603,23 +603,23 @@ async def test_abort_if_oauth_token_closing_error(
 
 
 async def test_abort_discovered_existing_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
 ) -> None:
     """Test if abort discovery when entries exists."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
     entry = MockConfigEntry(
         domain=TEST_DOMAIN,
         data={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=data_entry_flow.BaseServiceInfo(),
@@ -638,23 +638,23 @@ async def test_abort_discovered_existing_entries(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     additional_components: list[str],
     expected_redirect_uri: str,
 ) -> None:
     """Check full flow."""
     for component in additional_components:
-        assert await setup.async_setup_component(hass, component, {})
-    flow_handler.async_register_implementation(hass, local_impl)
+        assert await setup.async_setup_component(menuai, component, {})
+    flow_handler.async_register_implementation(menuai, local_impl)
     config_entry_oauth2_flow.async_register_implementation(
-        hass, TEST_DOMAIN, MockOAuth2Implementation()
+        menuai, TEST_DOMAIN, MockOAuth2Implementation()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -662,12 +662,12 @@ async def test_full_flow(
     assert result["step_id"] == "pick_implementation"
 
     # Pick implementation
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"implementation": TEST_DOMAIN}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": expected_redirect_uri,
@@ -681,7 +681,7 @@ async def test_full_flow(
         f"&state={state}&scope=read+write"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -696,7 +696,7 @@ async def test_full_flow(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["data"]["auth_implementation"] == TEST_DOMAIN
 
@@ -708,18 +708,18 @@ async def test_full_flow(
         "expires_in": 60,
     }
 
-    entry = hass.config_entries.async_entries(TEST_DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(TEST_DOMAIN)[0]
 
     assert (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
         is local_impl
     )
 
 
 async def test_local_refresh_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -755,13 +755,13 @@ async def test_local_refresh_token(
 
 
 async def test_oauth_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test the OAuth2 session helper."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
 
     aioclient_mock.post(
         TOKEN_URL, json={"access_token": ACCESS_TOKEN_2, "expires_in": 100}
@@ -783,10 +783,10 @@ async def test_oauth_session(
             },
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     now = time.time()
-    session = config_entry_oauth2_flow.OAuth2Session(hass, config_entry, local_impl)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, config_entry, local_impl)
     resp = await session.async_request("post", "https://example.com")
     assert resp.status == 201
 
@@ -805,13 +805,13 @@ async def test_oauth_session(
 
 
 async def test_oauth_session_with_clock_slightly_out_of_sync(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test the OAuth2 session helper when the remote clock is slightly out of sync."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
 
     aioclient_mock.post(
         TOKEN_URL, json={"access_token": ACCESS_TOKEN_2, "expires_in": 19}
@@ -833,10 +833,10 @@ async def test_oauth_session_with_clock_slightly_out_of_sync(
             },
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     now = time.time()
-    session = config_entry_oauth2_flow.OAuth2Session(hass, config_entry, local_impl)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, config_entry, local_impl)
     resp = await session.async_request("post", "https://example.com")
     assert resp.status == 201
 
@@ -855,13 +855,13 @@ async def test_oauth_session_with_clock_slightly_out_of_sync(
 
 
 async def test_oauth_session_no_token_refresh_needed(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test the OAuth2 session helper when no refresh is needed."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
 
     aioclient_mock.post("https://example.com", status=201)
 
@@ -881,7 +881,7 @@ async def test_oauth_session_no_token_refresh_needed(
     )
 
     now = time.time()
-    session = config_entry_oauth2_flow.OAuth2Session(hass, config_entry, local_impl)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, config_entry, local_impl)
     resp = await session.async_request("post", "https://example.com")
     assert resp.status == 201
 
@@ -899,57 +899,57 @@ async def test_oauth_session_no_token_refresh_needed(
     assert round(config_entry.data["token"]["expires_at"] - now) == 500
 
 
-async def test_implementation_provider(hass: HomeAssistant, local_impl) -> None:
+async def test_implementation_provider(menuai: menuai, local_impl) -> None:
     """Test providing an implementation provider."""
     assert (
-        await config_entry_oauth2_flow.async_get_implementations(hass, TEST_DOMAIN)
+        await config_entry_oauth2_flow.async_get_implementations(menuai, TEST_DOMAIN)
         == {}
     )
 
     mock_domain_with_impl = "some_domain"
 
     config_entry_oauth2_flow.async_register_implementation(
-        hass, mock_domain_with_impl, local_impl
+        menuai, mock_domain_with_impl, local_impl
     )
 
     assert await config_entry_oauth2_flow.async_get_implementations(
-        hass, mock_domain_with_impl
+        menuai, mock_domain_with_impl
     ) == {TEST_DOMAIN: local_impl}
 
     provider_source = []
 
     async def async_provide_implementation(
-        hass: HomeAssistant, domain: str
+        menuai: menuai, domain: str
     ) -> list[config_entry_oauth2_flow.AbstractOAuth2Implementation]:
         """Mock implementation provider."""
         return provider_source
 
     config_entry_oauth2_flow.async_add_implementation_provider(
-        hass, "cloud", async_provide_implementation
+        menuai, "cloud", async_provide_implementation
     )
 
     assert await config_entry_oauth2_flow.async_get_implementations(
-        hass, mock_domain_with_impl
+        menuai, mock_domain_with_impl
     ) == {TEST_DOMAIN: local_impl}
 
     provider_source.append(
         config_entry_oauth2_flow.LocalOAuth2Implementation(
-            hass, "cloud", CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL
+            menuai, "cloud", CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL
         )
     )
 
     assert await config_entry_oauth2_flow.async_get_implementations(
-        hass, mock_domain_with_impl
+        menuai, mock_domain_with_impl
     ) == {TEST_DOMAIN: local_impl, "cloud": provider_source[0]}
 
     provider_source.append(
         config_entry_oauth2_flow.LocalOAuth2Implementation(
-            hass, "other", CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL
+            menuai, "other", CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL
         )
     )
 
     assert await config_entry_oauth2_flow.async_get_implementations(
-        hass, mock_domain_with_impl
+        menuai, mock_domain_with_impl
     ) == {
         TEST_DOMAIN: local_impl,
         "cloud": provider_source[0],
@@ -958,13 +958,13 @@ async def test_implementation_provider(hass: HomeAssistant, local_impl) -> None:
 
 
 async def test_oauth_session_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test the OAuth2 session helper when no refresh is needed."""
-    flow_handler.async_register_implementation(hass, local_impl)
+    flow_handler.async_register_implementation(menuai, local_impl)
 
     aioclient_mock.post(TOKEN_URL, status=400)
 
@@ -984,37 +984,37 @@ async def test_oauth_session_refresh_failure(
         },
     )
 
-    session = config_entry_oauth2_flow.OAuth2Session(hass, config_entry, local_impl)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, config_entry, local_impl)
     with pytest.raises(aiohttp.client_exceptions.ClientResponseError):
         await session.async_request("post", "https://example.com")
 
 
 async def test_oauth2_without_secret_init(
     local_impl: config_entry_oauth2_flow.LocalOAuth2Implementation,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check authorize callback without secret initalizated."""
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get("/auth/external/callback?code=abcd&state=qwer")
     assert resp.status == 400
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_abort_oauth_with_pkce_rejected(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl_pkce: config_entry_oauth2_flow.LocalOAuth2ImplementationWithPkce,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check bad oauth token."""
-    flow_handler.async_register_implementation(hass, local_impl_pkce)
+    flow_handler.async_register_implementation(menuai, local_impl_pkce)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -1033,14 +1033,14 @@ async def test_abort_oauth_with_pkce_rejected(
     assert f"code_challenge={code_challenge}" in result["url"]
     assert "code_challenge_method=S256" in result["url"]
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(
         f"/auth/external/callback?error=access_denied&state={state}"
     )
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "user_rejected_authorize"
@@ -1049,30 +1049,30 @@ async def test_abort_oauth_with_pkce_rejected(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_oauth_with_pkce_adds_code_verifier_to_token_resolve(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_handler: type[config_entry_oauth2_flow.AbstractOAuth2FlowHandler],
     local_impl_pkce: config_entry_oauth2_flow.LocalOAuth2ImplementationWithPkce,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Check pkce flow."""
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             domain=TEST_DOMAIN,
             async_setup_entry=AsyncMock(return_value=True),
         ),
     )
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow", None)
-    flow_handler.async_register_implementation(hass, local_impl_pkce)
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow", None)
+    flow_handler.async_register_implementation(menuai, local_impl_pkce)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         TEST_DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -1102,13 +1102,13 @@ async def test_oauth_with_pkce_adds_code_verifier_to_token_resolve(
         },
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     # trigger the callback
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     # Verify the token resolve request occurred
     assert len(aioclient_mock.mock_calls) == 1

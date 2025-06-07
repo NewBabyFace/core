@@ -21,4 +21,4 @@ DEFAULT_TIMEOUT_SECONDS = 15
 DOMAIN: Final = "slack"
 
 SLACK_DATA = "data"
-DATA_HASS_CONFIG = "slack_hass_config"
+DATA_menuai_CONFIG = "slack_menuai_config"

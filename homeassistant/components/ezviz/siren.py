@@ -8,17 +8,17 @@ from typing import Any
 
 from pyezvizapi import HTTPError, PyEzvizError, SupportExt
 
-from homeassistant.components.siren import (
+from menuai.components.siren import (
     SirenEntity,
     SirenEntityDescription,
     SirenEntityFeature,
 )
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import event as evt
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import STATE_ON
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import event as evt
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .coordinator import EzvizConfigEntry, EzvizDataUpdateCoordinator
 from .entity import EzvizBaseEntity
@@ -33,7 +33,7 @@ SIREN_ENTITY_TYPE = SirenEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -69,24 +69,24 @@ class EzvizSirenEntity(EzvizBaseEntity, SirenEntity, RestoreEntity):
         self._attr_is_on = False
         self._delay_listener: Callable | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         if not (last_state := await self.async_get_last_state()):
             return
         self._attr_is_on = last_state.state == STATE_ON
 
         if self._attr_is_on:
-            evt.async_call_later(self.hass, OFF_DELAY, self.off_delay_listener)
+            evt.async_call_later(self.menuai, OFF_DELAY, self.off_delay_listener)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off camera siren."""
         try:
-            result = await self.hass.async_add_executor_job(
+            result = await self.menuai.async_add_executor_job(
                 self.coordinator.ezviz_client.sound_alarm, self._serial, 1
             )
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to turn siren off for {self.name}"
             ) from err
 
@@ -101,12 +101,12 @@ class EzvizSirenEntity(EzvizBaseEntity, SirenEntity, RestoreEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on camera siren."""
         try:
-            result = self.hass.async_add_executor_job(
+            result = self.menuai.async_add_executor_job(
                 self.coordinator.ezviz_client.sound_alarm, self._serial, 2
             )
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to turn siren on for {self.name}"
             ) from err
 
@@ -117,7 +117,7 @@ class EzvizSirenEntity(EzvizBaseEntity, SirenEntity, RestoreEntity):
 
             self._attr_is_on = True
             self._delay_listener = evt.async_call_later(
-                self.hass, OFF_DELAY, self.off_delay_listener
+                self.menuai, OFF_DELAY, self.off_delay_listener
             )
             self.async_write_ha_state()
 

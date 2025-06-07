@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from awesomeversion import AwesomeVersion, AwesomeVersionStrategy
 import pytest
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_BACKUP,
     ATTR_VERSION,
     DOMAIN,
@@ -16,7 +16,7 @@ from homeassistant.components.update import (
     UpdateEntity,
     UpdateEntityDescription,
 )
-from homeassistant.components.update.const import (
+from menuai.components.update.const import (
     ATTR_AUTO_UPDATE,
     ATTR_DISPLAY_PRECISION,
     ATTR_IN_PROGRESS,
@@ -29,8 +29,8 @@ from homeassistant.components.update.const import (
     ATTR_UPDATE_PERCENTAGE,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_ENTITY_PICTURE,
     ATTR_FRIENDLY_NAME,
@@ -42,11 +42,11 @@ from homeassistant.const import (
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, State, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_state_change_event
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -68,11 +68,11 @@ class MockUpdateEntity(UpdateEntity):
     """Mock UpdateEntity to use in tests."""
 
 
-async def test_update(hass: HomeAssistant) -> None:
+async def test_update(menuai: menuai) -> None:
     """Test getting data from the mocked update entity."""
     update = MockUpdateEntity()
-    update.hass = hass
-    update.platform = MockEntityPlatform(hass)
+    update.menuai = menuai
+    update.platform = MockEntityPlatform(menuai)
 
     update._attr_installed_version = "1.0.0"
     update._attr_latest_version = "1.0.1"
@@ -175,25 +175,25 @@ async def test_update(hass: HomeAssistant) -> None:
 
 
 async def test_entity_with_no_install(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
 ) -> None:
     """Test entity with no updates."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     # Update is available
-    state = hass.states.get("update.update_no_install")
+    state = menuai.states.get("update.update_no_install")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "1.0.1"
 
     # Should not be able to install as the entity doesn't support that
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: "update.update_no_install"},
@@ -201,7 +201,7 @@ async def test_entity_with_no_install(
         )
 
     # Nothing changed
-    state = hass.states.get("update.update_no_install")
+    state = menuai.states.get("update.update_no_install")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -209,14 +209,14 @@ async def test_entity_with_no_install(
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
 
     # We can mark the update as skipped
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SKIP,
         {ATTR_ENTITY_ID: "update.update_no_install"},
         blocking=True,
     )
 
-    state = hass.states.get("update.update_no_install")
+    state = menuai.states.get("update.update_no_install")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -224,14 +224,14 @@ async def test_entity_with_no_install(
     assert state.attributes[ATTR_SKIPPED_VERSION] == "1.0.1"
 
     # We can clear the skipped marker again
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "clear_skipped",
         {ATTR_ENTITY_ID: "update.update_no_install"},
         blocking=True,
     )
 
-    state = hass.states.get("update.update_no_install")
+    state = menuai.states.get("update.update_no_install")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -240,25 +240,25 @@ async def test_entity_with_no_install(
 
 
 async def test_entity_with_no_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
 ) -> None:
     """Test entity with no updates."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     # No update available
-    state = hass.states.get("update.no_update")
+    state = menuai.states.get("update.no_update")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "1.0.0"
 
     # Should not be able to skip when there is no update available
-    with pytest.raises(HomeAssistantError, match="No update available to skip for"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="No update available to skip for"):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SKIP,
             {ATTR_ENTITY_ID: "update.no_update"},
@@ -266,8 +266,8 @@ async def test_entity_with_no_updates(
         )
 
     # Should not be able to install an update when there is no update available
-    with pytest.raises(HomeAssistantError, match="No update available for"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="No update available for"):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: "update.no_update"},
@@ -276,10 +276,10 @@ async def test_entity_with_no_updates(
 
     # Updating to a specific version is not supported by this entity
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Installing a specific version is not supported for",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,
             {ATTR_VERSION: "0.9.0", ATTR_ENTITY_ID: "update.no_update"},
@@ -288,17 +288,17 @@ async def test_entity_with_no_updates(
 
 
 async def test_entity_with_auto_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update entity that has auto update feature."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.update_with_auto_update")
+    state = menuai.states.get("update.update_with_auto_update")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -306,7 +306,7 @@ async def test_entity_with_auto_update(
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
 
     # Should be able to manually install an update even if it can auto update
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.update_with_auto_update"},
@@ -315,10 +315,10 @@ async def test_entity_with_auto_update(
 
     # Should not be able to skip the update
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Skipping update is not supported for update.update_with_auto_update",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SKIP,
             {ATTR_ENTITY_ID: "update.update_with_auto_update"},
@@ -327,10 +327,10 @@ async def test_entity_with_auto_update(
 
     # Should not be able to clear a skipped the update
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Clearing skipped update is not supported for update.update_with_auto_update",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "clear_skipped",
             {ATTR_ENTITY_ID: "update.update_with_auto_update"},
@@ -339,18 +339,18 @@ async def test_entity_with_auto_update(
 
 
 async def test_entity_with_updates_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test basic update entity with updates available."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     # Entity has an update available
-    state = hass.states.get("update.update_available")
+    state = menuai.states.get("update.update_available")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -358,7 +358,7 @@ async def test_entity_with_updates_available(
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
 
     # Skip skip the update
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SKIP,
         {ATTR_ENTITY_ID: "update.update_available"},
@@ -366,7 +366,7 @@ async def test_entity_with_updates_available(
     )
 
     # The state should have changed to off, skipped version should be set
-    state = hass.states.get("update.update_available")
+    state = menuai.states.get("update.update_available")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -374,7 +374,7 @@ async def test_entity_with_updates_available(
     assert state.attributes[ATTR_SKIPPED_VERSION] == "1.0.1"
 
     # Even though skipped, we can still update if we want to
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.update_available"},
@@ -382,7 +382,7 @@ async def test_entity_with_updates_available(
     )
 
     # The state should have changed to off, skipped version should be set
-    state = hass.states.get("update.update_available")
+    state = menuai.states.get("update.update_available")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.1"
@@ -392,17 +392,17 @@ async def test_entity_with_updates_available(
 
 
 async def test_entity_with_unknown_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update entity that has an unknown version."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.update_unknown")
+    state = menuai.states.get("update.update_unknown")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -410,8 +410,8 @@ async def test_entity_with_unknown_version(
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
 
     # Should not be able to install an update when there is no update available
-    with pytest.raises(HomeAssistantError, match="No update available for"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="No update available for"):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: "update.update_unknown"},
@@ -419,8 +419,8 @@ async def test_entity_with_unknown_version(
         )
 
     # Should not be to skip the update
-    with pytest.raises(HomeAssistantError, match="Cannot skip an unknown version for"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Cannot skip an unknown version for"):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SKIP,
             {ATTR_ENTITY_ID: "update.update_unknown"},
@@ -429,24 +429,24 @@ async def test_entity_with_unknown_version(
 
 
 async def test_entity_with_specific_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update entity that support specific version."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.update_specific_version")
+    state = menuai.states.get("update.update_specific_version")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "1.0.0"
 
     # Update to a specific version
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INSTALL,
         {ATTR_VERSION: "0.9.9", ATTR_ENTITY_ID: "update.update_specific_version"},
@@ -454,7 +454,7 @@ async def test_entity_with_specific_version(
     )
 
     # Version has changed, state should be on as there is an update available
-    state = hass.states.get("update.update_specific_version")
+    state = menuai.states.get("update.update_specific_version")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "0.9.9"
@@ -462,14 +462,14 @@ async def test_entity_with_specific_version(
     assert "Installed update with version: 0.9.9" in caplog.text
 
     # Update back to the latest version
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.update_specific_version"},
         blocking=True,
     )
 
-    state = hass.states.get("update.update_specific_version")
+    state = menuai.states.get("update.update_specific_version")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -477,8 +477,8 @@ async def test_entity_with_specific_version(
     assert "Installed latest update" in caplog.text
 
     # This entity does not support doing a backup before upgrade
-    with pytest.raises(HomeAssistantError, match="Backup is not supported for"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Backup is not supported for"):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,
             {
@@ -491,25 +491,25 @@ async def test_entity_with_specific_version(
 
 
 async def test_entity_with_backup_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update entity with backup support."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     # This entity support backing up before install the update
-    state = hass.states.get("update.update_backup")
+    state = menuai.states.get("update.update_backup")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "1.0.1"
 
     # Without a backup
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INSTALL,
         {
@@ -519,7 +519,7 @@ async def test_entity_with_backup_support(
         blocking=True,
     )
 
-    state = hass.states.get("update.update_backup")
+    state = menuai.states.get("update.update_backup")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.1"
@@ -528,7 +528,7 @@ async def test_entity_with_backup_support(
     assert "Installed latest update" in caplog.text
 
     # Specific version, do create a backup this time
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INSTALL,
         {
@@ -540,7 +540,7 @@ async def test_entity_with_backup_support(
     )
 
     # This entity support backing up before install the update
-    state = hass.states.get("update.update_backup")
+    state = menuai.states.get("update.update_backup")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "0.9.8"
@@ -557,7 +557,7 @@ async def test_entity_with_backup_support(
     ],
 )
 async def test_entity_already_in_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
     entity_id: str,
@@ -565,12 +565,12 @@ async def test_entity_already_in_progress(
     expected_update_percentage: float,
 ) -> None:
     """Test update install already in progress."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_DISPLAY_PRECISION] == expected_display_precision
@@ -580,10 +580,10 @@ async def test_entity_already_in_progress(
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] == expected_update_percentage
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Update installation already in progress for",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: entity_id},
@@ -596,34 +596,34 @@ async def test_entity_already_in_progress(
     )
     entity._attr_in_progress = False
     entity.async_write_ha_state()
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_IN_PROGRESS] is False
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] is None
 
 
 async def test_entity_without_progress_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update entity without progress support.
 
-    In that case, progress is still handled by Home Assistant.
+    In that case, progress is still handled by MenuAI.
     """
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     events = []
     async_track_state_change_event(
-        hass,
+        menuai,
         "update.update_available",
         # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.update_available"},
@@ -643,22 +643,22 @@ async def test_entity_without_progress_support(
 
 
 async def test_entity_without_progress_support_raising(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update entity without progress support that raises during install.
 
-    In that case, progress is still handled by Home Assistant.
+    In that case, progress is still handled by MenuAI.
     """
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     events = []
     async_track_state_change_event(
-        hass,
+        menuai,
         "update.update_available",
         # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
@@ -666,19 +666,19 @@ async def test_entity_without_progress_support_raising(
 
     with (
         patch(
-            "homeassistant.components.update.UpdateEntity.async_install",
+            "menuai.components.update.UpdateEntity.async_install",
             side_effect=RuntimeError,
         ),
         pytest.raises(RuntimeError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: "update.update_available"},
             blocking=True,
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 2
     assert events[0].data.get("old_state").attributes[ATTR_IN_PROGRESS] is False
@@ -693,11 +693,11 @@ async def test_entity_without_progress_support_raising(
 
 
 async def test_restore_state(
-    hass: HomeAssistant, mock_update_entities: list[MockUpdateEntity]
+    menuai: menuai, mock_update_entities: list[MockUpdateEntity]
 ) -> None:
     """Test we restore skipped version state."""
     mock_restore_cache(
-        hass,
+        menuai,
         (
             State(
                 "update.update_available",
@@ -709,12 +709,12 @@ async def test_restore_state(
         ),
     )
 
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.update_available")
+    state = menuai.states.get("update.update_available")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
@@ -723,18 +723,18 @@ async def test_restore_state(
 
 
 async def test_release_notes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test getting the release notes over the websocket connection."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json(
         {
@@ -748,18 +748,18 @@ async def test_release_notes(
 
 
 async def test_release_notes_entity_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test getting the release notes for not found entity."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json(
         {
@@ -774,18 +774,18 @@ async def test_release_notes_entity_not_found(
 
 
 async def test_release_notes_entity_does_not_support_release_notes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_update_entities: list[MockUpdateEntity],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test getting the release notes for entity that does not support release notes."""
-    setup_test_component_platform(hass, DOMAIN, mock_update_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_update_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json(
         {
@@ -804,29 +804,29 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
-async def test_name(hass: HomeAssistant) -> None:
+async def test_name(menuai: menuai) -> None:
     """Test update name."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.UPDATE]
         )
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -858,7 +858,7 @@ async def test_name(hass: HomeAssistant) -> None:
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -866,22 +866,22 @@ async def test_name(hass: HomeAssistant) -> None:
         async_add_entities([entity1, entity2, entity3, entity4])
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state
     assert "device_class" not in state.attributes
     assert "friendly_name" not in state.attributes
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state
     assert state.attributes.get("device_class") == "firmware"
     assert "friendly_name" not in state.attributes
@@ -890,16 +890,16 @@ async def test_name(hass: HomeAssistant) -> None:
         "device_class": "firmware",
         "friendly_name": "Firmware",
     }
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state
     assert expected.items() <= state.attributes.items()
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity4.entity_id)
     assert state
     assert expected.items() <= state.attributes.items()
 
 
-async def test_custom_version_is_newer(hass: HomeAssistant) -> None:
+async def test_custom_version_is_newer(menuai: menuai) -> None:
     """Test UpdateEntity with overridden version_is_newer method."""
 
     class MockUpdateEntity(UpdateEntity):
@@ -916,8 +916,8 @@ async def test_custom_version_is_newer(hass: HomeAssistant) -> None:
             )
 
     update = MockUpdateEntity()
-    update.hass = hass
-    update.platform = MockEntityPlatform(hass)
+    update.menuai = menuai
+    update.platform = MockEntityPlatform(menuai)
 
     STABLE = "20230913-111730/v1.14.0-gcb84623"
     BETA = "20231107-162609/v1.14.1-rc1-g0617c15"
@@ -969,7 +969,7 @@ async def test_custom_version_is_newer(hass: HomeAssistant) -> None:
     ],
 )
 async def test_update_percentage_backwards_compatibility(
-    hass: HomeAssistant,
+    menuai: menuai,
     supported_features: UpdateEntityFeature,
     extra_expected_attributes: list[dict],
 ) -> None:
@@ -984,9 +984,9 @@ async def test_update_percentage_backwards_compatibility(
     update._attr_supported_features = supported_features
     update._attr_title = "Title"
 
-    setup_test_component_platform(hass, DOMAIN, [update])
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    setup_test_component_platform(menuai, DOMAIN, [update])
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     expected_attributes = {
         ATTR_AUTO_UPDATE: False,
@@ -1004,7 +1004,7 @@ async def test_update_percentage_backwards_compatibility(
         ATTR_UPDATE_PERCENTAGE: None,
     }
 
-    state = hass.states.get("update.legacy")
+    state = menuai.states.get("update.legacy")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes == expected_attributes | extra_expected_attributes[0]
@@ -1014,7 +1014,7 @@ async def test_update_percentage_backwards_compatibility(
     for i, in_progress in enumerate(in_progress_list):
         update._attr_in_progress = in_progress
         update.async_write_ha_state()
-        state = hass.states.get("update.legacy")
+        state = menuai.states.get("update.legacy")
         assert state.state == STATE_ON
         assert (
             state.attributes == expected_attributes | extra_expected_attributes[i + 1]

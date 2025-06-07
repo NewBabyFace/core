@@ -1,21 +1,21 @@
 """Test config flow."""
 
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
+from menuai import config_entries
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
 
 from tests.common import MockConfigEntry
 from tests.typing import MqttMockHAClient
 
 
 async def test_mqtt_abort_if_existing_entry(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Check MQTT flow aborts when an entry already exist."""
-    MockConfigEntry(domain="tasmota").add_to_hass(hass)
+    MockConfigEntry(domain="tasmota").add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota", context={"source": config_entries.SOURCE_MQTT}
     )
 
@@ -24,7 +24,7 @@ async def test_mqtt_abort_if_existing_entry(
 
 
 async def test_mqtt_abort_invalid_topic(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Check MQTT flow aborts if discovery topic is invalid."""
     discovery_info = MqttServiceInfo(
@@ -44,7 +44,7 @@ async def test_mqtt_abort_invalid_topic(
         subscribed_topic="tasmota/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota", context={"source": config_entries.SOURCE_MQTT}, data=discovery_info
     )
     assert result["type"] is FlowResultType.ABORT
@@ -58,7 +58,7 @@ async def test_mqtt_abort_invalid_topic(
         subscribed_topic="tasmota/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota", context={"source": config_entries.SOURCE_MQTT}, data=discovery_info
     )
     assert result["type"] is FlowResultType.ABORT
@@ -81,13 +81,13 @@ async def test_mqtt_abort_invalid_topic(
         subscribed_topic="tasmota/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota", context={"source": config_entries.SOURCE_MQTT}, data=discovery_info
     )
     assert result["type"] is FlowResultType.FORM
 
 
-async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_mqtt_setup(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
         topic="tasmota/discovery/DC4F220848A2/config",
@@ -106,25 +106,25 @@ async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> N
         subscribed_topic="tasmota/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota", context={"source": config_entries.SOURCE_MQTT}, data=discovery_info
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {"discovery_prefix": "tasmota/discovery"}
 
 
-async def test_user_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_user_setup(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test we can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
@@ -133,16 +133,16 @@ async def test_user_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> N
 
 
 async def test_user_setup_advanced(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test we can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota",
         context={"source": config_entries.SOURCE_USER, "show_advanced_options": True},
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"discovery_prefix": "test_tasmota/discovery"}
     )
 
@@ -153,16 +153,16 @@ async def test_user_setup_advanced(
 
 
 async def test_user_setup_advanced_strip_wildcard(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test we can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota",
         context={"source": config_entries.SOURCE_USER, "show_advanced_options": True},
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"discovery_prefix": "test_tasmota/discovery/#"}
     )
 
@@ -173,16 +173,16 @@ async def test_user_setup_advanced_strip_wildcard(
 
 
 async def test_user_setup_invalid_topic_prefix(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test abort on invalid discovery topic."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota",
         context={"source": config_entries.SOURCE_USER, "show_advanced_options": True},
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"discovery_prefix": "tasmota/config/##"}
     )
 
@@ -191,12 +191,12 @@ async def test_user_setup_invalid_topic_prefix(
 
 
 async def test_user_single_instance(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test we only allow a single config flow."""
-    MockConfigEntry(domain="tasmota").add_to_hass(hass)
+    MockConfigEntry(domain="tasmota").add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tasmota", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT

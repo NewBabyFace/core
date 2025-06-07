@@ -2,32 +2,32 @@
 
 import pytest
 
-from homeassistant.components.select.const import (
+from menuai.components.select.const import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing select states."""
-    calls = async_mock_service(hass, DOMAIN, SERVICE_SELECT_OPTION)
-    hass.states.async_set(
+    calls = async_mock_service(menuai, DOMAIN, SERVICE_SELECT_OPTION)
+    menuai.states.async_set(
         "select.test",
         "option_one",
         {ATTR_OPTIONS: ["option_one", "option_two", "option_three"]},
     )
 
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("select.test", "option_two"),
         ],
@@ -39,7 +39,7 @@ async def test_reproducing_states(
 
     # Calling it again should not do anything
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("select.test", "option_one"),
         ],
@@ -47,11 +47,11 @@ async def test_reproducing_states(
     assert len(calls) == 1
 
     # Restoring an invalid state should not work either
-    await async_reproduce_state(hass, [State("select.test", "option_four")])
+    await async_reproduce_state(menuai, [State("select.test", "option_four")])
     assert len(calls) == 1
     assert "Invalid state specified" in caplog.text
 
     # Restoring an state for an invalid entity ID logs a warning
-    await async_reproduce_state(hass, [State("select.non_existing", "option_three")])
+    await async_reproduce_state(menuai, [State("select.non_existing", "option_three")])
     assert len(calls) == 1
     assert "Unable to find entity" in caplog.text

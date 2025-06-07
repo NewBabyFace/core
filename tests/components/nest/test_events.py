@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock
 import aiohttp
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util.dt import utcnow
 
 from .common import (
     DEVICE_ID,
@@ -162,7 +162,7 @@ def create_events(events, device_id=DEVICE_ID, timestamp=None):
     ],
 )
 async def test_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     auth,
@@ -173,7 +173,7 @@ async def test_event(
     expected_type,
 ) -> None:
     """Test a pubsub message for a doorbell event."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
 
     entry = entity_registry.async_get("camera.front")
@@ -193,7 +193,7 @@ async def test_event(
 
     timestamp = utcnow()
     await subscriber.async_receive_event(create_event(event_trait, timestamp=timestamp))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     event_time = timestamp.replace(microsecond=0)
     assert len(events) == 1
@@ -213,10 +213,10 @@ async def test_event(
     ],
 )
 async def test_camera_multiple_event(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, subscriber, setup_platform
+    menuai: menuai, entity_registry: er.EntityRegistry, subscriber, setup_platform
 ) -> None:
     """Test a pubsub message for a camera person event."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     entry = entity_registry.async_get("camera.front")
     assert entry is not None
@@ -234,7 +234,7 @@ async def test_camera_multiple_event(
 
     timestamp = utcnow()
     await subscriber.async_receive_event(create_events(event_map, timestamp=timestamp))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     event_time = timestamp.replace(microsecond=0)
     assert len(events) == 2
@@ -255,10 +255,10 @@ async def test_camera_multiple_event(
     [(["sdm.devices.traits.CameraMotion"])],
 )
 async def test_media_not_supported(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, subscriber, setup_platform
+    menuai: menuai, entity_registry: er.EntityRegistry, subscriber, setup_platform
 ) -> None:
     """Test a pubsub message for a camera person event."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     entry = entity_registry.async_get("camera.front")
     assert entry is not None
@@ -272,7 +272,7 @@ async def test_media_not_supported(
 
     timestamp = utcnow()
     await subscriber.async_receive_event(create_events(event_map, timestamp=timestamp))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     event_time = timestamp.replace(microsecond=0)
     assert len(events) == 1
@@ -285,35 +285,35 @@ async def test_media_not_supported(
     assert "attachment" not in events[0].data
 
 
-async def test_unknown_event(hass: HomeAssistant, subscriber, setup_platform) -> None:
+async def test_unknown_event(menuai: menuai, subscriber, setup_platform) -> None:
     """Test a pubsub message for an unknown event type."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     await subscriber.async_receive_event(create_event("some-event-id"))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 0
 
 
 async def test_unknown_device_id(
-    hass: HomeAssistant, subscriber, setup_platform
+    menuai: menuai, subscriber, setup_platform
 ) -> None:
     """Test a pubsub message for an unknown event type."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     await subscriber.async_receive_event(
         create_event("sdm.devices.events.DoorbellChime.Chime", "invalid-device-id")
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 0
 
 
 async def test_event_message_without_device_event(
-    hass: HomeAssistant, subscriber, setup_platform
+    menuai: menuai, subscriber, setup_platform
 ) -> None:
     """Test a pubsub message for an unknown event type."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     timestamp = utcnow()
     event = create_nest_event(
@@ -323,7 +323,7 @@ async def test_event_message_without_device_event(
         },
     )
     await subscriber.async_receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 0
 
@@ -335,10 +335,10 @@ async def test_event_message_without_device_event(
     ],
 )
 async def test_doorbell_event_thread(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, subscriber, setup_platform
+    menuai: menuai, entity_registry: er.EntityRegistry, subscriber, setup_platform
 ) -> None:
     """Test a series of pubsub messages in the same thread."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     entry = entity_registry.async_get("camera.front")
     assert entry is not None
@@ -383,7 +383,7 @@ async def test_doorbell_event_thread(
         }
     )
     await subscriber.async_receive_event(create_nest_event(message_data_2))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # The event is only published once
     assert len(events) == 1
@@ -407,10 +407,10 @@ async def test_doorbell_event_thread(
     ],
 )
 async def test_doorbell_event_session_update(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, subscriber, setup_platform
+    menuai: menuai, entity_registry: er.EntityRegistry, subscriber, setup_platform
 ) -> None:
     """Test a pubsub message with updates to an existing session."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     entry = entity_registry.async_get("camera.front")
     assert entry is not None
@@ -454,7 +454,7 @@ async def test_doorbell_event_session_update(
             timestamp=timestamp2,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 2
     assert event_view(events[0].data) == {
@@ -470,14 +470,14 @@ async def test_doorbell_event_session_update(
 
 
 async def test_structure_update_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     subscriber: AsyncMock,
     setup_platform: PlatformSetup,
     create_device: CreateDevice,
 ) -> None:
     """Test a pubsub message for a new device being added."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
 
     # Entity for first device is registered
@@ -513,9 +513,9 @@ async def test_structure_update_event(
     )
 
     await subscriber.async_receive_event(message)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    # No home assistant events published
+    # No MenuAI events published
     assert not events
 
     assert entity_registry.async_get("camera.front")
@@ -530,10 +530,10 @@ async def test_structure_update_event(
     ],
 )
 async def test_event_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, subscriber, setup_platform
+    menuai: menuai, entity_registry: er.EntityRegistry, subscriber, setup_platform
 ) -> None:
     """Test events published with zone information."""
-    events = async_capture_events(hass, NEST_EVENT)
+    events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
     entry = entity_registry.async_get("camera.front")
     assert entry is not None
@@ -548,7 +548,7 @@ async def test_event_zones(
 
     timestamp = utcnow()
     await subscriber.async_receive_event(create_events(event_map, timestamp=timestamp))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     event_time = timestamp.replace(microsecond=0)
     assert len(events) == 1

@@ -4,13 +4,13 @@ from unittest.mock import MagicMock, patch
 
 from homewizard_energy.errors import DisabledError
 
-from homeassistant.components.homewizard.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components.homewizard.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.components.repairs import (
@@ -22,28 +22,28 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_repair_acquires_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homewizardenergy: MagicMock,
     mock_homewizardenergy_v2: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test repair flow is able to obtain and use token."""
 
-    assert await async_setup_component(hass, "repairs", {})
-    await async_process_repairs_platforms(hass)
-    client = await hass_client()
+    assert await async_setup_component(menuai, "repairs", {})
+    await async_process_repairs_platforms(menuai)
+    client = await menuai_client()
 
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry, unique_id="HWE-BAT_5c2fafabcdef"
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    with patch("homeassistant.components.homewizard.has_v2_api", return_value=True):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.homewizard.has_v2_api", return_value=True):
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 

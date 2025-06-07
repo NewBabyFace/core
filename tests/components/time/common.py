@@ -2,7 +2,7 @@
 
 from datetime import time
 
-from homeassistant.components.time import TimeEntity
+from menuai.components.time import TimeEntity
 
 from tests.common import MockEntity
 

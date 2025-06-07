@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.components.automation import EVENT_AUTOMATION_TRIGGERED
-from homeassistant.components.script import EVENT_SCRIPT_STARTED
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import EVENT_CALL_SERVICE, EVENT_LOGBOOK_ENTRY
+from menuai.components.automation import EVENT_AUTOMATION_TRIGGERED
+from menuai.components.script import EVENT_SCRIPT_STARTED
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import EVENT_CALL_SERVICE, EVENT_LOGBOOK_ENTRY
 
 #
 # Domains that are always continuous

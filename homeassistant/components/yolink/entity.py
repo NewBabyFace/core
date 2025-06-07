@@ -7,11 +7,11 @@ from abc import abstractmethod
 from yolink.client_request import ClientRequest
 from yolink.exception import YoLinkAuthFailError, YoLinkClientError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import YoLinkCoordinator
@@ -36,9 +36,9 @@ class YoLinkEntity(CoordinatorEntity[YoLinkCoordinator]):
         """Return the device id of the YoLink device."""
         return self.coordinator.device.device_id
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Update state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         return self._handle_coordinator_update()
 
     @callback
@@ -70,7 +70,7 @@ class YoLinkEntity(CoordinatorEntity[YoLinkCoordinator]):
             # call_device will check result, fail by raise YoLinkClientError
             await self.coordinator.device.call_device(request)
         except YoLinkAuthFailError as yl_auth_err:
-            self.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(yl_auth_err) from yl_auth_err
+            self.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(yl_auth_err) from yl_auth_err
         except YoLinkClientError as yl_client_err:
-            raise HomeAssistantError(yl_client_err) from yl_client_err
+            raise menuaiError(yl_client_err) from yl_client_err

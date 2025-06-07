@@ -10,12 +10,12 @@ from iottycloud.device import Device
 from iottycloud.shutter import Shutter
 from iottycloud.verbs import OPEN_PERCENTAGE, RESULT, STATUS
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client, device_registry as dr
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client, device_registry as dr
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import api
 from .const import DOMAIN
@@ -52,13 +52,13 @@ class IottyDataUpdateCoordinator(DataUpdateCoordinator[IottyData]):
     _device_registry: dr.DeviceRegistry
 
     def __init__(
-        self, hass: HomeAssistant, entry: IottyConfigEntry, session: OAuth2Session
+        self, menuai: menuai, entry: IottyConfigEntry, session: OAuth2Session
     ) -> None:
         """Initialize the coordinator."""
         _LOGGER.debug("Initializing iotty data update coordinator")
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN}_coordinator",
@@ -68,9 +68,9 @@ class IottyDataUpdateCoordinator(DataUpdateCoordinator[IottyData]):
         self._entities = {}
         self._devices = []
         self.iotty = api.IottyProxy(
-            hass, aiohttp_client.async_get_clientsession(hass), session
+            menuai, aiohttp_client.async_get_clientsession(menuai), session
         )
-        self._device_registry = dr.async_get(hass)
+        self._device_registry = dr.async_get(menuai)
 
     async def _async_setup(self) -> None:
         """Get devices."""

@@ -6,11 +6,11 @@ import asyncio
 
 import voluptuous as vol
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_RTSP_PORT, CONF_STREAM, LOGGER, SERVICE_PTZ, SERVICE_PTZ_PRESET
 from .coordinator import FoscamConfigEntry, FoscamCoordinator
@@ -47,7 +47,7 @@ PTZ_GOTO_PRESET_COMMAND = "ptz_goto_preset"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FoscamConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -83,10 +83,10 @@ async def async_setup_entry(
 
     coordinator = config_entry.runtime_data
 
-    async_add_entities([HassFoscamCamera(coordinator, config_entry)])
+    async_add_entities([menuaiFoscamCamera(coordinator, config_entry)])
 
 
-class HassFoscamCamera(FoscamEntity, Camera):
+class menuaiFoscamCamera(FoscamEntity, Camera):
     """An implementation of a Foscam IP camera."""
 
     _attr_has_entity_name = True
@@ -110,13 +110,13 @@ class HassFoscamCamera(FoscamEntity, Camera):
         if self._rtsp_port:
             self._attr_supported_features = CameraEntityFeature.STREAM
 
-    async def async_added_to_hass(self) -> None:
-        """Handle entity addition to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle entity addition to menuai."""
         # Get motion detection status
 
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-        ret, response = await self.hass.async_add_executor_job(
+        ret, response = await self.menuai.async_add_executor_job(
             self._foscam_session.get_motion_detect_config
         )
 
@@ -214,7 +214,7 @@ class HassFoscamCamera(FoscamEntity, Camera):
 
         movement_function = getattr(self._foscam_session, MOVEMENT_ATTRS[movement])
 
-        ret, _ = await self.hass.async_add_executor_job(movement_function)
+        ret, _ = await self.menuai.async_add_executor_job(movement_function)
 
         if ret != 0:
             LOGGER.error("Error moving %s '%s': %s", movement, self.name, ret)
@@ -222,7 +222,7 @@ class HassFoscamCamera(FoscamEntity, Camera):
 
         await asyncio.sleep(travel_time)
 
-        ret, _ = await self.hass.async_add_executor_job(
+        ret, _ = await self.menuai.async_add_executor_job(
             self._foscam_session.ptz_stop_run
         )
 
@@ -236,7 +236,7 @@ class HassFoscamCamera(FoscamEntity, Camera):
 
         preset_function = getattr(self._foscam_session, PTZ_GOTO_PRESET_COMMAND)
 
-        ret, _ = await self.hass.async_add_executor_job(preset_function, preset_name)
+        ret, _ = await self.menuai.async_add_executor_job(preset_function, preset_name)
 
         if ret != 0:
             LOGGER.error(

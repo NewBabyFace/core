@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from homeassistant.components.ituran.const import (
+from menuai.components.ituran.const import (
     CONF_ID_OR_PASSPORT,
     CONF_MOBILE_ID,
     CONF_PHONE_NUMBER,
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.ituran.async_setup_entry",
+        "menuai.components.ituran.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -68,11 +68,11 @@ def mock_ituran() -> Generator[AsyncMock]:
     """Return a mocked PalazzettiClient."""
     with (
         patch(
-            "homeassistant.components.ituran.coordinator.Ituran",
+            "menuai.components.ituran.coordinator.Ituran",
             autospec=True,
         ) as ituran,
         patch(
-            "homeassistant.components.ituran.config_flow.Ituran",
+            "menuai.components.ituran.config_flow.Ituran",
             new=ituran,
         ),
     ):

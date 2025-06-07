@@ -5,11 +5,11 @@ import asyncio
 import aiohttp
 from aiowebostv import WebOsTvCommandError
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "webostv"
 PLATFORMS = [Platform.MEDIA_PLAYER]
-DATA_HASS_CONFIG = "hass_config"
+DATA_menuai_CONFIG = "menuai_config"
 DEFAULT_NAME = "LG webOS TV"
 
 ATTR_BUTTON = "button"

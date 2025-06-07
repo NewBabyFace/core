@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
+from menuai import data_entry_flow
+from menuai.components.repairs import RepairsFlow
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult
 
 from .config_flow import async_request_token
 
@@ -47,7 +47,7 @@ class MigrateToV2ApiRepairFlow(RepairsFlow):
 
         # Tell device we want a token, user must now press the button within 30 seconds
         # The first attempt will always fail, but this opens the window to press the button
-        token = await async_request_token(self.hass, ip_address)
+        token = await async_request_token(self.menuai, ip_address)
         errors: dict[str, str] | None = None
 
         if token is None:
@@ -57,13 +57,13 @@ class MigrateToV2ApiRepairFlow(RepairsFlow):
             return self.async_show_form(step_id="authorize", errors=errors)
 
         data = {**self.entry.data, CONF_TOKEN: token}
-        self.hass.config_entries.async_update_entry(self.entry, data=data)
-        await self.hass.config_entries.async_reload(self.entry.entry_id)
+        self.menuai.config_entries.async_update_entry(self.entry, data=data)
+        await self.menuai.config_entries.async_reload(self.entry.entry_id)
         return self.async_create_entry(data={})
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:
@@ -72,7 +72,7 @@ async def async_create_fix_flow(
     assert isinstance(data["entry_id"], str)
 
     if issue_id.startswith("migrate_to_v2_api_") and (
-        entry := hass.config_entries.async_get_entry(data["entry_id"])
+        entry := menuai.config_entries.async_get_entry(data["entry_id"])
     ):
         return MigrateToV2ApiRepairFlow(entry)
 

@@ -9,7 +9,7 @@ from typing import Any, Self
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     ATTR_ENTITY_ID,
     CONF_ICON,
@@ -17,16 +17,16 @@ from homeassistant.const import (
     CONF_NAME,
     SERVICE_RELOAD,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.restore_state import RestoreEntity
-import homeassistant.helpers.service
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.restore_state import RestoreEntity
+import menuai.helpers.service
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -108,24 +108,24 @@ CONFIG_SCHEMA = vol.Schema(
 RELOAD_SERVICE_SCHEMA = vol.Schema({})
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up an input select."""
-    component = EntityComponent[Timer](_LOGGER, DOMAIN, hass)
+    component = EntityComponent[Timer](_LOGGER, DOMAIN, menuai)
     id_manager = collection.IDManager()
 
     yaml_collection = collection.YamlCollection(
         logging.getLogger(f"{__name__}.yaml_collection"), id_manager
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, yaml_collection, Timer
+        menuai, DOMAIN, DOMAIN, component, yaml_collection, Timer
     )
 
     storage_collection = TimerStorageCollection(
-        Store(hass, STORAGE_VERSION, STORAGE_KEY),
+        Store(menuai, STORAGE_VERSION, STORAGE_KEY),
         id_manager,
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, storage_collection, Timer
+        menuai, DOMAIN, DOMAIN, component, storage_collection, Timer
     )
 
     await yaml_collection.async_load(
@@ -135,7 +135,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     collection.DictStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, STORAGE_FIELDS, STORAGE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     async def reload_service_handler(service_call: ServiceCall) -> None:
         """Reload yaml entities."""
@@ -146,8 +146,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             [{CONF_ID: id_, **cfg} for id_, cfg in conf.get(DOMAIN, {}).items()]
         )
 
-    homeassistant.helpers.service.async_register_admin_service(
-        hass,
+    menuai.helpers.service.async_register_admin_service(
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         reload_service_handler,
@@ -266,8 +266,8 @@ class Timer(collection.CollectionEntity, RestoreEntity):
         """Return unique id for the entity."""
         return self._config[CONF_ID]  # type: ignore[no-any-return]
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is about to be added to Home Assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is about to be added to MenuAI."""
         # If we don't need to restore a previous state or no previous state exists,
         # start at idle
         if not self._restore or (state := await self.async_get_last_state()) is None:
@@ -324,27 +324,27 @@ class Timer(collection.CollectionEntity, RestoreEntity):
         self._end = start + self._remaining
 
         self.async_write_ha_state()
-        self.hass.bus.async_fire(event, {ATTR_ENTITY_ID: self.entity_id})
+        self.menuai.bus.async_fire(event, {ATTR_ENTITY_ID: self.entity_id})
 
         self._listener = async_track_point_in_utc_time(
-            self.hass, self._async_finished, self._end
+            self.menuai, self._async_finished, self._end
         )
 
     @callback
     def async_change(self, duration: timedelta) -> None:
         """Change duration of a running timer."""
         if self._listener is None or self._end is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Timer {self.entity_id} is not running, only active timers can be changed"
             )
         # Check against new remaining time before checking boundaries
         new_remaining = (self._end + duration) - dt_util.utcnow().replace(microsecond=0)
         if self._remaining and new_remaining > self._running_duration:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Not possible to change timer {self.entity_id} beyond duration"
             )
         if self._remaining and (self._remaining + duration) < timedelta():
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Not possible to change timer {self.entity_id} to negative time remaining"
             )
 
@@ -352,9 +352,9 @@ class Timer(collection.CollectionEntity, RestoreEntity):
         self._end += duration
         self._remaining = new_remaining
         self.async_write_ha_state()
-        self.hass.bus.async_fire(EVENT_TIMER_CHANGED, {ATTR_ENTITY_ID: self.entity_id})
+        self.menuai.bus.async_fire(EVENT_TIMER_CHANGED, {ATTR_ENTITY_ID: self.entity_id})
         self._listener = async_track_point_in_utc_time(
-            self.hass, self._async_finished, self._end
+            self.menuai, self._async_finished, self._end
         )
 
     @callback
@@ -369,7 +369,7 @@ class Timer(collection.CollectionEntity, RestoreEntity):
         self._state = STATUS_PAUSED
         self._end = None
         self.async_write_ha_state()
-        self.hass.bus.async_fire(EVENT_TIMER_PAUSED, {ATTR_ENTITY_ID: self.entity_id})
+        self.menuai.bus.async_fire(EVENT_TIMER_PAUSED, {ATTR_ENTITY_ID: self.entity_id})
 
     @callback
     def async_cancel(self) -> None:
@@ -385,7 +385,7 @@ class Timer(collection.CollectionEntity, RestoreEntity):
         self._remaining = None
         self._running_duration = self._configured_duration
         self.async_write_ha_state()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_TIMER_CANCELLED, {ATTR_ENTITY_ID: self.entity_id}
         )
 
@@ -406,7 +406,7 @@ class Timer(collection.CollectionEntity, RestoreEntity):
         self._remaining = None
         self._running_duration = self._configured_duration
         self.async_write_ha_state()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_TIMER_FINISHED,
             {ATTR_ENTITY_ID: self.entity_id, ATTR_FINISHED_AT: end.isoformat()},
         )
@@ -424,7 +424,7 @@ class Timer(collection.CollectionEntity, RestoreEntity):
         self._remaining = None
         self._running_duration = self._configured_duration
         self.async_write_ha_state()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_TIMER_FINISHED,
             {ATTR_ENTITY_ID: self.entity_id, ATTR_FINISHED_AT: end.isoformat()},
         )

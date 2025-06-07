@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_FAN_MODE,
     ATTR_FAN_MODES,
     ATTR_HVAC_ACTION,
@@ -35,8 +35,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.homeassistant import SERVICE_UPDATE_ENTITY
-from homeassistant.components.modbus.const import (
+from menuai.components.menuai import SERVICE_UPDATE_ENTITY
+from menuai.components.modbus.const import (
     CONF_CLIMATES,
     CONF_DATA_TYPE,
     CONF_DEVICE_ADDRESS,
@@ -87,7 +87,7 @@ from homeassistant.components.modbus.const import (
     MODBUS_DOMAIN,
     DataType,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     CONF_ADDRESS,
@@ -98,8 +98,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, State
-from homeassistant.setup import async_setup_component
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai, State
+from menuai.setup import async_setup_component
 
 from .conftest import TEST_ENTITY_NAME, ReadResult
 
@@ -275,9 +275,9 @@ ENTITY_ID = f"{CLIMATE_DOMAIN}.{TEST_ENTITY_NAME}".replace(" ", "_")
         },
     ],
 )
-async def test_config_climate(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_climate(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for climate."""
-    assert CLIMATE_DOMAIN in hass.config.components
+    assert CLIMATE_DOMAIN in menuai.config.components
 
 
 @pytest.mark.parametrize(
@@ -306,9 +306,9 @@ async def test_config_climate(hass: HomeAssistant, mock_modbus) -> None:
         },
     ],
 )
-async def test_config_hvac_mode_register(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_hvac_mode_register(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for HVAC mode register."""
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert HVACMode.OFF in state.attributes[ATTR_HVAC_MODES]
     assert HVACMode.HEAT in state.attributes[ATTR_HVAC_MODES]
     assert HVACMode.COOL in state.attributes[ATTR_HVAC_MODES]
@@ -343,9 +343,9 @@ async def test_config_hvac_mode_register(hass: HomeAssistant, mock_modbus) -> No
         },
     ],
 )
-async def test_config_fan_mode_register(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_fan_mode_register(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for Fan mode register."""
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert FAN_ON in state.attributes[ATTR_FAN_MODES]
     assert FAN_OFF in state.attributes[ATTR_FAN_MODES]
     assert FAN_AUTO in state.attributes[ATTR_FAN_MODES]
@@ -383,9 +383,9 @@ async def test_config_fan_mode_register(hass: HomeAssistant, mock_modbus) -> Non
         },
     ],
 )
-async def test_config_swing_mode_register(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_swing_mode_register(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for Fan mode register."""
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert SWING_ON in state.attributes[ATTR_SWING_MODES]
     assert SWING_OFF in state.attributes[ATTR_SWING_MODES]
     assert SWING_BOTH in state.attributes[ATTR_SWING_MODES]
@@ -409,9 +409,9 @@ async def test_config_swing_mode_register(hass: HomeAssistant, mock_modbus) -> N
         },
     ],
 )
-async def test_config_hvac_onoff_register(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_hvac_onoff_register(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for On/Off register."""
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert HVACMode.OFF in state.attributes[ATTR_HVAC_MODES]
     assert HVACMode.AUTO in state.attributes[ATTR_HVAC_MODES]
 
@@ -432,9 +432,9 @@ async def test_config_hvac_onoff_register(hass: HomeAssistant, mock_modbus) -> N
         },
     ],
 )
-async def test_config_hvac_onoff_coil(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_hvac_onoff_coil(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for On/Off coil."""
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert HVACMode.OFF in state.attributes[ATTR_HVAC_MODES]
     assert HVACMode.AUTO in state.attributes[ATTR_HVAC_MODES]
 
@@ -457,25 +457,25 @@ async def test_config_hvac_onoff_coil(hass: HomeAssistant, mock_modbus) -> None:
         },
     ],
 )
-async def test_hvac_onoff_values(hass: HomeAssistant, mock_modbus) -> None:
+async def test_hvac_onoff_values(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for On/Off register values."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_modbus.write_register.assert_called_with(11, value=0xAA, slave=10)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_modbus.write_register.assert_called_with(11, value=0xFF, slave=10)
 
@@ -496,25 +496,25 @@ async def test_hvac_onoff_values(hass: HomeAssistant, mock_modbus) -> None:
         },
     ],
 )
-async def test_hvac_onoff_coil(hass: HomeAssistant, mock_modbus) -> None:
+async def test_hvac_onoff_coil(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for On/Off coil values."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_modbus.write_coil.assert_called_with(11, value=1, slave=10)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_modbus.write_coil.assert_called_with(11, value=0, slave=10)
 
@@ -545,10 +545,10 @@ async def test_hvac_onoff_coil(hass: HomeAssistant, mock_modbus) -> None:
     ],
 )
 async def test_temperature_climate(
-    hass: HomeAssistant, expected, mock_do_cycle
+    menuai: menuai, expected, mock_do_cycle
 ) -> None:
     """Run test for given config."""
-    assert hass.states.get(ENTITY_ID).state == expected
+    assert menuai.states.get(ENTITY_ID).state == expected
 
 
 @pytest.mark.parametrize(
@@ -576,9 +576,9 @@ async def test_temperature_climate(
         ),
     ],
 )
-async def test_temperature_error(hass: HomeAssistant, expected, mock_do_cycle) -> None:
+async def test_temperature_error(menuai: menuai, expected, mock_do_cycle) -> None:
     """Run test for given config."""
-    assert hass.states.get(ENTITY_ID).state == expected
+    assert menuai.states.get(ENTITY_ID).state == expected
 
 
 @pytest.mark.parametrize(
@@ -660,18 +660,18 @@ async def test_temperature_error(hass: HomeAssistant, expected, mock_do_cycle) -
     ],
 )
 async def test_service_climate_update(
-    hass: HomeAssistant, mock_modbus_ha, result, register_words
+    menuai: menuai, mock_modbus_ha, result, register_words
 ) -> None:
-    """Run test for service homeassistant.update_entity."""
+    """Run test for service menuai.update_entity."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(register_words)
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == result
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == result
 
 
 @pytest.mark.parametrize(
@@ -776,21 +776,21 @@ async def test_service_climate_update(
     ],
 )
 async def test_hvac_onoff_coil_update(
-    hass: HomeAssistant, mock_modbus_ha, result, register_words, coil_value
+    menuai: menuai, mock_modbus_ha, result, register_words, coil_value
 ) -> None:
     """Test climate update based on On/Off coil values."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(register_words)
     mock_modbus_ha.read_coils.return_value = ReadResult(coil_value)
 
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == result
 
 
@@ -869,18 +869,18 @@ async def test_hvac_onoff_coil_update(
     ],
 )
 async def test_service_climate_action_update(
-    hass: HomeAssistant, mock_modbus_ha, result, register_words
+    menuai: menuai, mock_modbus_ha, result, register_words
 ) -> None:
     """Test HVAC action updates."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(register_words)
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).attributes[ATTR_HVAC_ACTION] == result
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).attributes[ATTR_HVAC_ACTION] == result
 
 
 @pytest.mark.parametrize(
@@ -987,18 +987,18 @@ async def test_service_climate_action_update(
     ],
 )
 async def test_service_climate_fan_update(
-    hass: HomeAssistant, mock_modbus_ha, result, register_words
+    menuai: menuai, mock_modbus_ha, result, register_words
 ) -> None:
-    """Run test for service homeassistant.update_entity."""
+    """Run test for service menuai.update_entity."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(register_words)
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).attributes[ATTR_FAN_MODE] == result
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).attributes[ATTR_FAN_MODE] == result
 
 
 @pytest.mark.parametrize(
@@ -1130,18 +1130,18 @@ async def test_service_climate_fan_update(
     ],
 )
 async def test_service_climate_swing_update(
-    hass: HomeAssistant, mock_modbus_ha, result, register_words
+    menuai: menuai, mock_modbus_ha, result, register_words
 ) -> None:
-    """Run test for service homeassistant.update_entity."""
+    """Run test for service menuai.update_entity."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(register_words)
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).attributes[ATTR_SWING_MODE] == result
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).attributes[ATTR_SWING_MODE] == result
 
 
 @pytest.mark.parametrize(
@@ -1226,11 +1226,11 @@ async def test_service_climate_swing_update(
     ],
 )
 async def test_service_climate_set_temperature(
-    hass: HomeAssistant, temperature, result, mock_modbus_ha
+    menuai: menuai, temperature, result, mock_modbus_ha
 ) -> None:
     """Test set_temperature."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(result)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -1336,12 +1336,12 @@ async def test_service_climate_set_temperature(
     ],
 )
 async def test_service_set_hvac_mode(
-    hass: HomeAssistant, hvac_mode, result, mock_modbus_ha
+    menuai: menuai, hvac_mode, result, mock_modbus_ha
 ) -> None:
     """Test set HVAC mode."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(result)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -1400,11 +1400,11 @@ async def test_service_set_hvac_mode(
     ],
 )
 async def test_service_set_fan_mode(
-    hass: HomeAssistant, fan_mode, result, mock_modbus_ha
+    menuai: menuai, fan_mode, result, mock_modbus_ha
 ) -> None:
     """Test set Fan mode."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(result)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {
@@ -1463,11 +1463,11 @@ async def test_service_set_fan_mode(
     ],
 )
 async def test_service_set_swing_mode(
-    hass: HomeAssistant, swing_mode, result, mock_modbus_ha
+    menuai: menuai, swing_mode, result, mock_modbus_ha
 ) -> None:
     """Test set Swing mode."""
     mock_modbus_ha.read_holding_registers.return_value = ReadResult(result)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_MODE,
         {
@@ -1503,10 +1503,10 @@ test_value.attributes = {ATTR_TEMPERATURE: 37}
     ],
 )
 async def test_restore_state_climate(
-    hass: HomeAssistant, mock_test_state, mock_modbus
+    menuai: menuai, mock_test_state, mock_modbus
 ) -> None:
     """Run test for sensor restore state."""
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == HVACMode.AUTO
     assert state.attributes[ATTR_TEMPERATURE] == 37
 
@@ -1543,20 +1543,20 @@ async def test_restore_state_climate(
         ),
     ],
 )
-async def test_wrong_unpack_climate(hass: HomeAssistant, mock_do_cycle) -> None:
+async def test_wrong_unpack_climate(menuai: menuai, mock_do_cycle) -> None:
     """Run test for sensor."""
-    assert hass.states.get(ENTITY_ID).state == STATE_UNAVAILABLE
+    assert menuai.states.get(ENTITY_ID).state == STATE_UNAVAILABLE
 
 
 async def test_no_discovery_info_climate(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup without discovery info."""
-    assert CLIMATE_DOMAIN not in hass.config.components
+    assert CLIMATE_DOMAIN not in menuai.config.components
     assert await async_setup_component(
-        hass,
+        menuai,
         CLIMATE_DOMAIN,
         {CLIMATE_DOMAIN: {CONF_PLATFORM: MODBUS_DOMAIN}},
     )
-    await hass.async_block_till_done()
-    assert CLIMATE_DOMAIN in hass.config.components
+    await menuai.async_block_till_done()
+    assert CLIMATE_DOMAIN in menuai.config.components

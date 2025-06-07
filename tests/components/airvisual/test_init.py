@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.airvisual import (
+from menuai.components.airvisual import (
     CONF_CITY,
     CONF_GEOGRAPHIES,
     CONF_INTEGRATION_TYPE,
@@ -12,9 +12,9 @@ from homeassistant.components.airvisual import (
     INTEGRATION_TYPE_NODE_PRO,
 )
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.airvisual_pro.const import DOMAIN as AIRVISUAL_PRO_DOMAIN
-from homeassistant.const import (
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.airvisual_pro.const import DOMAIN as AIRVISUAL_PRO_DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_COUNTRY,
     CONF_IP_ADDRESS,
@@ -23,8 +23,8 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_STATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, issue_registry as ir
 
 from .conftest import (
     COORDS_CONFIG,
@@ -43,7 +43,7 @@ from .conftest import (
 from tests.common import MockConfigEntry
 
 
-async def test_migration_1_2(hass: HomeAssistant, mock_pyairvisual) -> None:
+async def test_migration_1_2(menuai: menuai, mock_pyairvisual) -> None:
     """Test migrating from version 1 to 2."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -68,12 +68,12 @@ async def test_migration_1_2(hass: HomeAssistant, mock_pyairvisual) -> None:
         },
         version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    config_entries = hass.config_entries.async_entries(DOMAIN)
+    config_entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(config_entries) == 3
 
     # Ensure that after migration, each configuration has its own config entry:
@@ -103,7 +103,7 @@ async def test_migration_1_2(hass: HomeAssistant, mock_pyairvisual) -> None:
 
 
 async def test_migration_2_3(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyairvisual,
     device_registry: dr.DeviceRegistry,
     issue_registry: ir.IssueRegistry,
@@ -119,7 +119,7 @@ async def test_migration_2_3(
         },
         version=2,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         name="192.168.1.100",
@@ -128,15 +128,15 @@ async def test_migration_2_3(
     )
 
     with patch(
-        "homeassistant.components.airvisual.automation.automations_with_device",
+        "menuai.components.airvisual.automation.automations_with_device",
         return_value=["automation.test_automation"],
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         # Ensure that after migration, the AirVisual Pro device has been moved to the
         # `airvisual_pro` domain and an issue has been created:
         for domain, entry_count in ((DOMAIN, 0), (AIRVISUAL_PRO_DOMAIN, 1)):
-            assert len(hass.config_entries.async_entries(domain)) == entry_count
+            assert len(menuai.config_entries.async_entries(domain)) == entry_count
 
         assert len(issue_registry.issues) == 1

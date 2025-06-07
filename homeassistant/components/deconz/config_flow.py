@@ -19,18 +19,18 @@ from pydeconz.utils import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    SOURCE_HASSIO,
+from menuai.config_entries import (
+    SOURCE_menuaiIO,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_SERIAL, SsdpServiceInfo
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT
+from menuai.core import callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_SERIAL, SsdpServiceInfo
 
 from .const import (
     CONF_ALLOW_CLIP_SENSOR,
@@ -41,7 +41,7 @@ from .const import (
     DEFAULT_ALLOW_NEW_DEVICES,
     DEFAULT_PORT,
     DOMAIN,
-    HASSIO_CONFIGURATION_URL,
+    menuaiIO_CONFIGURATION_URL,
     LOGGER,
 )
 from .hub import DeconzHub
@@ -56,7 +56,7 @@ class DeconzFlowHandler(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    _hassio_discovery: dict[str, Any]
+    _menuaiio_discovery: dict[str, Any]
 
     bridges: list[DiscoveredBridge]
     host: str
@@ -94,7 +94,7 @@ class DeconzFlowHandler(ConfigFlow, domain=DOMAIN):
                     self.port = bridge[CONF_PORT]
                     return await self.async_step_link()
 
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
 
         try:
             async with asyncio.timeout(10):
@@ -148,7 +148,7 @@ class DeconzFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         if user_input is not None:
-            session = aiohttp_client.async_get_clientsession(self.hass)
+            session = aiohttp_client.async_get_clientsession(self.menuai)
             deconz_session = DeconzSession(session, self.host, self.port)
 
             try:
@@ -170,7 +170,7 @@ class DeconzFlowHandler(ConfigFlow, domain=DOMAIN):
     async def _create_entry(self) -> ConfigFlowResult:
         """Create entry for gateway."""
         if not self.bridge_id:
-            session = aiohttp_client.async_get_clientsession(self.hass)
+            session = aiohttp_client.async_get_clientsession(self.menuai)
 
             try:
                 async with asyncio.timeout(10):
@@ -221,7 +221,7 @@ class DeconzFlowHandler(ConfigFlow, domain=DOMAIN):
         parsed_url = urlparse(discovery_info.ssdp_location)
 
         entry = await self.async_set_unique_id(self.bridge_id)
-        if entry and entry.source == SOURCE_HASSIO:
+        if entry and entry.source == SOURCE_menuaiIO:
             return self.async_abort(reason="already_configured")
 
         self.host = cast(str, parsed_url.hostname)
@@ -243,15 +243,15 @@ class DeconzFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_link()
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
-        """Prepare configuration for a Hass.io deCONZ bridge.
+        """Prepare configuration for a menuai.io deCONZ bridge.
 
         This flow is triggered by the discovery component.
         """
         if LOGGER.isEnabledFor(logging.DEBUG):
-            LOGGER.debug("deCONZ HASSIO discovery %s", pformat(discovery_info.config))
+            LOGGER.debug("deCONZ menuaiIO discovery %s", pformat(discovery_info.config))
 
         self.bridge_id = normalize_bridge_id(discovery_info.config[CONF_SERIAL])
         await self.async_set_unique_id(self.bridge_id)
@@ -268,22 +268,22 @@ class DeconzFlowHandler(ConfigFlow, domain=DOMAIN):
             }
         )
 
-        self.context["configuration_url"] = HASSIO_CONFIGURATION_URL
-        self._hassio_discovery = discovery_info.config
+        self.context["configuration_url"] = menuaiIO_CONFIGURATION_URL
+        self._menuaiio_discovery = discovery_info.config
 
-        return await self.async_step_hassio_confirm()
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Confirm a Hass.io discovery."""
+        """Confirm a menuai.io discovery."""
 
         if user_input is not None:
             return await self._create_entry()
 
         return self.async_show_form(
-            step_id="hassio_confirm",
-            description_placeholders={"addon": self._hassio_discovery["addon"]},
+            step_id="menuaiio_confirm",
+            description_placeholders={"addon": self._menuaiio_discovery["addon"]},
         )
 
 

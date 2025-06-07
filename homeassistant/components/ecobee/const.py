@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_FOG,
     ATTR_CONDITION_HAIL,
@@ -15,7 +15,7 @@ from homeassistant.components.weather import (
     ATTR_CONDITION_SUNNY,
     ATTR_CONDITION_WINDY,
 )
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 _LOGGER = logging.getLogger(__package__)
 
@@ -57,9 +57,9 @@ MANUFACTURER = "ecobee"
 
 ECOBEE_AUX_HEAT_ONLY = "auxHeatOnly"
 
-# Translates ecobee API weatherSymbol to Home Assistant usable names
+# Translates ecobee API weatherSymbol to MenuAI usable names
 # https://www.ecobee.com/home/developer/api/documentation/v1/objects/WeatherForecast.shtml
-ECOBEE_WEATHER_SYMBOL_TO_HASS = {
+ECOBEE_WEATHER_SYMBOL_TO_menuai = {
     0: ATTR_CONDITION_SUNNY,
     1: ATTR_CONDITION_PARTLYCLOUDY,
     2: ATTR_CONDITION_PARTLYCLOUDY,

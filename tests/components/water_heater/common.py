@@ -4,7 +4,7 @@ All containing methods are legacy helpers that should not be used by new
 components. Instead call the service directly.
 """
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     _LOGGER,
     ATTR_AWAY_MODE,
     ATTR_OPERATION_MODE,
@@ -15,12 +15,12 @@ from homeassistant.components.water_heater import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, ENTITY_MATCH_ALL
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, ENTITY_MATCH_ALL
+from menuai.core import menuai
 
 
 async def async_set_away_mode(
-    hass: HomeAssistant, away_mode: bool, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, away_mode: bool, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Turn all or specified water_heater devices away mode on."""
     data = {ATTR_AWAY_MODE: away_mode}
@@ -28,11 +28,11 @@ async def async_set_away_mode(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_SET_AWAY_MODE, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_SET_AWAY_MODE, data, blocking=True)
 
 
 async def async_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     temperature: float,
     entity_id: str = ENTITY_MATCH_ALL,
     operation_mode: str | None = None,
@@ -48,13 +48,13 @@ async def async_set_temperature(
         if value is not None
     }
     _LOGGER.debug("set_temperature start data=%s", kwargs)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_SET_TEMPERATURE, kwargs, blocking=True
     )
 
 
 async def async_set_operation_mode(
-    hass: HomeAssistant, operation_mode: str, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, operation_mode: str, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Set new target operation mode."""
     data = {ATTR_OPERATION_MODE: operation_mode}
@@ -62,23 +62,23 @@ async def async_set_operation_mode(
     if entity_id is not None:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_SET_OPERATION_MODE, data, blocking=True
     )
 
 
-async def async_turn_on(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+async def async_turn_on(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Turn all or specified water_heater devices on."""
     data = {}
 
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
 
 
 async def async_turn_off(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Turn all or specified water_heater devices off."""
     data = {}
@@ -86,4 +86,4 @@ async def async_turn_off(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)

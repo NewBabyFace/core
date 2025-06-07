@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, patch
 from ohme import ChargerPower, ChargerStatus
 import pytest
 
-from homeassistant.components.ohme.const import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
+from menuai.components.ohme.const import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -17,13 +17,13 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.ohme.async_setup_entry", return_value=True
+        "menuai.components.ohme.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return the default mocked config entry."""
     return MockConfigEntry(
         title="test@example.com",
@@ -41,11 +41,11 @@ def mock_client():
     """Fixture to mock the OhmeApiClient."""
     with (
         patch(
-            "homeassistant.components.ohme.config_flow.OhmeApiClient",
+            "menuai.components.ohme.config_flow.OhmeApiClient",
             autospec=True,
         ) as client,
         patch(
-            "homeassistant.components.ohme.OhmeApiClient",
+            "menuai.components.ohme.OhmeApiClient",
             new=client,
         ),
     ):

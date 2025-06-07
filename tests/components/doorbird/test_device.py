@@ -6,19 +6,19 @@ from http import HTTPStatus
 from doorbirdpy import DoorBirdScheduleEntry
 import pytest
 
-from homeassistant.components.doorbird.const import CONF_EVENTS
-from homeassistant.core import HomeAssistant
+from menuai.components.doorbird.const import CONF_EVENTS
+from menuai.core import menuai
 
 from .conftest import DoorbirdMockerType
 
 
 async def test_no_configured_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     doorbird_mocker: DoorbirdMockerType,
 ) -> None:
     """Test a doorbird with no events configured."""
     await doorbird_mocker(options={CONF_EVENTS: []})
-    assert not hass.states.async_all("event")
+    assert not menuai.states.async_all("event")
 
 
 async def test_change_schedule_success(

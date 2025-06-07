@@ -9,12 +9,12 @@ from aiohomeconnect.model import HomeAppliance, OptionKey, ProgramKey, SettingKe
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.home_connect.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr
-import homeassistant.helpers.issue_registry as ir
+from menuai.components.home_connect.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import device_registry as dr
+import menuai.helpers.issue_registry as ir
 
 from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator
@@ -176,7 +176,7 @@ SERVICES_SET_PROGRAM_AND_OPTIONS = [
     SERVICE_KV_CALL_PARAMS + SERVICE_COMMAND_CALL_PARAMS + SERVICE_PROGRAM_CALL_PARAMS,
 )
 async def test_key_value_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -195,8 +195,8 @@ async def test_key_value_services(
 
     service_name = service_call["service"]
     service_call["service_data"]["device_id"] = device_entry.id
-    await hass.services.async_call(**service_call)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(**service_call)
+    await menuai.async_block_till_done()
     assert (
         getattr(client, SERVICE_APPLIANCE_METHOD_MAPPING[service_name]).call_count == 1
     )
@@ -223,8 +223,8 @@ async def test_key_value_services(
     ],
 )
 async def test_programs_and_options_actions_deprecation(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     issue_registry: ir.IssueRegistry,
     client: MagicMock,
@@ -244,14 +244,14 @@ async def test_programs_and_options_actions_deprecation(
     )
 
     service_call["service_data"]["device_id"] = device_entry.id
-    await hass.services.async_call(**service_call)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(**service_call)
+    await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 1
     issue = issue_registry.async_get_issue(DOMAIN, issue_id)
     assert issue
 
-    _client = await hass_client()
+    _client = await menuai_client()
     resp = await _client.post(
         "/api/repairs/issues/fix",
         json={"handler": DOMAIN, "issue_id": issue.issue_id},
@@ -263,14 +263,14 @@ async def test_programs_and_options_actions_deprecation(
     assert not issue_registry.async_get_issue(DOMAIN, issue_id)
     assert len(issue_registry.issues) == 0
 
-    await hass.services.async_call(**service_call)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(**service_call)
+    await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 1
     assert issue_registry.async_get_issue(DOMAIN, issue_id)
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert the issue is no longer present
     assert not issue_registry.async_get_issue(DOMAIN, issue_id)
@@ -292,7 +292,7 @@ async def test_programs_and_options_actions_deprecation(
     ),
 )
 async def test_set_program_and_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -312,8 +312,8 @@ async def test_set_program_and_options(
     )
 
     service_call["service_data"]["device_id"] = device_entry.id
-    await hass.services.async_call(**service_call)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(**service_call)
+    await menuai.async_block_till_done()
     method_mock: MagicMock = getattr(client, called_method)
     assert method_mock.call_count == 1
     assert method_mock.call_args == snapshot
@@ -334,7 +334,7 @@ async def test_set_program_and_options(
     ),
 )
 async def test_set_program_and_options_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
@@ -353,8 +353,8 @@ async def test_set_program_and_options_exceptions(
     )
 
     service_call["service_data"]["device_id"] = device_entry.id
-    with pytest.raises(HomeAssistantError, match=error_regex):
-        await hass.services.async_call(**service_call)
+    with pytest.raises(menuaiError, match=error_regex):
+        await menuai.services.async_call(**service_call)
 
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
@@ -363,7 +363,7 @@ async def test_set_program_and_options_exceptions(
     SERVICE_KV_CALL_PARAMS + SERVICE_COMMAND_CALL_PARAMS + SERVICE_PROGRAM_CALL_PARAMS,
 )
 async def test_services_exception_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
@@ -371,7 +371,7 @@ async def test_services_exception_device_id(
     appliance: HomeAppliance,
     service_call: dict[str, Any],
 ) -> None:
-    """Raise a HomeAssistantError when there is an API error."""
+    """Raise a menuaiError when there is an API error."""
     assert await integration_setup(client_with_exception)
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -382,12 +382,12 @@ async def test_services_exception_device_id(
 
     service_call["service_data"]["device_id"] = device_entry.id
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(**service_call)
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(**service_call)
 
 
 async def test_services_appliance_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -402,12 +402,12 @@ async def test_services_appliance_not_found(
     service_call["service_data"]["device_id"] = "DOES_NOT_EXISTS"
 
     with pytest.raises(ServiceValidationError, match=r"Device entry.*not found"):
-        await hass.services.async_call(**service_call)
+        await menuai.services.async_call(**service_call)
 
     unrelated_config_entry = MockConfigEntry(
         domain="TEST",
     )
-    unrelated_config_entry.add_to_hass(hass)
+    unrelated_config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=unrelated_config_entry.entry_id,
         identifiers={("RANDOM", "ABCD")},
@@ -415,7 +415,7 @@ async def test_services_appliance_not_found(
     service_call["service_data"]["device_id"] = device_entry.id
 
     with pytest.raises(ServiceValidationError, match=r"Config entry.*not found"):
-        await hass.services.async_call(**service_call)
+        await menuai.services.async_call(**service_call)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -424,7 +424,7 @@ async def test_services_appliance_not_found(
     service_call["service_data"]["device_id"] = device_entry.id
 
     with pytest.raises(ServiceValidationError, match=r"Appliance.*not found"):
-        await hass.services.async_call(**service_call)
+        await menuai.services.async_call(**service_call)
 
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
@@ -433,7 +433,7 @@ async def test_services_appliance_not_found(
     SERVICE_KV_CALL_PARAMS + SERVICE_COMMAND_CALL_PARAMS + SERVICE_PROGRAM_CALL_PARAMS,
 )
 async def test_services_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
@@ -454,7 +454,7 @@ async def test_services_exception(
 
     service_name = service_call["service"]
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=SERVICE_VALIDATION_ERROR_MAPPING[service_name],
     ):
-        await hass.services.async_call(**service_call)
+        await menuai.services.async_call(**service_call)

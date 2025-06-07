@@ -7,11 +7,11 @@ from typing import Any
 from aioridwell.errors import RidwellError
 from aioridwell.model import EventState, RidwellAccount
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import RidwellDataUpdateCoordinator
@@ -24,12 +24,12 @@ SWITCH_DESCRIPTION = SwitchEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Ridwell sensors based on a config entry."""
-    coordinator: RidwellDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RidwellDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         RidwellSwitch(coordinator, account, SWITCH_DESCRIPTION)
@@ -62,7 +62,7 @@ class RidwellSwitch(RidwellEntity, SwitchEntity):
         try:
             await self.next_pickup_event.async_opt_out()
         except RidwellError as err:
-            raise HomeAssistantError(f"Error while opting out: {err}") from err
+            raise menuaiError(f"Error while opting out: {err}") from err
 
         await self.coordinator.async_request_refresh()
 
@@ -71,6 +71,6 @@ class RidwellSwitch(RidwellEntity, SwitchEntity):
         try:
             await self.next_pickup_event.async_opt_in()
         except RidwellError as err:
-            raise HomeAssistantError(f"Error while opting in: {err}") from err
+            raise menuaiError(f"Error while opting in: {err}") from err
 
         await self.coordinator.async_request_refresh()

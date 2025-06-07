@@ -10,9 +10,9 @@ from aionotion.sensor.models import Sensor
 from aionotion.user.models import UserPreferences
 import pytest
 
-from homeassistant.components.notion import CONF_REFRESH_TOKEN, CONF_USER_UUID, DOMAIN
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.notion import CONF_REFRESH_TOKEN, CONF_USER_UUID, DOMAIN
+from menuai.const import CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -26,7 +26,7 @@ TEST_USER_UUID = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.notion.async_setup_entry", return_value=True
+        "menuai.components.notion.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -70,10 +70,10 @@ def client_fixture(data_bridge, data_listener, data_sensor, data_user_preference
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(hass: HomeAssistant, config):
+def config_entry_fixture(menuai: menuai, config):
     """Define a config entry fixture."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id=TEST_USERNAME, data=config)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -122,15 +122,15 @@ async def mock_aionotion_fixture(client):
     """Define a fixture to patch aionotion."""
     with (
         patch(
-            "homeassistant.components.notion.async_get_client_with_credentials",
+            "menuai.components.notion.async_get_client_with_credentials",
             AsyncMock(return_value=client),
         ),
         patch(
-            "homeassistant.components.notion.async_get_client_with_refresh_token",
+            "menuai.components.notion.async_get_client_with_refresh_token",
             AsyncMock(return_value=client),
         ),
         patch(
-            "homeassistant.components.notion.config_flow.async_get_client_with_credentials",
+            "menuai.components.notion.config_flow.async_get_client_with_credentials",
             AsyncMock(return_value=client),
         ),
     ):
@@ -138,7 +138,7 @@ async def mock_aionotion_fixture(client):
 
 
 @pytest.fixture(name="setup_config_entry")
-async def setup_config_entry_fixture(hass: HomeAssistant, config_entry, mock_aionotion):
+async def setup_config_entry_fixture(menuai: menuai, config_entry, mock_aionotion):
     """Define a fixture to set up notion."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

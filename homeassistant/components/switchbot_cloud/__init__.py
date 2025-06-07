@@ -15,11 +15,11 @@ from switchbot_api import (
     SwitchBotConnectionError,
 )
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_API_TOKEN, CONF_WEBHOOK_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_API_TOKEN, CONF_WEBHOOK_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN, ENTRY_TITLE
 from .coordinator import SwitchBotCoordinator
@@ -62,7 +62,7 @@ class SwitchbotCloudData:
 
 
 async def coordinator_for_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     api: SwitchBotAPI,
     device: Device | Remote,
@@ -72,7 +72,7 @@ async def coordinator_for_device(
     """Instantiate coordinator and adds to list for gathering."""
     coordinator = coordinators_by_id.setdefault(
         device.device_id,
-        SwitchBotCoordinator(hass, entry, api, device, manageable_by_webhook),
+        SwitchBotCoordinator(menuai, entry, api, device, manageable_by_webhook),
     )
 
     if coordinator.data is None:
@@ -82,7 +82,7 @@ async def coordinator_for_device(
 
 
 async def make_switchbot_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     api: SwitchBotAPI,
     devices: list[Device | Remote],
@@ -92,7 +92,7 @@ async def make_switchbot_devices(
     devices_data = SwitchbotDevices()
     await gather(
         *[
-            make_device_data(hass, entry, api, device, devices_data, coordinators_by_id)
+            make_device_data(menuai, entry, api, device, devices_data, coordinators_by_id)
             for device in devices
         ]
     )
@@ -101,7 +101,7 @@ async def make_switchbot_devices(
 
 
 async def make_device_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     api: SwitchBotAPI,
     device: Device | Remote,
@@ -111,7 +111,7 @@ async def make_device_data(
     """Make device data."""
     if isinstance(device, Remote) and device.device_type.endswith("Air Conditioner"):
         coordinator = await coordinator_for_device(
-            hass, entry, api, device, coordinators_by_id
+            menuai, entry, api, device, coordinators_by_id
         )
         devices_data.climates.append((device, coordinator))
     if (
@@ -122,7 +122,7 @@ async def make_device_data(
         )
     ) or isinstance(device, Remote):
         coordinator = await coordinator_for_device(
-            hass, entry, api, device, coordinators_by_id
+            menuai, entry, api, device, coordinators_by_id
         )
         devices_data.switches.append((device, coordinator))
 
@@ -138,7 +138,7 @@ async def make_device_data(
         "Plug Mini (JP)",
     ]:
         coordinator = await coordinator_for_device(
-            hass, entry, api, device, coordinators_by_id
+            menuai, entry, api, device, coordinators_by_id
         )
         devices_data.sensors.append((device, coordinator))
 
@@ -149,13 +149,13 @@ async def make_device_data(
         "Robot Vacuum Cleaner S1 Plus",
     ]:
         coordinator = await coordinator_for_device(
-            hass, entry, api, device, coordinators_by_id, True
+            menuai, entry, api, device, coordinators_by_id, True
         )
         devices_data.vacuums.append((device, coordinator))
 
     if isinstance(device, Device) and device.device_type.startswith("Smart Lock"):
         coordinator = await coordinator_for_device(
-            hass, entry, api, device, coordinators_by_id
+            menuai, entry, api, device, coordinators_by_id
         )
         devices_data.locks.append((device, coordinator))
         devices_data.sensors.append((device, coordinator))
@@ -163,7 +163,7 @@ async def make_device_data(
 
     if isinstance(device, Device) and device.device_type in ["Bot"]:
         coordinator = await coordinator_for_device(
-            hass, entry, api, device, coordinators_by_id
+            menuai, entry, api, device, coordinators_by_id
         )
         devices_data.sensors.append((device, coordinator))
         if coordinator.data is not None:
@@ -173,7 +173,7 @@ async def make_device_data(
                 devices_data.switches.append((device, coordinator))
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up SwitchBot via API from a config entry."""
     token = entry.data[CONF_API_TOKEN]
     secret = entry.data[CONF_API_KEY]
@@ -192,30 +192,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinators_by_id: dict[str, SwitchBotCoordinator] = {}
 
     switchbot_devices = await make_switchbot_devices(
-        hass, entry, api, devices, coordinators_by_id
+        menuai, entry, api, devices, coordinators_by_id
     )
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = SwitchbotCloudData(
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = SwitchbotCloudData(
         api=api, devices=switchbot_devices
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    await _initialize_webhook(hass, entry, api, coordinators_by_id)
+    await _initialize_webhook(menuai, entry, api, coordinators_by_id)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
 async def _initialize_webhook(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     api: SwitchBotAPI,
     coordinators_by_id: dict[str, SwitchBotCoordinator],
@@ -231,7 +231,7 @@ async def _initialize_webhook(
                 # create new id and new conf
                 new_data[CONF_WEBHOOK_ID] = webhook.async_generate_id()
 
-            hass.config_entries.async_update_entry(entry, data=new_data)
+            menuai.config_entries.async_update_entry(entry, data=new_data)
 
         # register webhook
         webhook_name = ENTRY_TITLE
@@ -240,7 +240,7 @@ async def _initialize_webhook(
 
         with contextlib.suppress(Exception):
             webhook.async_register(
-                hass,
+                menuai,
                 DOMAIN,
                 webhook_name,
                 entry.data[CONF_WEBHOOK_ID],
@@ -248,7 +248,7 @@ async def _initialize_webhook(
             )
 
         webhook_url = webhook.async_generate_url(
-            hass,
+            menuai,
             entry.data[CONF_WEBHOOK_ID],
         )
 
@@ -281,7 +281,7 @@ async def _initialize_webhook(
         if need_add_webhook:
             # call api for register webhookurl
             await api.setup_webhook(webhook_url)
-            _LOGGER.debug("Registered Switchbot cloud webhook at hass: %s", webhook_url)
+            _LOGGER.debug("Registered Switchbot cloud webhook at menuai: %s", webhook_url)
 
         for coordinator in coordinators_by_id.values():
             coordinator.webhook_subscription_listener(True)
@@ -291,11 +291,11 @@ async def _initialize_webhook(
 
 def _create_handle_webhook(
     coordinators_by_id: dict[str, SwitchBotCoordinator],
-) -> Callable[[HomeAssistant, str, web.Request], Awaitable[None]]:
+) -> Callable[[menuai, str, web.Request], Awaitable[None]]:
     """Create a webhook handler."""
 
     async def _internal_handle_webhook(
-        hass: HomeAssistant, webhook_id: str, request: web.Request
+        menuai: menuai, webhook_id: str, request: web.Request
     ) -> None:
         """Handle webhook callback."""
         if not request.body_exists:

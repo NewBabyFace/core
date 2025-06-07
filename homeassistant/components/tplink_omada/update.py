@@ -9,14 +9,14 @@ from tplink_omada_client import OmadaSiteClient
 from tplink_omada_client.devices import OmadaFirmwareUpdate, OmadaListDevice
 from tplink_omada_client.exceptions import OmadaClientException, RequestFailed
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OmadaConfigEntry
 from .coordinator import POLL_DEVICES, OmadaCoordinator, OmadaDevicesCoordinator
@@ -32,19 +32,19 @@ class FirmwareUpdateStatus(NamedTuple):
     firmware: OmadaFirmwareUpdate | None
 
 
-class OmadaFirmwareUpdateCoordinator(OmadaCoordinator[FirmwareUpdateStatus]):  # pylint: disable=hass-enforce-class-module
+class OmadaFirmwareUpdateCoordinator(OmadaCoordinator[FirmwareUpdateStatus]):  # pylint: disable=menuai-enforce-class-module
     """Coordinator for getting details about available firmware updates for Omada devices."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OmadaConfigEntry,
         omada_client: OmadaSiteClient,
         devices_coordinator: OmadaDevicesCoordinator,
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass, config_entry, omada_client, "Firmware Updates", poll_delay=None
+            menuai, config_entry, omada_client, "Firmware Updates", poll_delay=None
         )
 
         self._devices_coordinator = devices_coordinator
@@ -86,12 +86,12 @@ class OmadaFirmwareUpdateCoordinator(OmadaCoordinator[FirmwareUpdateStatus]):  #
         """Handle updated data from the devices coordinator."""
         # Trigger a refresh of our data, based on the updated device list
         self._config_entry.async_create_background_task(
-            self.hass, self.async_request_refresh(), "Omada Firmware Update Refresh"
+            self.menuai, self.async_request_refresh(), "Omada Firmware Update Refresh"
         )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OmadaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -101,7 +101,7 @@ async def async_setup_entry(
     devices = controller.devices_coordinator.data
 
     coordinator = OmadaFirmwareUpdateCoordinator(
-        hass, config_entry, controller.omada_client, controller.devices_coordinator
+        menuai, config_entry, controller.omada_client, controller.devices_coordinator
     )
 
     async_add_entities(
@@ -152,9 +152,9 @@ class OmadaDeviceUpdate(
                 self.coordinator.data[self._mac].device
             )
         except RequestFailed as ex:
-            raise HomeAssistantError("Firmware update request rejected") from ex
+            raise menuaiError("Firmware update request rejected") from ex
         except OmadaClientException as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Unable to send Firmware update request. Check the controller is online."
             ) from ex
         finally:

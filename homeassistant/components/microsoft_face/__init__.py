@@ -12,17 +12,17 @@ import aiohttp
 from aiohttp.hdrs import CONTENT_TYPE
 import voluptuous as vol
 
-from homeassistant.components import camera
-from homeassistant.const import ATTR_NAME, CONF_API_KEY, CONF_TIMEOUT, CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify
-from homeassistant.util.hass_dict import HassKey
+from menuai.components import camera
+from menuai.const import ATTR_NAME, CONF_API_KEY, CONF_TIMEOUT, CONTENT_TYPE_JSON
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.util import slugify
+from menuai.util.menuai_dict import menuaiKey
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ CONF_AZURE_REGION = "azure_region"
 
 DEFAULT_TIMEOUT = 10
 DOMAIN = "microsoft_face"
-DATA_MICROSOFT_FACE: HassKey[MicrosoftFace] = HassKey(DOMAIN)
+DATA_MICROSOFT_FACE: menuaiKey[MicrosoftFace] = menuaiKey(DOMAIN)
 
 FACE_API_URL = "api.cognitive.microsoft.com/face/v1.0/{0}"
 
@@ -75,10 +75,10 @@ SCHEMA_FACE_SERVICE = vol.Schema(
 SCHEMA_TRAIN_SERVICE = vol.Schema({vol.Required(ATTR_GROUP): cv.slugify})
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Microsoft Face."""
     component = EntityComponent[MicrosoftFaceGroupEntity](
-        logging.getLogger(__name__), DOMAIN, hass
+        logging.getLogger(__name__), DOMAIN, menuai
     )
     entities: dict[str, MicrosoftFaceGroupEntity] = {}
     domain_config: dict[str, Any] = config[DOMAIN]
@@ -86,7 +86,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     api_key: str = domain_config[CONF_API_KEY]
     timeout: int = domain_config[CONF_TIMEOUT]
     face = MicrosoftFace(
-        hass,
+        menuai,
         azure_region,
         api_key,
         timeout,
@@ -97,11 +97,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     try:
         # read exists group/person from cloud and create entities
         await face.update_store()
-    except HomeAssistantError as err:
+    except menuaiError as err:
         _LOGGER.error("Can't load data from face api: %s", err)
         return False
 
-    hass.data[DATA_MICROSOFT_FACE] = face
+    menuai.data[DATA_MICROSOFT_FACE] = face
 
     async def async_create_group(service: ServiceCall) -> None:
         """Create a new person group."""
@@ -117,10 +117,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             entities[g_id] = MicrosoftFaceGroupEntity(face, g_id, name)
             await component.async_add_entities([entities[g_id]])
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Can't create group '%s' with error: %s", g_id, err)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_CREATE_GROUP, async_create_group, schema=SCHEMA_GROUP_SERVICE
     )
 
@@ -134,10 +134,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             entity = entities.pop(g_id)
             await component.async_remove_entity(entity.entity_id)
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Can't delete group '%s' with error: %s", g_id, err)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_DELETE_GROUP, async_delete_group, schema=SCHEMA_GROUP_SERVICE
     )
 
@@ -147,10 +147,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         try:
             await face.call_api("post", f"persongroups/{g_id}/train")
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Can't train group '%s' with error: %s", g_id, err)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TRAIN_GROUP, async_train_group, schema=SCHEMA_TRAIN_SERVICE
     )
 
@@ -166,10 +166,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             face.store[g_id][name] = user_data["personId"]
             entities[g_id].async_write_ha_state()
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Can't create person '%s' with error: %s", name, err)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_CREATE_PERSON, async_create_person, schema=SCHEMA_PERSON_SERVICE
     )
 
@@ -184,10 +184,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             face.store[g_id].pop(name)
             entities[g_id].async_write_ha_state()
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Can't delete person '%s' with error: %s", p_id, err)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_DELETE_PERSON, async_delete_person, schema=SCHEMA_PERSON_SERVICE
     )
 
@@ -199,7 +199,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         camera_entity = service.data[ATTR_CAMERA_ENTITY]
 
         try:
-            image = await camera.async_get_image(hass, camera_entity)
+            image = await camera.async_get_image(menuai, camera_entity)
 
             await face.call_api(
                 "post",
@@ -207,12 +207,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 image.content,
                 binary=True,
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error(
                 "Can't add an image of a person '%s' with error: %s", p_id, err
             )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_FACE_PERSON, async_face_person, schema=SCHEMA_FACE_SERVICE
     )
 
@@ -243,11 +243,11 @@ class MicrosoftFaceGroupEntity(Entity):
 
 
 class MicrosoftFace:
-    """Microsoft Face api for Home Assistant."""
+    """Microsoft Face api for MenuAI."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         server_loc: str,
         api_key: str,
         timeout: int,
@@ -255,8 +255,8 @@ class MicrosoftFace:
         entities: dict[str, MicrosoftFaceGroupEntity],
     ) -> None:
         """Initialize Microsoft Face api."""
-        self.hass = hass
-        self.websession = async_get_clientsession(hass)
+        self.menuai = menuai
+        self.websession = async_get_clientsession(menuai)
         self.timeout = timeout
         self._api_key = api_key
         self._server_url = f"https://{server_loc}.{FACE_API_URL}"
@@ -327,7 +327,7 @@ class MicrosoftFace:
             _LOGGER.warning(
                 "Error %d microsoft face api %s", response.status, response.url
             )
-            raise HomeAssistantError(answer["error"]["message"])
+            raise menuaiError(answer["error"]["message"])
 
         except aiohttp.ClientError:
             _LOGGER.warning("Can't connect to microsoft face api")
@@ -335,4 +335,4 @@ class MicrosoftFace:
         except TimeoutError:
             _LOGGER.warning("Timeout from microsoft face api %s", response.url)
 
-        raise HomeAssistantError("Network error on microsoft face api.")
+        raise menuaiError("Network error on microsoft face api.")

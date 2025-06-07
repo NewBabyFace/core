@@ -11,7 +11,7 @@ import pyvera as pv
 from requests.exceptions import RequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IMPORT,
     SOURCE_USER,
     ConfigEntry,
@@ -19,10 +19,10 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_EXCLUDE, CONF_LIGHTS, CONF_SOURCE
-from homeassistant.core import callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_EXCLUDE, CONF_LIGHTS, CONF_SOURCE
+from menuai.core import callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.typing import VolDictType
 
 from .const import CONF_CONTROLLER, CONF_LEGACY_UNIQUE_ID, DOMAIN
 
@@ -128,7 +128,7 @@ class VeraFlowHandler(ConfigFlow, domain=DOMAIN):
 
         # If there are entities with the legacy unique_id, then this imported config
         # should also use the legacy unique_id for entity creation.
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         use_legacy_unique_id = (
             len(
                 [
@@ -155,7 +155,7 @@ class VeraFlowHandler(ConfigFlow, domain=DOMAIN):
 
         # Verify the controller is online and get the serial number.
         try:
-            await self.hass.async_add_executor_job(controller.refresh_data)
+            await self.menuai.async_add_executor_job(controller.refresh_data)
         except RequestException:
             _LOGGER.error("Failed to connect to vera controller %s", base_url)
             return self.async_abort(

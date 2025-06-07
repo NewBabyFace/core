@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from homeassistant.components.energy import data, is_configured
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.statistics import async_add_external_statistics
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.energy import data, is_configured
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.statistics import async_add_external_statistics
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, flush_store, mock_platform
 from tests.components.recorder.common import (
@@ -21,17 +21,17 @@ from tests.typing import WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-async def setup_integration(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def setup_integration(recorder_mock: Recorder, menuai: menuai) -> None:
     """Set up the integration."""
-    assert await async_setup_component(hass, "energy", {})
+    assert await async_setup_component(menuai, "energy", {})
 
 
 @pytest.fixture
-def mock_energy_platform(hass: HomeAssistant) -> None:
+def mock_energy_platform(menuai: menuai) -> None:
     """Mock an energy platform."""
-    hass.config.components.add("some_domain")
+    menuai.config.components.add("some_domain")
     mock_platform(
-        hass,
+        menuai,
         "some_domain.energy",
         Mock(
             async_get_solar_forecast=AsyncMock(
@@ -47,10 +47,10 @@ def mock_energy_platform(hass: HomeAssistant) -> None:
 
 
 async def test_get_preferences_no_data(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we get error if no preferences set."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 5, "type": "energy/get_prefs"})
 
@@ -62,17 +62,17 @@ async def test_get_preferences_no_data(
 
 
 async def test_get_preferences_default(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test we get preferences."""
-    assert not await is_configured(hass)
-    manager = await data.async_get_manager(hass)
+    assert not await is_configured(menuai)
+    manager = await data.async_get_manager(menuai)
     manager.data = data.EnergyManager.default_preferences()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    assert not await is_configured(hass)
+    assert not await is_configured(menuai)
 
     await client.send_json({"id": 5, "type": "energy/get_prefs"})
 
@@ -84,14 +84,14 @@ async def test_get_preferences_default(
 
 
 async def test_save_preferences(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
     mock_energy_platform,
 ) -> None:
     """Test we can save preferences."""
-    await hass.async_block_till_done()
-    client = await hass_ws_client(hass)
+    await menuai.async_block_till_done()
+    client = await menuai_ws_client(menuai)
 
     # Test saving default prefs is also valid.
     default_prefs = data.EnergyManager.default_preferences()
@@ -166,13 +166,13 @@ async def test_save_preferences(
     assert msg["success"]
     assert msg["result"] == new_prefs
 
-    assert data.STORAGE_KEY not in hass_storage, "expected not to be written yet"
+    assert data.STORAGE_KEY not in menuai_storage, "expected not to be written yet"
 
-    await flush_store((await data.async_get_manager(hass))._store)
+    await flush_store((await data.async_get_manager(menuai))._store)
 
-    assert hass_storage[data.STORAGE_KEY]["data"] == new_prefs
+    assert menuai_storage[data.STORAGE_KEY]["data"] == new_prefs
 
-    assert await is_configured(hass)
+    assert await is_configured(menuai)
 
     # Verify info reflects data.
     await client.send_json({"id": 7, "type": "energy/info"})
@@ -225,10 +225,10 @@ async def test_save_preferences(
 
 
 async def test_handle_duplicate_from_stat(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we handle duplicate from stats."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -266,10 +266,10 @@ async def test_handle_duplicate_from_stat(
 
 
 async def test_validate(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can validate the preferences."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 5, "type": "energy/validate"})
 
@@ -284,13 +284,13 @@ async def test_validate(
 
 
 async def test_get_solar_forecast(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, mock_energy_platform
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, mock_energy_platform
 ) -> None:
     """Test we get preferences."""
     entry = MockConfigEntry(domain="some_domain")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    manager = await data.async_get_manager(hass)
+    manager = await data.async_get_manager(menuai)
 
     manager.data = data.EnergyManager.default_preferences()
     manager.data["energy_sources"].append(
@@ -300,8 +300,8 @@ async def test_get_solar_forecast(
             "config_entry_solar_forecast": [entry.entry_id],
         }
     )
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 5, "type": "energy/solar_forecast"})
 
@@ -321,15 +321,15 @@ async def test_get_solar_forecast(
 
 @pytest.mark.freeze_time("2021-08-01 00:00:00+00:00")
 async def test_fossil_energy_consumption_no_co2(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test fossil_energy_consumption when co2 data is missing."""
     now = dt_util.utcnow()
     later = dt_util.as_utc(dt_util.parse_datetime("2022-09-01 00:00:00"))
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     period1 = dt_util.as_utc(dt_util.parse_datetime("2021-09-01 00:00:00"))
     period2 = dt_util.as_utc(dt_util.parse_datetime("2021-09-30 23:00:00"))
@@ -408,14 +408,14 @@ async def test_fossil_energy_consumption_no_co2(
     }
 
     async_add_external_statistics(
-        hass, external_energy_metadata_1, external_energy_statistics_1
+        menuai, external_energy_metadata_1, external_energy_statistics_1
     )
     async_add_external_statistics(
-        hass, external_energy_metadata_2, external_energy_statistics_2
+        menuai, external_energy_metadata_2, external_energy_statistics_2
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -486,15 +486,15 @@ async def test_fossil_energy_consumption_no_co2(
 
 @pytest.mark.freeze_time("2021-08-01 00:00:00+00:00")
 async def test_fossil_energy_consumption_hole(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test fossil_energy_consumption when some data points lack sum."""
     now = dt_util.utcnow()
     later = dt_util.as_utc(dt_util.parse_datetime("2022-09-01 00:00:00"))
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     period1 = dt_util.as_utc(dt_util.parse_datetime("2021-09-01 00:00:00"))
     period2 = dt_util.as_utc(dt_util.parse_datetime("2021-09-30 23:00:00"))
@@ -573,14 +573,14 @@ async def test_fossil_energy_consumption_hole(
     }
 
     async_add_external_statistics(
-        hass, external_energy_metadata_1, external_energy_statistics_1
+        menuai, external_energy_metadata_1, external_energy_statistics_1
     )
     async_add_external_statistics(
-        hass, external_energy_metadata_2, external_energy_statistics_2
+        menuai, external_energy_metadata_2, external_energy_statistics_2
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -651,15 +651,15 @@ async def test_fossil_energy_consumption_hole(
 
 @pytest.mark.freeze_time("2021-08-01 00:00:00+00:00")
 async def test_fossil_energy_consumption_no_data(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test fossil_energy_consumption when there is no data."""
     now = dt_util.utcnow()
     later = dt_util.as_utc(dt_util.parse_datetime("2022-09-01 00:00:00"))
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     period1 = dt_util.as_utc(dt_util.parse_datetime("2021-09-01 00:00:00"))
     period2 = dt_util.as_utc(dt_util.parse_datetime("2021-09-30 23:00:00"))
@@ -736,14 +736,14 @@ async def test_fossil_energy_consumption_no_data(
     }
 
     async_add_external_statistics(
-        hass, external_energy_metadata_1, external_energy_statistics_1
+        menuai, external_energy_metadata_1, external_energy_statistics_1
     )
     async_add_external_statistics(
-        hass, external_energy_metadata_2, external_energy_statistics_2
+        menuai, external_energy_metadata_2, external_energy_statistics_2
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -801,15 +801,15 @@ async def test_fossil_energy_consumption_no_data(
 
 @pytest.mark.freeze_time("2021-08-01 00:00:00+00:00")
 async def test_fossil_energy_consumption(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test fossil_energy_consumption with co2 sensor data."""
     now = dt_util.utcnow()
     later = dt_util.as_utc(dt_util.parse_datetime("2022-09-01 00:00:00"))
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     period1 = dt_util.as_utc(dt_util.parse_datetime("2021-09-01 00:00:00"))
     period2 = dt_util.as_utc(dt_util.parse_datetime("2021-09-30 23:00:00"))
@@ -918,15 +918,15 @@ async def test_fossil_energy_consumption(
     }
 
     async_add_external_statistics(
-        hass, external_energy_metadata_1, external_energy_statistics_1
+        menuai, external_energy_metadata_1, external_energy_statistics_1
     )
     async_add_external_statistics(
-        hass, external_energy_metadata_2, external_energy_statistics_2
+        menuai, external_energy_metadata_2, external_energy_statistics_2
     )
-    async_add_external_statistics(hass, external_co2_metadata, external_co2_statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, external_co2_metadata, external_co2_statistics)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -998,10 +998,10 @@ async def test_fossil_energy_consumption(
 
 
 async def test_fossil_energy_consumption_checks(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test fossil_energy_consumption parameter validation."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     now = dt_util.utcnow()
 
     await client.send_json(
@@ -1052,16 +1052,16 @@ async def test_fossil_energy_consumption_checks(
 
 @pytest.mark.freeze_time("2021-08-01 01:00:00+00:00")
 async def test_fossil_energy_consumption_check_missing_hour(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test explicitly if the API keeps the first hour of data for the requested time frame."""
 
     now = dt_util.utcnow()
     later = dt_util.as_utc(dt_util.parse_datetime("2021-08-01 05:00:00"))
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     hour1 = dt_util.as_utc(dt_util.parse_datetime("2021-08-01 01:00:00"))
     hour2 = dt_util.as_utc(dt_util.parse_datetime("2021-08-01 02:00:00"))
@@ -1104,7 +1104,7 @@ async def test_fossil_energy_consumption_check_missing_hour(
         "unit_of_measurement": "kWh",
     }
 
-    async_add_external_statistics(hass, energy_metadata_1, energy_statistics_1)
+    async_add_external_statistics(menuai, energy_metadata_1, energy_statistics_1)
 
     # add co2 statistics for 4 hours
     co2_statistics = (
@@ -1138,10 +1138,10 @@ async def test_fossil_energy_consumption_check_missing_hour(
         "unit_of_measurement": "%",
     }
 
-    async_add_external_statistics(hass, co2_metadata, co2_statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, co2_metadata, co2_statistics)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -1169,15 +1169,15 @@ async def test_fossil_energy_consumption_check_missing_hour(
 
 @pytest.mark.freeze_time("2021-08-01 00:00:00+00:00")
 async def test_fossil_energy_consumption_missing_sum(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test fossil_energy_consumption statistics missing sum."""
     now = dt_util.utcnow()
     later = dt_util.as_utc(dt_util.parse_datetime("2022-09-01 00:00:00"))
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     period1 = dt_util.as_utc(dt_util.parse_datetime("2021-09-01 00:00:00"))
     period2 = dt_util.as_utc(dt_util.parse_datetime("2021-09-30 23:00:00"))
@@ -1200,11 +1200,11 @@ async def test_fossil_energy_consumption_missing_sum(
     }
 
     async_add_external_statistics(
-        hass, external_energy_metadata_1, external_energy_statistics_1
+        menuai, external_energy_metadata_1, external_energy_statistics_1
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,

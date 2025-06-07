@@ -16,17 +16,17 @@ from onedrive_personal_sdk.exceptions import (
 )
 from onedrive_personal_sdk.models.items import Item, ItemUpdate
 
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
-from homeassistant.helpers.instance_id import async_get as async_get_instance_id
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.instance_id import async_get as async_get_instance_id
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_FOLDER_ID, CONF_FOLDER_NAME, DATA_BACKUP_AGENT_LISTENERS, DOMAIN
 from .coordinator import (
@@ -42,15 +42,15 @@ PLATFORMS = [Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the OneDrive integration."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: OneDriveConfigEntry) -> bool:
     """Set up OneDrive from a config entry."""
-    client, get_access_token = await _get_onedrive_client(hass, entry)
+    client, get_access_token = await _get_onedrive_client(menuai, entry)
 
     # get approot, will be created automatically if it does not exist
     approot = await _handle_item_operation(client.get_approot, "approot")
@@ -67,12 +67,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -> 
             lambda: client.create_folder(parent_id=approot.id, name=folder_name),
             folder_name,
         )
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_FOLDER_ID: backup_folder.id}
         )
 
     # write instance id to description
-    if backup_folder.description != (instance_id := await async_get_instance_id(hass)):
+    if backup_folder.description != (instance_id := await async_get_instance_id(menuai)):
         await _handle_item_operation(
             lambda: client.update_drive_item(
                 backup_folder.id, ItemUpdate(description=instance_id)
@@ -82,11 +82,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -> 
 
     # update in case folder was renamed manually inside OneDrive
     if backup_folder.name != entry.data[CONF_FOLDER_NAME]:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_FOLDER_NAME: backup_folder.name}
         )
 
-    coordinator = OneDriveUpdateCoordinator(hass, entry, client)
+    coordinator = OneDriveUpdateCoordinator(menuai, entry, client)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = OneDriveRuntimeData(
@@ -104,10 +104,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -> 
             translation_key="failed_to_migrate_files",
         ) from err
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     def async_notify_backup_listeners() -> None:
-        for listener in hass.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
+        for listener in menuai.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
             listener()
 
     entry.async_on_unload(entry.async_on_state_change(async_notify_backup_listeners))
@@ -115,9 +115,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -> 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: OneDriveConfigEntry) -> bool:
     """Unload a OneDrive config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def _migrate_backup_files(client: OneDriveClient, backup_folder_id: str) -> None:
@@ -151,7 +151,7 @@ async def _migrate_backup_files(client: OneDriveClient, backup_folder_id: str) -
             _LOGGER.debug("Migrated backup file %s", file.name)
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: OneDriveConfigEntry) -> bool:
     """Migrate old entry."""
     if entry.version > 1:
         # This means the user has downgraded from a future version
@@ -161,8 +161,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -
         _LOGGER.debug(
             "Migrating OneDrive config entry from version %s.%s", version, minor_version
         )
-        client, _ = await _get_onedrive_client(hass, entry)
-        instance_id = await async_get_instance_id(hass)
+        client, _ = await _get_onedrive_client(menuai, entry)
+        instance_id = await async_get_instance_id(menuai)
         try:
             approot = await client.get_approot()
             folder = await client.get_drive_item(
@@ -172,7 +172,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -
             _LOGGER.exception("Migration to version 1.2 failed")
             return False
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={
                 **entry.data,
@@ -186,18 +186,18 @@ async def async_migrate_entry(hass: HomeAssistant, entry: OneDriveConfigEntry) -
 
 
 async def _get_onedrive_client(
-    hass: HomeAssistant, entry: OneDriveConfigEntry
+    menuai: menuai, entry: OneDriveConfigEntry
 ) -> tuple[OneDriveClient, Callable[[], Awaitable[str]]]:
     """Get OneDrive client."""
-    implementation = await async_get_config_entry_implementation(hass, entry)
-    session = OAuth2Session(hass, entry, implementation)
+    implementation = await async_get_config_entry_implementation(menuai, entry)
+    session = OAuth2Session(menuai, entry, implementation)
 
     async def get_access_token() -> str:
         await session.async_ensure_token_valid()
         return cast(str, session.token[CONF_ACCESS_TOKEN])
 
     return (
-        OneDriveClient(get_access_token, async_get_clientsession(hass)),
+        OneDriveClient(get_access_token, async_get_clientsession(menuai)),
         get_access_token,
     )
 

@@ -1,6 +1,6 @@
 """Constants for testing AEH."""
 
-from homeassistant.components.azure_event_hub.const import (
+from menuai.components.azure_event_hub.const import (
     CONF_EVENT_HUB_CON_STRING,
     CONF_EVENT_HUB_INSTANCE_NAME,
     CONF_EVENT_HUB_NAMESPACE,
@@ -11,7 +11,7 @@ from homeassistant.components.azure_event_hub.const import (
     CONF_USE_CONN_STRING,
 )
 
-AZURE_EVENT_HUB_PATH = "homeassistant.components.azure_event_hub"
+AZURE_EVENT_HUB_PATH = "menuai.components.azure_event_hub"
 PRODUCER_PATH = f"{AZURE_EVENT_HUB_PATH}.client.EventHubProducerClient"
 CLIENT_PATH = f"{AZURE_EVENT_HUB_PATH}.client.AzureEventHubClient"
 CONFIG_FLOW_PATH = f"{AZURE_EVENT_HUB_PATH}.config_flow"

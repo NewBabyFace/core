@@ -6,8 +6,8 @@ from bring_api import BringItemsResponse
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.bring.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.bring.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_fixture
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -16,8 +16,8 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.usefixtures("mock_bring_client")
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     bring_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     mock_bring_client: AsyncMock,
@@ -25,16 +25,16 @@ async def test_diagnostics(
     """Test diagnostics."""
     mock_bring_client.get_list.side_effect = [
         BringItemsResponse.from_json(
-            await async_load_fixture(hass, "items.json", DOMAIN)
+            await async_load_fixture(menuai, "items.json", DOMAIN)
         ),
         BringItemsResponse.from_json(
-            await async_load_fixture(hass, "items2.json", DOMAIN)
+            await async_load_fixture(menuai, "items2.json", DOMAIN)
         ),
     ]
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, bring_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, bring_config_entry)
         == snapshot
     )

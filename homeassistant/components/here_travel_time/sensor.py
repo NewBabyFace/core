@@ -6,13 +6,13 @@ from collections.abc import Mapping
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ATTRIBUTION,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
@@ -21,10 +21,10 @@ from homeassistant.const import (
     UnitOfLength,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_DESTINATION,
@@ -76,7 +76,7 @@ def sensor_descriptions(travel_mode: str) -> tuple[SensorEntityDescription, ...]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HereConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -134,10 +134,10 @@ class HERETravelTimeSensor(
         if restored_data := await self.async_get_last_sensor_data():
             self._attr_native_value = restored_data.native_value
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Wait for start so origin and destination entities can be resolved."""
         await self._async_restore_state()
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def _handle_coordinator_update(self) -> None:

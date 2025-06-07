@@ -8,9 +8,9 @@ from urllib.parse import urlparse
 from devolo_home_control_api.devices.zwave import Zwave
 from devolo_home_control_api.homecontrol import HomeControl
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.components.sensor import SensorDeviceClass
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .subscriber import Subscriber
@@ -52,8 +52,8 @@ class DevoloDeviceEntity(Entity):
 
         self._value: float
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         assert self.device_info
         assert self.device_info["name"]  # The name was set on entity creation
         self.subscriber = Subscriber(
@@ -63,7 +63,7 @@ class DevoloDeviceEntity(Entity):
             self._device_instance.uid, self.subscriber, self.sync_callback
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Call when entity is removed or disabled."""
         self._homecontrol.publisher.unregister(
             self._device_instance.uid, self.subscriber

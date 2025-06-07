@@ -6,7 +6,7 @@ from freezegun import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .test_common import get_device_discovery_payload, send_discovery_message
 
@@ -24,7 +24,7 @@ from tests.typing import MqttMockHAClient
     ],
 )
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mqtt_mock: MqttMockHAClient,
     setup_pglab,
@@ -38,17 +38,17 @@ async def test_sensors(
         number_of_boards=0,
     )
 
-    await send_discovery_message(hass, payload)
+    await send_discovery_message(menuai, payload)
 
     # check initial sensors state
-    state = hass.states.get(f"sensor.test_{sensor_suffix}")
+    state = menuai.states.get(f"sensor.test_{sensor_suffix}")
     assert state == snapshot(name=f"initial_sensor_{sensor_suffix}")
 
     # update sensors value via mqtt
     update_payload = {"temp": 33.4, "volt": 3.31, "rtime": 1000}
-    async_fire_mqtt_message(hass, "pglab/test/sensor/value", json.dumps(update_payload))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "pglab/test/sensor/value", json.dumps(update_payload))
+    await menuai.async_block_till_done()
 
     # check updated sensors state
-    state = hass.states.get(f"sensor.test_{sensor_suffix}")
+    state = menuai.states.get(f"sensor.test_{sensor_suffix}")
     assert state == snapshot(name=f"updated_sensor_{sensor_suffix}")

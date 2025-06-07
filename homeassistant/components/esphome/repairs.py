@@ -6,10 +6,10 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
+from menuai import data_entry_flow
+from menuai.components.repairs import RepairsFlow
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
 
 from .manager import async_replace_device
 
@@ -24,7 +24,7 @@ class ESPHomeRepair(RepairsFlow):
 
     @callback
     def _async_get_placeholders(self) -> dict[str, str]:
-        issue_registry = ir.async_get(self.hass)
+        issue_registry = ir.async_get(self.menuai)
         issue = issue_registry.async_get_issue(self.handler, self.issue_id)
         assert issue is not None
         return issue.translation_placeholders or {}
@@ -72,8 +72,8 @@ class DeviceConflictRepair(ESPHomeRepair):
                 description_placeholders=self._async_get_placeholders(),
             )
         entry_id = self.entry_id
-        await async_replace_device(self.hass, entry_id, self.stored_mac, self.mac)
-        self.hass.config_entries.async_schedule_reload(entry_id)
+        await async_replace_device(self.menuai, entry_id, self.stored_mac, self.mac)
+        self.menuai.config_entries.async_schedule_reload(entry_id)
         return self.async_create_entry(data={})
 
     async def async_step_manual(
@@ -86,12 +86,12 @@ class DeviceConflictRepair(ESPHomeRepair):
                 data_schema=vol.Schema({}),
                 description_placeholders=self._async_get_placeholders(),
             )
-        self.hass.config_entries.async_schedule_reload(self.entry_id)
+        self.menuai.config_entries.async_schedule_reload(self.entry_id)
         return self.async_create_entry(data={})
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:

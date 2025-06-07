@@ -29,21 +29,21 @@ from epson_projector.const import (
 )
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_platform,
     entity_registry as er,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EpsonConfigEntry
 from .const import ATTR_CMODE, DOMAIN, SERVICE_SELECT_CMODE
@@ -52,7 +52,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EpsonConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -109,19 +109,19 @@ class EpsonProjectorMediaPlayer(MediaPlayerEntity):
         if self._entry.unique_id:
             return False
         if uid := await self._projector.get_serial_number():
-            self.hass.config_entries.async_update_entry(self._entry, unique_id=uid)
-            ent_reg = er.async_get(self.hass)
+            self.menuai.config_entries.async_update_entry(self._entry, unique_id=uid)
+            ent_reg = er.async_get(self.menuai)
             old_entity_id = ent_reg.async_get_entity_id(
                 "media_player", DOMAIN, self._entry.entry_id
             )
             if old_entity_id is not None:
                 ent_reg.async_update_entity(old_entity_id, new_unique_id=uid)
-            dev_reg = dr.async_get(self.hass)
+            dev_reg = dr.async_get(self.menuai)
             device = dev_reg.async_get_device({(DOMAIN, self._entry.entry_id)})
             if device is not None:
                 dev_reg.async_update_device(device.id, new_identifiers={(DOMAIN, uid)})
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self._entry.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(self._entry.entry_id)
             )
             return True
         return False

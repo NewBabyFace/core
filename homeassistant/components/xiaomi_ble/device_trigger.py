@@ -7,19 +7,19 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_EVENT,
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     BUTTON,
@@ -294,11 +294,11 @@ MODEL_DATA = {
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate trigger config."""
     device_id = config[CONF_DEVICE_ID]
-    if model_data := _async_trigger_model_data(hass, device_id):
+    if model_data := _async_trigger_model_data(menuai, device_id):
         schema = DEVICE_TRIGGER_BASE_SCHEMA.extend(
             {
                 vol.Required(CONF_TYPE): vol.In(model_data.event_types),
@@ -310,12 +310,12 @@ async def async_validate_trigger_config(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
     """List a list of triggers for Xiaomi BLE devices."""
 
     # Check if device is a model supporting device triggers.
-    if not (model_data := _async_trigger_model_data(hass, device_id)):
+    if not (model_data := _async_trigger_model_data(menuai, device_id)):
         return []
 
     event_types = model_data.event_types
@@ -336,14 +336,14 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     return await event_trigger.async_attach_trigger(
-        hass,
+        menuai,
         event_trigger.TRIGGER_SCHEMA(
             {
                 event_trigger.CONF_PLATFORM: CONF_EVENT,
@@ -362,10 +362,10 @@ async def async_attach_trigger(
 
 
 def _async_trigger_model_data(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> TriggerModelData | None:
     """Get available triggers for a given model."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = device_registry.async_get(device_id)
     if device and device.model and (model_data := MODEL_DATA.get(device.model)):
         return model_data

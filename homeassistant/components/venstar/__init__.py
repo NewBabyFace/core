@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from venstarcolortouch import VenstarColorTouch
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PIN,
@@ -13,7 +13,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DOMAIN, VENSTAR_TIMEOUT
 from .coordinator import VenstarDataUpdateCoordinator
@@ -21,7 +21,7 @@ from .coordinator import VenstarDataUpdateCoordinator
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.CLIMATE, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up the Venstar thermostat."""
     username = config_entry.data.get(CONF_USERNAME)
     password = config_entry.data.get(CONF_PASSWORD)
@@ -40,23 +40,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
 
     venstar_data_coordinator = VenstarDataUpdateCoordinator(
-        hass,
+        menuai,
         config_entry,
         venstar_connection=client,
     )
     await venstar_data_coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = venstar_data_coordinator
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})[config_entry.entry_id] = venstar_data_coordinator
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload the config and platforms."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
     if unload_ok:
-        hass.data[DOMAIN].pop(config_entry.entry_id)
+        menuai.data[DOMAIN].pop(config_entry.entry_id)
     return unload_ok

@@ -18,8 +18,8 @@ from broadlink.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.remote import (
+from menuai.components import persistent_notification
+from menuai.components.remote import (
     ATTR_ALTERNATIVE,
     ATTR_COMMAND_TYPE,
     ATTR_DELAY_SECS,
@@ -33,14 +33,14 @@ from homeassistant.components.remote import (
     RemoteEntity,
     RemoteEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_COMMAND, STATE_OFF
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.storage import Store
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_COMMAND, STATE_OFF
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.storage import Store
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .entity import BroadlinkEntity
@@ -90,16 +90,16 @@ SERVICE_DELETE_SCHEMA = COMMAND_SCHEMA.extend(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a Broadlink remote."""
-    device = hass.data[DOMAIN].devices[config_entry.entry_id]
+    device = menuai.data[DOMAIN].devices[config_entry.entry_id]
     remote = BroadlinkRemote(
         device,
-        Store(hass, CODE_STORAGE_VERSION, f"broadlink_remote_{device.unique_id}_codes"),
-        Store(hass, FLAG_STORAGE_VERSION, f"broadlink_remote_{device.unique_id}_flags"),
+        Store(menuai, CODE_STORAGE_VERSION, f"broadlink_remote_{device.unique_id}_codes"),
+        Store(menuai, FLAG_STORAGE_VERSION, f"broadlink_remote_{device.unique_id}_flags"),
     )
     async_add_entities([remote], False)
 
@@ -179,11 +179,11 @@ class BroadlinkRemote(BroadlinkEntity, RemoteEntity, RestoreEntity):
         """
         return self._flags
 
-    async def async_added_to_hass(self) -> None:
-        """Call when the remote is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when the remote is added to menuai."""
         state = await self.async_get_last_state()
         self._attr_is_on = state is None or state.state != STATE_OFF
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the remote."""
@@ -325,7 +325,7 @@ class BroadlinkRemote(BroadlinkEntity, RemoteEntity, RestoreEntity):
             raise
 
         persistent_notification.async_create(
-            self.hass,
+            self.menuai,
             f"Press the '{command}' button.",
             title="Learn command",
             notification_id="learn_command",
@@ -348,7 +348,7 @@ class BroadlinkRemote(BroadlinkEntity, RemoteEntity, RestoreEntity):
 
         finally:
             persistent_notification.async_dismiss(
-                self.hass, notification_id="learn_command"
+                self.menuai, notification_id="learn_command"
             )
 
     async def _async_learn_rf_command(self, command):
@@ -363,7 +363,7 @@ class BroadlinkRemote(BroadlinkEntity, RemoteEntity, RestoreEntity):
             raise
 
         persistent_notification.async_create(
-            self.hass,
+            self.menuai,
             f"Press and hold the '{command}' button.",
             title="Sweep frequency",
             notification_id="sweep_frequency",
@@ -388,7 +388,7 @@ class BroadlinkRemote(BroadlinkEntity, RemoteEntity, RestoreEntity):
 
         finally:
             persistent_notification.async_dismiss(
-                self.hass, notification_id="sweep_frequency"
+                self.menuai, notification_id="sweep_frequency"
             )
 
         await asyncio.sleep(1)
@@ -401,7 +401,7 @@ class BroadlinkRemote(BroadlinkEntity, RemoteEntity, RestoreEntity):
             raise
 
         persistent_notification.async_create(
-            self.hass,
+            self.menuai,
             f"Press the '{command}' button again.",
             title="Learn command",
             notification_id="learn_command",
@@ -424,7 +424,7 @@ class BroadlinkRemote(BroadlinkEntity, RemoteEntity, RestoreEntity):
 
         finally:
             persistent_notification.async_dismiss(
-                self.hass, notification_id="learn_command"
+                self.menuai, notification_id="learn_command"
             )
 
     async def async_delete_command(self, **kwargs: Any) -> None:

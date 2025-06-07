@@ -1,17 +1,17 @@
-"""Dataclass storing integration data in hass.data[DOMAIN]."""
+"""Dataclass storing integration data in menuai.data[DOMAIN]."""
 
 from dataclasses import dataclass, field
 import logging
 
 from aiohttp.hdrs import METH_POST
 
-from homeassistant.components.webhook import (
+from menuai.components.webhook import (
     async_generate_id,
     async_register as webhook_register,
     async_unregister as webhook_unregister,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.network import get_url
+from menuai.core import menuai
+from menuai.helpers.network import get_url
 
 from .const import DOMAIN, WEBHOOK_URL
 from .coordinator import NotificationCoordinator
@@ -36,13 +36,13 @@ class NASwebData:
         """Return whether this instance can be deinitialized."""
         return not self.notify_coordinator.has_coordinators()
 
-    def initialize(self, hass: HomeAssistant) -> None:
+    def initialize(self, menuai: menuai) -> None:
         """Initialize NASwebData instance."""
         if self.is_initialized():
             return
         new_webhook_id = async_generate_id()
         webhook_register(
-            hass,
+            menuai,
             DOMAIN,
             "NASweb",
             new_webhook_id,
@@ -52,13 +52,13 @@ class NASwebData:
         self.webhook_id = new_webhook_id
         _LOGGER.debug("Registered webhook: %s", self.webhook_id)
 
-    def deinitialize(self, hass: HomeAssistant) -> None:
+    def deinitialize(self, menuai: menuai) -> None:
         """Deinitialize NASwebData instance."""
         if not self.is_initialized():
             return
-        webhook_unregister(hass, self.webhook_id)
+        webhook_unregister(menuai, self.webhook_id)
 
-    def get_webhook_url(self, hass: HomeAssistant) -> str:
+    def get_webhook_url(self, menuai: menuai) -> str:
         """Return webhook url for Push API."""
-        hass_url = get_url(hass, allow_external=False)
-        return WEBHOOK_URL.format(internal_url=hass_url, webhook_id=self.webhook_id)
+        menuai_url = get_url(menuai, allow_external=False)
+        return WEBHOOK_URL.format(internal_url=menuai_url, webhook_id=self.webhook_id)

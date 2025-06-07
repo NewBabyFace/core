@@ -30,25 +30,25 @@ from aiounifi.models.outlet import Outlet
 from aiounifi.models.port import Port
 from aiounifi.models.wlan import Wlan
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
     UnitOfTemperature,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfDataRate,
     UnitOfPower,
     UnitOfTime,
 )
-from homeassistant.core import Event as core_Event, HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util, slugify
+from menuai.core import Event as core_Event, menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util, slugify
 
 from . import UnifiConfigEntry
 from .const import DEVICE_STATES
@@ -642,7 +642,7 @@ ENTITY_DESCRIPTIONS += make_wan_latency_sensors() + make_device_temperatur_senso
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: UnifiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -689,23 +689,23 @@ class UnifiSensorEntity(UnifiEntity[HandlerT, ApiItemT], SensorEntity):
                     dt_util.utcnow() + self.hub.config.option_detection_time,
                 )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if self.entity_description.is_connected_fn is not None:
             # Register callback for missed heartbeat
             self.async_on_remove(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     f"{self.hub.signal_heartbeat_missed}_{self.unique_id}",
                     self._make_disconnected,
                 )
             )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect object when removed."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
         if self.entity_description.is_connected_fn is not None:
             # Remove heartbeat registration

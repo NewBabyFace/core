@@ -15,16 +15,16 @@ from broadlink.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IMPORT,
     SOURCE_REAUTH,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_TIMEOUT, CONF_TYPE
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_TIMEOUT, CONF_TYPE
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DEFAULT_PORT, DEFAULT_TIMEOUT, DEVICE_TYPES, DOMAIN
 from .helpers import format_mac
@@ -74,7 +74,7 @@ class BroadlinkFlowHandler(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured(updates={CONF_HOST: host})
 
         try:
-            device = await self.hass.async_add_executor_job(blk.hello, host)
+            device = await self.menuai.async_add_executor_job(blk.hello, host)
 
         except NetworkTimeoutError:
             return self.async_abort(reason="cannot_connect")
@@ -102,7 +102,7 @@ class BroadlinkFlowHandler(ConfigFlow, domain=DOMAIN):
 
             try:
                 hello = partial(blk.hello, host, timeout=timeout)
-                device = await self.hass.async_add_executor_job(hello)
+                device = await self.menuai.async_add_executor_job(hello)
 
             except NetworkTimeoutError:
                 errors["base"] = "cannot_connect"
@@ -160,7 +160,7 @@ class BroadlinkFlowHandler(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         try:
-            await self.hass.async_add_executor_job(device.auth)
+            await self.menuai.async_add_executor_job(device.auth)
 
         except AuthenticationError:
             errors["base"] = "invalid_auth"
@@ -250,7 +250,7 @@ class BroadlinkFlowHandler(ConfigFlow, domain=DOMAIN):
 
         elif user_input["unlock"]:
             try:
-                await self.hass.async_add_executor_job(device.set_lock, False)
+                await self.menuai.async_add_executor_job(device.set_lock, False)
 
             except NetworkTimeoutError as err:
                 errors["base"] = "cannot_connect"

@@ -4,10 +4,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.devolo_home_control.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult, FlowResultType
+from menuai import config_entries
+from menuai.components.devolo_home_control.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult, FlowResultType
 
 from .const import (
     DISCOVERY_INFO,
@@ -18,31 +18,31 @@ from .const import (
 from tests.common import MockConfigEntry
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    await _setup(hass, result)
+    await _setup(menuai, result)
 
 
 @pytest.mark.parametrize("credentials_valid", [False])
-async def test_form_invalid_credentials_user(hass: HomeAssistant) -> None:
+async def test_form_invalid_credentials_user(menuai: menuai) -> None:
     """Test if we get the error message on invalid credentials."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"username": "test-username", "password": "test-password"},
     )
@@ -50,14 +50,14 @@ async def test_form_invalid_credentials_user(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_already_configured(hass: HomeAssistant) -> None:
+async def test_form_already_configured(menuai: menuai) -> None:
     """Test if we get the error message on already configured."""
     with patch(
-        "homeassistant.components.devolo_home_control.Mydevolo.uuid",
+        "menuai.components.devolo_home_control.Mydevolo.uuid",
         return_value="123456",
     ):
-        MockConfigEntry(domain=DOMAIN, unique_id="123456", data={}).add_to_hass(hass)
-        result = await hass.config_entries.flow.async_init(
+        MockConfigEntry(domain=DOMAIN, unique_id="123456", data={}).add_to_menuai(menuai)
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data={"username": "test-username", "password": "test-password"},
@@ -66,9 +66,9 @@ async def test_form_already_configured(hass: HomeAssistant) -> None:
         assert result["reason"] == "already_configured"
 
 
-async def test_form_advanced_options(hass: HomeAssistant) -> None:
+async def test_form_advanced_options(menuai: menuai) -> None:
     """Test if we get the advanced options if user has enabled it."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER, "show_advanced_options": True},
     )
@@ -77,22 +77,22 @@ async def test_form_advanced_options(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.devolo_home_control.async_setup_entry",
+            "menuai.components.devolo_home_control.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.devolo_home_control.Mydevolo.uuid",
+            "menuai.components.devolo_home_control.Mydevolo.uuid",
             return_value="123456",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "devolo Home Control"
@@ -104,9 +104,9 @@ async def test_form_advanced_options(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_zeroconf(hass: HomeAssistant) -> None:
+async def test_form_zeroconf(menuai: menuai) -> None:
     """Test that the zeroconf confirmation form is served."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=DISCOVERY_INFO,
@@ -115,14 +115,14 @@ async def test_form_zeroconf(hass: HomeAssistant) -> None:
     assert result["step_id"] == "zeroconf_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    await _setup(hass, result)
+    await _setup(menuai, result)
 
 
 @pytest.mark.parametrize("credentials_valid", [False])
-async def test_form_invalid_credentials_zeroconf(hass: HomeAssistant) -> None:
+async def test_form_invalid_credentials_zeroconf(menuai: menuai) -> None:
     """Test if we get the error message on invalid credentials."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=DISCOVERY_INFO,
@@ -131,7 +131,7 @@ async def test_form_invalid_credentials_zeroconf(hass: HomeAssistant) -> None:
     assert result["step_id"] == "zeroconf_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"username": "test-username", "password": "test-password"},
     )
@@ -139,9 +139,9 @@ async def test_form_invalid_credentials_zeroconf(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_zeroconf_wrong_device(hass: HomeAssistant) -> None:
+async def test_zeroconf_wrong_device(menuai: menuai) -> None:
     """Test that the zeroconf ignores wrong devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=DISCOVERY_INFO_WRONG_DEVOLO_DEVICE,
@@ -150,7 +150,7 @@ async def test_zeroconf_wrong_device(hass: HomeAssistant) -> None:
     assert result["reason"] == "Not a devolo Home Control gateway."
     assert result["type"] is FlowResultType.ABORT
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=DISCOVERY_INFO_WRONG_DEVICE,
@@ -160,7 +160,7 @@ async def test_zeroconf_wrong_device(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.ABORT
 
 
-async def test_form_reauth(hass: HomeAssistant) -> None:
+async def test_form_reauth(menuai: menuai) -> None:
     """Test that the reauth confirmation form is served."""
     mock_config = MockConfigEntry(
         domain=DOMAIN,
@@ -170,33 +170,33 @@ async def test_form_reauth(hass: HomeAssistant) -> None:
             "password": "test-password",
         },
     )
-    mock_config.add_to_hass(hass)
-    result = await mock_config.start_reauth_flow(hass)
+    mock_config.add_to_menuai(menuai)
+    result = await mock_config.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
 
     with (
         patch(
-            "homeassistant.components.devolo_home_control.async_setup_entry",
+            "menuai.components.devolo_home_control.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.devolo_home_control.Mydevolo.uuid",
+            "menuai.components.devolo_home_control.Mydevolo.uuid",
             return_value="123456",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": "test-username-new", "password": "test-password-new"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 @pytest.mark.parametrize("credentials_valid", [False])
-async def test_form_invalid_credentials_reauth(hass: HomeAssistant) -> None:
+async def test_form_invalid_credentials_reauth(menuai: menuai) -> None:
     """Test if we get the error message on invalid credentials."""
     mock_config = MockConfigEntry(
         domain=DOMAIN,
@@ -206,10 +206,10 @@ async def test_form_invalid_credentials_reauth(hass: HomeAssistant) -> None:
             "password": "test-password",
         },
     )
-    mock_config.add_to_hass(hass)
-    result = await mock_config.start_reauth_flow(hass)
+    mock_config.add_to_menuai(menuai)
+    result = await mock_config.start_reauth_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"username": "test-username", "password": "test-password"},
     )
@@ -217,7 +217,7 @@ async def test_form_invalid_credentials_reauth(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_uuid_change_reauth(hass: HomeAssistant) -> None:
+async def test_form_uuid_change_reauth(menuai: menuai) -> None:
     """Test that the reauth confirmation form is served."""
     mock_config = MockConfigEntry(
         domain=DOMAIN,
@@ -227,49 +227,49 @@ async def test_form_uuid_change_reauth(hass: HomeAssistant) -> None:
             "password": "test-password",
         },
     )
-    mock_config.add_to_hass(hass)
-    result = await mock_config.start_reauth_flow(hass)
+    mock_config.add_to_menuai(menuai)
+    result = await mock_config.start_reauth_flow(menuai)
 
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
 
     with (
         patch(
-            "homeassistant.components.devolo_home_control.async_setup_entry",
+            "menuai.components.devolo_home_control.async_setup_entry",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.devolo_home_control.Mydevolo.uuid",
+            "menuai.components.devolo_home_control.Mydevolo.uuid",
             return_value="789123",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": "test-username-new", "password": "test-password-new"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "reauth_failed"}
 
 
-async def _setup(hass: HomeAssistant, result: FlowResult) -> None:
+async def _setup(menuai: menuai, result: FlowResult) -> None:
     """Finish configuration steps."""
     with (
         patch(
-            "homeassistant.components.devolo_home_control.async_setup_entry",
+            "menuai.components.devolo_home_control.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.devolo_home_control.Mydevolo.uuid",
+            "menuai.components.devolo_home_control.Mydevolo.uuid",
             return_value="123456",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": "test-username", "password": "test-password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "devolo Home Control"

@@ -2,24 +2,24 @@
 
 import pytest
 
-from homeassistant.components.knx.const import (
+from menuai.components.knx.const import (
     CONF_PAYLOAD_LENGTH,
     CONF_RESPOND_TO_READ,
     CONF_STATE_ADDRESS,
     CONF_SYNC_STATE,
     KNX_ADDRESS,
 )
-from homeassistant.components.knx.schema import SelectSchema
-from homeassistant.const import CONF_NAME, CONF_PAYLOAD, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import ServiceValidationError
+from menuai.components.knx.schema import SelectSchema
+from menuai.const import CONF_NAME, CONF_PAYLOAD, STATE_UNKNOWN
+from menuai.core import menuai, State
+from menuai.exceptions import ServiceValidationError
 
 from .conftest import KNXTestKit
 
 from tests.common import mock_restore_cache
 
 
-async def test_select_dpt_2_simple(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_select_dpt_2_simple(menuai: menuai, knx: KNXTestKit) -> None:
     """Test simple KNX select."""
     _options = [
         {CONF_PAYLOAD: 0b00, SelectSchema.CONF_OPTION: "No control"},
@@ -38,29 +38,29 @@ async def test_select_dpt_2_simple(hass: HomeAssistant, knx: KNXTestKit) -> None
             }
         }
     )
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state is STATE_UNKNOWN
 
     # select an option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {"entity_id": "select.test", "option": "Control - Off"},
         blocking=True,
     )
     await knx.assert_write(test_address, 0b10)
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "Control - Off"
 
     # select another option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {"entity_id": "select.test", "option": "No control"},
         blocking=True,
     )
     await knx.assert_write(test_address, 0b00)
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "No control"
 
     # don't answer to GroupValueRead requests by default
@@ -69,17 +69,17 @@ async def test_select_dpt_2_simple(hass: HomeAssistant, knx: KNXTestKit) -> None
 
     # update from KNX
     await knx.receive_write(test_address, 0b11)
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "Control - On"
 
     # update from KNX with undefined value
     await knx.receive_write(test_address, 0b01)
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state is STATE_UNKNOWN
 
     # select invalid option
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "select",
             "select_option",
             {"entity_id": "select.test", "option": "invalid"},
@@ -88,7 +88,7 @@ async def test_select_dpt_2_simple(hass: HomeAssistant, knx: KNXTestKit) -> None
     await knx.assert_no_telegram()
 
 
-async def test_select_dpt_2_restore(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_select_dpt_2_restore(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX select with passive_address and respond_to_read restoring state."""
     _options = [
         {CONF_PAYLOAD: 0b00, SelectSchema.CONF_OPTION: "No control"},
@@ -98,7 +98,7 @@ async def test_select_dpt_2_restore(hass: HomeAssistant, knx: KNXTestKit) -> Non
     test_address = "1/1/1"
     test_passive_address = "3/3/3"
     fake_state = State("select.test", "Control - On")
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     await knx.setup_integration(
         {
@@ -112,7 +112,7 @@ async def test_select_dpt_2_restore(hass: HomeAssistant, knx: KNXTestKit) -> Non
         }
     )
     # restored state - doesn't send telegram
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "Control - On"
     await knx.assert_telegram_count(0)
 
@@ -126,7 +126,7 @@ async def test_select_dpt_2_restore(hass: HomeAssistant, knx: KNXTestKit) -> Non
 
 
 async def test_select_dpt_20_103_all_options(
-    hass: HomeAssistant, knx: KNXTestKit
+    menuai: menuai, knx: KNXTestKit
 ) -> None:
     """Test KNX select with state_address, passive_address and respond_to_read."""
     _options = [
@@ -152,24 +152,24 @@ async def test_select_dpt_20_103_all_options(
             }
         }
     )
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state is STATE_UNKNOWN
 
     # StateUpdater initialize state
     await knx.assert_read(test_state_address)
     await knx.receive_response(test_state_address, (2,))
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "Normal"
 
     # select an option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {"entity_id": "select.test", "option": "Legio protect"},
         blocking=True,
     )
     await knx.assert_write(test_address, (1,))
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "Legio protect"
 
     # answer to GroupValueRead requests
@@ -178,10 +178,10 @@ async def test_select_dpt_20_103_all_options(
 
     # update from KNX state_address
     await knx.receive_write(test_state_address, (3,))
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "Reduced"
 
     # update from KNX passive_address
     await knx.receive_write(test_passive_address, (4,))
-    state = hass.states.get("select.test")
+    state = menuai.states.get("select.test")
     assert state.state == "Off"

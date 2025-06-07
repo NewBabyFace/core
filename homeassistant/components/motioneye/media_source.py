@@ -8,8 +8,8 @@ from typing import cast
 
 from motioneye_client.const import KEY_MEDIA_LIST, KEY_MIME_TYPE, KEY_PATH
 
-from homeassistant.components.media_player import MediaClass, MediaType
-from homeassistant.components.media_source import (
+from menuai.components.media_player import MediaClass, MediaType
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceError,
@@ -17,9 +17,9 @@ from homeassistant.components.media_source import (
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
 
 from . import get_media_url, split_motioneye_device_identifier
 from .const import CONF_CLIENT, DOMAIN
@@ -45,9 +45,9 @@ _LOGGER = logging.getLogger(__name__)
 #     -> path hierarchy as configured on motionEye
 
 
-async def async_get_media_source(hass: HomeAssistant) -> MotionEyeMediaSource:
+async def async_get_media_source(menuai: menuai) -> MotionEyeMediaSource:
     """Set up motionEye media source."""
-    return MotionEyeMediaSource(hass)
+    return MotionEyeMediaSource(menuai)
 
 
 class MotionEyeMediaSource(MediaSource):
@@ -55,10 +55,10 @@ class MotionEyeMediaSource(MediaSource):
 
     name: str = "motionEye Media"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize MotionEyeMediaSource."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a url."""
@@ -74,7 +74,7 @@ class MotionEyeMediaSource(MediaSource):
         self._verify_kind_or_raise(kind)
 
         url = get_media_url(
-            self.hass.data[DOMAIN][config.entry_id][CONF_CLIENT],
+            self.menuai.data[DOMAIN][config.entry_id][CONF_CLIENT],
             self._get_camera_id_or_raise(config, device),
             self._get_path_or_raise(path),
             kind == "images",
@@ -122,14 +122,14 @@ class MotionEyeMediaSource(MediaSource):
 
     def _get_config_or_raise(self, config_id: str) -> ConfigEntry:
         """Get a config entry from a URL."""
-        entry = self.hass.config_entries.async_get_entry(config_id)
+        entry = self.menuai.config_entries.async_get_entry(config_id)
         if not entry:
             raise MediaSourceError(f"Unable to find config entry with id: {config_id}")
         return entry
 
     def _get_device_or_raise(self, device_id: str) -> dr.DeviceEntry:
         """Get a config entry from a URL."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         if not (device := device_registry.async_get(device_id)):
             raise MediaSourceError(f"Unable to find device with id: {device_id}")
         return device
@@ -188,7 +188,7 @@ class MotionEyeMediaSource(MediaSource):
             can_expand=True,
             children=[
                 self._build_media_config(entry)
-                for entry in self.hass.config_entries.async_entries(DOMAIN)
+                for entry in self.menuai.config_entries.async_entries(DOMAIN)
             ],
             children_media_class=MediaClass.DIRECTORY,
         )
@@ -213,7 +213,7 @@ class MotionEyeMediaSource(MediaSource):
 
     def _build_media_devices(self, config: ConfigEntry) -> BrowseMediaSource:
         """Build the media sources for device entries."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         devices = dr.async_entries_for_config_entry(device_registry, config.entry_id)
 
         base = self._build_media_config(config)
@@ -276,7 +276,7 @@ class MotionEyeMediaSource(MediaSource):
 
         base.children = []
 
-        client = self.hass.data[DOMAIN][config.entry_id][CONF_CLIENT]
+        client = self.menuai.data[DOMAIN][config.entry_id][CONF_CLIENT]
         camera_id = self._get_camera_id_or_raise(config, device)
 
         if kind == "movies":

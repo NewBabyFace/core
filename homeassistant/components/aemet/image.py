@@ -7,9 +7,9 @@ from typing import Final
 from aemet_opendata.const import AOD_DATETIME, AOD_IMG_BYTES, AOD_IMG_TYPE, AOD_RADAR
 from aemet_opendata.helpers import dict_nested_value
 
-from homeassistant.components.image import Image, ImageEntity, ImageEntityDescription
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.image import Image, ImageEntity, ImageEntityDescription
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AemetConfigEntry, WeatherUpdateCoordinator
 from .entity import AemetEntity
@@ -23,7 +23,7 @@ AEMET_IMAGES: Final[tuple[ImageEntityDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AemetConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -37,7 +37,7 @@ async def async_setup_entry(
 
     async_add_entities(
         AemetImage(
-            hass,
+            menuai,
             name,
             coordinator,
             description,
@@ -55,7 +55,7 @@ class AemetImage(AemetEntity, ImageEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         coordinator: WeatherUpdateCoordinator,
         description: ImageEntityDescription,
@@ -63,7 +63,7 @@ class AemetImage(AemetEntity, ImageEntity):
     ) -> None:
         """Initialize the image."""
         super().__init__(coordinator, name, unique_id)
-        ImageEntity.__init__(self, hass)
+        ImageEntity.__init__(self, menuai)
         self.entity_description = description
         self._attr_unique_id = f"{unique_id}-{description.key}"
 

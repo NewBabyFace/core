@@ -1,4 +1,4 @@
-"""Coordinator for Home Assistant Backup integration."""
+"""Coordinator for MenuAI Backup integration."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.backup import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.backup import (
     async_subscribe_events,
     async_subscribe_platform_events,
 )
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, LOGGER
 from .manager import (
@@ -43,21 +43,21 @@ class BackupDataUpdateCoordinator(DataUpdateCoordinator[BackupCoordinatorData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         backup_manager: BackupManager,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=None,
         )
         self.unsubscribe: list[Callable[[], None]] = [
-            async_subscribe_events(hass, self._on_event),
-            async_subscribe_platform_events(hass, self._on_event),
+            async_subscribe_events(menuai, self._on_event),
+            async_subscribe_platform_events(menuai, self._on_event),
         ]
 
         self.backup_manager = backup_manager
@@ -68,7 +68,7 @@ class BackupDataUpdateCoordinator(DataUpdateCoordinator[BackupCoordinatorData]):
         """Handle new event."""
         LOGGER.debug("Received backup event: %s", event)
         self._last_event = event
-        self.config_entry.async_create_task(self.hass, self.async_refresh())
+        self.config_entry.async_create_task(self.menuai, self.async_refresh())
 
     async def _async_update_data(self) -> BackupCoordinatorData:
         """Update backup manager data."""

@@ -6,16 +6,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from switchbot.devices.device import SwitchbotOperationError
 
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.const import (
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_LOCK,
     SERVICE_OPEN,
     SERVICE_UNLOCK,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import (
     LOCK_LITE_SERVICE_INFO,
@@ -42,7 +42,7 @@ from tests.components.bluetooth import inject_bluetooth_service_info
     [(SERVICE_UNLOCK, "unlock"), (SERVICE_LOCK, "lock")],
 )
 async def test_lock_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_encrypted_factory: Callable[[str], MockConfigEntry],
     sensor_type: str,
     service: str,
@@ -50,23 +50,23 @@ async def test_lock_services(
     service_info: BluetoothServiceInfoBleak,
 ) -> None:
     """Test lock and unlock services on lock and lockpro devices."""
-    inject_bluetooth_service_info(hass, service_info)
+    inject_bluetooth_service_info(menuai, service_info)
 
     entry = mock_entry_encrypted_factory(sensor_type=sensor_type)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     mocked_instance = AsyncMock(return_value=True)
 
     with patch.multiple(
-        "homeassistant.components.switchbot.lock.switchbot.SwitchbotLock",
+        "menuai.components.switchbot.lock.switchbot.SwitchbotLock",
         update=AsyncMock(return_value=None),
         **{mock_method: mocked_instance},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         entity_id = "lock.test_name"
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             service,
             {ATTR_ENTITY_ID: entity_id},
@@ -90,7 +90,7 @@ async def test_lock_services(
     [(SERVICE_UNLOCK, "unlock_without_unlatch"), (SERVICE_OPEN, "unlock")],
 )
 async def test_lock_services_with_night_latch_enabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_encrypted_factory: Callable[[str], MockConfigEntry],
     sensor_type: str,
     service: str,
@@ -98,24 +98,24 @@ async def test_lock_services_with_night_latch_enabled(
     service_info: BluetoothServiceInfoBleak,
 ) -> None:
     """Test lock service when night latch enabled."""
-    inject_bluetooth_service_info(hass, service_info)
+    inject_bluetooth_service_info(menuai, service_info)
 
     entry = mock_entry_encrypted_factory(sensor_type=sensor_type)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     mocked_instance = AsyncMock(return_value=True)
 
     with patch.multiple(
-        "homeassistant.components.switchbot.lock.switchbot.SwitchbotLock",
+        "menuai.components.switchbot.lock.switchbot.SwitchbotLock",
         is_night_latch_enabled=MagicMock(return_value=True),
         update=AsyncMock(return_value=None),
         **{mock_method: mocked_instance},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         entity_id = "lock.test_name"
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             service,
             {ATTR_ENTITY_ID: entity_id},
@@ -143,7 +143,7 @@ async def test_lock_services_with_night_latch_enabled(
     ],
 )
 async def test_exception_handling_lock_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_encrypted_factory: Callable[[str], MockConfigEntry],
     service: str,
     mock_method: str,
@@ -151,23 +151,23 @@ async def test_exception_handling_lock_service(
     error_message: str,
 ) -> None:
     """Test exception handling for lock service with exception."""
-    inject_bluetooth_service_info(hass, LOCK_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, LOCK_SERVICE_INFO)
 
     entry = mock_entry_encrypted_factory(sensor_type="lock")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entity_id = "lock.test_name"
 
     with patch.multiple(
-        "homeassistant.components.switchbot.lock.switchbot.SwitchbotLock",
+        "menuai.components.switchbot.lock.switchbot.SwitchbotLock",
         is_night_latch_enabled=MagicMock(return_value=True),
         update=AsyncMock(return_value=None),
         **{mock_method: AsyncMock(side_effect=exception)},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        with pytest.raises(HomeAssistantError, match=error_message):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=error_message):
+            await menuai.services.async_call(
                 LOCK_DOMAIN,
                 service,
                 {ATTR_ENTITY_ID: entity_id},

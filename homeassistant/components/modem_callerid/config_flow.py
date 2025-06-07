@@ -9,10 +9,10 @@ import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 import voluptuous as vol
 
-from homeassistant.components import usb
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE, CONF_NAME
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.components import usb
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE, CONF_NAME
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .const import DEFAULT_NAME, DOMAIN, EXCEPTIONS
 
@@ -62,7 +62,7 @@ class PhoneModemFlowHandler(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] | None = {}
         if self._async_in_progress():
             return self.async_abort(reason="already_in_progress")
-        ports = await self.hass.async_add_executor_job(serial.tools.list_ports.comports)
+        ports = await self.menuai.async_add_executor_job(serial.tools.list_ports.comports)
         existing_devices = [
             entry.data[CONF_DEVICE] for entry in self._async_current_entries()
         ]
@@ -83,7 +83,7 @@ class PhoneModemFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             port = ports[unused_ports.index(str(user_input.get(CONF_DEVICE)))]
-            dev_path = await self.hass.async_add_executor_job(
+            dev_path = await self.menuai.async_add_executor_job(
                 usb.get_serial_by_id, port.device
             )
             errors = await self.validate_device_errors(

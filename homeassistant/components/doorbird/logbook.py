@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.components.logbook import (
+from menuai.components.logbook import (
     LOGBOOK_ENTRY_ENTITY_ID,
     LOGBOOK_ENTRY_MESSAGE,
     LOGBOOK_ENTRY_NAME,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import Event, HomeAssistant, callback
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import Event, menuai, callback
 
 from .const import DOMAIN
 from .util import async_get_entries
@@ -18,7 +18,7 @@ from .util import async_get_entries
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[
         [str, str, Callable[[Event], dict[str, str | None]]], None
     ],
@@ -35,7 +35,7 @@ def async_describe_events(
             LOGBOOK_ENTRY_ENTITY_ID: event.data.get(ATTR_ENTITY_ID),
         }
 
-    for entry in async_get_entries(hass):
+    for entry in async_get_entries(menuai):
         data = entry.runtime_data
         for event in data.door_station.door_station_events:
             async_describe_event(

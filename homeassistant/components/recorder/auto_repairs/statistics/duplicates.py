@@ -12,10 +12,10 @@ from sqlalchemy.engine.row import Row
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal_column
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.helpers.storage import STORAGE_DIR
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.json import JSONEncoder
+from menuai.helpers.storage import STORAGE_DIR
+from menuai.util import dt as dt_util
 
 from ...const import DEFAULT_MAX_BIND_VARS
 from ...db_schema import Statistics, StatisticsBase, StatisticsMeta, StatisticsShortTerm
@@ -137,7 +137,7 @@ def _delete_duplicates_from_table(
 
 @database_job_retry_wrapper("delete statistics duplicates", 3)
 def delete_statistics_duplicates(
-    instance: Recorder, hass: HomeAssistant, session: Session
+    instance: Recorder, menuai: menuai, session: Session
 ) -> None:
     """Identify and delete duplicated statistics.
 
@@ -152,7 +152,7 @@ def delete_statistics_duplicates(
     if non_identical_duplicates:
         isotime = dt_util.utcnow().isoformat()
         backup_file_name = f"deleted_statistics.{isotime}.json"
-        backup_path = hass.config.path(STORAGE_DIR, backup_file_name)
+        backup_path = menuai.config.path(STORAGE_DIR, backup_file_name)
 
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
         with open(backup_path, "w", encoding="utf8") as backup_file:

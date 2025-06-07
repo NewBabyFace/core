@@ -7,9 +7,9 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from wled import Device as WLEDDevice, WLEDConnectionError, WLEDError
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.wled.const import DOMAIN, SCAN_INTERVAL
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.wled.const import DOMAIN, SCAN_INTERVAL
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -17,9 +17,9 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import async_fire_time_changed, async_load_json_object_fixture
 
@@ -56,7 +56,7 @@ pytestmark = pytest.mark.usefixtures("init_integration")
     ],
 )
 async def test_switch_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -67,7 +67,7 @@ async def test_switch_state(
     called_with_off: dict[str, bool | int],
 ) -> None:
     """Test the creation and values of the WLED switches."""
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state == snapshot
 
     assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -80,7 +80,7 @@ async def test_switch_state(
     # Test on/off services
     method_mock = getattr(mock_wled, method)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: state.entity_id},
@@ -90,7 +90,7 @@ async def test_switch_state(
     assert method_mock.call_count == 1
     method_mock.assert_called_with(**called_with_on)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: state.entity_id},
@@ -102,8 +102,8 @@ async def test_switch_state(
 
     # Test invalid response, not becoming unavailable
     method_mock.side_effect = WLEDError
-    with pytest.raises(HomeAssistantError, match="Invalid response from WLED API"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Invalid response from WLED API"):
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: state.entity_id},
@@ -111,13 +111,13 @@ async def test_switch_state(
         )
 
     assert method_mock.call_count == 3
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state != STATE_UNAVAILABLE
 
     # Test connection error, leading to becoming unavailable
     method_mock.side_effect = WLEDConnectionError
-    with pytest.raises(HomeAssistantError, match="Error communicating with WLED API"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Error communicating with WLED API"):
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: state.entity_id},
@@ -125,44 +125,44 @@ async def test_switch_state(
         )
 
     assert method_mock.call_count == 4
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("device_fixture", ["rgb_single_segment"])
 async def test_switch_dynamically_handle_segments(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_wled: MagicMock,
 ) -> None:
     """Test if a new/deleted segment is dynamically added/removed."""
 
-    assert (segment0 := hass.states.get("switch.wled_rgb_light_reverse"))
+    assert (segment0 := menuai.states.get("switch.wled_rgb_light_reverse"))
     assert segment0.state == STATE_OFF
-    assert not hass.states.get("switch.wled_rgb_light_segment_1_reverse")
+    assert not menuai.states.get("switch.wled_rgb_light_segment_1_reverse")
 
     # Test adding a segment dynamically...
     return_value = mock_wled.update.return_value
     mock_wled.update.return_value = WLEDDevice.from_dict(
-        await async_load_json_object_fixture(hass, "rgb.json", DOMAIN)
+        await async_load_json_object_fixture(menuai, "rgb.json", DOMAIN)
     )
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (segment0 := hass.states.get("switch.wled_rgb_light_reverse"))
+    assert (segment0 := menuai.states.get("switch.wled_rgb_light_reverse"))
     assert segment0.state == STATE_OFF
-    assert (segment1 := hass.states.get("switch.wled_rgb_light_segment_1_reverse"))
+    assert (segment1 := menuai.states.get("switch.wled_rgb_light_segment_1_reverse"))
     assert segment1.state == STATE_ON
 
     # Test remove segment again...
     mock_wled.update.return_value = return_value
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (segment0 := hass.states.get("switch.wled_rgb_light_reverse"))
+    assert (segment0 := menuai.states.get("switch.wled_rgb_light_reverse"))
     assert segment0.state == STATE_OFF
-    assert (segment1 := hass.states.get("switch.wled_rgb_light_segment_1_reverse"))
+    assert (segment1 := menuai.states.get("switch.wled_rgb_light_segment_1_reverse"))
     assert segment1.state == STATE_UNAVAILABLE

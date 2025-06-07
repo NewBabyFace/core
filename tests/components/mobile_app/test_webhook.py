@@ -12,20 +12,20 @@ from nacl.encoding import Base64Encoder
 from nacl.secret import SecretBox
 import pytest
 
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.mobile_app.const import CONF_SECRET, DATA_DEVICES, DOMAIN
-from homeassistant.components.tag import EVENT_TAG_SCANNED
-from homeassistant.components.zone import DOMAIN as ZONE_DOMAIN
-from homeassistant.const import (
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.mobile_app.const import CONF_SECRET, DATA_DEVICES, DOMAIN
+from menuai.components.tag import EVENT_TAG_SCANNED
+from menuai.components.zone import DOMAIN as ZONE_DOMAIN
+from menuai.const import (
     CONF_WEBHOOK_ID,
     STATE_HOME,
     STATE_NOT_HOME,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .const import CALL_SERVICE, FIRE_EVENT, REGISTER_CLEARTEXT, RENDER_TEMPLATE, UPDATE
 
@@ -34,9 +34,9 @@ from tests.components.conversation import MockAgent
 
 
 @pytest.fixture
-async def homeassistant(hass: HomeAssistant) -> None:
-    """Load the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def menuai(menuai: menuai) -> None:
+    """Load the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
 def encrypt_payload(secret_key, payload, encode_json=True):
@@ -125,12 +125,12 @@ async def test_webhook_handle_render_template(
 
 
 async def test_webhook_handle_call_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
     """Test that we call services properly."""
-    calls = async_mock_service(hass, "test", "mobile_app")
+    calls = async_mock_service(menuai, "test", "mobile_app")
 
     resp = await webhook_client.post(
         f"/api/webhook/{create_registrations[1]['webhook_id']}",
@@ -143,7 +143,7 @@ async def test_webhook_handle_call_services(
 
 
 async def test_webhook_handle_fire_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -155,7 +155,7 @@ async def test_webhook_handle_fire_event(
         """Help store events."""
         events.append(event)
 
-    hass.bus.async_listen("test_event", store_event)
+    menuai.bus.async_listen("test_event", store_event)
 
     resp = await webhook_client.post(
         f"/api/webhook/{create_registrations[1]['webhook_id']}", json=FIRE_EVENT
@@ -194,7 +194,7 @@ async def test_webhook_update_registration(webhook_client: TestClient) -> None:
 
 
 async def test_webhook_handle_get_zones(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -202,7 +202,7 @@ async def test_webhook_handle_get_zones(
     # Zone is already loaded as part of the fixture,
     # so we just trigger a reload.
     with patch(
-        "homeassistant.config.load_yaml_config_file",
+        "menuai.config.load_yaml_config_file",
         autospec=True,
         return_value={
             ZONE_DOMAIN: [
@@ -221,7 +221,7 @@ async def test_webhook_handle_get_zones(
             ]
         },
     ):
-        await hass.services.async_call(ZONE_DOMAIN, "reload", blocking=True)
+        await menuai.services.async_call(ZONE_DOMAIN, "reload", blocking=True)
 
     resp = await webhook_client.post(
         f"/api/webhook/{create_registrations[1]['webhook_id']}",
@@ -248,14 +248,14 @@ async def test_webhook_handle_get_zones(
 
 
 async def test_webhook_handle_get_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
     """Test that we can get config properly."""
     webhook_id = create_registrations[1]["webhook_id"]
     webhook_url = f"/api/webhook/{webhook_id}"
-    device: dr.DeviceEntry = hass.data[DOMAIN][DATA_DEVICES][webhook_id]
+    device: dr.DeviceEntry = menuai.data[DOMAIN][DATA_DEVICES][webhook_id]
 
     # Create two entities
     for sensor in (
@@ -287,18 +287,18 @@ async def test_webhook_handle_get_config(
     if "allowlist_external_dirs" in json:
         json["allowlist_external_dirs"] = set(json["allowlist_external_dirs"])
 
-    hass_config = hass.config.as_dict()
+    menuai_config = menuai.config.as_dict()
 
     expected_dict = {
-        "latitude": hass_config["latitude"],
-        "longitude": hass_config["longitude"],
-        "elevation": hass_config["elevation"],
-        "hass_device_id": device.id,
-        "unit_system": hass_config["unit_system"],
-        "location_name": hass_config["location_name"],
-        "time_zone": hass_config["time_zone"],
-        "components": set(hass_config["components"]),
-        "version": hass_config["version"],
+        "latitude": menuai_config["latitude"],
+        "longitude": menuai_config["longitude"],
+        "elevation": menuai_config["elevation"],
+        "menuai_device_id": device.id,
+        "unit_system": menuai_config["unit_system"],
+        "location_name": menuai_config["location_name"],
+        "time_zone": menuai_config["time_zone"],
+        "components": set(menuai_config["components"]),
+        "version": menuai_config["version"],
         "theme_color": ANY,
         "entities": {
             "mock-device-id": {"disabled": False},
@@ -329,19 +329,19 @@ async def test_webhook_returns_error_incorrect_json(
 @pytest.mark.parametrize(
     ("msg", "generate_response"),
     [
-        (RENDER_TEMPLATE, lambda hass: {"one": "Hello world"}),
+        (RENDER_TEMPLATE, lambda menuai: {"one": "Hello world"}),
         (
             {"type": "get_zones", "data": {}},
-            lambda hass: [hass.states.get("zone.home").as_dict()],
+            lambda menuai: [menuai.states.get("zone.home").as_dict()],
         ),
     ],
 )
 async def test_webhook_handle_decryption(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
     msg: dict[str, Any],
-    generate_response: Callable[[HomeAssistant], dict[str, Any]],
+    generate_response: Callable[[menuai], dict[str, Any]],
 ) -> None:
     """Test that we can encrypt/decrypt properly."""
     key = create_registrations[0]["secret"]
@@ -360,7 +360,7 @@ async def test_webhook_handle_decryption(
 
     decrypted_data = decrypt_payload(key, webhook_json["encrypted_data"])
 
-    assert decrypted_data == generate_response(hass)
+    assert decrypted_data == generate_response(menuai)
 
 
 async def test_webhook_handle_decryption_legacy(
@@ -552,7 +552,7 @@ async def test_webhook_requires_encryption(
 
 
 async def test_webhook_update_location_without_locations(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -569,7 +569,7 @@ async def test_webhook_update_location_without_locations(
 
     assert resp.status == HTTPStatus.OK
 
-    state = hass.states.get("device_tracker.test_1_2")
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state is not None
     assert state.state == STATE_HOME
 
@@ -584,14 +584,14 @@ async def test_webhook_update_location_without_locations(
 
     assert resp.status == HTTPStatus.OK
 
-    state = hass.states.get("device_tracker.test_1_2")
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state is not None
     assert state.state == STATE_UNKNOWN
     assert state.attributes["altitude"] == 123
 
 
 async def test_webhook_update_location_with_gps(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -606,7 +606,7 @@ async def test_webhook_update_location_with_gps(
 
     assert resp.status == HTTPStatus.OK
 
-    state = hass.states.get("device_tracker.test_1_2")
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state is not None
     assert state.attributes["latitude"] == 1.0
     assert state.attributes["longitude"] == 2.0
@@ -615,7 +615,7 @@ async def test_webhook_update_location_with_gps(
 
 
 async def test_webhook_update_location_with_gps_without_accuracy(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -630,19 +630,19 @@ async def test_webhook_update_location_with_gps_without_accuracy(
 
     assert resp.status == HTTPStatus.OK
 
-    state = hass.states.get("device_tracker.test_1_2")
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state.state == STATE_UNKNOWN
 
 
 async def test_webhook_update_location_with_location_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
     """Test that location can be updated."""
 
     with patch(
-        "homeassistant.config.load_yaml_config_file",
+        "menuai.config.load_yaml_config_file",
         autospec=True,
         return_value={
             ZONE_DOMAIN: [
@@ -656,7 +656,7 @@ async def test_webhook_update_location_with_location_name(
             ]
         },
     ):
-        await hass.services.async_call(ZONE_DOMAIN, "reload", blocking=True)
+        await menuai.services.async_call(ZONE_DOMAIN, "reload", blocking=True)
 
     resp = await webhook_client.post(
         f"/api/webhook/{create_registrations[1]['webhook_id']}",
@@ -668,7 +668,7 @@ async def test_webhook_update_location_with_location_name(
 
     assert resp.status == HTTPStatus.OK
 
-    state = hass.states.get("device_tracker.test_1_2")
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state.state == "zone_name"
 
     resp = await webhook_client.post(
@@ -681,7 +681,7 @@ async def test_webhook_update_location_with_location_name(
 
     assert resp.status == HTTPStatus.OK
 
-    state = hass.states.get("device_tracker.test_1_2")
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state.state == STATE_HOME
 
     resp = await webhook_client.post(
@@ -694,12 +694,12 @@ async def test_webhook_update_location_with_location_name(
 
     assert resp.status == HTTPStatus.OK
 
-    state = hass.states.get("device_tracker.test_1_2")
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state.state == STATE_NOT_HOME
 
 
 async def test_webhook_enable_encryption(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -752,7 +752,7 @@ async def test_webhook_enable_encryption(
 
 
 async def test_webhook_camera_stream_non_existent(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -773,12 +773,12 @@ async def test_webhook_camera_stream_non_existent(
 
 
 async def test_webhook_camera_stream_non_hls(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
     """Test fetching camera stream URLs for a non-HLS/stream-supporting camera."""
-    hass.states.async_set("camera.non_stream_camera", "idle", {"supported_features": 0})
+    menuai.states.async_set("camera.non_stream_camera", "idle", {"supported_features": 0})
 
     webhook_id = create_registrations[1]["webhook_id"]
 
@@ -800,12 +800,12 @@ async def test_webhook_camera_stream_non_hls(
 
 
 async def test_webhook_camera_stream_stream_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
     """Test fetching camera stream URLs for an HLS/stream-supporting camera."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "camera.stream_camera",
         "idle",
         {"supported_features": CameraEntityFeature.STREAM},
@@ -814,7 +814,7 @@ async def test_webhook_camera_stream_stream_available(
     webhook_id = create_registrations[1]["webhook_id"]
 
     with patch(
-        "homeassistant.components.camera.async_request_stream",
+        "menuai.components.camera.async_request_stream",
         return_value="/api/streams/some_hls_stream",
     ):
         resp = await webhook_client.post(
@@ -832,12 +832,12 @@ async def test_webhook_camera_stream_stream_available(
 
 
 async def test_webhook_camera_stream_stream_available_but_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
     """Test fetching camera stream URLs for an HLS/stream-supporting camera but that streaming errors."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "camera.stream_camera",
         "idle",
         {"supported_features": CameraEntityFeature.STREAM},
@@ -846,8 +846,8 @@ async def test_webhook_camera_stream_stream_available_but_errors(
     webhook_id = create_registrations[1]["webhook_id"]
 
     with patch(
-        "homeassistant.components.camera.async_request_stream",
-        side_effect=HomeAssistantError(),
+        "menuai.components.camera.async_request_stream",
+        side_effect=menuaiError(),
     ):
         resp = await webhook_client.post(
             f"/api/webhook/{webhook_id}",
@@ -864,7 +864,7 @@ async def test_webhook_camera_stream_stream_available_but_errors(
 
 
 async def test_webhook_handle_scan_tag(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
@@ -873,7 +873,7 @@ async def test_webhook_handle_scan_tag(
     device = device_registry.async_get_device(identifiers={(DOMAIN, "mock-device-id")})
     assert device is not None
 
-    events = async_capture_events(hass, EVENT_TAG_SCANNED)
+    events = async_capture_events(menuai, EVENT_TAG_SCANNED)
 
     resp = await webhook_client.post(
         f"/api/webhook/{create_registrations[1]['webhook_id']}",
@@ -890,7 +890,7 @@ async def test_webhook_handle_scan_tag(
 
 
 async def test_register_sensor_limits_state_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -933,7 +933,7 @@ async def test_register_sensor_limits_state_class(
 
 
 async def test_reregister_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
@@ -1037,9 +1037,9 @@ async def test_reregister_sensor(
     assert entry.original_icon is None
 
 
-@pytest.mark.usefixtures("homeassistant")
+@pytest.mark.usefixtures("menuai")
 async def test_webhook_handle_conversation_process(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
     mock_conversation_agent: MockAgent,
@@ -1048,7 +1048,7 @@ async def test_webhook_handle_conversation_process(
     webhook_client.server.app.router._frozen = False
 
     with patch(
-        "homeassistant.components.conversation.agent_manager.async_get_agent",
+        "menuai.components.conversation.agent_manager.async_get_agent",
         return_value=mock_conversation_agent,
     ):
         resp = await webhook_client.post(
@@ -1073,7 +1073,7 @@ async def test_webhook_handle_conversation_process(
                     "speech": "Test response",
                 }
             },
-            "language": hass.config.language,
+            "language": menuai.config.language,
             "data": {
                 "targets": [],
                 "success": [],
@@ -1086,7 +1086,7 @@ async def test_webhook_handle_conversation_process(
 
 
 async def test_sending_sensor_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
@@ -1133,13 +1133,13 @@ async def test_sending_sensor_state(
     assert entry.original_icon == "mdi:cellphone"
     assert entry.disabled_by is None
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test_1_battery_state")
+    state = menuai.states.get("sensor.test_1_battery_state")
     assert state is not None
     assert state.state == "100"
 
-    state = hass.states.get("sensor.test_1_battery_health")
+    state = menuai.states.get("sensor.test_1_battery_health")
     assert state is not None
     assert state.state == "good"
 
@@ -1163,12 +1163,12 @@ async def test_sending_sensor_state(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test_1_battery_state")
+    state = menuai.states.get("sensor.test_1_battery_state")
     assert state is not None
     assert state.state == "50.0"
 
-    state = hass.states.get("sensor.test_1_battery_health")
+    state = menuai.states.get("sensor.test_1_battery_health")
     assert state is not None
     assert state.state == "okay-ish"

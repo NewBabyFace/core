@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import UnitOfEnergy
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import AdaxConfigEntry
 from .const import CONNECTION_TYPE, DOMAIN, LOCAL
@@ -21,7 +21,7 @@ from .coordinator import AdaxCloudCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AdaxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

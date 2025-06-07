@@ -8,11 +8,11 @@ from aiohttp import ClientConnectionError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.myuplink.const import DOMAIN, OAUTH2_TOKEN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.myuplink.const import DOMAIN, OAUTH2_TOKEN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import setup_integration
 from .const import UNIQUE_ID
@@ -23,18 +23,18 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_myuplink_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload entry."""
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
 
@@ -56,7 +56,7 @@ async def test_load_unload_entry(
     ids=["unauthorized", "internal_server_error"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
@@ -70,7 +70,7 @@ async def test_expired_token_refresh_failure(
         status=status,
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is expected_state
 
@@ -88,7 +88,7 @@ async def test_expired_token_refresh_failure(
     ],
 )
 async def test_expired_token_refresh_connection_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     expected_state: ConfigEntryState,
@@ -101,7 +101,7 @@ async def test_expired_token_refresh_connection_failure(
         exc=ClientConnectionError(),
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is expected_state
 
@@ -111,31 +111,31 @@ async def test_expired_token_refresh_connection_failure(
     [load_fixture("systems.json", DOMAIN)],
 )
 async def test_devices_created_count(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_myuplink_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test that one device is created."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert len(device_registry.devices) == 1
 
 
 async def test_devices_multiple_created_count(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_myuplink_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test that multiple devices are created."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert len(device_registry.devices) == 2
 
 
 async def test_migrate_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_myuplink_client: MagicMock,
     expires_at: float,
@@ -161,39 +161,39 @@ async def test_migrate_config_entry(
         entry_id="myuplink_test",
     )
 
-    await setup_integration(hass, mock_entry_v1_1)
+    await setup_integration(menuai, mock_entry_v1_1)
     assert mock_entry_v1_1.version == 1
     assert mock_entry_v1_1.minor_version == 2
     assert mock_entry_v1_1.unique_id == UNIQUE_ID
 
 
 async def test_oaut2_scope_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_myuplink_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test that an incorrect OAuth2 scope fails."""
 
     mock_config_entry.data["token"]["scope"] = "wrong_scope"
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
 async def test_device_remove_devices(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
     mock_myuplink_client: MagicMock,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test we can only remove a device that no longer exists."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         identifiers={
@@ -203,7 +203,7 @@ async def test_device_remove_devices(
             )
         },
     )
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device_entry.id, mock_config_entry.entry_id)
     assert not response["success"]
 
@@ -247,7 +247,7 @@ async def test_device_remove_devices(
     ],
 )
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_myuplink_client: MagicMock,
     mock_config_entry: MockConfigEntry,
@@ -255,7 +255,7 @@ async def test_device_info(
     device_id: str,
 ) -> None:
     """Test device registry integration."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     device_entry = device_registry.async_get_device(identifiers={(DOMAIN, device_id)})
     assert device_entry is not None
     assert device_entry == snapshot

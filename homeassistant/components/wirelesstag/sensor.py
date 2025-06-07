@@ -6,19 +6,19 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import CONF_MONITORED_CONDITIONS, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_MONITORED_CONDITIONS, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN, SIGNAL_TAG_UPDATE
 from .entity import WirelessTagBaseSensor
@@ -72,13 +72,13 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the sensor platform."""
-    platform = hass.data[DOMAIN]
+    platform = menuai.data[DOMAIN]
     sensors = []
     tags = platform.tags
     for tag in tags.values():
@@ -86,7 +86,7 @@ async def async_setup_platform(
             if key not in tag.allowed_sensor_types:
                 continue
             description = SENSOR_TYPES[key]
-            async_migrate_unique_id(hass, tag, Platform.SENSOR, description.key)
+            async_migrate_unique_id(menuai, tag, Platform.SENSOR, description.key)
             sensors.append(WirelessTagSensor(platform, tag, description))
 
     async_add_entities(sensors, True)
@@ -112,11 +112,11 @@ class WirelessTagSensor(WirelessTagBaseSensor, SensorEntity):
         # sensor.bedroom_2 for humidity
         self.entity_id = f"sensor.{DOMAIN}_{self.underscored_name}_{self._sensor_type}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_TAG_UPDATE.format(self.tag_id, self.tag_manager_mac),
                 self._update_tag_info_callback,
             )

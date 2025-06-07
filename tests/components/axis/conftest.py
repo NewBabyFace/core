@@ -12,8 +12,8 @@ from axis.rtsp import Signal, State
 import pytest
 import respx
 
-from homeassistant.components.axis.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.axis.const import DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_MODEL,
     CONF_NAME,
@@ -21,7 +21,7 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import (
     API_DISCOVERY_RESPONSE,
@@ -75,7 +75,7 @@ class _RtspClientMock(Protocol):
 def fixture_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.axis.async_setup_entry", return_value=True
+        "menuai.components.axis.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -281,17 +281,17 @@ def fixture_default_requests(mock_requests: Callable[[str], None]) -> None:
 
 @pytest.fixture(name="config_entry_factory")
 async def fixture_config_entry_factory(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_requests: Callable[[str], None],
 ) -> ConfigEntryFactoryType:
     """Fixture factory to set up Axis network device."""
 
     async def __mock_setup_config_entry() -> MockConfigEntry:
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
         mock_requests(config_entry.data[CONF_HOST])
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         return config_entry
 
     return __mock_setup_config_entry

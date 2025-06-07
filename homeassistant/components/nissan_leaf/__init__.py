@@ -16,14 +16,14 @@ from pycarwings2.responses import (
 )
 import voluptuous as vol
 
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME, Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.dt import utcnow
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME, Platform
+from menuai.core import CALLBACK_TYPE, menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.typing import ConfigType
+from menuai.util.dt import utcnow
 
 from .const import (
     CONF_CHARGING_INTERVAL,
@@ -96,15 +96,15 @@ UPDATE_LEAF_SCHEMA = vol.Schema({vol.Required(ATTR_VIN): cv.string})
 START_CHARGE_LEAF_SCHEMA = vol.Schema({vol.Required(ATTR_VIN): cv.string})
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Nissan Leaf integration."""
 
     async def async_handle_update(service: ServiceCall) -> None:
         """Handle service to update leaf data from Nissan servers."""
         vin = service.data[ATTR_VIN]
 
-        if vin in hass.data[DATA_LEAF]:
-            data_store = hass.data[DATA_LEAF][vin]
+        if vin in menuai.data[DATA_LEAF]:
+            data_store = menuai.data[DATA_LEAF][vin]
             await data_store.async_update_data(utcnow())
         else:
             _LOGGER.debug("Vin %s not recognised for update", vin)
@@ -118,20 +118,20 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
         vin = service.data[ATTR_VIN]
 
-        if vin in hass.data[DATA_LEAF]:
-            data_store = hass.data[DATA_LEAF][vin]
+        if vin in menuai.data[DATA_LEAF]:
+            data_store = menuai.data[DATA_LEAF][vin]
 
             # Send the command to request charging is started to Nissan
             # servers. If that completes OK then trigger a fresh update to
             # pull the charging status from the car after waiting a minute
             # for the charging request to reach the car.
-            result = await hass.async_add_executor_job(data_store.leaf.start_charging)
+            result = await menuai.async_add_executor_job(data_store.leaf.start_charging)
             if result:
                 _LOGGER.debug("Start charging sent, request updated data in 1 minute")
                 check_charge_at = utcnow() + timedelta(minutes=1)
                 data_store.next_update = check_charge_at
                 async_track_point_in_utc_time(
-                    hass, data_store.async_update_data, check_charge_at
+                    menuai, data_store.async_update_data, check_charge_at
                 )
 
         else:
@@ -147,7 +147,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         try:
             # This might need to be made async (somehow) causes
-            # homeassistant to be slow to start
+            # menuai to be slow to start
             sess = Session(username, password, region)
             leaf = sess.get_leaf()
         except KeyError:
@@ -170,24 +170,24 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             " Don't set the intervals too low"
         )
 
-        data_store = LeafDataStore(hass, leaf, car_config)
-        hass.data[DATA_LEAF][leaf.vin] = data_store
+        data_store = LeafDataStore(menuai, leaf, car_config)
+        menuai.data[DATA_LEAF][leaf.vin] = data_store
 
         for platform in PLATFORMS:
-            load_platform(hass, platform, DOMAIN, {}, car_config)
+            load_platform(menuai, platform, DOMAIN, {}, car_config)
 
         async_track_point_in_utc_time(
-            hass, data_store.async_update_data, utcnow() + INITIAL_UPDATE
+            menuai, data_store.async_update_data, utcnow() + INITIAL_UPDATE
         )
 
-    hass.data[DATA_LEAF] = {}
+    menuai.data[DATA_LEAF] = {}
     for car in config[DOMAIN]:
         setup_leaf(car)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN, SERVICE_UPDATE_LEAF, async_handle_update, schema=UPDATE_LEAF_SCHEMA
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_START_CHARGE_LEAF,
         async_handle_start_charge,
@@ -214,10 +214,10 @@ class LeafDataStore:
     """Nissan Leaf Data Store."""
 
     def __init__(
-        self, hass: HomeAssistant, leaf: Leaf, car_config: dict[str, Any]
+        self, menuai: menuai, leaf: Leaf, car_config: dict[str, Any]
     ) -> None:
         """Initialise the data store."""
-        self.hass = hass
+        self.menuai = menuai
         self.leaf = leaf
         self.car_config = car_config
         self.force_miles = car_config[CONF_FORCE_MILES]
@@ -253,7 +253,7 @@ class LeafDataStore:
 
         if self.next_update is not None:
             self._remove_listener = async_track_point_in_utc_time(
-                self.hass, self.async_update_data, self.next_update
+                self.menuai, self.async_update_data, self.next_update
             )
 
     def get_next_interval(self) -> datetime:
@@ -325,7 +325,7 @@ class LeafDataStore:
 
                 self.data[DATA_PLUGGED_IN] = server_response.is_connected
                 self.data[DATA_CHARGING] = server_response.is_charging
-                async_dispatcher_send(self.hass, SIGNAL_UPDATE_LEAF)
+                async_dispatcher_send(self.menuai, SIGNAL_UPDATE_LEAF)
                 self.last_battery_response = utcnow()
 
         # Climate response only updated if battery data updated first.
@@ -342,7 +342,7 @@ class LeafDataStore:
                 _LOGGER.error("Error fetching climate info")
 
         self.request_in_progress = False
-        async_dispatcher_send(self.hass, SIGNAL_UPDATE_LEAF)
+        async_dispatcher_send(self.menuai, SIGNAL_UPDATE_LEAF)
 
     async def async_get_battery(
         self,
@@ -353,7 +353,7 @@ class LeafDataStore:
             _LOGGER.debug("Requesting battery update, %s", self.leaf.vin)
             start_date: datetime | None = None
             try:
-                start_server_info = await self.hass.async_add_executor_job(
+                start_server_info = await self.menuai.async_add_executor_job(
                     self.leaf.get_latest_battery_status
                 )
             except TypeError:  # pycarwings2 can fail if Nissan returns nothing
@@ -364,7 +364,7 @@ class LeafDataStore:
                 else:
                     start_date = _extract_start_date(start_server_info)
             await asyncio.sleep(1)  # Critical sleep
-            request = await self.hass.async_add_executor_job(self.leaf.request_update)
+            request = await self.menuai.async_add_executor_job(self.leaf.request_update)
             if not request:
                 _LOGGER.error("Battery update request failed")
                 return None
@@ -381,14 +381,14 @@ class LeafDataStore:
                 # We don't use the response from get_status_from_update
                 # apart from knowing that the car has responded saying it
                 # has given the latest battery status to Nissan.
-                check_result_info = await self.hass.async_add_executor_job(
+                check_result_info = await self.menuai.async_add_executor_job(
                     self.leaf.get_status_from_update, request
                 )
 
                 if check_result_info is not None:
                     # Get the latest battery status from Nissan servers.
                     # This has the SOC in it.
-                    server_info = await self.hass.async_add_executor_job(
+                    server_info = await self.menuai.async_add_executor_job(
                         self.leaf.get_latest_battery_status
                     )
                     if not start_date or (
@@ -398,7 +398,7 @@ class LeafDataStore:
                     # get_status_from_update returned {"resultFlag": "1"}
                     # but the data didn't change, make a fresh request.
                     await asyncio.sleep(1)  # Critical sleep
-                    request = await self.hass.async_add_executor_job(
+                    request = await self.menuai.async_add_executor_job(
                         self.leaf.request_update
                     )
                     if not request:
@@ -411,7 +411,7 @@ class LeafDataStore:
             )
             # Get the latest data from the nissan servers, even though
             # it may be out of date, it's better than nothing.
-            server_info = await self.hass.async_add_executor_job(
+            server_info = await self.menuai.async_add_executor_job(
                 self.leaf.get_latest_battery_status
             )
         except CarwingsError:
@@ -427,7 +427,7 @@ class LeafDataStore:
     ) -> CarwingsLatestClimateControlStatusResponse:
         """Request climate data from Nissan servers."""
         try:
-            return await self.hass.async_add_executor_job(
+            return await self.menuai.async_add_executor_job(
                 self.leaf.get_latest_hvac_status
             )
         except CarwingsError:
@@ -448,7 +448,7 @@ class LeafDataStore:
             set_function = self.leaf.stop_climate_control
             result_function = self.leaf.get_stop_climate_control_result
 
-        request = await self.hass.async_add_executor_job(set_function)
+        request = await self.menuai.async_add_executor_job(set_function)
         for attempt in range(MAX_RESPONSE_ATTEMPTS):
             if attempt > 0:
                 _LOGGER.debug(
@@ -459,7 +459,7 @@ class LeafDataStore:
                 )
                 await asyncio.sleep(PYCARWINGS2_SLEEP)
 
-            climate_result = await self.hass.async_add_executor_job(
+            climate_result = await self.menuai.async_add_executor_job(
                 result_function, request
             )
 
@@ -468,7 +468,7 @@ class LeafDataStore:
 
         if climate_result is not None:
             _LOGGER.debug("Climate result: %s", climate_result.__dict__)
-            async_dispatcher_send(self.hass, SIGNAL_UPDATE_LEAF)
+            async_dispatcher_send(self.menuai, SIGNAL_UPDATE_LEAF)
             return bool(climate_result.is_hvac_running) == toggle
 
         _LOGGER.debug("Climate result not returned by Nissan servers")
@@ -476,7 +476,7 @@ class LeafDataStore:
 
     async def async_start_charging(self) -> None:
         """Request to start charging the car. Used by the button platform."""
-        await self.hass.async_add_executor_job(self.leaf.start_charging)
+        await self.menuai.async_add_executor_job(self.leaf.start_charging)
         self.schedule_update()
 
     def schedule_update(self) -> None:
@@ -490,5 +490,5 @@ class LeafDataStore:
         update_at = utcnow() + timedelta(minutes=1)
         self.next_update = update_at
         self._remove_listener = async_track_point_in_utc_time(
-            self.hass, self.async_update_data, update_at
+            self.menuai, self.async_update_data, update_at
         )

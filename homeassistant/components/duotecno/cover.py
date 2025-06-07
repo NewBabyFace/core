@@ -6,16 +6,16 @@ from typing import Any
 
 from duotecno.unit import DuoswitchUnit
 
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import CoverEntity, CoverEntityFeature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DuotecnoConfigEntry
 from .entity import DuotecnoEntity, api_call
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DuotecnoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

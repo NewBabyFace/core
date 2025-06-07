@@ -7,11 +7,11 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.trigger import TriggerActionType, TriggerData, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.trigger import TriggerActionType, TriggerData, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import Notification, UpdateType, async_register_callback
 
@@ -33,14 +33,14 @@ TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Listen for state changes based on configuration."""
     trigger_data: TriggerData = trigger_info["trigger_data"]
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     persistent_notification_id = config.get(CONF_NOTIFICATION_ID)
     update_types = config.get(CONF_UPDATE_TYPE)
@@ -60,7 +60,7 @@ async def async_attach_trigger(
             ):
                 continue
 
-            hass.async_run_hass_job(
+            menuai.async_run_menuai_job(
                 job,
                 {
                     "trigger": {
@@ -78,4 +78,4 @@ async def async_attach_trigger(
         update_types,
     )
 
-    return async_register_callback(hass, persistent_notification_listener)
+    return async_register_callback(menuai, persistent_notification_listener)

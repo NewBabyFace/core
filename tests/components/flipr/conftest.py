@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.flipr.const import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.util import dt as dt_util
+from menuai.components.flipr.const import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -48,7 +48,7 @@ MOCK_HUB_MODE_MANUAL = {
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.flipr.async_setup_entry", return_value=True
+        "menuai.components.flipr.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -73,11 +73,11 @@ def mock_flipr_client() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.flipr.FliprAPIRestClient",
+            "menuai.components.flipr.FliprAPIRestClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.flipr.config_flow.FliprAPIRestClient",
+            "menuai.components.flipr.config_flow.FliprAPIRestClient",
             new=mock_client,
         ),
     ):

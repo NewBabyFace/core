@@ -7,10 +7,10 @@ import logging
 
 import justnimbus
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_CLIENT_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_CLIENT_ID
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_ZIP_CODE, DOMAIN
 
@@ -22,10 +22,10 @@ class JustNimbusCoordinator(DataUpdateCoordinator[justnimbus.JustNimbusModel]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -38,4 +38,4 @@ class JustNimbusCoordinator(DataUpdateCoordinator[justnimbus.JustNimbusModel]):
 
     async def _async_update_data(self) -> justnimbus.JustNimbusModel:
         """Fetch the latest data from the source."""
-        return await self.hass.async_add_executor_job(self._client.get_data)
+        return await self.menuai.async_add_executor_job(self._client.get_data)

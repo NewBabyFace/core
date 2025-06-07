@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from homeassistant.components.github.const import DOMAIN, FALLBACK_UPDATE_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.github.const import DOMAIN, FALLBACK_UPDATE_INTERVAL
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .common import TEST_REPOSITORY
 
@@ -19,17 +19,17 @@ TEST_SENSOR_ENTITY = "sensor.octocat_hello_world_latest_release"
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_sensor_updates_with_empty_release_array(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test the sensor updates by default GitHub sensors."""
-    state = hass.states.get(TEST_SENSOR_ENTITY)
+    state = menuai.states.get(TEST_SENSOR_ENTITY)
     assert state.state == "v1.0.0"
 
-    response_json = json.loads(await async_load_fixture(hass, "graphql.json", DOMAIN))
+    response_json = json.loads(await async_load_fixture(menuai, "graphql.json", DOMAIN))
     response_json["data"]["repository"]["release"] = None
-    headers = json.loads(await async_load_fixture(hass, "base_headers.json", DOMAIN))
+    headers = json.loads(await async_load_fixture(menuai, "base_headers.json", DOMAIN))
 
     aioclient_mock.clear_requests()
     aioclient_mock.get(
@@ -43,8 +43,8 @@ async def test_sensor_updates_with_empty_release_array(
         headers=headers,
     )
 
-    async_fire_time_changed(hass, dt_util.utcnow() + FALLBACK_UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + FALLBACK_UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    new_state = hass.states.get(TEST_SENSOR_ENTITY)
+    new_state = menuai.states.get(TEST_SENSOR_ENTITY)
     assert new_state.state == "unavailable"

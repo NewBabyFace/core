@@ -8,13 +8,13 @@ from typing import Final
 
 from aioecowitt import EcoWittSensor, EcoWittSensorTypes
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
     DEGREE,
@@ -31,10 +31,10 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolumetricFlux,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from . import EcowittConfigEntry
 from .entity import EcowittEntity
@@ -219,7 +219,7 @@ ECOWITT_SENSORS_MAPPING: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EcowittConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -232,9 +232,9 @@ async def async_setup_entry(
             return
 
         # Ignore metrics that are not supported by the user's locale
-        if sensor.stype in _METRIC and hass.config.units is not METRIC_SYSTEM:
+        if sensor.stype in _METRIC and menuai.config.units is not METRIC_SYSTEM:
             return
-        if sensor.stype in _IMPERIAL and hass.config.units is not US_CUSTOMARY_SYSTEM:
+        if sensor.stype in _IMPERIAL and menuai.config.units is not US_CUSTOMARY_SYSTEM:
             return
         mapping = ECOWITT_SENSORS_MAPPING[sensor.stype]
 

@@ -8,22 +8,22 @@ from enum import StrEnum
 
 from pynecil import CharSetting, LiveDataResponse, SettingsDataResponse
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     DEFAULT_MAX_VALUE,
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     EntityCategory,
     UnitOfElectricPotential,
     UnitOfPower,
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import IronOSConfigEntry
 from .const import MAX_TEMP, MIN_TEMP
@@ -343,7 +343,7 @@ PINECIL_NUMBER_DESCRIPTIONS_V223: tuple[IronOSNumberEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IronOSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -397,10 +397,10 @@ class IronOSNumberEntity(IronOSBaseEntity, NumberEntity):
 
         return self.entity_description.native_max_value or DEFAULT_MAX_VALUE
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
 
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.settings.async_add_listener(
                 self._handle_coordinator_update, self.entity_description.characteristic

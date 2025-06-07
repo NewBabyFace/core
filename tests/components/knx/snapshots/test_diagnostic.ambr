@@ -1,5 +1,5 @@
 # serializer version: 1
-# name: test_diagnostic_config_error[hass_config0]
+# name: test_diagnostic_config_error[menuai_config0]
   dict({
     'config_entry_data': dict({
       'connection_type': 'automatic',
@@ -21,7 +21,7 @@
     }),
   })
 # ---
-# name: test_diagnostic_redact[hass_config0]
+# name: test_diagnostic_redact[menuai_config0]
   dict({
     'config_entry_data': dict({
       'backbone_key': '**REDACTED**',
@@ -44,7 +44,7 @@
     }),
   })
 # ---
-# name: test_diagnostics[hass_config0]
+# name: test_diagnostics[menuai_config0]
   dict({
     'config_entry_data': dict({
       'connection_type': 'automatic',
@@ -63,7 +63,7 @@
     }),
   })
 # ---
-# name: test_diagnostics_project[hass_config0]
+# name: test_diagnostics_project[menuai_config0]
   dict({
     'config_entry_data': dict({
       'connection_type': 'automatic',

@@ -13,10 +13,10 @@ from pyjoin import (
 )
 import voluptuous as vol
 
-from homeassistant.const import CONF_API_KEY, CONF_DEVICE_ID, CONF_NAME
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_API_KEY, CONF_DEVICE_ID, CONF_NAME
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def register_device(hass, api_key, name, device_id, device_ids, device_names):
+def register_device(menuai, api_key, name, device_id, device_ids, device_names):
     """Register services for each join device listed."""
 
     def ring_service(service: ServiceCall) -> None:
@@ -107,15 +107,15 @@ def register_device(hass, api_key, name, device_id, device_ids, device_names):
             api_key=api_key,
         )
 
-    hass.services.register(DOMAIN, f"{name}ring", ring_service)
-    hass.services.register(DOMAIN, f"{name}set_wallpaper", set_wallpaper_service)
-    hass.services.register(DOMAIN, f"{name}send_sms", send_sms_service)
-    hass.services.register(DOMAIN, f"{name}send_file", send_file_service)
-    hass.services.register(DOMAIN, f"{name}send_url", send_url_service)
-    hass.services.register(DOMAIN, f"{name}send_tasker", send_tasker_service)
+    menuai.services.register(DOMAIN, f"{name}ring", ring_service)
+    menuai.services.register(DOMAIN, f"{name}set_wallpaper", set_wallpaper_service)
+    menuai.services.register(DOMAIN, f"{name}send_sms", send_sms_service)
+    menuai.services.register(DOMAIN, f"{name}send_file", send_file_service)
+    menuai.services.register(DOMAIN, f"{name}send_url", send_url_service)
+    menuai.services.register(DOMAIN, f"{name}send_tasker", send_tasker_service)
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Join services."""
     for device in config[DOMAIN]:
         api_key = device.get(CONF_API_KEY)
@@ -134,5 +134,5 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
             return False
 
-        register_device(hass, api_key, name, device_id, device_ids, device_names)
+        register_device(menuai, api_key, name, device_id, device_ids, device_names)
     return True

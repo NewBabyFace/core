@@ -5,29 +5,29 @@ from unittest.mock import AsyncMock
 from mastodon.Mastodon import MastodonNetworkError, MastodonUnauthorizedError
 import pytest
 
-from homeassistant.components.mastodon.const import CONF_BASE_URL, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.mastodon.const import CONF_BASE_URL, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mastodon_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_BASE_URL: "https://mastodon.social",
@@ -48,19 +48,19 @@ async def test_full_flow(
 
 
 async def test_full_flow_with_path(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mastodon_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test full flow, where a path is accidentally specified."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_BASE_URL: "https://mastodon.social/home",
@@ -89,7 +89,7 @@ async def test_full_flow_with_path(
     ],
 )
 async def test_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mastodon_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
@@ -98,14 +98,14 @@ async def test_flow_errors(
     """Test flow errors."""
     mock_mastodon_client.account_verify_credentials.side_effect = exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_BASE_URL: "https://mastodon.social",
@@ -120,7 +120,7 @@ async def test_flow_errors(
 
     mock_mastodon_client.account_verify_credentials.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_BASE_URL: "https://mastodon.social",
@@ -133,22 +133,22 @@ async def test_flow_errors(
 
 
 async def test_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mastodon_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test duplicate flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_BASE_URL: "https://mastodon.social",

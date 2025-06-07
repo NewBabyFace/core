@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import CLEAR_TIMER, DOMAIN
 from .coordinator import ModernFormsDataUpdateCoordinator
@@ -14,12 +14,12 @@ from .entity import ModernFormsDeviceEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Modern Forms binary sensors."""
-    coordinator: ModernFormsDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: ModernFormsDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     binary_sensors: list[ModernFormsBinarySensor] = [
         ModernFormsFanSleepTimerActive(entry.entry_id, coordinator),

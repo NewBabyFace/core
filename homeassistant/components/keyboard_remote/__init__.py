@@ -12,10 +12,10 @@ from asyncinotify import Inotify, Mask
 from evdev import InputDevice, categorize, ecodes, list_devices
 import voluptuous as vol
 
-from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import EVENT_menuai_START, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,11 +65,11 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the keyboard_remote."""
     domain_config: list[dict[str, Any]] = config[DOMAIN]
 
-    remote = KeyboardRemote(hass, domain_config)
+    remote = KeyboardRemote(menuai, domain_config)
     remote.setup()
 
     return True
@@ -78,9 +78,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class KeyboardRemote:
     """Manage device connection/disconnection using inotify to asynchronously monitor."""
 
-    def __init__(self, hass: HomeAssistant, config: list[dict[str, Any]]) -> None:
+    def __init__(self, menuai: menuai, config: list[dict[str, Any]]) -> None:
         """Create handlers and setup dictionaries to keep track of them."""
-        self.hass = hass
+        self.menuai = menuai
         self.handlers_by_name = {}
         self.handlers_by_descriptor = {}
         self.active_handlers_by_descriptor: dict[str, asyncio.Future] = {}
@@ -89,7 +89,7 @@ class KeyboardRemote:
         self.monitor_task = None
 
         for dev_block in config:
-            handler = self.DeviceHandler(hass, dev_block)
+            handler = self.DeviceHandler(menuai, dev_block)
             descriptor = dev_block.get(DEVICE_DESCRIPTOR)
             if descriptor is not None:
                 self.handlers_by_descriptor[descriptor] = handler
@@ -98,13 +98,13 @@ class KeyboardRemote:
                 self.handlers_by_name[name] = handler
 
     def setup(self):
-        """Listen for Home Assistant start and stop events."""
+        """Listen for MenuAI start and stop events."""
 
-        self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_START, self.async_start_monitoring
+        self.menuai.bus.async_listen_once(
+            EVENT_menuai_START, self.async_start_monitoring
         )
-        self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, self.async_stop_monitoring
+        self.menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, self.async_stop_monitoring
         )
 
     async def async_start_monitoring(self, event):
@@ -124,9 +124,9 @@ class KeyboardRemote:
         # add initial devices (do this AFTER starting watcher in order to
         # avoid race conditions leading to missing device connections)
         initial_start_monitoring = set()
-        descriptors = await self.hass.async_add_executor_job(list_devices, DEVINPUT)
+        descriptors = await self.menuai.async_add_executor_job(list_devices, DEVINPUT)
         for descriptor in descriptors:
-            dev, handler = await self.hass.async_add_executor_job(
+            dev, handler = await self.menuai.async_add_executor_job(
                 self.get_device_handler, descriptor
             )
 
@@ -141,7 +141,7 @@ class KeyboardRemote:
         if initial_start_monitoring:
             await asyncio.wait(initial_start_monitoring)
 
-        self.monitor_task = self.hass.async_create_task(self.async_monitor_devices())
+        self.monitor_task = self.menuai.async_create_task(self.async_monitor_devices())
 
     async def async_stop_monitoring(self, event):
         """Stop and cleanup running monitoring tasks."""
@@ -220,7 +220,7 @@ class KeyboardRemote:
                     (event.mask & Mask.CREATE) or (event.mask & Mask.ATTRIB)
                 ) and not descriptor_active:
                     _LOGGER.debug("checking new: %s", descriptor)
-                    dev, handler = await self.hass.async_add_executor_job(
+                    dev, handler = await self.menuai.async_add_executor_job(
                         self.get_device_handler, descriptor
                     )
                     if handler is None:
@@ -235,10 +235,10 @@ class KeyboardRemote:
     class DeviceHandler:
         """Manage input events using evdev with asyncio."""
 
-        def __init__(self, hass: HomeAssistant, dev_block: dict[str, Any]) -> None:
+        def __init__(self, menuai: menuai, dev_block: dict[str, Any]) -> None:
             """Fill configuration data."""
 
-            self.hass = hass
+            self.menuai = menuai
 
             key_types = dev_block[TYPE]
 
@@ -259,7 +259,7 @@ class KeyboardRemote:
 
             await asyncio.sleep(delay)
             while True:
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     KEYBOARD_REMOTE_COMMAND_RECEIVED,
                     {
                         KEY_CODE: code,
@@ -281,10 +281,10 @@ class KeyboardRemote:
                 else:
                     self.descriptor = self.dev.path
 
-                self.monitor_task = self.hass.async_create_task(
+                self.monitor_task = self.menuai.async_create_task(
                     self.async_device_monitor_input()
                 )
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     KEYBOARD_REMOTE_CONNECTED,
                     {
                         DEVICE_DESCRIPTOR: self.descriptor,
@@ -297,7 +297,7 @@ class KeyboardRemote:
             """Stop event monitoring task and issue event."""
             if self.monitor_task is not None:
                 with suppress(OSError):
-                    await self.hass.async_add_executor_job(self.dev.ungrab)
+                    await self.menuai.async_add_executor_job(self.dev.ungrab)
                 # monitoring of the device form the event loop and closing of the
                 # device has to occur before cancelling the task to avoid
                 # triggering unhandled exceptions inside evdev coroutines
@@ -307,7 +307,7 @@ class KeyboardRemote:
                     self.monitor_task.cancel()
                 await self.monitor_task
                 self.monitor_task = None
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     KEYBOARD_REMOTE_DISCONNECTED,
                     {
                         DEVICE_DESCRIPTOR: self.descriptor,
@@ -329,7 +329,7 @@ class KeyboardRemote:
 
             try:
                 _LOGGER.debug("Start device monitoring")
-                await self.hass.async_add_executor_job(self.dev.grab)
+                await self.menuai.async_add_executor_job(self.dev.grab)
                 async for event in self.dev.async_read_loop():
                     if event.type is ecodes.EV_KEY:
                         if event.value in self.key_values:
@@ -337,7 +337,7 @@ class KeyboardRemote:
                                 "device: %s: %s", self.dev.name, categorize(event)
                             )
 
-                            self.hass.bus.async_fire(
+                            self.menuai.bus.async_fire(
                                 KEYBOARD_REMOTE_COMMAND_RECEIVED,
                                 {
                                     KEY_CODE: event.code,
@@ -351,7 +351,7 @@ class KeyboardRemote:
                             event.value == KEY_VALUE["key_down"]
                             and self.emulate_key_hold
                         ):
-                            repeat_tasks[event.code] = self.hass.async_create_task(
+                            repeat_tasks[event.code] = self.menuai.async_create_task(
                                 self.async_device_keyrepeat(
                                     event.code,
                                     self.emulate_key_hold_delay,

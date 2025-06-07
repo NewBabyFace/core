@@ -9,9 +9,9 @@ from unittest.mock import call, patch
 
 import pytest
 
-from homeassistant.components import device_tracker, zone
-from homeassistant.components.device_tracker import SourceType, const, legacy
-from homeassistant.const import (
+from menuai.components import device_tracker, zone
+from menuai.components.device_tracker import SourceType, const, legacy
+from menuai.const import (
     ATTR_ENTITY_PICTURE,
     ATTR_FRIENDLY_NAME,
     ATTR_GPS_ACCURACY,
@@ -22,12 +22,12 @@ from homeassistant.const import (
     STATE_HOME,
     STATE_NOT_HOME,
 )
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import discovery
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, State, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import discovery
+from menuai.helpers.json import JSONEncoder
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import common
 from .common import MockScanner, mock_legacy_device_tracker_setup
@@ -47,9 +47,9 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(name="yaml_devices")
-def mock_yaml_devices(hass: HomeAssistant) -> Generator[str]:
+def mock_yaml_devices(menuai: menuai) -> Generator[str]:
     """Get a path for storing yaml devices."""
-    yaml_devices = hass.config.path(legacy.YAML_DEVICES)
+    yaml_devices = menuai.config.path(legacy.YAML_DEVICES)
     if os.path.isfile(yaml_devices):
         os.remove(yaml_devices)
     yield yaml_devices
@@ -59,26 +59,26 @@ def mock_yaml_devices(hass: HomeAssistant) -> Generator[str]:
 
 @pytest.fixture(autouse=True)
 def _mock_legacy_device_tracker_setup(
-    hass: HomeAssistant, mock_legacy_device_scanner: MockScanner
+    menuai: menuai, mock_legacy_device_scanner: MockScanner
 ) -> None:
     """Mock legacy device tracker setup."""
-    mock_legacy_device_tracker_setup(hass, mock_legacy_device_scanner)
+    mock_legacy_device_tracker_setup(menuai, mock_legacy_device_scanner)
 
 
-async def test_is_on(hass: HomeAssistant) -> None:
+async def test_is_on(menuai: menuai) -> None:
     """Test is_on method."""
     entity_id = f"{const.DOMAIN}.test"
 
-    hass.states.async_set(entity_id, STATE_HOME)
+    menuai.states.async_set(entity_id, STATE_HOME)
 
-    assert device_tracker.is_on(hass, entity_id)
+    assert device_tracker.is_on(menuai, entity_id)
 
-    hass.states.async_set(entity_id, STATE_NOT_HOME)
+    menuai.states.async_set(entity_id, STATE_NOT_HOME)
 
-    assert not device_tracker.is_on(hass, entity_id)
+    assert not device_tracker.is_on(menuai, entity_id)
 
 
-async def test_reading_broken_yaml_config(hass: HomeAssistant) -> None:
+async def test_reading_broken_yaml_config(menuai: menuai) -> None:
     """Test when known devices contains invalid data."""
     files = {
         "empty.yaml": "",
@@ -88,7 +88,7 @@ async def test_reading_broken_yaml_config(hass: HomeAssistant) -> None:
         "allok.yaml": "My Device:\n  name: Device",
         "oneok.yaml": "My Device!:\n  name: Device\nbad_device:\n  nme: Device",
     }
-    args = {"hass": hass, "consider_home": timedelta(seconds=60)}
+    args = {"menuai": menuai, "consider_home": timedelta(seconds=60)}
     with patch_yaml_files(files):
         assert await legacy.async_load_config("empty.yaml", **args) == []
         assert await legacy.async_load_config("nodict.yaml", **args) == []
@@ -106,11 +106,11 @@ async def test_reading_broken_yaml_config(hass: HomeAssistant) -> None:
         assert res[0].dev_id == "my_device"
 
 
-async def test_reading_yaml_config(hass: HomeAssistant, yaml_devices: str) -> None:
+async def test_reading_yaml_config(menuai: menuai, yaml_devices: str) -> None:
     """Test the rendering of the YAML configuration."""
     dev_id = "test"
     device = legacy.Device(
-        hass,
+        menuai,
         timedelta(seconds=180),
         True,
         dev_id,
@@ -119,7 +119,7 @@ async def test_reading_yaml_config(hass: HomeAssistant, yaml_devices: str) -> No
         picture="http://test.picture",
         icon="mdi:kettle",
     )
-    await hass.async_add_executor_job(
+    await menuai.async_add_executor_job(
         legacy.update_config, yaml_devices, dev_id, device
     )
     loaded_config = None
@@ -131,11 +131,11 @@ async def test_reading_yaml_config(hass: HomeAssistant, yaml_devices: str) -> No
         return loaded_config
 
     with patch(
-        "homeassistant.components.device_tracker.legacy.async_load_config",
+        "menuai.components.device_tracker.legacy.async_load_config",
         capture_load_config,
     ):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+        await menuai.async_block_till_done()
     config = loaded_config[0]
     assert device.dev_id == config.dev_id
     assert device.track == config.track
@@ -143,21 +143,21 @@ async def test_reading_yaml_config(hass: HomeAssistant, yaml_devices: str) -> No
     assert device.config_picture == config.config_picture
     assert device.consider_home == config.consider_home
     assert device.icon == config.icon
-    assert f"test.{device_tracker.DOMAIN}" in hass.config.components
+    assert f"test.{device_tracker.DOMAIN}" in menuai.config.components
 
 
-@patch("homeassistant.components.device_tracker.const.LOGGER.warning")
-async def test_duplicate_mac_dev_id(mock_warning, hass: HomeAssistant) -> None:
+@patch("menuai.components.device_tracker.const.LOGGER.warning")
+async def test_duplicate_mac_dev_id(mock_warning, menuai: menuai) -> None:
     """Test adding duplicate MACs or device IDs to DeviceTracker."""
     devices = [
         legacy.Device(
-            hass, True, True, "my_device", "AB:01", "My device", None, None, False
+            menuai, True, True, "my_device", "AB:01", "My device", None, None, False
         ),
         legacy.Device(
-            hass, True, True, "your_device", "AB:01", "Your device", None, None, False
+            menuai, True, True, "your_device", "AB:01", "Your device", None, None, False
         ),
     ]
-    legacy.DeviceTracker(hass, False, True, {}, devices)
+    legacy.DeviceTracker(menuai, False, True, {}, devices)
     _LOGGER.debug(mock_warning.call_args_list)
     assert mock_warning.call_count == 1, (
         "The only warning call should be duplicates (check DEBUG)"
@@ -168,13 +168,13 @@ async def test_duplicate_mac_dev_id(mock_warning, hass: HomeAssistant) -> None:
     mock_warning.reset_mock()
     devices = [
         legacy.Device(
-            hass, True, True, "my_device", "AB:01", "My device", None, None, False
+            menuai, True, True, "my_device", "AB:01", "My device", None, None, False
         ),
         legacy.Device(
-            hass, True, True, "my_device", None, "Your device", None, None, False
+            menuai, True, True, "my_device", None, "Your device", None, None, False
         ),
     ]
-    legacy.DeviceTracker(hass, False, True, {}, devices)
+    legacy.DeviceTracker(menuai, False, True, {}, devices)
 
     _LOGGER.debug(mock_warning.call_args_list)
     assert mock_warning.call_count == 1, (
@@ -184,18 +184,18 @@ async def test_duplicate_mac_dev_id(mock_warning, hass: HomeAssistant) -> None:
     assert "Duplicate device IDs" in args[0], "Duplicate device IDs warning expected"
 
 
-async def test_setup_without_yaml_file(hass: HomeAssistant, yaml_devices: str) -> None:
+async def test_setup_without_yaml_file(menuai: menuai, yaml_devices: str) -> None:
     """Test with no YAML file."""
     with assert_setup_component(1, device_tracker.DOMAIN):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+        await menuai.async_block_till_done()
 
 
-async def test_gravatar(hass: HomeAssistant) -> None:
+async def test_gravatar(menuai: menuai) -> None:
     """Test the Gravatar generation."""
     dev_id = "test"
     device = legacy.Device(
-        hass,
+        menuai,
         timedelta(seconds=180),
         True,
         dev_id,
@@ -210,11 +210,11 @@ async def test_gravatar(hass: HomeAssistant) -> None:
     assert device.config_picture == gravatar_url
 
 
-async def test_gravatar_and_picture(hass: HomeAssistant) -> None:
+async def test_gravatar_and_picture(menuai: menuai) -> None:
     """Test that Gravatar overrides picture."""
     dev_id = "test"
     device = legacy.Device(
-        hass,
+        menuai,
         timedelta(seconds=180),
         True,
         dev_id,
@@ -230,25 +230,25 @@ async def test_gravatar_and_picture(hass: HomeAssistant) -> None:
     assert device.config_picture == gravatar_url
 
 
-@patch("homeassistant.components.device_tracker.legacy.DeviceTracker.see")
-@patch("homeassistant.components.demo.device_tracker.setup_scanner", autospec=True)
+@patch("menuai.components.device_tracker.legacy.DeviceTracker.see")
+@patch("menuai.components.demo.device_tracker.setup_scanner", autospec=True)
 async def test_discover_platform(
-    mock_demo_setup_scanner, mock_see, hass: HomeAssistant
+    mock_demo_setup_scanner, mock_see, menuai: menuai
 ) -> None:
     """Test discovery of device_tracker demo platform."""
-    await async_setup_component(hass, "homeassistant", {})
-    await async_setup_component(hass, device_tracker.DOMAIN, {})
+    await async_setup_component(menuai, "menuai", {})
+    await async_setup_component(menuai, device_tracker.DOMAIN, {})
     # async_block_till_done is intentionally missing here so we
     # can verify async_load_platform still works without it
-    with patch("homeassistant.components.device_tracker.legacy.update_config"):
+    with patch("menuai.components.device_tracker.legacy.update_config"):
         await discovery.async_load_platform(
-            hass, device_tracker.DOMAIN, "demo", {"test_key": "test_val"}, {"bla": {}}
+            menuai, device_tracker.DOMAIN, "demo", {"test_key": "test_val"}, {"bla": {}}
         )
-        await hass.async_block_till_done()
-    assert device_tracker.DOMAIN in hass.config.components
+        await menuai.async_block_till_done()
+    assert device_tracker.DOMAIN in menuai.config.components
     assert mock_demo_setup_scanner.called
     assert mock_demo_setup_scanner.call_args[0] == (
-        hass,
+        menuai,
         {},
         mock_see,
         {"test_key": "test_val"},
@@ -256,23 +256,23 @@ async def test_discover_platform(
 
 
 async def test_discover_platform_missing_platform(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test discovery of device_tracker missing platform."""
-    await async_setup_component(hass, "homeassistant", {})
-    await async_setup_component(hass, device_tracker.DOMAIN, {})
+    await async_setup_component(menuai, "menuai", {})
+    await async_setup_component(menuai, device_tracker.DOMAIN, {})
     # async_block_till_done is intentionally missing here so we
     # can verify async_load_platform still works without it
-    with patch("homeassistant.components.device_tracker.legacy.update_config"):
+    with patch("menuai.components.device_tracker.legacy.update_config"):
         await discovery.async_load_platform(
-            hass,
+            menuai,
             device_tracker.DOMAIN,
             "its_not_there",
             {"test_key": "test_val"},
             {"bla": {}},
         )
-        await hass.async_block_till_done()
-    assert device_tracker.DOMAIN in hass.config.components
+        await menuai.async_block_till_done()
+    assert device_tracker.DOMAIN in menuai.config.components
     assert (
         "Unable to prepare setup for platform 'its_not_there.device_tracker'"
         in caplog.text
@@ -281,7 +281,7 @@ async def test_discover_platform_missing_platform(
 
 
 async def test_update_stale(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_tracker_conf: list[legacy.Device],
     mock_legacy_device_scanner: MockScanner,
 ) -> None:
@@ -295,13 +295,13 @@ async def test_update_stale(
 
     with (
         patch(
-            "homeassistant.components.device_tracker.legacy.dt_util.utcnow",
+            "menuai.components.device_tracker.legacy.dt_util.utcnow",
             return_value=register_time,
         ),
         assert_setup_component(1, device_tracker.DOMAIN),
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             device_tracker.DOMAIN,
             {
                 device_tracker.DOMAIN: {
@@ -310,24 +310,24 @@ async def test_update_stale(
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("device_tracker.dev1").state == STATE_HOME
+    assert menuai.states.get("device_tracker.dev1").state == STATE_HOME
 
     mock_legacy_device_scanner.leave_home("DEV1")
 
     with patch(
-        "homeassistant.components.device_tracker.legacy.dt_util.utcnow",
+        "menuai.components.device_tracker.legacy.dt_util.utcnow",
         return_value=scan_time,
     ):
-        async_fire_time_changed(hass, scan_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, scan_time)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("device_tracker.dev1").state == STATE_NOT_HOME
+    assert menuai.states.get("device_tracker.dev1").state == STATE_NOT_HOME
 
 
 async def test_entity_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_tracker_conf: list[legacy.Device],
 ) -> None:
     """Test the entity attributes."""
@@ -339,7 +339,7 @@ async def test_entity_attributes(
     icon = "mdi:kettle"
 
     device = legacy.Device(
-        hass,
+        menuai,
         timedelta(seconds=180),
         True,
         dev_id,
@@ -351,22 +351,22 @@ async def test_entity_attributes(
     devices.append(device)
 
     with assert_setup_component(1, device_tracker.DOMAIN):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+        await menuai.async_block_till_done()
 
-    attrs = hass.states.get(entity_id).attributes
+    attrs = menuai.states.get(entity_id).attributes
 
     assert friendly_name == attrs.get(ATTR_FRIENDLY_NAME)
     assert icon == attrs.get(ATTR_ICON)
     assert picture == attrs.get(ATTR_ENTITY_PICTURE)
 
 
-@patch("homeassistant.components.device_tracker.legacy.DeviceTracker.async_see")
-async def test_see_service(mock_see, hass: HomeAssistant) -> None:
+@patch("menuai.components.device_tracker.legacy.DeviceTracker.async_see")
+async def test_see_service(mock_see, menuai: menuai) -> None:
     """Test the see service with a unicode dev_id and NO MAC."""
     with assert_setup_component(1, device_tracker.DOMAIN):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+        await menuai.async_block_till_done()
     params = {
         "dev_id": "some_device",
         "host_name": "example.com",
@@ -374,8 +374,8 @@ async def test_see_service(mock_see, hass: HomeAssistant) -> None:
         "gps": [0.3, 0.8],
         "attributes": {"test": "test"},
     }
-    common.async_see(hass, **params)
-    await hass.async_block_till_done()
+    common.async_see(menuai, **params)
+    await menuai.async_block_till_done()
     assert mock_see.call_count == 1
     assert mock_see.call_count == 1
     assert mock_see.call_args == call(**params)
@@ -383,22 +383,22 @@ async def test_see_service(mock_see, hass: HomeAssistant) -> None:
     mock_see.reset_mock()
     params["dev_id"] += chr(233)  # e' acute accent from icloud
 
-    common.async_see(hass, **params)
-    await hass.async_block_till_done()
+    common.async_see(menuai, **params)
+    await menuai.async_block_till_done()
     assert mock_see.call_count == 1
     assert mock_see.call_count == 1
     assert mock_see.call_args == call(**params)
 
 
 async def test_see_service_guard_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_tracker_conf: list[legacy.Device],
 ) -> None:
     """Test the guard if the device is registered in the entity registry."""
     dev_id = "test"
     entity_id = f"{const.DOMAIN}.{dev_id}"
     mock_registry(
-        hass,
+        menuai,
         {
             entity_id: RegistryEntryWithDefaults(
                 entity_id=entity_id, unique_id=1, platform=const.DOMAIN
@@ -406,24 +406,24 @@ async def test_see_service_guard_config_entry(
         },
     )
     devices = mock_device_tracker_conf
-    assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+    await menuai.async_block_till_done()
     params = {"dev_id": dev_id, "gps": [0.3, 0.8]}
 
-    common.async_see(hass, **params)
-    await hass.async_block_till_done()
+    common.async_see(menuai, **params)
+    await menuai.async_block_till_done()
 
     assert not devices
 
 
 async def test_new_device_event_fired(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_tracker_conf: list[legacy.Device],
 ) -> None:
     """Test that the device tracker will fire an event."""
     with assert_setup_component(1, device_tracker.DOMAIN):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+        await menuai.async_block_till_done()
     test_events = []
 
     @callback
@@ -431,12 +431,12 @@ async def test_new_device_event_fired(
         """Record that our event got called."""
         test_events.append(event)
 
-    hass.bus.async_listen("device_tracker_new_device", listener)
+    menuai.bus.async_listen("device_tracker_new_device", listener)
 
-    common.async_see(hass, "mac_1", host_name="hello")
-    common.async_see(hass, "mac_1", host_name="hello")
+    common.async_see(menuai, "mac_1", host_name="hello")
+    common.async_see(menuai, "mac_1", host_name="hello")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(test_events) == 1
 
@@ -451,44 +451,44 @@ async def test_new_device_event_fired(
 
 
 async def test_duplicate_yaml_keys(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_tracker_conf: list[legacy.Device],
 ) -> None:
     """Test that the device tracker will not generate invalid YAML."""
     devices = mock_device_tracker_conf
     with assert_setup_component(1, device_tracker.DOMAIN):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+        await menuai.async_block_till_done()
 
-    common.async_see(hass, "mac_1", host_name="hello")
-    common.async_see(hass, "mac_2", host_name="hello")
+    common.async_see(menuai, "mac_1", host_name="hello")
+    common.async_see(menuai, "mac_2", host_name="hello")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(devices) == 2
     assert devices[0].dev_id != devices[1].dev_id
 
 
 async def test_invalid_dev_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_tracker_conf: list[legacy.Device],
 ) -> None:
     """Test that the device tracker will not allow invalid dev ids."""
     devices = mock_device_tracker_conf
     with assert_setup_component(1, device_tracker.DOMAIN):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+        await menuai.async_block_till_done()
 
-    common.async_see(hass, dev_id="hello-world")
-    await hass.async_block_till_done()
+    common.async_see(menuai, dev_id="hello-world")
+    await menuai.async_block_till_done()
 
     assert not devices
 
 
-async def test_see_state(hass: HomeAssistant, yaml_devices: str) -> None:
+async def test_see_state(menuai: menuai, yaml_devices: str) -> None:
     """Test device tracker see records state correctly."""
-    assert await async_setup_component(hass, device_tracker.DOMAIN, TEST_PLATFORM)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, device_tracker.DOMAIN, TEST_PLATFORM)
+    await menuai.async_block_till_done()
 
     params = {
         "mac": "AA:BB:CC:DD:EE:FF",
@@ -501,13 +501,13 @@ async def test_see_state(hass: HomeAssistant, yaml_devices: str) -> None:
         "attributes": {"test": "test", "number": 1},
     }
 
-    common.async_see(hass, **params)
-    await hass.async_block_till_done()
+    common.async_see(menuai, **params)
+    await menuai.async_block_till_done()
 
-    config = await legacy.async_load_config(yaml_devices, hass, timedelta(seconds=0))
+    config = await legacy.async_load_config(yaml_devices, menuai, timedelta(seconds=0))
     assert len(config) == 1
 
-    state = hass.states.get("device_tracker.example_com")
+    state = menuai.states.get("device_tracker.example_com")
     attrs = state.attributes
     assert state.state == "Work"
     assert state.object_id == "example_com"
@@ -523,7 +523,7 @@ async def test_see_state(hass: HomeAssistant, yaml_devices: str) -> None:
 
 
 async def test_see_passive_zone_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_tracker_conf: list[legacy.Device],
     mock_legacy_device_scanner: MockScanner,
 ) -> None:
@@ -542,21 +542,21 @@ async def test_see_passive_zone_state(
             "passive": False,
         }
 
-        await async_setup_component(hass, zone.DOMAIN, {"zone": zone_info})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, zone.DOMAIN, {"zone": zone_info})
+        await menuai.async_block_till_done()
 
     mock_legacy_device_scanner.reset()
     mock_legacy_device_scanner.come_home("dev1")
 
     with (
         patch(
-            "homeassistant.components.device_tracker.legacy.dt_util.utcnow",
+            "menuai.components.device_tracker.legacy.dt_util.utcnow",
             return_value=register_time,
         ),
         assert_setup_component(1, device_tracker.DOMAIN),
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             device_tracker.DOMAIN,
             {
                 device_tracker.DOMAIN: {
@@ -565,9 +565,9 @@ async def test_see_passive_zone_state(
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("device_tracker.dev1")
+    state = menuai.states.get("device_tracker.dev1")
     attrs = state.attributes
     assert state.state == STATE_HOME
     assert state.object_id == "dev1"
@@ -581,13 +581,13 @@ async def test_see_passive_zone_state(
     mock_legacy_device_scanner.leave_home("dev1")
 
     with patch(
-        "homeassistant.components.device_tracker.legacy.dt_util.utcnow",
+        "menuai.components.device_tracker.legacy.dt_util.utcnow",
         return_value=scan_time,
     ):
-        async_fire_time_changed(hass, scan_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, scan_time)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("device_tracker.dev1")
+    state = menuai.states.get("device_tracker.dev1")
     attrs = state.attributes
     assert state.state == STATE_NOT_HOME
     assert state.object_id == "dev1"
@@ -599,19 +599,19 @@ async def test_see_passive_zone_state(
     assert attrs.get("source_type") == SourceType.ROUTER
 
 
-@patch("homeassistant.components.device_tracker.const.LOGGER.warning")
+@patch("menuai.components.device_tracker.const.LOGGER.warning")
 async def test_see_failures(
-    mock_warning, hass: HomeAssistant, mock_device_tracker_conf: list[legacy.Device]
+    mock_warning, menuai: menuai, mock_device_tracker_conf: list[legacy.Device]
 ) -> None:
     """Test that the device tracker see failures."""
     devices = mock_device_tracker_conf
-    tracker = legacy.DeviceTracker(hass, timedelta(seconds=60), 0, {}, [])
+    tracker = legacy.DeviceTracker(menuai, timedelta(seconds=60), 0, {}, [])
 
     # MAC is not a string (but added)
     await tracker.async_see(mac=567, host_name="Number MAC")
 
     # No device id or MAC(not added)
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await tracker.async_see()
     assert mock_warning.call_count == 0
 
@@ -619,13 +619,13 @@ async def test_see_failures(
     await tracker.async_see(mac="mac_1_bad_gps", gps=1)
     await tracker.async_see(mac="mac_2_bad_gps", gps=[1])
     await tracker.async_see(mac="mac_3_bad_gps", gps="gps")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_warning.call_count == 3
     assert len(devices) == 4
 
 
-async def test_async_added_to_hass(hass: HomeAssistant) -> None:
+async def test_async_added_to_menuai(menuai: menuai) -> None:
     """Test restoring state."""
     attr = {
         ATTR_LONGITUDE: 18,
@@ -634,16 +634,16 @@ async def test_async_added_to_hass(hass: HomeAssistant) -> None:
         ATTR_GPS_ACCURACY: 2,
         const.ATTR_BATTERY: 100,
     }
-    mock_restore_cache(hass, [State("device_tracker.jk", "home", attr)])
+    mock_restore_cache(menuai, [State("device_tracker.jk", "home", attr)])
 
-    path = hass.config.path(legacy.YAML_DEVICES)
+    path = menuai.config.path(legacy.YAML_DEVICES)
 
     files = {path: "jk:\n  name: JK Phone\n  track: True"}
     with patch_yaml_files(files):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("device_tracker.jk")
+    state = menuai.states.get("device_tracker.jk")
     assert state
     assert state.state == "home"
 
@@ -652,19 +652,19 @@ async def test_async_added_to_hass(hass: HomeAssistant) -> None:
         assert atr == val, f"{key}={atr} expected: {val}"
 
 
-async def test_bad_platform(hass: HomeAssistant) -> None:
+async def test_bad_platform(menuai: menuai) -> None:
     """Test bad platform."""
     config = {"device_tracker": [{"platform": "bad_platform"}]}
     with assert_setup_component(0, device_tracker.DOMAIN):
-        assert await async_setup_component(hass, device_tracker.DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, device_tracker.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    assert f"bad_platform.{device_tracker.DOMAIN}" not in hass.config.components
+    assert f"bad_platform.{device_tracker.DOMAIN}" not in menuai.config.components
 
 
 async def test_adding_unknown_device_to_config(
     mock_device_tracker_conf: list[legacy.Device],
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_legacy_device_scanner: MockScanner,
 ) -> None:
     """Test the adding of unknown devices to configuration file."""
@@ -672,10 +672,10 @@ async def test_adding_unknown_device_to_config(
     mock_legacy_device_scanner.come_home("DEV1")
 
     await async_setup_component(
-        hass, device_tracker.DOMAIN, {device_tracker.DOMAIN: {CONF_PLATFORM: "test"}}
+        menuai, device_tracker.DOMAIN, {device_tracker.DOMAIN: {CONF_PLATFORM: "test"}}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_device_tracker_conf) == 1
     device = mock_device_tracker_conf[0]
@@ -684,39 +684,39 @@ async def test_adding_unknown_device_to_config(
 
 
 async def test_picture_and_icon_on_see_discovery(
-    mock_device_tracker_conf: list[legacy.Device], hass: HomeAssistant
+    mock_device_tracker_conf: list[legacy.Device], menuai: menuai
 ) -> None:
     """Test that picture and icon are set in initial see."""
-    tracker = legacy.DeviceTracker(hass, timedelta(seconds=60), False, {}, [])
+    tracker = legacy.DeviceTracker(menuai, timedelta(seconds=60), False, {}, [])
     await tracker.async_see(dev_id=11, picture="pic_url", icon="mdi:icon")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_device_tracker_conf) == 1
     assert mock_device_tracker_conf[0].icon == "mdi:icon"
     assert mock_device_tracker_conf[0].entity_picture == "pic_url"
 
 
 async def test_backward_compatibility_for_track_new(
-    mock_device_tracker_conf: list[legacy.Device], hass: HomeAssistant
+    mock_device_tracker_conf: list[legacy.Device], menuai: menuai
 ) -> None:
     """Test backward compatibility for track new."""
     tracker = legacy.DeviceTracker(
-        hass, timedelta(seconds=60), False, {device_tracker.CONF_TRACK_NEW: True}, []
+        menuai, timedelta(seconds=60), False, {device_tracker.CONF_TRACK_NEW: True}, []
     )
     await tracker.async_see(dev_id=13)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_device_tracker_conf) == 1
     assert mock_device_tracker_conf[0].track is False
 
 
 async def test_old_style_track_new_is_skipped(
-    mock_device_tracker_conf: list[legacy.Device], hass: HomeAssistant
+    mock_device_tracker_conf: list[legacy.Device], menuai: menuai
 ) -> None:
     """Test old style config is skipped."""
     tracker = legacy.DeviceTracker(
-        hass, timedelta(seconds=60), None, {device_tracker.CONF_TRACK_NEW: False}, []
+        menuai, timedelta(seconds=60), None, {device_tracker.CONF_TRACK_NEW: False}, []
     )
     await tracker.async_see(dev_id=14)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_device_tracker_conf) == 1
     assert mock_device_tracker_conf[0].track is False
 

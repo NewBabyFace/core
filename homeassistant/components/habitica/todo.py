@@ -16,18 +16,18 @@ from habiticalib import (
     TooManyRequestsError,
 )
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.todo import (
+from menuai.components import persistent_notification
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import ASSETS_URL, DOMAIN
 from .coordinator import HabiticaConfigEntry, HabiticaDataUpdateCoordinator
@@ -49,7 +49,7 @@ class HabiticaTodoList(StrEnum):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HabiticaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -81,7 +81,7 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
             try:
                 await self.coordinator.habitica.delete_completed_todos()
             except TooManyRequestsError as e:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="setup_rate_limit_exception",
                     translation_placeholders={"retry_after": str(e.retry_after)},
@@ -97,7 +97,7 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
                 try:
                     await self.coordinator.habitica.delete_task(UUID(task_id))
                 except TooManyRequestsError as e:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="setup_rate_limit_exception",
                         translation_placeholders={"retry_after": str(e.retry_after)},
@@ -136,7 +136,7 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
                 await self.coordinator.habitica.reorder_task(UUID(uid), pos)
             ).data
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -181,7 +181,7 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
                 await self.coordinator.habitica.update_task(UUID(item.uid), task)
                 refresh_required = True
             except TooManyRequestsError as e:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="setup_rate_limit_exception",
                     translation_placeholders={"retry_after": str(e.retry_after)},
@@ -215,7 +215,7 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
             else:
                 score_result = None
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -235,7 +235,7 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
                 f"{drop.dialog}"
             )
             persistent_notification.async_create(
-                self.hass, message=msg, title="Habitica"
+                self.menuai, message=msg, title="Habitica"
             )
         if refresh_required:
             await self.coordinator.async_request_refresh()
@@ -303,7 +303,7 @@ class HabiticaTodosListEntity(BaseHabiticaListEntity):
                 )
             )
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -342,7 +342,7 @@ class HabiticaDailiesListEntity(BaseHabiticaListEntity):
         If a task is a yesterdaily, the due date is the last time
         a new day has been started. This allows to check off dailies from yesterday,
         that have been completed but forgotten to mark as completed before resetting the dailies.
-        Changes of the date input field in Home Assistant will be ignored.
+        Changes of the date input field in MenuAI will be ignored.
         """
         if TYPE_CHECKING:
             assert self.coordinator.data.user.lastCron

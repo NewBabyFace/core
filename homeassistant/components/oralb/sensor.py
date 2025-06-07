@@ -4,26 +4,26 @@ from __future__ import annotations
 
 from oralb_ble import OralBSensor, SensorUpdate
 
-from homeassistant.components.bluetooth.passive_update_processor import (
+from menuai.components.bluetooth.passive_update_processor import (
     PassiveBluetoothDataProcessor,
     PassiveBluetoothDataUpdate,
     PassiveBluetoothProcessorEntity,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.sensor import sensor_device_info_to_hass_device_info
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.sensor import sensor_device_info_to_menuai_device_info
 
 from . import OralBConfigEntry
 from .device import device_key_to_bluetooth_entity_key
@@ -88,7 +88,7 @@ def sensor_update_to_bluetooth_data_update(
     """Convert a sensor update to a bluetooth data update."""
     return PassiveBluetoothDataUpdate(
         devices={
-            device_id: sensor_device_info_to_hass_device_info(device_info)
+            device_id: sensor_device_info_to_menuai_device_info(device_info)
             for device_id, device_info in sensor_update.devices.items()
         },
         entity_descriptions={
@@ -106,7 +106,7 @@ def sensor_update_to_bluetooth_data_update(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: OralBConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

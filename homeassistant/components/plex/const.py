@@ -3,7 +3,7 @@
 from datetime import timedelta
 from typing import Final
 
-from homeassistant.const import Platform, __version__
+from menuai.const import Platform, __version__
 
 DOMAIN = "plex"
 NAME_FORMAT = "Plex ({})"
@@ -47,9 +47,9 @@ CONF_MONITORED_USERS = "monitored_users"
 AUTH_CALLBACK_PATH = "/auth/plex/callback"
 AUTH_CALLBACK_NAME = "auth:plex:callback"
 
-X_PLEX_DEVICE_NAME = "Home Assistant"
-X_PLEX_PLATFORM = "Home Assistant"
-X_PLEX_PRODUCT = "Home Assistant"
+X_PLEX_DEVICE_NAME = "MenuAI"
+X_PLEX_PLATFORM = "MenuAI"
+X_PLEX_PRODUCT = "MenuAI"
 X_PLEX_VERSION = __version__
 
 AUTOMATIC_SETUP_STRING = "Obtain a new token from plex.tv"

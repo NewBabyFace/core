@@ -9,17 +9,17 @@ from typing import Any
 from pyrisco.common import Partition
 from pyrisco.local.partition import Partition as LocalPartition
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PIN
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import LocalData, is_local
 from .const import (
@@ -48,14 +48,14 @@ STATES_TO_SUPPORTED_FEATURES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Risco alarm control panel."""
     options = {**DEFAULT_OPTIONS, **config_entry.options}
     if is_local(config_entry):
-        local_data: LocalData = hass.data[DOMAIN][config_entry.entry_id]
+        local_data: LocalData = menuai.data[DOMAIN][config_entry.entry_id]
         async_add_entities(
             RiscoLocalAlarm(
                 local_data.system.id,
@@ -68,7 +68,7 @@ async def async_setup_entry(
             for partition_id, partition in local_data.system.partitions.items()
         )
     else:
-        coordinator: RiscoDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: RiscoDataUpdateCoordinator = menuai.data[DOMAIN][
             config_entry.entry_id
         ][DATA_COORDINATOR]
         async_add_entities(
@@ -233,7 +233,7 @@ class RiscoLocalAlarm(RiscoAlarm):
             manufacturer="Risco",
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self._partition_updates[self._partition_id] = self.async_write_ha_state
 

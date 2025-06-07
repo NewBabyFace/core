@@ -2,9 +2,9 @@
 
 from rtmapi import Rtm, RtmRequestFailedException
 
-from homeassistant.const import CONF_ID, CONF_NAME, STATE_OK
-from homeassistant.core import ServiceCall
-from homeassistant.helpers.entity import Entity
+from menuai.const import CONF_ID, CONF_NAME, STATE_OK
+from menuai.core import ServiceCall
+from menuai.helpers.entity import Entity
 
 from .const import LOGGER
 from .storage import RememberTheMilkConfiguration
@@ -59,10 +59,10 @@ class RememberTheMilkEntity(Entity):
         """
         try:
             task_name = call.data[CONF_NAME]
-            hass_id = call.data.get(CONF_ID)
+            menuai_id = call.data.get(CONF_ID)
             rtm_id = None
-            if hass_id is not None:
-                rtm_id = self._rtm_config.get_rtm_id(self._name, hass_id)
+            if menuai_id is not None:
+                rtm_id = self._rtm_config.get_rtm_id(self._name, menuai_id)
             result = self._rtm_api.rtm.timelines.create()
             timeline = result.timeline.value
 
@@ -73,10 +73,10 @@ class RememberTheMilkEntity(Entity):
                 LOGGER.debug(
                     "Created new task '%s' in account %s", task_name, self.name
                 )
-                if hass_id is not None:
+                if menuai_id is not None:
                     self._rtm_config.set_rtm_id(
                         self._name,
-                        hass_id,
+                        menuai_id,
                         result.list.id,
                         result.list.taskseries.id,
                         result.list.taskseries.task.id,
@@ -91,7 +91,7 @@ class RememberTheMilkEntity(Entity):
                 )
                 LOGGER.debug(
                     "Updated task with id '%s' in account %s to name %s",
-                    hass_id,
+                    menuai_id,
                     self.name,
                     task_name,
                 )
@@ -104,15 +104,15 @@ class RememberTheMilkEntity(Entity):
 
     def complete_task(self, call: ServiceCall) -> None:
         """Complete a task that was previously created by this component."""
-        hass_id = call.data[CONF_ID]
-        rtm_id = self._rtm_config.get_rtm_id(self._name, hass_id)
+        menuai_id = call.data[CONF_ID]
+        rtm_id = self._rtm_config.get_rtm_id(self._name, menuai_id)
         if rtm_id is None:
             LOGGER.error(
                 (
                     "Could not find task with ID %s in account %s. "
                     "So task could not be closed"
                 ),
-                hass_id,
+                menuai_id,
                 self._name,
             )
             return
@@ -125,8 +125,8 @@ class RememberTheMilkEntity(Entity):
                 task_id=rtm_id[2],
                 timeline=timeline,
             )
-            self._rtm_config.delete_rtm_id(self._name, hass_id)
-            LOGGER.debug("Completed task with id %s in account %s", hass_id, self._name)
+            self._rtm_config.delete_rtm_id(self._name, menuai_id)
+            LOGGER.debug("Completed task with id %s in account %s", menuai_id, self._name)
         except RtmRequestFailedException as rtm_exception:
             LOGGER.error(
                 "Error creating new Remember The Milk task for account %s: %s",

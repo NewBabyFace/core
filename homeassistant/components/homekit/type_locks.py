@@ -5,9 +5,9 @@ from typing import Any
 
 from pyhap.const import CATEGORY_DOOR_LOCK
 
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN, LockState
-from homeassistant.const import ATTR_CODE, ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import State, callback
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN, LockState
+from menuai.const import ATTR_CODE, ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import State, callback
 
 from .accessories import TYPES
 from .const import CHAR_LOCK_CURRENT_STATE, CHAR_LOCK_TARGET_STATE, SERV_LOCK
@@ -15,7 +15,7 @@ from .doorbell import HomeDoorbellAccessory
 
 _LOGGER = logging.getLogger(__name__)
 
-HASS_TO_HOMEKIT_CURRENT = {
+menuai_TO_HOMEKIT_CURRENT = {
     LockState.UNLOCKED.value: 0,
     LockState.UNLOCKING.value: 1,
     LockState.LOCKING.value: 0,
@@ -24,7 +24,7 @@ HASS_TO_HOMEKIT_CURRENT = {
     STATE_UNKNOWN: 3,
 }
 
-HASS_TO_HOMEKIT_TARGET = {
+menuai_TO_HOMEKIT_TARGET = {
     LockState.UNLOCKED.value: 0,
     LockState.UNLOCKING.value: 0,
     LockState.LOCKING.value: 1,
@@ -38,7 +38,7 @@ VALID_TARGET_STATES = {
     LockState.UNLOCKED.value,
 }
 
-HOMEKIT_TO_HASS = {
+HOMEKIT_TO_menuai = {
     0: LockState.UNLOCKED.value,
     1: LockState.LOCKED.value,
     2: LockState.JAMMED.value,
@@ -64,16 +64,16 @@ class Lock(HomeDoorbellAccessory):
         """Initialize a Lock accessory object."""
         super().__init__(*args, category=CATEGORY_DOOR_LOCK)
         self._code = self.config.get(ATTR_CODE)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state is not None
 
         serv_lock_mechanism = self.add_preload_service(SERV_LOCK)
         self.char_current_state = serv_lock_mechanism.configure_char(
-            CHAR_LOCK_CURRENT_STATE, value=HASS_TO_HOMEKIT_CURRENT[STATE_UNKNOWN]
+            CHAR_LOCK_CURRENT_STATE, value=menuai_TO_HOMEKIT_CURRENT[STATE_UNKNOWN]
         )
         self.char_target_state = serv_lock_mechanism.configure_char(
             CHAR_LOCK_TARGET_STATE,
-            value=HASS_TO_HOMEKIT_CURRENT[LockState.LOCKED.value],
+            value=menuai_TO_HOMEKIT_CURRENT[LockState.LOCKED.value],
             setter_callback=self.set_state,
         )
         self.async_update_state(state)
@@ -82,8 +82,8 @@ class Lock(HomeDoorbellAccessory):
         """Set lock state to value if call came from HomeKit."""
         _LOGGER.debug("%s: Set state to %d", self.entity_id, value)
 
-        hass_value = HOMEKIT_TO_HASS[value]
-        service = STATE_TO_SERVICE[hass_value]
+        menuai_value = HOMEKIT_TO_menuai[value]
+        service = STATE_TO_SERVICE[menuai_value]
 
         params = {ATTR_ENTITY_ID: self.entity_id}
         if self._code:
@@ -93,15 +93,15 @@ class Lock(HomeDoorbellAccessory):
     @callback
     def async_update_state(self, new_state: State) -> None:
         """Update lock after state changed."""
-        hass_state = new_state.state
-        current_lock_state = HASS_TO_HOMEKIT_CURRENT.get(
-            hass_state, HASS_TO_HOMEKIT_CURRENT[STATE_UNKNOWN]
+        menuai_state = new_state.state
+        current_lock_state = menuai_TO_HOMEKIT_CURRENT.get(
+            menuai_state, menuai_TO_HOMEKIT_CURRENT[STATE_UNKNOWN]
         )
-        target_lock_state = HASS_TO_HOMEKIT_TARGET.get(hass_state)
+        target_lock_state = menuai_TO_HOMEKIT_TARGET.get(menuai_state)
         _LOGGER.debug(
             "%s: Updated current state to %s (current=%d) (target=%s)",
             self.entity_id,
-            hass_state,
+            menuai_state,
             current_lock_state,
             target_lock_state,
         )

@@ -9,11 +9,11 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from voluptuous.error import MultipleInvalid
 
-from homeassistant.components.husqvarna_automower.const import DOMAIN
-from homeassistant.components.husqvarna_automower.coordinator import SCAN_INTERVAL
-from homeassistant.components.lawn_mower import LawnMowerActivity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.components.husqvarna_automower.const import DOMAIN
+from menuai.components.husqvarna_automower.coordinator import SCAN_INTERVAL
+from menuai.components.lawn_mower import LawnMowerActivity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from . import setup_integration
 from .const import TEST_MOWER_ID
@@ -45,7 +45,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     ],
 )
 async def test_lawn_mower_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -55,17 +55,17 @@ async def test_lawn_mower_states(
     expected_state: LawnMowerActivity,
 ) -> None:
     """Test lawn_mower state."""
-    await setup_integration(hass, mock_config_entry)
-    state = hass.states.get("lawn_mower.test_mower_1")
+    await setup_integration(menuai, mock_config_entry)
+    state = menuai.states.get("lawn_mower.test_mower_1")
     assert state is not None
     assert state.state == LawnMowerActivity.DOCKED
     values[TEST_MOWER_ID].mower.activity = activity
     values[TEST_MOWER_ID].mower.state = mower_state
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    state = hass.states.get("lawn_mower.test_mower_1")
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("lawn_mower.test_mower_1")
     assert state.state == expected_state
 
 
@@ -78,15 +78,15 @@ async def test_lawn_mower_states(
     ],
 )
 async def test_lawn_mower_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioautomower_command: str,
     service: str,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test lawn_mower commands."""
-    await setup_integration(hass, mock_config_entry)
-    await hass.services.async_call(
+    await setup_integration(menuai, mock_config_entry)
+    await menuai.services.async_call(
         domain="lawn_mower",
         service=service,
         service_data={"entity_id": "lawn_mower.test_mower_1"},
@@ -97,10 +97,10 @@ async def test_lawn_mower_commands(
 
     mocked_method.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain="lawn_mower",
             service=service,
             target={"entity_id": "lawn_mower.test_mower_1"},
@@ -132,7 +132,7 @@ async def test_lawn_mower_commands(
     ],
 )
 async def test_lawn_mower_service_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioautomower_command: str,
     extra_data: timedelta,
     service: str,
@@ -141,9 +141,9 @@ async def test_lawn_mower_service_commands(
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test lawn_mower commands."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mocked_method = getattr(mock_automower_client.commands, aioautomower_command)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain=DOMAIN,
         service=service,
         target={"entity_id": "lawn_mower.test_mower_1"},
@@ -154,10 +154,10 @@ async def test_lawn_mower_service_commands(
 
     mocked_method.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain=DOMAIN,
             service=service,
             target={"entity_id": "lawn_mower.test_mower_1"},
@@ -182,7 +182,7 @@ async def test_lawn_mower_service_commands(
     ],
 )
 async def test_lawn_mower_override_work_area_command(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioautomower_command: str,
     extra_data1: int,
     extra_data2: timedelta,
@@ -192,9 +192,9 @@ async def test_lawn_mower_override_work_area_command(
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test lawn_mower work area override commands."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mocked_method = getattr(mock_automower_client.commands, aioautomower_command)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain=DOMAIN,
         service=service,
         target={"entity_id": "lawn_mower.test_mower_1"},
@@ -207,10 +207,10 @@ async def test_lawn_mower_override_work_area_command(
         mock_automower_client.commands, aioautomower_command
     ).side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain=DOMAIN,
             service=service,
             target={"entity_id": "lawn_mower.test_mower_1"},
@@ -252,7 +252,7 @@ async def test_lawn_mower_override_work_area_command(
     ],
 )
 async def test_lawn_mower_wrong_service_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     service_data: dict[str, int] | None,
     mower_support_wa: bool,
@@ -263,14 +263,14 @@ async def test_lawn_mower_wrong_service_commands(
     values: dict[str, MowerAttributes],
 ) -> None:
     """Test lawn_mower commands."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     values[TEST_MOWER_ID].capabilities.work_areas = mower_support_wa
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     with pytest.raises(exception):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain=DOMAIN,
             service=service,
             target={"entity_id": "lawn_mower.test_mower_1"},

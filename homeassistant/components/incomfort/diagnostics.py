@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant, callback
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PASSWORD
+from menuai.core import menuai, callback
 
 from .coordinator import InComfortConfigEntry
 
@@ -14,15 +14,15 @@ REDACT_CONFIG = {CONF_PASSWORD}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: InComfortConfigEntry
+    menuai: menuai, entry: InComfortConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    return _async_get_diagnostics(hass, entry)
+    return _async_get_diagnostics(menuai, entry)
 
 
 @callback
 def _async_get_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: InComfortConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""

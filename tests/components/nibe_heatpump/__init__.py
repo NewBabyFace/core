@@ -8,9 +8,9 @@ from nibe.connection import Connection
 from nibe.exceptions import ReadException
 from nibe.heatpump import HeatPump, Model
 
-from homeassistant.components.nibe_heatpump import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.nibe_heatpump import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -57,17 +57,17 @@ class MockConnection(Connection):
         self.heatpump.notify_coil_update(CoilData(coil, value))
 
 
-async def async_add_entry(hass: HomeAssistant, data: dict[str, Any]) -> MockConfigEntry:
+async def async_add_entry(menuai: menuai, data: dict[str, Any]) -> MockConfigEntry:
     """Add entry and get the coordinator."""
     entry = MockConfigEntry(domain=DOMAIN, title="Dummy", data=data)
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
     return entry
 
 
-async def async_add_model(hass: HomeAssistant, model: Model) -> MockConfigEntry:
+async def async_add_model(menuai: menuai, model: Model) -> MockConfigEntry:
     """Add entry of specific model."""
-    return await async_add_entry(hass, {**MOCK_ENTRY_DATA, "model": model.name})
+    return await async_add_entry(menuai, {**MOCK_ENTRY_DATA, "model": model.name})

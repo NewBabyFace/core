@@ -15,9 +15,9 @@ from pyuptimerobot import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import API_ATTR_OK, DOMAIN, LOGGER
 
@@ -40,7 +40,7 @@ class UptimeRobotConfigFlow(ConfigFlow, domain=DOMAIN):
             LOGGER.error("Wrong API key type detected, use the 'main' API key")
             errors["base"] = "not_main_key"
             return errors, None
-        uptime_robot_api = UptimeRobot(key, async_get_clientsession(self.hass))
+        uptime_robot_api = UptimeRobot(key, async_get_clientsession(self.menuai))
 
         try:
             response = await uptime_robot_api.async_get_account_details()
@@ -106,10 +106,10 @@ class UptimeRobotConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 existing_entry = await self.async_set_unique_id(str(account.user_id))
                 if existing_entry:
-                    self.hass.config_entries.async_update_entry(
+                    self.menuai.config_entries.async_update_entry(
                         existing_entry, data=user_input
                     )
-                    await self.hass.config_entries.async_reload(existing_entry.entry_id)
+                    await self.menuai.config_entries.async_reload(existing_entry.entry_id)
                     return self.async_abort(reason="reauth_successful")
                 return self.async_abort(reason="reauth_failed_existing")
 

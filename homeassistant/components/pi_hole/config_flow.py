@@ -10,8 +10,8 @@ from hole import Hole
 from hole.exceptions import HoleError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_LOCATION,
@@ -20,7 +20,7 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DEFAULT_LOCATION,
@@ -151,7 +151,7 @@ class PiHoleFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
     async def _async_try_connect(self) -> dict[str, str]:
-        session = async_get_clientsession(self.hass, self._config[CONF_VERIFY_SSL])
+        session = async_get_clientsession(self.menuai, self._config[CONF_VERIFY_SSL])
         pi_hole = Hole(
             self._config[CONF_HOST],
             session,

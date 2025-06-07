@@ -2,20 +2,20 @@
 
 import pytest
 
-from homeassistant.components.compensation.const import CONF_PRECISION, DOMAIN
-from homeassistant.components.compensation.sensor import ATTR_COEFFICIENTS
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.compensation.const import CONF_PRECISION, DOMAIN
+from menuai.components.compensation.sensor import ATTR_COEFFICIENTS
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     EVENT_STATE_CHANGED,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_linear_state(hass: HomeAssistant) -> None:
+async def test_linear_state(menuai: menuai) -> None:
     """Test compensation sensor state."""
     config = {
         "compensation": {
@@ -32,16 +32,16 @@ async def test_linear_state(hass: HomeAssistant) -> None:
     }
     expected_entity_id = "sensor.compensation_sensor_uncompensated"
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    assert await async_setup_component(hass, SENSOR_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    assert await async_setup_component(menuai, SENSOR_DOMAIN, config)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
     entity_id = config[DOMAIN]["test"]["source"]
-    hass.states.async_set(entity_id, 4, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 4, {})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(expected_entity_id)
+    state = menuai.states.get(expected_entity_id)
     assert state is not None
 
     assert round(float(state.state), config[DOMAIN]["test"][CONF_PRECISION]) == 5.0
@@ -51,16 +51,16 @@ async def test_linear_state(hass: HomeAssistant) -> None:
     coefs = [round(v, 1) for v in state.attributes.get(ATTR_COEFFICIENTS)]
     assert coefs == [1.0, 1.0]
 
-    hass.states.async_set(entity_id, "foo", {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, "foo", {})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(expected_entity_id)
+    state = menuai.states.get(expected_entity_id)
     assert state is not None
 
     assert state.state == STATE_UNKNOWN
 
 
-async def test_linear_state_from_attribute(hass: HomeAssistant) -> None:
+async def test_linear_state_from_attribute(menuai: menuai) -> None:
     """Test compensation sensor state that pulls from attribute."""
     config = {
         "compensation": {
@@ -77,17 +77,17 @@ async def test_linear_state_from_attribute(hass: HomeAssistant) -> None:
     }
     expected_entity_id = "sensor.compensation_sensor_uncompensated_value"
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    assert await async_setup_component(hass, SENSOR_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    assert await async_setup_component(menuai, SENSOR_DOMAIN, config)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
     entity_id = config[DOMAIN]["test"]["source"]
-    hass.states.async_set(entity_id, 3, {"value": 4})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 3, {"value": 4})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(expected_entity_id)
+    state = menuai.states.get(expected_entity_id)
     assert state is not None
 
     assert round(float(state.state), config[DOMAIN]["test"][CONF_PRECISION]) == 5.0
@@ -95,16 +95,16 @@ async def test_linear_state_from_attribute(hass: HomeAssistant) -> None:
     coefs = [round(v, 1) for v in state.attributes.get(ATTR_COEFFICIENTS)]
     assert coefs == [1.0, 1.0]
 
-    hass.states.async_set(entity_id, 3, {"value": "bar"})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 3, {"value": "bar"})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(expected_entity_id)
+    state = menuai.states.get(expected_entity_id)
     assert state is not None
 
     assert state.state == STATE_UNKNOWN
 
 
-async def test_quadratic_state(hass: HomeAssistant) -> None:
+async def test_quadratic_state(menuai: menuai) -> None:
     """Test 3 degree polynominial compensation sensor."""
     config = {
         "compensation": {
@@ -132,16 +132,16 @@ async def test_quadratic_state(hass: HomeAssistant) -> None:
             }
         }
     }
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     entity_id = config[DOMAIN]["test"]["source"]
-    hass.states.async_set(entity_id, 43.2, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 43.2, {})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.compensation_sensor_temperature")
+    state = menuai.states.get("sensor.compensation_sensor_temperature")
 
     assert state is not None
 
@@ -149,7 +149,7 @@ async def test_quadratic_state(hass: HomeAssistant) -> None:
 
 
 async def test_numpy_errors(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Tests bad polyfits."""
     config = {
@@ -163,16 +163,16 @@ async def test_numpy_errors(
             },
         }
     }
-    await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     assert "invalid value encountered in divide" in caplog.text
 
 
 async def test_datapoints_greater_than_degree(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Tests 3 bad data points."""
     config = {
@@ -187,15 +187,15 @@ async def test_datapoints_greater_than_degree(
             },
         }
     }
-    await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     assert "data_points must have at least 3 data_points" in caplog.text
 
 
-async def test_new_state_is_none(hass: HomeAssistant) -> None:
+async def test_new_state_is_none(menuai: menuai) -> None:
     """Tests catch for empty new states."""
     config = {
         "compensation": {
@@ -212,18 +212,18 @@ async def test_new_state_is_none(hass: HomeAssistant) -> None:
     }
     expected_entity_id = "sensor.compensation_sensor_uncompensated"
 
-    await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    last_changed = hass.states.get(expected_entity_id).last_changed
+    last_changed = menuai.states.get(expected_entity_id).last_changed
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_STATE_CHANGED, event_data={"entity_id": "sensor.uncompensated"}
     )
 
-    assert last_changed == hass.states.get(expected_entity_id).last_changed
+    assert last_changed == menuai.states.get(expected_entity_id).last_changed
 
 
 @pytest.mark.parametrize(
@@ -234,7 +234,7 @@ async def test_new_state_is_none(hass: HomeAssistant) -> None:
         (True, True),
     ],
 )
-async def test_limits(hass: HomeAssistant, lower: bool, upper: bool) -> None:
+async def test_limits(menuai: menuai, lower: bool, upper: bool) -> None:
     """Test compensation sensor state."""
     source = "sensor.test"
     config = {
@@ -253,21 +253,21 @@ async def test_limits(hass: HomeAssistant, lower: bool, upper: bool) -> None:
             }
         }
     }
-    await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     entity_id = "sensor.compensation_sensor_test"
 
-    hass.states.async_set(source, 0, {})
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    menuai.states.async_set(source, 0, {})
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     value = 0.0 if lower else -1.0
     assert float(state.state) == value
 
-    hass.states.async_set(source, 5, {})
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    menuai.states.async_set(source, 5, {})
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     value = 2.0 if upper else 4.0
     assert float(state.state) == value

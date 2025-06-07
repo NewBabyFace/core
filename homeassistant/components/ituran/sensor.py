@@ -8,20 +8,20 @@ from datetime import datetime
 
 from pyituran import Vehicle
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     DEGREE,
     UnitOfElectricPotential,
     UnitOfLength,
     UnitOfSpeed,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import IturanConfigEntry
 from .coordinator import IturanDataUpdateCoordinator
@@ -85,7 +85,7 @@ SENSOR_TYPES: list[IturanSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IturanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

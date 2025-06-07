@@ -7,11 +7,11 @@ from typing import TypedDict
 from aiohttp.web import Request
 from loqedAPI import loqed
 
-from homeassistant.components import cloud, webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components import cloud, webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_CLOUDHOOK_URL, DOMAIN
 
@@ -75,13 +75,13 @@ class LoqedDataCoordinator(DataUpdateCoordinator[StatusMessage]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         api: loqed.LoqedAPI,
         lock: loqed.Lock,
     ) -> None:
         """Initialize the Loqed Data Update coordinator."""
-        super().__init__(hass, _LOGGER, config_entry=config_entry, name="Loqed sensors")
+        super().__init__(menuai, _LOGGER, config_entry=config_entry, name="Loqed sensors")
         self._api = api
         self.lock = lock
         self.device_name = config_entry.data[CONF_NAME]
@@ -92,7 +92,7 @@ class LoqedDataCoordinator(DataUpdateCoordinator[StatusMessage]):
             return await self._api.async_get_lock_details()
 
     async def _handle_webhook(
-        self, hass: HomeAssistant, webhook_id: str, request: Request
+        self, menuai: menuai, webhook_id: str, request: Request
     ) -> None:
         """Handle incoming Loqed messages."""
         _LOGGER.debug("Callback received: %s", request.headers)
@@ -114,16 +114,16 @@ class LoqedDataCoordinator(DataUpdateCoordinator[StatusMessage]):
         webhook_id = self.config_entry.data[CONF_WEBHOOK_ID]
 
         webhook.async_register(
-            self.hass, DOMAIN, "Loqed", webhook_id, self._handle_webhook
+            self.menuai, DOMAIN, "Loqed", webhook_id, self._handle_webhook
         )
 
-        if cloud.async_active_subscription(self.hass):
+        if cloud.async_active_subscription(self.menuai):
             webhook_url = await async_cloudhook_generate_url(
-                self.hass, self.config_entry
+                self.menuai, self.config_entry
             )
         else:
             webhook_url = webhook.async_generate_url(
-                self.hass, self.config_entry.data[CONF_WEBHOOK_ID]
+                self.menuai, self.config_entry.data[CONF_WEBHOOK_ID]
             )
 
         _LOGGER.debug("Webhook URL: %s", webhook_url)
@@ -148,10 +148,10 @@ class LoqedDataCoordinator(DataUpdateCoordinator[StatusMessage]):
         if CONF_CLOUDHOOK_URL in self.config_entry.data:
             webhook_url = self.config_entry.data[CONF_CLOUDHOOK_URL]
         else:
-            webhook_url = webhook.async_generate_url(self.hass, webhook_id)
+            webhook_url = webhook.async_generate_url(self.menuai, webhook_id)
 
         webhook.async_unregister(
-            self.hass,
+            self.menuai,
             webhook_id,
         )
         _LOGGER.debug("Webhook URL: %s", webhook_url)
@@ -166,13 +166,13 @@ class LoqedDataCoordinator(DataUpdateCoordinator[StatusMessage]):
             await self.lock.deleteWebhook(webhook_index)
 
 
-async def async_cloudhook_generate_url(hass: HomeAssistant, entry: ConfigEntry) -> str:
+async def async_cloudhook_generate_url(menuai: menuai, entry: ConfigEntry) -> str:
     """Generate the full URL for a webhook_id."""
     if CONF_CLOUDHOOK_URL not in entry.data:
         webhook_url = await cloud.async_create_cloudhook(
-            hass, entry.data[CONF_WEBHOOK_ID]
+            menuai, entry.data[CONF_WEBHOOK_ID]
         )
         data = {**entry.data, CONF_CLOUDHOOK_URL: webhook_url}
-        hass.config_entries.async_update_entry(entry, data=data)
+        menuai.config_entries.async_update_entry(entry, data=data)
         return webhook_url
     return str(entry.data[CONF_CLOUDHOOK_URL])

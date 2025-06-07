@@ -8,10 +8,10 @@ from typing import Any
 from pyaprilaire.const import Attribute
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import format_mac
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import format_mac
 
 from .const import DOMAIN
 from .coordinator import AprilaireCoordinator
@@ -42,7 +42,7 @@ class AprilaireConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         coordinator = AprilaireCoordinator(
-            self.hass, None, user_input[CONF_HOST], user_input[CONF_PORT]
+            self.menuai, None, user_input[CONF_HOST], user_input[CONF_PORT]
         )
         await coordinator.start_listen()
 

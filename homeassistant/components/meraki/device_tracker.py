@@ -8,15 +8,15 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     AsyncSeeCallback,
     SourceType,
 )
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 CONF_VALIDATOR = "validator"
 CONF_SECRET = "secret"
@@ -33,18 +33,18 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_see: AsyncSeeCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> bool:
     """Set up an endpoint for the Meraki tracker."""
-    hass.http.register_view(MerakiView(config, async_see))
+    menuai.http.register_view(MerakiView(config, async_see))
 
     return True
 
 
-class MerakiView(HomeAssistantView):
+class MerakiView(menuaiView):
     """View to handle Meraki requests."""
 
     url = URL
@@ -87,11 +87,11 @@ class MerakiView(HomeAssistantView):
         if not data["data"]["observations"]:
             _LOGGER.debug("No observations found")
             return None
-        self._handle(request.app[KEY_HASS], data)
+        self._handle(request.app[KEY_menuai], data)
         return None
 
     @callback
-    def _handle(self, hass, data):
+    def _handle(self, menuai, data):
         for i in data["data"]["observations"]:
             data["data"]["secret"] = "hidden"
 
@@ -125,7 +125,7 @@ class MerakiView(HomeAssistantView):
                 attrs["seenTime"] = i["seenTime"]
             if i.get("ssid", False):
                 attrs["ssid"] = i["ssid"]
-            hass.async_create_task(
+            menuai.async_create_task(
                 self.async_see(
                     gps=gps_location,
                     mac=mac,

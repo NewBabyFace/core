@@ -7,10 +7,10 @@ from typing import Any, cast
 
 from pytradfri.command import Command
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_GATEWAY_ID, COORDINATOR, COORDINATOR_LIST, DOMAIN, KEY_API
 from .coordinator import TradfriDeviceDataUpdateCoordinator
@@ -31,13 +31,13 @@ def _from_fan_speed(fan_speed: int) -> int:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Load Tradfri switches based on a config entry."""
     gateway_id = config_entry.data[CONF_GATEWAY_ID]
-    coordinator_data = hass.data[DOMAIN][config_entry.entry_id][COORDINATOR]
+    coordinator_data = menuai.data[DOMAIN][config_entry.entry_id][COORDINATOR]
     api = coordinator_data[KEY_API]
 
     async_add_entities(
@@ -52,7 +52,7 @@ async def async_setup_entry(
 
 
 class TradfriAirPurifierFan(TradfriBaseEntity, FanEntity):
-    """The platform class required by Home Assistant."""
+    """The platform class required by MenuAI."""
 
     _attr_name = None
     _attr_supported_features = (

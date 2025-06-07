@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import selected_platforms, snapshot_platform_entities
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     netatmo_auth: AsyncMock,
     snapshot: SnapshotAssertion,
@@ -25,7 +25,7 @@ async def test_entity(
 ) -> None:
     """Test entities."""
     await snapshot_platform_entities(
-        hass,
+        menuai,
         config_entry,
         Platform.BUTTON,
         entity_registry,
@@ -35,27 +35,27 @@ async def test_entity(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_button_setup_and_services(
-    hass: HomeAssistant, config_entry: MockConfigEntry, netatmo_auth: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, netatmo_auth: AsyncMock
 ) -> None:
     """Test setup and services."""
     with selected_platforms([Platform.BUTTON]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     button_entity = "button.entrance_blinds_preferred_position"
 
-    assert hass.states.get(button_entity).state == STATE_UNKNOWN
+    assert menuai.states.get(button_entity).state == STATE_UNKNOWN
 
     # Test button press
     with patch("pyatmo.home.Home.async_set_state") as mock_set_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: button_entity},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_set_state.assert_called_once_with(
             {
                 "modules": [
@@ -68,5 +68,5 @@ async def test_button_setup_and_services(
             }
         )
 
-    assert (state := hass.states.get(button_entity))
+    assert (state := menuai.states.get(button_entity))
     assert state.state != STATE_UNKNOWN

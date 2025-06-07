@@ -1,11 +1,11 @@
 """Exceptions raised by IMAP integration."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Raise exception for invalid credentials."""
 
 
-class InvalidFolder(HomeAssistantError):
+class InvalidFolder(menuaiError):
     """Raise exception for invalid folder."""

@@ -8,10 +8,10 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import (
     REMOTE_SERVICE_EXC_TRANSLATION,
@@ -25,7 +25,7 @@ from tests.common import snapshot_platform
 @pytest.mark.usefixtures("bmw_fixture")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity_state_attrs(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -33,12 +33,12 @@ async def test_entity_state_attrs(
 
     # Setup component
     with patch(
-        "homeassistant.components.bmw_connected_drive.PLATFORMS",
+        "menuai.components.bmw_connected_drive.PLATFORMS",
         [Platform.BUTTON],
     ):
-        mock_config_entry = await setup_mocked_integration(hass)
+        mock_config_entry = await setup_mocked_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ async def test_entity_state_attrs(
     ],
 )
 async def test_service_call_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     remote_service: str,
     bmw_fixture: respx.Router,
@@ -57,10 +57,10 @@ async def test_service_call_success(
     """Test successful button press."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     # Test
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         blocking=True,
@@ -71,15 +71,15 @@ async def test_service_call_success(
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_service_call_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test failed button press."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
     entity_id = "switch.i4_edrive40_climate"
-    old_value = hass.states.get(entity_id).state
+    old_value = menuai.states.get(entity_id).state
 
     # Setup exception
     monkeypatch.setattr(
@@ -91,14 +91,14 @@ async def test_service_call_fail(
     )
 
     # Test
-    with pytest.raises(HomeAssistantError, match=REMOTE_SERVICE_EXC_TRANSLATION):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=REMOTE_SERVICE_EXC_TRANSLATION):
+        await menuai.services.async_call(
             "button",
             "press",
             blocking=True,
             target={"entity_id": "button.i4_edrive40_activate_air_conditioning"},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value
 
 
 @pytest.mark.parametrize(
@@ -138,7 +138,7 @@ async def test_service_call_fail(
     ],
 )
 async def test_service_call_success_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     state_entity_id: str,
     new_value: str,
@@ -150,19 +150,19 @@ async def test_service_call_success_state_change(
     """Test successful button press with state change."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    hass.states.async_set(state_entity_id, old_value)
-    assert hass.states.get(state_entity_id).state == old_value
+    assert await setup_mocked_integration(menuai)
+    menuai.states.async_set(state_entity_id, old_value)
+    assert menuai.states.get(state_entity_id).state == old_value
 
     # Test
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         blocking=True,
         target={"entity_id": entity_id},
     )
     check_remote_service_call(bmw_fixture, remote_service, remote_service_params)
-    assert hass.states.get(state_entity_id).state == new_value
+    assert menuai.states.get(state_entity_id).state == new_value
 
 
 @pytest.mark.parametrize(
@@ -177,7 +177,7 @@ async def test_service_call_success_state_change(
     ],
 )
 async def test_service_call_success_attr_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     state_entity_id: str,
     new_attrs: dict,
@@ -187,16 +187,16 @@ async def test_service_call_success_attr_change(
     """Test successful button press with attribute change."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     assert {
         k: v
-        for k, v in hass.states.get(state_entity_id).attributes.items()
+        for k, v in menuai.states.get(state_entity_id).attributes.items()
         if k in old_attrs
     } == old_attrs
 
     # Test
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         blocking=True,
@@ -205,6 +205,6 @@ async def test_service_call_success_attr_change(
     check_remote_service_call(bmw_fixture)
     assert {
         k: v
-        for k, v in hass.states.get(state_entity_id).attributes.items()
+        for k, v in menuai.states.get(state_entity_id).attributes.items()
         if k in new_attrs
     } == new_attrs

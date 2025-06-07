@@ -7,9 +7,9 @@ import logging
 from url_normalize import url_normalize
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_TOKEN, CONF_URL
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_TOKEN, CONF_URL
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import helpers
 from .const import DOMAIN

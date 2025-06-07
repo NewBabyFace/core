@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_API_KEY, CONF_LOCATION, CONF_UNIQUE_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_API_KEY, CONF_LOCATION, CONF_UNIQUE_ID
+from menuai.core import menuai
 
 from . import AmbientStationConfigEntry
 from .const import CONF_APP_KEY
@@ -36,7 +36,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: AmbientStationConfigEntry
+    menuai: menuai, entry: AmbientStationConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     return {

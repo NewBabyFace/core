@@ -3,9 +3,9 @@
 import pytest
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device import (
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device import (
     async_device_info_to_link_from_device_id,
     async_device_info_to_link_from_entity,
     async_entity_id_to_device_id,
@@ -17,13 +17,13 @@ from tests.common import MockConfigEntry
 
 
 async def test_entity_id_to_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test returning an entity's device ID."""
     config_entry = MockConfigEntry(domain="my")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         identifiers={("test", "current_device")},
@@ -40,30 +40,30 @@ async def test_entity_id_to_device_id(
         config_entry=config_entry,
         device_id=device.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     device_id = async_entity_id_to_device_id(
-        hass,
+        menuai,
         entity_id_or_uuid=entity.entity_id,
     )
     assert device_id == device.id
 
     with pytest.raises(vol.Invalid):
         async_entity_id_to_device_id(
-            hass,
+            menuai,
             entity_id_or_uuid="unknown_uuid",
         )
 
 
 async def test_device_info_to_link(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for returning device info with device link information."""
     config_entry = MockConfigEntry(domain="my")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         identifiers={("test", "my_device")},
@@ -80,18 +80,18 @@ async def test_device_info_to_link(
         config_entry=config_entry,
         device_id=device.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     result = async_device_info_to_link_from_entity(
-        hass, entity_id_or_uuid=source_entity.entity_id
+        menuai, entity_id_or_uuid=source_entity.entity_id
     )
     assert result == {
         "identifiers": {("test", "my_device")},
         "connections": {("mac", "30:31:32:33:34:00")},
     }
 
-    result = async_device_info_to_link_from_device_id(hass, device_id=device.id)
+    result = async_device_info_to_link_from_device_id(menuai, device_id=device.id)
     assert result == {
         "identifiers": {("test", "my_device")},
         "connections": {("mac", "30:31:32:33:34:00")},
@@ -99,29 +99,29 @@ async def test_device_info_to_link(
 
     # With a non-existent entity id
     result = async_device_info_to_link_from_entity(
-        hass, entity_id_or_uuid="sensor.invalid"
+        menuai, entity_id_or_uuid="sensor.invalid"
     )
     assert result is None
 
     # With a non-existent device id
-    result = async_device_info_to_link_from_device_id(hass, device_id="abcdefghi")
+    result = async_device_info_to_link_from_device_id(menuai, device_id="abcdefghi")
     assert result is None
 
     # With a None device id
-    result = async_device_info_to_link_from_device_id(hass, device_id=None)
+    result = async_device_info_to_link_from_device_id(menuai, device_id=None)
     assert result is None
 
 
 async def test_remove_stale_device_links_keep_entity_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test cleaning works for entity."""
     helper_config_entry = MockConfigEntry(domain="helper_integration")
-    helper_config_entry.add_to_hass(hass)
+    helper_config_entry.add_to_menuai(menuai)
     host_config_entry = MockConfigEntry(domain="host_integration")
-    host_config_entry.add_to_hass(hass)
+    host_config_entry.add_to_menuai(menuai)
 
     current_device = device_registry.async_get_or_create(
         identifiers={("test", "current_device")},
@@ -170,12 +170,12 @@ async def test_remove_stale_device_links_keep_entity_device(
 
     # Manual cleanup should unlink stale devices from the config entry
     async_remove_stale_devices_links_keep_entity_device(
-        hass,
+        menuai,
         entry_id=helper_config_entry.entry_id,
         source_entity_id_or_uuid=source_entity.entity_id,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     devices_helper_entry = device_registry.devices.get_devices_for_config_entry_id(
         helper_config_entry.entry_id
@@ -190,12 +190,12 @@ async def test_remove_stale_device_links_keep_entity_device(
 
 
 async def test_remove_stale_devices_links_keep_current_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test cleanup works for device id."""
     config_entry = MockConfigEntry(domain="hue")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     current_device = device_registry.async_get_or_create(
         identifiers={("test", "current_device")},
@@ -225,7 +225,7 @@ async def test_remove_stale_devices_links_keep_current_device(
 
     # Manual cleanup should unlink stales devices from the config entry
     async_remove_stale_devices_links_keep_current_device(
-        hass,
+        menuai,
         entry_id=config_entry.entry_id,
         current_device_id=current_device.id,
     )

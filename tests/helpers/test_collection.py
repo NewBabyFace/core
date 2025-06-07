@@ -9,15 +9,15 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.core import menuai
+from menuai.helpers import (
     collection,
     entity_component,
     entity_registry as er,
     storage,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.dt import utcnow
+from menuai.helpers.typing import ConfigType
+from menuai.util.dt import utcnow
 
 from tests.common import flush_store
 from tests.typing import WebSocketGenerator
@@ -194,9 +194,9 @@ async def test_yaml_collection_skipping_duplicate_ids() -> None:
     )
 
 
-async def test_storage_collection(hass: HomeAssistant) -> None:
+async def test_storage_collection(menuai: menuai) -> None:
     """Test storage collection."""
-    store = storage.Store(hass, 1, "test-data")
+    store = storage.Store(menuai, 1, "test-data")
     await store.async_save(
         {
             "items": [
@@ -248,7 +248,7 @@ async def test_storage_collection(hass: HomeAssistant) -> None:
 
     await flush_store(store)
 
-    assert await storage.Store(hass, 1, "test-data").async_load() == {
+    assert await storage.Store(menuai, 1, "test-data").async_load() == {
         "items": [
             {"id": "mock-1", "name": "Mock 1", "data": 1},
             {"id": "mock-2", "name": "Mock 2 updated", "data": 2},
@@ -258,7 +258,7 @@ async def test_storage_collection(hass: HomeAssistant) -> None:
 
 
 async def test_storage_collection_update_modifiet_at(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -291,7 +291,7 @@ async def test_storage_collection_update_modifiet_at(
             self._state = value
             self.async_write_ha_state()
 
-    store = storage.Store(hass, 1, "test-data")
+    store = storage.Store(menuai, 1, "test-data")
     data = {"id": "mock-1", "name": "Mock 1", "data": 1}
     await store.async_save(
         {
@@ -301,10 +301,10 @@ async def test_storage_collection_update_modifiet_at(
         }
     )
     id_manager = collection.IDManager()
-    ent_comp = entity_component.EntityComponent(_LOGGER, "test", hass)
+    ent_comp = entity_component.EntityComponent(_LOGGER, "test", menuai)
     await ent_comp.async_setup({})
     coll = MockStorageCollection(store, id_manager)
-    collection.sync_entity_lifecycle(hass, "test", "test", ent_comp, coll, TestEntity)
+    collection.sync_entity_lifecycle(menuai, "test", "test", ent_comp, coll, TestEntity)
     changes = track_changes(coll)
 
     await coll.async_load()
@@ -335,12 +335,12 @@ async def test_storage_collection_update_modifiet_at(
     assert modified_3 == modified_2
 
 
-async def test_attach_entity_component_collection(hass: HomeAssistant) -> None:
+async def test_attach_entity_component_collection(menuai: menuai) -> None:
     """Test attaching collection to entity component."""
-    ent_comp = entity_component.EntityComponent(_LOGGER, "test", hass)
+    ent_comp = entity_component.EntityComponent(_LOGGER, "test", menuai)
     await ent_comp.async_setup({})
     coll = MockObservableCollection(None)
-    collection.sync_entity_lifecycle(hass, "test", "test", ent_comp, coll, MockEntity)
+    collection.sync_entity_lifecycle(menuai, "test", "test", ent_comp, coll, MockEntity)
 
     await coll.notify_changes(
         [
@@ -352,8 +352,8 @@ async def test_attach_entity_component_collection(hass: HomeAssistant) -> None:
         ],
     )
 
-    assert hass.states.get("test.mock_1").name == "Mock 1"
-    assert hass.states.get("test.mock_1").state == "initial"
+    assert menuai.states.get("test.mock_1").name == "Mock 1"
+    assert menuai.states.get("test.mock_1").state == "initial"
 
     await coll.notify_changes(
         [
@@ -365,21 +365,21 @@ async def test_attach_entity_component_collection(hass: HomeAssistant) -> None:
         ],
     )
 
-    assert hass.states.get("test.mock_1").name == "Mock 1 updated"
-    assert hass.states.get("test.mock_1").state == "second"
+    assert menuai.states.get("test.mock_1").name == "Mock 1 updated"
+    assert menuai.states.get("test.mock_1").state == "second"
 
     await coll.notify_changes(
         [collection.CollectionChange(collection.CHANGE_REMOVED, "mock_id", None)],
     )
 
-    assert hass.states.get("test.mock_1") is None
+    assert menuai.states.get("test.mock_1") is None
 
 
 async def test_entity_component_collection_abort(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test aborted entity adding is handled."""
-    ent_comp = entity_component.EntityComponent(_LOGGER, "test", hass)
+    ent_comp = entity_component.EntityComponent(_LOGGER, "test", menuai)
     await ent_comp.async_setup({})
     coll = MockObservableCollection(None)
 
@@ -400,7 +400,7 @@ async def test_entity_component_collection_abort(
             await super().async_remove()
 
     collection.sync_entity_lifecycle(
-        hass, "test", "test", ent_comp, coll, MockMockEntity
+        menuai, "test", "test", ent_comp, coll, MockMockEntity
     )
     entity_registry.async_get_or_create(
         "test",
@@ -420,7 +420,7 @@ async def test_entity_component_collection_abort(
         ],
     )
 
-    assert hass.states.get("test.mock_1") is None
+    assert menuai.states.get("test.mock_1") is None
 
     await coll.notify_changes(
         [
@@ -432,22 +432,22 @@ async def test_entity_component_collection_abort(
         ],
     )
 
-    assert hass.states.get("test.mock_1") is None
+    assert menuai.states.get("test.mock_1") is None
     assert len(async_update_config_calls) == 0
 
     await coll.notify_changes(
         [collection.CollectionChange(collection.CHANGE_REMOVED, "mock_id", None)],
     )
 
-    assert hass.states.get("test.mock_1") is None
+    assert menuai.states.get("test.mock_1") is None
     assert len(async_remove_calls) == 0
 
 
 async def test_entity_component_collection_entity_removed(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test entity removal is handled."""
-    ent_comp = entity_component.EntityComponent(_LOGGER, "test", hass)
+    ent_comp = entity_component.EntityComponent(_LOGGER, "test", menuai)
     await ent_comp.async_setup({})
     coll = MockObservableCollection(None)
 
@@ -468,7 +468,7 @@ async def test_entity_component_collection_entity_removed(
             await super().async_remove()
 
     collection.sync_entity_lifecycle(
-        hass, "test", "test", ent_comp, coll, MockMockEntity
+        menuai, "test", "test", ent_comp, coll, MockMockEntity
     )
     entity_registry.async_get_or_create(
         "test", "test", "mock_id", suggested_object_id="mock_1"
@@ -484,12 +484,12 @@ async def test_entity_component_collection_entity_removed(
         ],
     )
 
-    assert hass.states.get("test.mock_1").name == "Mock 1"
-    assert hass.states.get("test.mock_1").state == "initial"
+    assert menuai.states.get("test.mock_1").name == "Mock 1"
+    assert menuai.states.get("test.mock_1").state == "initial"
 
     entity_registry.async_remove("test.mock_1")
-    await hass.async_block_till_done()
-    assert hass.states.get("test.mock_1") is None
+    await menuai.async_block_till_done()
+    assert menuai.states.get("test.mock_1") is None
     assert len(async_remove_calls) == 1
 
     await coll.notify_changes(
@@ -502,22 +502,22 @@ async def test_entity_component_collection_entity_removed(
         ],
     )
 
-    assert hass.states.get("test.mock_1") is None
+    assert menuai.states.get("test.mock_1") is None
     assert len(async_update_config_calls) == 0
 
     await coll.notify_changes(
         [collection.CollectionChange(collection.CHANGE_REMOVED, "mock_id", None)],
     )
 
-    assert hass.states.get("test.mock_1") is None
+    assert menuai.states.get("test.mock_1") is None
     assert len(async_remove_calls) == 1
 
 
 async def test_storage_collection_websocket(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test exposing a storage collection via websockets."""
-    store = storage.Store(hass, 1, "test-data")
+    store = storage.Store(menuai, 1, "test-data")
     coll = MockStorageCollection(store)
     changes = track_changes(coll)
     collection.DictStorageCollectionWebsocket(
@@ -526,9 +526,9 @@ async def test_storage_collection_websocket(
         "test_item",
         {vol.Required("name"): str, vol.Required("immutable_string"): str},
         {vol.Optional("name"): str},
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Create invalid
     await client.send_json_auto_id(
@@ -647,10 +647,10 @@ async def test_storage_collection_websocket(
 
 
 async def test_storage_collection_websocket_subscribe(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test exposing a storage collection via websockets."""
-    store = storage.Store(hass, 1, "test-data")
+    store = storage.Store(menuai, 1, "test-data")
     coll = MockStorageCollection(store)
     changes = track_changes(coll)
     collection.DictStorageCollectionWebsocket(
@@ -659,9 +659,9 @@ async def test_storage_collection_websocket_subscribe(
         "test_item",
         {vol.Required("name"): str, vol.Required("immutable_string"): str},
         {vol.Optional("name"): str},
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Subscribe
     await client.send_json_auto_id({"type": "test_item/collection/subscribe"})

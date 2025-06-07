@@ -11,15 +11,15 @@ from typing import Any, Final
 import audioop  # pylint: disable=deprecated-module
 import voluptuous as vol
 
-from homeassistant.components import conversation, stt, tts, websocket_api
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_SECONDS, MATCH_ALL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.components import conversation, stt, tts, websocket_api
+from menuai.const import ATTR_DEVICE_ID, ATTR_SECONDS, MATCH_ALL
+from menuai.core import menuai, callback
+from menuai.helpers import (
     chat_session,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.util import language as language_util
+from menuai.util import language as language_util
 
 from .const import (
     DEFAULT_PIPELINE_TIMEOUT,
@@ -53,14 +53,14 @@ MAX_CAPTURE_TIMEOUT: Final = 60.0
 
 
 @callback
-def async_register_websocket_api(hass: HomeAssistant) -> None:
+def async_register_websocket_api(menuai: menuai) -> None:
     """Register the websocket API."""
-    websocket_api.async_register_command(hass, websocket_run)
-    websocket_api.async_register_command(hass, websocket_list_languages)
-    websocket_api.async_register_command(hass, websocket_list_runs)
-    websocket_api.async_register_command(hass, websocket_list_devices)
-    websocket_api.async_register_command(hass, websocket_get_run)
-    websocket_api.async_register_command(hass, websocket_device_capture)
+    websocket_api.async_register_command(menuai, websocket_run)
+    websocket_api.async_register_command(menuai, websocket_list_languages)
+    websocket_api.async_register_command(menuai, websocket_list_runs)
+    websocket_api.async_register_command(menuai, websocket_list_devices)
+    websocket_api.async_register_command(menuai, websocket_get_run)
+    websocket_api.async_register_command(menuai, websocket_device_capture)
 
 
 @websocket_api.websocket_command(
@@ -123,14 +123,14 @@ def async_register_websocket_api(hass: HomeAssistant) -> None:
 )
 @websocket_api.async_response
 async def websocket_run(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Run a pipeline."""
     pipeline_id = msg.get("pipeline")
     try:
-        pipeline = async_get_pipeline(hass, pipeline_id=pipeline_id)
+        pipeline = async_get_pipeline(menuai, pipeline_id=pipeline_id)
     except PipelineNotFound:
         connection.send_error(
             msg["id"],
@@ -184,7 +184,7 @@ async def websocket_run(
                 yield chunk
 
         def handle_binary(
-            _hass: HomeAssistant,
+            _menuai: menuai,
             _connection: websocket_api.ActiveConnection,
             data: bytes,
         ) -> None:
@@ -222,7 +222,7 @@ async def websocket_run(
         input_args["tts_input"] = msg["input"]["text"]
 
     input_args["run"] = PipelineRun(
-        hass,
+        menuai,
         context=connection.context(msg),
         pipeline=pipeline,
         start_stage=start_stage,
@@ -237,7 +237,7 @@ async def websocket_run(
     )
 
     with chat_session.async_get_chat_session(
-        hass, msg.get("conversation_id")
+        menuai, msg.get("conversation_id")
     ) as session:
         input_args["session"] = session
         pipeline_input = PipelineInput(**input_args)
@@ -252,7 +252,7 @@ async def websocket_run(
         # Confirm subscription
         connection.send_result(msg["id"])
 
-        run_task = hass.async_create_task(pipeline_input.execute())
+        run_task = menuai.async_create_task(pipeline_input.execute())
 
         # Cancel pipeline if user unsubscribes
         connection.subscriptions[msg["id"]] = run_task.cancel
@@ -283,12 +283,12 @@ async def websocket_run(
     }
 )
 def websocket_list_runs(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List pipeline runs for which debug data is available."""
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
     pipeline_id = msg["pipeline_id"]
 
     if pipeline_id not in pipeline_data.pipeline_debug:
@@ -319,13 +319,13 @@ def websocket_list_runs(
     }
 )
 def websocket_list_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List assist devices."""
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
-    ent_reg = er.async_get(hass)
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
+    ent_reg = er.async_get(menuai)
     connection.send_result(
         msg["id"],
         [
@@ -350,12 +350,12 @@ def websocket_list_devices(
     }
 )
 def websocket_get_run(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get debug data for a pipeline run."""
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
     pipeline_id = msg["pipeline_id"]
     pipeline_run_id = msg["pipeline_run_id"]
 
@@ -390,7 +390,7 @@ def websocket_get_run(
 )
 @callback
 def websocket_list_languages(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -399,9 +399,9 @@ def websocket_list_languages(
     This will return a list of languages which are supported by at least one stt, tts
     and conversation engine respectively.
     """
-    conv_language_tags = conversation.async_get_conversation_languages(hass)
-    stt_language_tags = stt.async_get_speech_to_text_languages(hass)
-    tts_language_tags = tts.async_get_text_to_speech_languages(hass)
+    conv_language_tags = conversation.async_get_conversation_languages(menuai)
+    stt_language_tags = stt.async_get_speech_to_text_languages(menuai)
+    tts_language_tags = tts.async_get_text_to_speech_languages(menuai)
     pipeline_languages: set[str] | None = None
 
     if conv_language_tags and conv_language_tags != MATCH_ALL:
@@ -455,12 +455,12 @@ def websocket_list_languages(
 )
 @websocket_api.async_response
 async def websocket_device_capture(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Capture raw audio from a satellite device and forward to client."""
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
     device_id = msg["device_id"]
 
     # Number of seconds to record audio in wall clock time
@@ -501,7 +501,7 @@ async def websocket_device_capture(
     connection.send_result(msg["id"])
 
     # Record to logbook
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_RECORDING,
         {
             ATTR_DEVICE_ID: device_id,

@@ -17,11 +17,11 @@ from uiprotect.data import (
 )
 from uiprotect.data.nvr import EventMetadata, LicensePlateMetadata
 
-from homeassistant.components.unifiprotect.const import (
+from menuai.components.unifiprotect.const import (
     ATTR_EVENT_SCORE,
     DEFAULT_ATTRIBUTION,
 )
-from homeassistant.components.unifiprotect.sensor import (
+from menuai.components.unifiprotect.sensor import (
     ALL_DEVICES_SENSORS,
     CAMERA_DISABLED_SENSORS,
     CAMERA_SENSORS,
@@ -31,15 +31,15 @@ from homeassistant.components.unifiprotect.sensor import (
     NVR_SENSORS,
     SENSE_SENSORS,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ATTRIBUTION,
     EVENT_STATE_CHANGED,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import Event as HAEvent, EventStateChangedData, HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import Event as HAEvent, EventStateChangedData, menuai
+from menuai.helpers import entity_registry as er
 
 from .utils import (
     MockUFPFixture,
@@ -60,43 +60,43 @@ SENSE_SENSORS_WRITE = SENSE_SENSORS[:8]
 
 
 async def test_sensor_camera_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
 ) -> None:
     """Test removing and re-adding a camera device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SENSOR, 24, 12)
-    await remove_entities(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SENSOR, 12, 9)
-    await adopt_devices(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SENSOR, 24, 12)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SENSOR, 24, 12)
+    await remove_entities(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SENSOR, 12, 9)
+    await adopt_devices(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SENSOR, 24, 12)
 
 
 async def test_sensor_sensor_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, sensor_all: Sensor
+    menuai: menuai, ufp: MockUFPFixture, sensor_all: Sensor
 ) -> None:
     """Test removing and re-adding a light device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [sensor_all])
-    assert_entity_counts(hass, Platform.SENSOR, 22, 14)
-    await remove_entities(hass, ufp, [sensor_all])
-    assert_entity_counts(hass, Platform.SENSOR, 12, 9)
-    await adopt_devices(hass, ufp, [sensor_all])
-    assert_entity_counts(hass, Platform.SENSOR, 22, 14)
+    await init_entry(menuai, ufp, [sensor_all])
+    assert_entity_counts(menuai, Platform.SENSOR, 22, 14)
+    await remove_entities(menuai, ufp, [sensor_all])
+    assert_entity_counts(menuai, Platform.SENSOR, 12, 9)
+    await adopt_devices(menuai, ufp, [sensor_all])
+    assert_entity_counts(menuai, Platform.SENSOR, 22, 14)
 
 
 async def test_sensor_setup_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     sensor_all: Sensor,
 ) -> None:
     """Test sensor entity setup for sensor devices."""
 
-    await init_entry(hass, ufp, [sensor_all])
-    assert_entity_counts(hass, Platform.SENSOR, 22, 14)
+    await init_entry(menuai, ufp, [sensor_all])
+    assert_entity_counts(menuai, Platform.SENSOR, 22, 14)
 
     expected_values = (
         "10",
@@ -116,7 +116,7 @@ async def test_sensor_setup_sensor(
         assert entity
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -131,24 +131,24 @@ async def test_sensor_setup_sensor(
     assert entity.disabled is True
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "-50"
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_sensor_setup_sensor_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     sensor: Sensor,
 ) -> None:
     """Test sensor entity setup for sensor devices with no sensors enabled."""
 
-    await init_entry(hass, ufp, [sensor])
-    assert_entity_counts(hass, Platform.SENSOR, 22, 14)
+    await init_entry(menuai, ufp, [sensor])
+    assert_entity_counts(menuai, Platform.SENSOR, 22, 14)
 
     expected_values = (
         "10",
@@ -168,14 +168,14 @@ async def test_sensor_setup_sensor_none(
         assert entity
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_sensor_setup_nvr(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     fixed_now: datetime,
@@ -198,10 +198,10 @@ async def test_sensor_setup_nvr(
     nvr.storage_stats.storage_distribution.free.percentage = 50.0
     nvr.storage_stats.capacity = 50.0
 
-    await hass.config_entries.async_setup(ufp.entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(ufp.entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert_entity_counts(hass, Platform.SENSOR, 12, 9)
+    assert_entity_counts(menuai, Platform.SENSOR, 12, 9)
 
     expected_values = (
         fixed_now.replace(second=0, microsecond=0).isoformat(),
@@ -225,9 +225,9 @@ async def test_sensor_setup_nvr(
         assert entity.unique_id == unique_id
 
         if not description.entity_registry_enabled_default:
-            await enable_entity(hass, ufp.entry.entry_id, entity_id)
+            await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -243,16 +243,16 @@ async def test_sensor_setup_nvr(
         assert entity.disabled is not description.entity_registry_enabled_default
         assert entity.unique_id == unique_id
 
-        await enable_entity(hass, ufp.entry.entry_id, entity_id)
+        await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_sensor_nvr_missing_values(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, ufp: MockUFPFixture
+    menuai: menuai, entity_registry: er.EntityRegistry, ufp: MockUFPFixture
 ) -> None:
     """Test NVR sensor sensors if no data available."""
 
@@ -263,10 +263,10 @@ async def test_sensor_nvr_missing_values(
     nvr.up_since = None
     nvr.storage_stats.capacity = None
 
-    await hass.config_entries.async_setup(ufp.entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(ufp.entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert_entity_counts(hass, Platform.SENSOR, 12, 9)
+    assert_entity_counts(menuai, Platform.SENSOR, 12, 9)
 
     # Uptime
     description = NVR_SENSORS[0]
@@ -278,9 +278,9 @@ async def test_sensor_nvr_missing_values(
     assert entity
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -295,7 +295,7 @@ async def test_sensor_nvr_missing_values(
     assert entity
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "0"
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -311,16 +311,16 @@ async def test_sensor_nvr_missing_values(
     assert entity.disabled is True
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_sensor_setup_camera(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorbell: Camera,
@@ -328,8 +328,8 @@ async def test_sensor_setup_camera(
 ) -> None:
     """Test sensor entity setup for camera devices."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SENSOR, 24, 12)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SENSOR, 24, 12)
 
     expected_values = (
         fixed_now.replace(microsecond=0).isoformat(),
@@ -349,7 +349,7 @@ async def test_sensor_setup_camera(
         assert entity.disabled is not description.entity_registry_enabled_default
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -365,9 +365,9 @@ async def test_sensor_setup_camera(
         assert entity.disabled is not description.entity_registry_enabled_default
         assert entity.unique_id == unique_id
 
-        await enable_entity(hass, ufp.entry.entry_id, entity_id)
+        await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == expected_values[index]
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -382,9 +382,9 @@ async def test_sensor_setup_camera(
     assert entity.disabled is True
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "1000"
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -399,9 +399,9 @@ async def test_sensor_setup_camera(
     assert entity.disabled is True
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "-50"
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -409,7 +409,7 @@ async def test_sensor_setup_camera(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_setup_camera_with_last_trip_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorbell: Camera,
@@ -417,8 +417,8 @@ async def test_sensor_setup_camera_with_last_trip_time(
 ) -> None:
     """Test sensor entity setup for camera devices with last trip time."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SENSOR, 24, 24)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SENSOR, 24, 24)
 
     # Last Trip Time
     unique_id, entity_id = ids_from_device_description(
@@ -429,7 +429,7 @@ async def test_sensor_setup_camera_with_last_trip_time(
     assert entity
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert (
         state.state
@@ -439,12 +439,12 @@ async def test_sensor_setup_camera_with_last_trip_time(
 
 
 async def test_sensor_update_alarm(
-    hass: HomeAssistant, ufp: MockUFPFixture, sensor_all: Sensor, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, sensor_all: Sensor, fixed_now: datetime
 ) -> None:
     """Test sensor motion entity."""
 
-    await init_entry(hass, ufp, [sensor_all])
-    assert_entity_counts(hass, Platform.SENSOR, 22, 14)
+    await init_entry(menuai, ufp, [sensor_all])
+    assert_entity_counts(menuai, Platform.SENSOR, 22, 14)
 
     _, entity_id = ids_from_device_description(
         Platform.SENSOR, sensor_all, SENSE_SENSORS_WRITE[4]
@@ -475,17 +475,17 @@ async def test_sensor_update_alarm(
     ufp.api.bootstrap.sensors = {new_sensor.id: new_sensor}
     ufp.api.bootstrap.events = {event.id: event}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "smoke"
-    await time_changed(hass, 10)
+    await time_changed(menuai, 10)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_update_alarm_with_last_trip_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     sensor_all: Sensor,
@@ -493,8 +493,8 @@ async def test_sensor_update_alarm_with_last_trip_time(
 ) -> None:
     """Test sensor motion entity with last trip time."""
 
-    await init_entry(hass, ufp, [sensor_all])
-    assert_entity_counts(hass, Platform.SENSOR, 22, 22)
+    await init_entry(menuai, ufp, [sensor_all])
+    assert_entity_counts(menuai, Platform.SENSOR, 22, 22)
 
     # Last Trip Time
     unique_id, entity_id = ids_from_device_description(
@@ -505,7 +505,7 @@ async def test_sensor_update_alarm_with_last_trip_time(
     assert entity
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert (
         state.state
@@ -515,7 +515,7 @@ async def test_sensor_update_alarm_with_last_trip_time(
 
 
 async def test_camera_update_license_plate(
-    hass: HomeAssistant, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
 ) -> None:
     """Test license plate sensor."""
 
@@ -525,8 +525,8 @@ async def test_camera_update_license_plate(
         SmartDetectObjectType.LICENSE_PLATE
     )
 
-    await init_entry(hass, ufp, [camera])
-    assert_entity_counts(hass, Platform.SENSOR, 23, 13)
+    await init_entry(menuai, ufp, [camera])
+    assert_entity_counts(menuai, Platform.SENSOR, 23, 13)
 
     _, entity_id = ids_from_device_description(
         Platform.SENSOR, camera, LICENSE_PLATE_EVENT_SENSORS[0]
@@ -562,12 +562,12 @@ async def test_camera_update_license_plate(
     ufp.api.bootstrap.events = {event.id: event}
 
     state_changes: list[HAEvent[EventStateChangedData]] = async_capture_events(
-        hass, EVENT_STATE_CHANGED
+        menuai, EVENT_STATE_CHANGED
     )
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "ABCD1234"
 
@@ -575,7 +575,7 @@ async def test_camera_update_license_plate(
 
     # ensure reply is ignored
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 1
 
     event = Event(
@@ -596,9 +596,9 @@ async def test_camera_update_license_plate(
         event.id
     )
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 2
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "none"
 
@@ -621,16 +621,16 @@ async def test_camera_update_license_plate(
         event.id
     )
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 4
     assert state_changes[2].data["new_state"].state == "ABCD1234"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "none"
 
 
 async def test_camera_update_license_plate_changes_number_during_detect(
-    hass: HomeAssistant, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
 ) -> None:
     """Test license plate sensor that changes number during detect."""
 
@@ -640,8 +640,8 @@ async def test_camera_update_license_plate_changes_number_during_detect(
         SmartDetectObjectType.LICENSE_PLATE
     )
 
-    await init_entry(hass, ufp, [camera])
-    assert_entity_counts(hass, Platform.SENSOR, 23, 13)
+    await init_entry(menuai, ufp, [camera])
+    assert_entity_counts(menuai, Platform.SENSOR, 23, 13)
 
     _, entity_id = ids_from_device_description(
         Platform.SENSOR, camera, LICENSE_PLATE_EVENT_SENSORS[0]
@@ -677,19 +677,19 @@ async def test_camera_update_license_plate_changes_number_during_detect(
     ufp.api.bootstrap.events = {event.id: event}
 
     state_changes: list[HAEvent[EventStateChangedData]] = async_capture_events(
-        hass, EVENT_STATE_CHANGED
+        menuai, EVENT_STATE_CHANGED
     )
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "ABCD1234"
 
     assert len(state_changes) == 1
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 1
 
     # Now mutate the original event so it ends
@@ -702,22 +702,22 @@ async def test_camera_update_license_plate_changes_number_during_detect(
     ufp.api.bootstrap.events = {event.id: event}
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 3
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "none"
 
     assert state_changes[0].data["new_state"].state == "ABCD1234"
     assert state_changes[1].data["new_state"].state == "DCBA4321"
     assert state_changes[2].data["new_state"].state == "none"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "none"
 
 
 async def test_camera_update_license_plate_multiple_updates(
-    hass: HomeAssistant, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
 ) -> None:
     """Test license plate sensor that updates multiple times."""
 
@@ -727,8 +727,8 @@ async def test_camera_update_license_plate_multiple_updates(
         SmartDetectObjectType.LICENSE_PLATE
     )
 
-    await init_entry(hass, ufp, [camera])
-    assert_entity_counts(hass, Platform.SENSOR, 23, 13)
+    await init_entry(menuai, ufp, [camera])
+    assert_entity_counts(menuai, Platform.SENSOR, 23, 13)
 
     _, entity_id = ids_from_device_description(
         Platform.SENSOR, camera, LICENSE_PLATE_EVENT_SENSORS[0]
@@ -764,12 +764,12 @@ async def test_camera_update_license_plate_multiple_updates(
     ufp.api.bootstrap.events = {event.id: event}
 
     state_changes: list[HAEvent[EventStateChangedData]] = async_capture_events(
-        hass, EVENT_STATE_CHANGED
+        menuai, EVENT_STATE_CHANGED
     )
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "ABCD1234"
     assert state.attributes[ATTR_EVENT_SCORE] == 100
@@ -777,7 +777,7 @@ async def test_camera_update_license_plate_multiple_updates(
     assert len(state_changes) == 1
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 1
 
     # Now mutate the original event so the score changes
@@ -786,9 +786,9 @@ async def test_camera_update_license_plate_multiple_updates(
     ufp.api.bootstrap.events = {event.id: event}
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 2
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "DCBA4321"
     assert state.attributes[ATTR_EVENT_SCORE] == 99
@@ -798,9 +798,9 @@ async def test_camera_update_license_plate_multiple_updates(
     ufp.api.bootstrap.events = {event.id: event}
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 3
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "DCBA4321"
     assert state.attributes[ATTR_EVENT_SCORE] == 40
@@ -809,9 +809,9 @@ async def test_camera_update_license_plate_multiple_updates(
     ufp.api.bootstrap.events = {event.id: event}
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 3
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "DCBA4321"
     assert state.attributes[ATTR_EVENT_SCORE] == 40
@@ -821,9 +821,9 @@ async def test_camera_update_license_plate_multiple_updates(
     ufp.api.bootstrap.events = {event.id: event}
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 4
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "none"
 
@@ -832,15 +832,15 @@ async def test_camera_update_license_plate_multiple_updates(
     ufp.api.bootstrap.events = {event.id: event}
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 4
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "none"
 
 
 async def test_camera_update_license_no_dupes(
-    hass: HomeAssistant, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, camera: Camera, fixed_now: datetime
 ) -> None:
     """Test license plate sensor does not generate duplicate reads."""
 
@@ -850,8 +850,8 @@ async def test_camera_update_license_no_dupes(
         SmartDetectObjectType.LICENSE_PLATE
     )
 
-    await init_entry(hass, ufp, [camera])
-    assert_entity_counts(hass, Platform.SENSOR, 23, 13)
+    await init_entry(menuai, ufp, [camera])
+    assert_entity_counts(menuai, Platform.SENSOR, 23, 13)
 
     _, entity_id = ids_from_device_description(
         Platform.SENSOR, camera, LICENSE_PLATE_EVENT_SENSORS[0]
@@ -887,12 +887,12 @@ async def test_camera_update_license_no_dupes(
     ufp.api.bootstrap.events = {event.id: event}
 
     state_changes: list[HAEvent[EventStateChangedData]] = async_capture_events(
-        hass, EVENT_STATE_CHANGED
+        menuai, EVENT_STATE_CHANGED
     )
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "FPR2238"
     assert state.attributes[ATTR_EVENT_SCORE] == 83
@@ -902,13 +902,13 @@ async def test_camera_update_license_no_dupes(
     # Now send it again
     ufp.api.bootstrap.events = {event.id: event}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 1
 
     # Again send it again
     ufp.api.bootstrap.events = {event.id: event}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 1
 
     # Now add the end time and change the confidence level
@@ -916,10 +916,10 @@ async def test_camera_update_license_no_dupes(
     event.metadata.license_plate.confidence_level = 96
     ufp.api.bootstrap.events = {event.id: event}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 2
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "none"
 
@@ -927,25 +927,25 @@ async def test_camera_update_license_no_dupes(
     for _ in range(3):
         ufp.api.bootstrap.events = {event.id: event}
         ufp.ws_msg(mock_msg)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(state_changes) == 2
 
     # Now clear the event
     ufp.api.bootstrap.events = {}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(state_changes) == 2
 
 
 async def test_sensor_precision(
-    hass: HomeAssistant, ufp: MockUFPFixture, sensor_all: Sensor, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, sensor_all: Sensor, fixed_now: datetime
 ) -> None:
     """Test sensor precision value is respected."""
 
-    await init_entry(hass, ufp, [sensor_all])
-    assert_entity_counts(hass, Platform.SENSOR, 22, 14)
+    await init_entry(menuai, ufp, [sensor_all])
+    assert_entity_counts(menuai, Platform.SENSOR, 22, 14)
     nvr: NVR = ufp.api.bootstrap.nvr
 
     _, entity_id = ids_from_device_description(Platform.SENSOR, nvr, NVR_SENSORS[6])
 
-    assert hass.states.get(entity_id).state == "17.49"
+    assert menuai.states.get(entity_id).state == "17.49"

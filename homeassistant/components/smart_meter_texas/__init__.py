@@ -9,14 +9,14 @@ from smart_meter_texas.exceptions import (
     SmartMeterTexasAuthError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.ssl import get_default_context
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import aiohttp_client
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.ssl import get_default_context
 
 from .const import (
     DATA_COORDINATOR,
@@ -31,7 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Smart Meter Texas from a config entry."""
 
     username = entry.data[CONF_USERNAME]
@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     ssl_context = get_default_context()
 
-    smart_meter_texas_data = SmartMeterTexasData(hass, entry, account, ssl_context)
+    smart_meter_texas_data = SmartMeterTexasData(menuai, entry, account, ssl_context)
     try:
         await smart_meter_texas_data.client.authenticate()
     except SmartMeterTexasAuthError:
@@ -59,31 +59,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Use a DataUpdateCoordinator to manage the updates. This is due to the
     # Smart Meter Texas API which takes around 30 seconds to read a meter.
-    # This avoids Home Assistant from complaining about the component taking
+    # This avoids MenuAI from complaining about the component taking
     # too long to update.
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name="Smart Meter Texas",
         update_method=async_update_data,
         update_interval=SCAN_INTERVAL,
         request_refresh_debouncer=Debouncer(
-            hass, _LOGGER, cooldown=DEBOUNCE_COOLDOWN, immediate=True
+            menuai, _LOGGER, cooldown=DEBOUNCE_COOLDOWN, immediate=True
         ),
     )
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = {
         DATA_COORDINATOR: coordinator,
         DATA_SMART_METER: smart_meter_texas_data,
     }
 
     entry.async_create_background_task(
-        hass, coordinator.async_refresh(), "smart_meter_texas-coordinator-refresh"
+        menuai, coordinator.async_refresh(), "smart_meter_texas-coordinator-refresh"
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
@@ -93,7 +93,7 @@ class SmartMeterTexasData:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
         account: Account,
         ssl_context: ssl.SSLContext,
@@ -101,7 +101,7 @@ class SmartMeterTexasData:
         """Initialize the data coordintator."""
         self._entry = entry
         self.account = account
-        websession = aiohttp_client.async_get_clientsession(hass)
+        websession = aiohttp_client.async_get_clientsession(menuai)
         self.client = Client(websession, account, ssl_context=ssl_context)
         self.meters: list = []
 
@@ -120,10 +120,10 @@ class SmartMeterTexasData:
         return self.meters
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

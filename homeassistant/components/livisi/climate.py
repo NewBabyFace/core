@@ -6,17 +6,17 @@ from typing import Any
 
 from livisi.const import CAPABILITY_CONFIG
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DOMAIN,
@@ -31,12 +31,12 @@ from .entity import LivisiEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up climate device."""
-    coordinator: LivisiDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: LivisiDataUpdateCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     @callback
     def handle_coordinator_update() -> None:
@@ -97,12 +97,12 @@ class LivisiClimate(LivisiEntity, ClimateEntity):
         )
         if response is None:
             self._attr_available = False
-            raise HomeAssistantError(f"Failed to turn off {self._attr_name}")
+            raise menuaiError(f"Failed to turn off {self._attr_name}")
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
 
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         target_temperature = await self.coordinator.async_get_device_state(
             self._target_temperature_capability,
@@ -123,21 +123,21 @@ class LivisiClimate(LivisiEntity, ClimateEntity):
             self._attr_current_humidity = humidity
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{LIVISI_STATE_CHANGE}_{self._target_temperature_capability}",
                 self.update_target_temperature,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{LIVISI_STATE_CHANGE}_{self._temperature_capability}",
                 self.update_temperature,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{LIVISI_STATE_CHANGE}_{self._humidity_capability}",
                 self.update_humidity,
             )

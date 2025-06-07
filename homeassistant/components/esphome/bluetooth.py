@@ -8,23 +8,23 @@ from typing import TYPE_CHECKING
 from aioesphomeapi import APIClient, DeviceInfo
 from bleak_esphome import connect_scanner
 
-from homeassistant.components.bluetooth import async_register_scanner
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback as hass_callback
+from menuai.components.bluetooth import async_register_scanner
+from menuai.core import CALLBACK_TYPE, menuai, callback as menuai_callback
 
 from .const import DOMAIN
 from .entry_data import RuntimeEntryData
 
 
-@hass_callback
+@menuai_callback
 def _async_unload(unload_callbacks: list[CALLBACK_TYPE]) -> None:
     """Cancel all the callbacks on unload."""
     for callback in unload_callbacks:
         callback()
 
 
-@hass_callback
+@menuai_callback
 def async_connect_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_data: RuntimeEntryData,
     cli: APIClient,
     device_info: DeviceInfo,
@@ -41,7 +41,7 @@ def async_connect_scanner(
         _async_unload,
         [
             async_register_scanner(
-                hass,
+                menuai,
                 scanner,
                 source_domain=DOMAIN,
                 source_model=device_info.model,

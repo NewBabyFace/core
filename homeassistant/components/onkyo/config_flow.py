@@ -7,17 +7,17 @@ from typing import Any
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import section
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_HOST
+from menuai.core import callback
+from menuai.data_entry_flow import section
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -27,7 +27,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TextSelector,
 )
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .const import (
     DOMAIN,

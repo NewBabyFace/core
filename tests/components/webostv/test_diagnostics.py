@@ -3,7 +3,7 @@
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import setup_webostv
 
@@ -12,13 +12,13 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     client,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
-    entry = await setup_webostv(hass)
-    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == snapshot(
+    entry = await setup_webostv(menuai)
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, entry) == snapshot(
         exclude=props("created_at", "modified_at", "entry_id")
     )

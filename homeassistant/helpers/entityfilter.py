@@ -10,14 +10,14 @@ import re
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DOMAINS,
     CONF_ENTITIES,
     CONF_EXCLUDE,
     CONF_INCLUDE,
     MAX_EXPECTED_ENTITY_IDS,
 )
-from homeassistant.core import split_entity_id
+from menuai.core import split_entity_id
 
 from . import config_validation as cv
 

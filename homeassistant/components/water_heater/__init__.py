@@ -11,8 +11,8 @@ from typing import Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
@@ -22,25 +22,25 @@ from homeassistant.const import (
     STATE_ON,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.deprecation import (
     DeprecatedConstant,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.temperature import display_temp as show_temp
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.temperature import display_temp as show_temp
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.unit_conversion import TemperatureConverter
 
 from .const import DOMAIN
 
-DATA_COMPONENT: HassKey[EntityComponent[WaterHeaterEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[WaterHeaterEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -98,10 +98,10 @@ SET_OPERATION_MODE_SCHEMA: VolDictType = {
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up water_heater devices."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[WaterHeaterEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[WaterHeaterEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
     await component.async_setup(config)
 
@@ -133,14 +133,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class WaterHeaterEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -206,7 +206,7 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Return the precision of the system."""
         if hasattr(self, "_attr_precision"):
             return self._attr_precision
-        if self.hass.config.units.temperature_unit == UnitOfTemperature.CELSIUS:
+        if self.menuai.config.units.temperature_unit == UnitOfTemperature.CELSIUS:
             return PRECISION_TENTHS
         return PRECISION_WHOLE
 
@@ -215,10 +215,10 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Return capability attributes."""
         data: dict[str, Any] = {
             ATTR_MIN_TEMP: show_temp(
-                self.hass, self.min_temp, self.temperature_unit, self.precision
+                self.menuai, self.min_temp, self.temperature_unit, self.precision
             ),
             ATTR_MAX_TEMP: show_temp(
-                self.hass, self.max_temp, self.temperature_unit, self.precision
+                self.menuai, self.max_temp, self.temperature_unit, self.precision
             ),
         }
         if target_temperature_step := self.target_temperature_step:
@@ -235,25 +235,25 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Return the optional state attributes."""
         data: dict[str, Any] = {
             ATTR_CURRENT_TEMPERATURE: show_temp(
-                self.hass,
+                self.menuai,
                 self.current_temperature,
                 self.temperature_unit,
                 self.precision,
             ),
             ATTR_TEMPERATURE: show_temp(
-                self.hass,
+                self.menuai,
                 self.target_temperature,
                 self.temperature_unit,
                 self.precision,
             ),
             ATTR_TARGET_TEMP_HIGH: show_temp(
-                self.hass,
+                self.menuai,
                 self.target_temperature_high,
                 self.temperature_unit,
                 self.precision,
             ),
             ATTR_TARGET_TEMP_LOW: show_temp(
-                self.hass,
+                self.menuai,
                 self.target_temperature_low,
                 self.temperature_unit,
                 self.precision,
@@ -322,7 +322,7 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.set_temperature, **kwargs)
         )
 
@@ -332,7 +332,7 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water heater on."""
-        await self.hass.async_add_executor_job(ft.partial(self.turn_on, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.turn_on, **kwargs))
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the water heater off."""
@@ -340,7 +340,7 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water heater off."""
-        await self.hass.async_add_executor_job(ft.partial(self.turn_off, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.turn_off, **kwargs))
 
     def set_operation_mode(self, operation_mode: str) -> None:
         """Set new target operation mode."""
@@ -348,7 +348,7 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set new target operation mode."""
-        await self.hass.async_add_executor_job(self.set_operation_mode, operation_mode)
+        await self.menuai.async_add_executor_job(self.set_operation_mode, operation_mode)
 
     @final
     async def async_handle_set_operation_mode(self, operation_mode: str) -> None:
@@ -381,7 +381,7 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_away_mode_on(self) -> None:
         """Turn away mode on."""
-        await self.hass.async_add_executor_job(self.turn_away_mode_on)
+        await self.menuai.async_add_executor_job(self.turn_away_mode_on)
 
     def turn_away_mode_off(self) -> None:
         """Turn away mode off."""
@@ -389,7 +389,7 @@ class WaterHeaterEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_away_mode_off(self) -> None:
         """Turn away mode off."""
-        await self.hass.async_add_executor_job(self.turn_away_mode_off)
+        await self.menuai.async_add_executor_job(self.turn_away_mode_off)
 
     @property
     def min_temp(self) -> float:
@@ -429,13 +429,13 @@ async def async_service_temperature_set(
     entity: WaterHeaterEntity, service: ServiceCall
 ) -> None:
     """Handle set temperature service."""
-    hass = entity.hass
+    menuai = entity.menuai
     kwargs = {}
 
     for value, temp in service.data.items():
         if value in CONVERTIBLE_ATTRIBUTE:
             kwargs[value] = TemperatureConverter.convert(
-                temp, hass.config.units.temperature_unit, entity.temperature_unit
+                temp, menuai.config.units.temperature_unit, entity.temperature_unit
             )
         else:
             kwargs[value] = temp

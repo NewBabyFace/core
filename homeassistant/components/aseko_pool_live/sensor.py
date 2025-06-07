@@ -7,16 +7,16 @@ from dataclasses import dataclass
 
 from aioaseko import Unit
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfElectricPotential, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.const import UnitOfElectricPotential, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .coordinator import AsekoConfigEntry
 from .entity import AsekoEntity
@@ -84,7 +84,7 @@ SENSORS: list[AsekoSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AsekoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

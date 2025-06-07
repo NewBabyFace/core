@@ -9,11 +9,11 @@ from sensorpush_ha import (
     SensorPushCloudHelper,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER, UPDATE_INTERVAL
 
@@ -23,17 +23,17 @@ type SensorPushCloudConfigEntry = ConfigEntry[SensorPushCloudCoordinator]
 class SensorPushCloudCoordinator(DataUpdateCoordinator[dict[str, SensorPushCloudData]]):
     """SensorPush Cloud coordinator."""
 
-    def __init__(self, hass: HomeAssistant, entry: SensorPushCloudConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: SensorPushCloudConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             name=entry.title,
             update_interval=UPDATE_INTERVAL,
             config_entry=entry,
         )
         email, password = entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD]
-        clientsession = async_get_clientsession(hass)
+        clientsession = async_get_clientsession(menuai)
         api = SensorPushCloudApi(email, password, clientsession)
         self.helper = SensorPushCloudHelper(api)
 

@@ -5,20 +5,20 @@ from functools import partial
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     BrowseMedia,
     MediaClass,
     MediaType,
 )
-from homeassistant.components.sonos.const import MEDIA_TYPE_DIRECTORY
-from homeassistant.components.sonos.media_browser import (
+from menuai.components.sonos.const import MEDIA_TYPE_DIRECTORY
+from menuai.components.sonos.media_browser import (
     build_item_response,
     get_thumbnail_url_full,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .conftest import SoCoMockFactory
 
@@ -72,7 +72,7 @@ def mock_browse_by_idstring(
 
 
 async def test_build_item_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco,
@@ -110,17 +110,17 @@ async def test_build_item_response(
 
 
 async def test_browse_media_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco,
     discover,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the async_browse_media method."""
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -134,17 +134,17 @@ async def test_browse_media_root(
 
 
 async def test_browse_media_library(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco,
     discover,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the async_browse_media method."""
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -160,18 +160,18 @@ async def test_browse_media_library(
 
 
 async def test_browse_media_library_albums(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco,
     discover,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the async_browse_media method."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -206,13 +206,13 @@ async def test_browse_media_library_albums(
 )
 async def test_browse_media_favorites(
     async_autosetup_sonos,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     media_content_id,
     media_content_type,
 ) -> None:
     """Test the async_browse_media method."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -235,17 +235,17 @@ async def test_browse_media_favorites(
     ],
 )
 async def test_browse_media_library_folders(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     media_content_id: str,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the async_browse_media method."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,

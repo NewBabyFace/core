@@ -8,8 +8,8 @@ import time
 
 def install_osx():
     """Set up to run via launchd on OS X."""
-    with os.popen("which hass") as inp:
-        hass_path = inp.read().strip()
+    with os.popen("which menuai") as inp:
+        menuai_path = inp.read().strip()
 
     with os.popen("whoami") as inp:
         user = inp.read().strip()
@@ -19,10 +19,10 @@ def install_osx():
     with open(template_path, encoding="utf-8") as tinp:
         plist = tinp.read()
 
-    plist = plist.replace("$HASS_PATH$", hass_path)
+    plist = plist.replace("$menuai_PATH$", menuai_path)
     plist = plist.replace("$USER$", user)
 
-    path = os.path.expanduser("~/Library/LaunchAgents/org.homeassistant.plist")
+    path = os.path.expanduser("~/Library/LaunchAgents/org.menuai.plist")
 
     try:
         with open(path, "w", encoding="utf-8") as outp:
@@ -33,15 +33,15 @@ def install_osx():
 
     os.popen(f"launchctl load -w -F {path}")
 
-    print("Home Assistant has been installed. Open it here: http://localhost:8123")
+    print("MenuAI has been installed. Open it here: http://localhost:8123")
 
 
 def uninstall_osx():
     """Unload from launchd on OS X."""
-    path = os.path.expanduser("~/Library/LaunchAgents/org.homeassistant.plist")
+    path = os.path.expanduser("~/Library/LaunchAgents/org.menuai.plist")
     os.popen(f"launchctl unload {path}")
 
-    print("Home Assistant has been uninstalled.")
+    print("MenuAI has been uninstalled.")
 
 
 def run(args: list[str]) -> int:

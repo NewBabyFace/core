@@ -6,14 +6,14 @@ from contextlib import suppress
 
 from pyfibaro.fibaro_device import DeviceModel
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ENTITY_ID_FORMAT,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     LIGHT_LUX,
     PERCENTAGE,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import convert
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import convert
 
 from . import FibaroConfigEntry
 from .entity import FibaroEntity
@@ -92,7 +92,7 @@ ADDITIONAL_SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     ),
 )
 
-FIBARO_TO_HASS_UNIT: dict[str, str] = {
+FIBARO_TO_menuai_UNIT: dict[str, str] = {
     "lux": LIGHT_LUX,
     "C": UnitOfTemperature.CELSIUS,
     "F": UnitOfTemperature.FAHRENHEIT,
@@ -100,7 +100,7 @@ FIBARO_TO_HASS_UNIT: dict[str, str] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FibaroConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -154,7 +154,7 @@ class FibaroSensor(FibaroEntity, SensorEntity):
         # or there is no entity description at all
         with suppress(KeyError, ValueError):
             if not self.native_unit_of_measurement:
-                self._attr_native_unit_of_measurement = FIBARO_TO_HASS_UNIT.get(
+                self._attr_native_unit_of_measurement = FIBARO_TO_menuai_UNIT.get(
                     fibaro_device.unit, fibaro_device.unit
                 )
 

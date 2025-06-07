@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.sia.config_flow import ACCOUNT_SCHEMA, HUB_SCHEMA
-from homeassistant.components.sia.const import (
+from menuai import config_entries
+from menuai.components.sia.config_flow import ACCOUNT_SCHEMA, HUB_SCHEMA
+from menuai.components.sia.const import (
     CONF_ACCOUNT,
     CONF_ACCOUNTS,
     CONF_ADDITIONAL_ACCOUNTS,
@@ -17,11 +17,11 @@ from homeassistant.components.sia.const import (
     CONF_ZONES,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_PORT, CONF_PROTOCOL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import CONF_PORT, CONF_PROTOCOL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -107,9 +107,9 @@ ADDITIONAL_OPTIONS = {
 
 
 @pytest.fixture
-async def flow_at_user_step(hass: HomeAssistant) -> ConfigFlowResult:
+async def flow_at_user_step(menuai: menuai) -> ConfigFlowResult:
     """Return a initialized flow."""
-    return await hass.config_entries.flow.async_init(
+    return await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
@@ -117,42 +117,42 @@ async def flow_at_user_step(hass: HomeAssistant) -> ConfigFlowResult:
 
 @pytest.fixture
 async def entry_with_basic_config(
-    hass: HomeAssistant, flow_at_user_step: ConfigFlowResult
+    menuai: menuai, flow_at_user_step: ConfigFlowResult
 ) -> ConfigFlowResult:
     """Return a entry with a basic config."""
-    with patch("homeassistant.components.sia.async_setup_entry", return_value=True):
-        return await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.sia.async_setup_entry", return_value=True):
+        return await menuai.config_entries.flow.async_configure(
             flow_at_user_step["flow_id"], BASIC_CONFIG
         )
 
 
 @pytest.fixture
 async def flow_at_add_account_step(
-    hass: HomeAssistant, flow_at_user_step: ConfigFlowResult
+    menuai: menuai, flow_at_user_step: ConfigFlowResult
 ) -> ConfigFlowResult:
     """Return a initialized flow at the additional account step."""
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         flow_at_user_step["flow_id"], BASIC_CONFIG_ADDITIONAL
     )
 
 
 @pytest.fixture
 async def entry_with_additional_account_config(
-    hass: HomeAssistant, flow_at_add_account_step: ConfigFlowResult
+    menuai: menuai, flow_at_add_account_step: ConfigFlowResult
 ) -> ConfigFlowResult:
     """Return a entry with a two account config."""
-    with patch("homeassistant.components.sia.async_setup_entry", return_value=True):
-        return await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.sia.async_setup_entry", return_value=True):
+        return await menuai.config_entries.flow.async_configure(
             flow_at_add_account_step["flow_id"], ADDITIONAL_ACCOUNT
         )
 
 
-async def setup_sia(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
-    """Add mock config to HASS."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+async def setup_sia(menuai: menuai, config_entry: MockConfigEntry) -> None:
+    """Add mock config to menuai."""
+    assert await async_setup_component(menuai, DOMAIN, {})
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_form_start_user(flow_at_user_step: ConfigFlowResult) -> None:
@@ -194,7 +194,7 @@ async def test_create_additional_account(
     assert entry_with_additional_account_config["options"] == ADDITIONAL_OUT["options"]
 
 
-async def test_abort_form(hass: HomeAssistant) -> None:
+async def test_abort_form(menuai: menuai) -> None:
     """Test aborting a config that already exists."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -204,11 +204,11 @@ async def test_abort_form(hass: HomeAssistant) -> None:
         entry_id=BASIS_CONFIG_ENTRY_ID,
         version=1,
     )
-    await setup_sia(hass, config_entry)
-    start_another_flow = await hass.config_entries.flow.async_init(
+    await setup_sia(menuai, config_entry)
+    start_another_flow = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    get_abort = await hass.config_entries.flow.async_configure(
+    get_abort = await menuai.config_entries.flow.async_configure(
         start_another_flow["flow_id"], BASIC_CONFIG
     )
     assert get_abort["type"] is FlowResultType.ABORT
@@ -218,7 +218,7 @@ async def test_abort_form(hass: HomeAssistant) -> None:
 @pytest.fixture(autouse=True)
 def mock_sia() -> Generator[None]:
     """Mock SIAClient."""
-    with patch("homeassistant.components.sia.hub.SIAClient", autospec=True):
+    with patch("menuai.components.sia.hub.SIAClient", autospec=True):
         yield
 
 
@@ -234,7 +234,7 @@ def mock_sia() -> Generator[None]:
     ],
 )
 async def test_validation_errors_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_at_user_step,
     field,
     value,
@@ -244,7 +244,7 @@ async def test_validation_errors_user(
     config = BASIC_CONFIG.copy()
     flow_id = flow_at_user_step["flow_id"]
     config[field] = value
-    result_err = await hass.config_entries.flow.async_configure(flow_id, config)
+    result_err = await menuai.config_entries.flow.async_configure(flow_id, config)
     assert result_err["type"] is FlowResultType.FORM
     assert result_err["errors"] == {"base": error}
 
@@ -261,25 +261,25 @@ async def test_validation_errors_user(
     ],
 )
 async def test_validation_errors_account(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_at_user_step,
     field,
     value,
     error,
 ) -> None:
     """Test we handle the different invalid inputs, in the add_account flow."""
-    flow_at_add_account_step = await hass.config_entries.flow.async_configure(
+    flow_at_add_account_step = await menuai.config_entries.flow.async_configure(
         flow_at_user_step["flow_id"], BASIC_CONFIG_ADDITIONAL
     )
     config = ADDITIONAL_ACCOUNT.copy()
     flow_id = flow_at_add_account_step["flow_id"]
     config[field] = value
-    result_err = await hass.config_entries.flow.async_configure(flow_id, config)
+    result_err = await menuai.config_entries.flow.async_configure(flow_id, config)
     assert result_err["type"] is FlowResultType.FORM
     assert result_err["errors"] == {"base": error}
 
 
-async def test_unknown_user(hass: HomeAssistant, flow_at_user_step) -> None:
+async def test_unknown_user(menuai: menuai, flow_at_user_step) -> None:
     """Test unknown exceptions."""
     flow_id = flow_at_user_step["flow_id"]
     with patch(
@@ -287,16 +287,16 @@ async def test_unknown_user(hass: HomeAssistant, flow_at_user_step) -> None:
         side_effect=Exception,
     ):
         config = BASIC_CONFIG
-        result_err = await hass.config_entries.flow.async_configure(flow_id, config)
+        result_err = await menuai.config_entries.flow.async_configure(flow_id, config)
         assert result_err
         assert result_err["step_id"] == "user"
         assert result_err["errors"] == {"base": "unknown"}
         assert result_err["data_schema"] == HUB_SCHEMA
 
 
-async def test_unknown_account(hass: HomeAssistant, flow_at_user_step) -> None:
+async def test_unknown_account(menuai: menuai, flow_at_user_step) -> None:
     """Test unknown exceptions."""
-    flow_at_add_account_step = await hass.config_entries.flow.async_configure(
+    flow_at_add_account_step = await menuai.config_entries.flow.async_configure(
         flow_at_user_step["flow_id"], BASIC_CONFIG_ADDITIONAL
     )
     flow_id = flow_at_add_account_step["flow_id"]
@@ -305,14 +305,14 @@ async def test_unknown_account(hass: HomeAssistant, flow_at_user_step) -> None:
         side_effect=Exception,
     ):
         config = ADDITIONAL_ACCOUNT
-        result_err = await hass.config_entries.flow.async_configure(flow_id, config)
+        result_err = await menuai.config_entries.flow.async_configure(flow_id, config)
         assert result_err
         assert result_err["step_id"] == "add_account"
         assert result_err["errors"] == {"base": "unknown"}
         assert result_err["data_schema"] == ACCOUNT_SCHEMA
 
 
-async def test_options_basic(hass: HomeAssistant) -> None:
+async def test_options_basic(menuai: menuai) -> None:
     """Test options flow for single account."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -322,23 +322,23 @@ async def test_options_basic(hass: HomeAssistant) -> None:
         entry_id=BASIS_CONFIG_ENTRY_ID,
         version=1,
     )
-    await setup_sia(hass, config_entry)
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await setup_sia(menuai, config_entry)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
     assert result["last_step"]
 
-    updated = await hass.config_entries.options.async_configure(
+    updated = await menuai.config_entries.options.async_configure(
         result["flow_id"], BASIC_OPTIONS
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert updated["type"] is FlowResultType.CREATE_ENTRY
     assert updated["data"] == {
         CONF_ACCOUNTS: {BASIC_CONFIG[CONF_ACCOUNT]: BASIC_OPTIONS}
     }
 
 
-async def test_options_additional(hass: HomeAssistant) -> None:
+async def test_options_additional(menuai: menuai) -> None:
     """Test options flow for single account."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -348,13 +348,13 @@ async def test_options_additional(hass: HomeAssistant) -> None:
         entry_id=ADDITIONAL_CONFIG_ENTRY_ID,
         version=1,
     )
-    await setup_sia(hass, config_entry)
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await setup_sia(menuai, config_entry)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
     assert not result["last_step"]
 
-    updated = await hass.config_entries.options.async_configure(
+    updated = await menuai.config_entries.options.async_configure(
         result["flow_id"], BASIC_OPTIONS
     )
     assert updated["type"] is FlowResultType.FORM

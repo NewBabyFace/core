@@ -7,8 +7,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.config_entries import (
+from menuai import data_entry_flow
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
@@ -16,8 +16,8 @@ from homeassistant.config_entries import (
     OptionsFlow,
     SubentryFlowResult,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from . import DOMAIN
 

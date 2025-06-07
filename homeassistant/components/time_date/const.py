@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 CONF_DISPLAY_OPTIONS = "display_options"
 DOMAIN: Final = "time_date"

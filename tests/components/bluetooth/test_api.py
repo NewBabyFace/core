@@ -5,15 +5,15 @@ import time
 from bleak.backends.scanner import AdvertisementData, BLEDevice
 import pytest
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth import (
     MONOTONIC_TIME,
     BaseHaRemoteScanner,
     HaBluetoothConnector,
     async_scanner_by_source,
     async_scanner_devices_by_address,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import (
     FakeScanner,
@@ -25,15 +25,15 @@ from . import (
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_scanner_by_source(hass: HomeAssistant) -> None:
+async def test_scanner_by_source(menuai: menuai) -> None:
     """Test we can get a scanner by source."""
 
     hci2_scanner = FakeScanner("hci2", "hci2")
-    cancel_hci2 = bluetooth.async_register_scanner(hass, hci2_scanner)
+    cancel_hci2 = bluetooth.async_register_scanner(menuai, hci2_scanner)
 
-    assert async_scanner_by_source(hass, "hci2") is hci2_scanner
+    assert async_scanner_by_source(menuai, "hci2") is hci2_scanner
     cancel_hci2()
-    assert async_scanner_by_source(hass, "hci2") is None
+    assert async_scanner_by_source(menuai, "hci2") is None
 
 
 async def test_monotonic_time() -> None:
@@ -42,15 +42,15 @@ async def test_monotonic_time() -> None:
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_async_get_advertisement_callback(hass: HomeAssistant) -> None:
+async def test_async_get_advertisement_callback(menuai: menuai) -> None:
     """Test getting advertisement callback."""
-    callback = bluetooth.async_get_advertisement_callback(hass)
+    callback = bluetooth.async_get_advertisement_callback(menuai)
     assert callback is not None
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_async_scanner_devices_by_address_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting scanner devices by address with connectable devices."""
     manager = _get_manager()
@@ -93,10 +93,10 @@ async def test_async_scanner_devices_by_address_connectable(
     )
     scanner.inject_advertisement(switchbot_device, switchbot_device_adv)
     assert async_scanner_devices_by_address(
-        hass, switchbot_device.address, connectable=True
-    ) == async_scanner_devices_by_address(hass, "44:44:33:11:23:45", connectable=False)
+        menuai, switchbot_device.address, connectable=True
+    ) == async_scanner_devices_by_address(menuai, "44:44:33:11:23:45", connectable=False)
     devices = async_scanner_devices_by_address(
-        hass, switchbot_device.address, connectable=False
+        menuai, switchbot_device.address, connectable=False
     )
     assert len(devices) == 1
     assert devices[0].scanner == scanner
@@ -108,7 +108,7 @@ async def test_async_scanner_devices_by_address_connectable(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_async_scanner_devices_by_address_non_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting scanner devices by address with non-connectable devices."""
     manager = _get_manager()
@@ -151,12 +151,12 @@ async def test_async_scanner_devices_by_address_non_connectable(
 
     assert (
         async_scanner_devices_by_address(
-            hass, switchbot_device.address, connectable=True
+            menuai, switchbot_device.address, connectable=True
         )
         == []
     )
     devices = async_scanner_devices_by_address(
-        hass, switchbot_device.address, connectable=False
+        menuai, switchbot_device.address, connectable=False
     )
     assert len(devices) == 1
     assert devices[0].scanner == scanner

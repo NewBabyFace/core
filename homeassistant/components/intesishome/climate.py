@@ -9,7 +9,7 @@ from typing import Any, NamedTuple
 from pyintesishome import IHAuthenticationError, IHConnectionError, IntesisHome
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     PRESET_BOOST,
@@ -23,20 +23,20 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_DEVICE,
     CONF_PASSWORD,
     CONF_USERNAME,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ MAP_STATE_ICONS = {
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -112,8 +112,8 @@ async def async_setup_platform(
     controller = IntesisHome(
         ih_user,
         ih_pass,
-        hass.loop,
-        websession=async_get_clientsession(hass),
+        menuai.loop,
+        websession=async_get_clientsession(menuai),
         device_type=device_type,
     )
     try:
@@ -207,7 +207,7 @@ class IntesisAC(ClimateEntity):
                 ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to event updates."""
         _LOGGER.debug("Added climate device with state: %s", repr(self._ih_device))
         await self._controller.add_update_callback(self.async_update_callback)
@@ -340,7 +340,7 @@ class IntesisAC(ClimateEntity):
             self._device_id
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Shutdown the controller when the device is being removed."""
         await self._controller.stop()
 
@@ -368,7 +368,7 @@ class IntesisAC(ClimateEntity):
             async def try_connect(_now):
                 await self._controller.connect()
 
-            async_call_later(self.hass, reconnect_minutes * 60, try_connect)
+            async_call_later(self.menuai, reconnect_minutes * 60, try_connect)
 
         if self._controller.is_connected and not self._connected:
             # Connection has been restored

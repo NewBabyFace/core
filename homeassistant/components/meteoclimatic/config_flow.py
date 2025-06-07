@@ -7,7 +7,7 @@ from meteoclimatic import MeteoclimaticClient
 from meteoclimatic.exceptions import MeteoclimaticError, StationNotFound
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import CONF_STATION_CODE, DOMAIN
 
@@ -49,7 +49,7 @@ class MeteoclimaticFlowHandler(ConfigFlow, domain=DOMAIN):
         client = MeteoclimaticClient()
 
         try:
-            weather = await self.hass.async_add_executor_job(
+            weather = await self.menuai.async_add_executor_job(
                 client.weather_at_station, station_code
             )
         except StationNotFound as exp:

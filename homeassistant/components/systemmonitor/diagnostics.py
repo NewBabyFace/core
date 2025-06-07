@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import SystemMonitorConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: SystemMonitorConfigEntry
+    menuai: menuai, entry: SystemMonitorConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for Sensibo config entry."""
     coordinator = entry.runtime_data.coordinator

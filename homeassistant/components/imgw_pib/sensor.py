@@ -7,18 +7,18 @@ from dataclasses import dataclass
 
 from imgw_pib.model import HydrologicalData
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_PLATFORM,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfLength, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.const import UnitOfLength, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import DOMAIN
 from .coordinator import ImgwPibConfigEntry, ImgwPibDataUpdateCoordinator
@@ -58,7 +58,7 @@ SENSOR_TYPES: tuple[ImgwPibSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ImgwPibConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -66,7 +66,7 @@ async def async_setup_entry(
     coordinator = entry.runtime_data.coordinator
 
     # Remove entities for which the endpoint has been blocked by IMGW-PIB API
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     for key in ("flood_warning_level", "flood_alarm_level"):
         if entity_id := entity_reg.async_get_entity_id(
             SENSOR_PLATFORM, DOMAIN, f"{coordinator.station_id}_{key}"

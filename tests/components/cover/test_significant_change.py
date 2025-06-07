@@ -2,11 +2,11 @@
 
 import pytest
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
 )
-from homeassistant.components.cover.significant_change import (
+from menuai.components.cover.significant_change import (
     async_check_significant_change,
 )
 

@@ -4,10 +4,10 @@ from typing import Any
 
 from xiaomi_gateway import XiaomiGateway
 
-from homeassistant.components.cover import ATTR_POSITION, CoverEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import ATTR_POSITION, CoverEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, GATEWAYS_KEY
 from .entity import XiaomiDevice
@@ -19,13 +19,13 @@ DATA_KEY_PROTO_V2 = "curtain_status"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Perform the setup for Xiaomi devices."""
     entities = []
-    gateway = hass.data[DOMAIN][GATEWAYS_KEY][config_entry.entry_id]
+    gateway = menuai.data[DOMAIN][GATEWAYS_KEY][config_entry.entry_id]
     for device in gateway.devices["cover"]:
         model = device["model"]
         if model in ("curtain", "curtain.aq2", "curtain.hagl04"):

@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.opengarage.const import CONF_DEVICE_KEY, DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
+from menuai.components.opengarage.const import CONF_DEVICE_KEY, DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT, CONF_VERIFY_SSL
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -34,7 +34,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_opengarage() -> Generator[MagicMock]:
     """Return a mocked OpenGarage client."""
     with patch(
-        "homeassistant.components.opengarage.opengarage.OpenGarage",
+        "menuai.components.opengarage.opengarage.OpenGarage",
         autospec=True,
     ) as client_mock:
         client = client_mock.return_value
@@ -49,12 +49,12 @@ def mock_opengarage() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_opengarage: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_opengarage: MagicMock
 ) -> MockConfigEntry:
     """Set up the OpenGarage integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

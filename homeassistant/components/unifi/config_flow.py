@@ -18,24 +18,24 @@ from urllib.parse import urlparse
 from aiounifi.interfaces.sites import Sites
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MODEL_DESCRIPTION,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
@@ -109,7 +109,7 @@ class UnifiFlowHandler(ConfigFlow, domain=DOMAIN):
             }
 
             try:
-                hub = await get_unifi_api(self.hass, MappingProxyType(self.config))
+                hub = await get_unifi_api(self.menuai, MappingProxyType(self.config))
                 await hub.sites.update()
                 self.sites = hub.sites
 
@@ -133,7 +133,7 @@ class UnifiFlowHandler(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_site()
 
         if not (host := self.config.get(CONF_HOST, "")) and await _async_discover_unifi(
-            self.hass
+            self.menuai
         ):
             host = "unifi"
 
@@ -467,9 +467,9 @@ class UnifiOptionsFlowHandler(OptionsFlow):
         return self.async_create_entry(title="", data=self.options)
 
 
-async def _async_discover_unifi(hass: HomeAssistant) -> str | None:
+async def _async_discover_unifi(menuai: menuai) -> str | None:
     """Discover UniFi Network address."""
     try:
-        return await hass.async_add_executor_job(socket.gethostbyname, "unifi")
+        return await menuai.async_add_executor_job(socket.gethostbyname, "unifi")
     except socket.gaierror:
         return None

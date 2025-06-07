@@ -6,23 +6,23 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant import loader
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import require_admin
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntry, DeviceEntryDisabler
+from menuai import loader
+from menuai.components import websocket_api
+from menuai.components.websocket_api import require_admin
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceEntry, DeviceEntryDisabler
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> bool:
+def async_setup(menuai: menuai) -> bool:
     """Enable the Device Registry views."""
 
-    websocket_api.async_register_command(hass, websocket_list_devices)
-    websocket_api.async_register_command(hass, websocket_update_device)
+    websocket_api.async_register_command(menuai, websocket_list_devices)
+    websocket_api.async_register_command(menuai, websocket_update_device)
     websocket_api.async_register_command(
-        hass, websocket_remove_config_entry_from_device
+        menuai, websocket_remove_config_entry_from_device
     )
     return True
 
@@ -34,12 +34,12 @@ def async_setup(hass: HomeAssistant) -> bool:
     }
 )
 def websocket_list_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle list devices command."""
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
     # Build start of response message
     msg_json_prefix = (
         f'{{"id":{msg["id"]},"type": "{websocket_api.TYPE_RESULT}",'
@@ -72,12 +72,12 @@ def websocket_list_devices(
 )
 @callback
 def websocket_update_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle update device websocket command."""
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     msg.pop("type")
     msg_id = msg.pop("id")
@@ -104,37 +104,37 @@ def websocket_update_device(
 )
 @websocket_api.async_response
 async def websocket_remove_config_entry_from_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Remove config entry from a device."""
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
     config_entry_id = msg["config_entry_id"]
     device_id = msg["device_id"]
 
-    if (config_entry := hass.config_entries.async_get_entry(config_entry_id)) is None:
-        raise HomeAssistantError("Unknown config entry")
+    if (config_entry := menuai.config_entries.async_get_entry(config_entry_id)) is None:
+        raise menuaiError("Unknown config entry")
 
     if not config_entry.supports_remove_device:
-        raise HomeAssistantError("Config entry does not support device removal")
+        raise menuaiError("Config entry does not support device removal")
 
     if (device_entry := registry.async_get(device_id)) is None:
-        raise HomeAssistantError("Unknown device")
+        raise menuaiError("Unknown device")
 
     if config_entry_id not in device_entry.config_entries:
-        raise HomeAssistantError("Config entry not in device")
+        raise menuaiError("Config entry not in device")
 
     try:
-        integration = await loader.async_get_integration(hass, config_entry.domain)
+        integration = await loader.async_get_integration(menuai, config_entry.domain)
         component = await integration.async_get_component()
     except (ImportError, loader.IntegrationNotFound) as exc:
-        raise HomeAssistantError("Integration not found") from exc
+        raise menuaiError("Integration not found") from exc
 
     if not await component.async_remove_config_entry_device(
-        hass, config_entry, device_entry
+        menuai, config_entry, device_entry
     ):
-        raise HomeAssistantError(
+        raise menuaiError(
             "Failed to remove device entry, rejected by integration"
         )
 

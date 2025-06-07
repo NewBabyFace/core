@@ -17,16 +17,16 @@ import py
 import pytest
 import voluptuous as vol
 
-import homeassistant
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+import menuai
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     issue_registry as ir,
     selector,
     template,
 )
-from homeassistant.helpers.config_validation import TRIGGER_SCHEMA
+from menuai.helpers.config_validation import TRIGGER_SCHEMA
 
 
 def test_boolean() -> None:
@@ -148,7 +148,7 @@ def test_configuration_url() -> None:
         "http//ha.io",
         "http://??,**",
         "https://??,**",
-        "homeassistant://??,**",
+        "menuai://??,**",
     ):
         with pytest.raises(vol.MultipleInvalid):
             schema(value)
@@ -159,8 +159,8 @@ def test_configuration_url() -> None:
         "http://home-assistant.io",
         "http://home-assistant.io/test/",
         "https://community.home-assistant.io/",
-        "homeassistant://api",
-        "homeassistant://api/hassio_ingress/XXXXXXX",
+        "menuai://api",
+        "menuai://api/menuaiio_ingress/XXXXXXX",
     ):
         assert schema(value)
 
@@ -419,17 +419,17 @@ def test_service() -> None:
     with pytest.raises(vol.MultipleInvalid):
         schema("invalid_turn_on")
 
-    schema("homeassistant.turn_on")
+    schema("menuai.turn_on")
 
 
 @pytest.mark.parametrize(
     "config",
     [
-        {"service": "homeassistant.turn_on"},
-        {"service": "homeassistant.turn_on", "entity_id": "light.kitchen"},
+        {"service": "menuai.turn_on"},
+        {"service": "menuai.turn_on", "entity_id": "light.kitchen"},
         {"service": "light.turn_on", "entity_id": "all"},
         {
-            "service": "homeassistant.turn_on",
+            "service": "menuai.turn_on",
             "entity_id": ["light.kitchen", "light.ceiling"],
         },
         {
@@ -438,11 +438,11 @@ def test_service() -> None:
             "alias": "turn on kitchen lights",
         },
         {"service": "scene.turn_on", "metadata": {}},
-        {"action": "homeassistant.turn_on"},
-        {"action": "homeassistant.turn_on", "entity_id": "light.kitchen"},
+        {"action": "menuai.turn_on"},
+        {"action": "menuai.turn_on", "entity_id": "light.kitchen"},
         {"action": "light.turn_on", "entity_id": "all"},
         {
-            "action": "homeassistant.turn_on",
+            "action": "menuai.turn_on",
             "entity_id": ["light.kitchen", "light.ceiling"],
         },
         {
@@ -453,7 +453,7 @@ def test_service() -> None:
         {"action": "scene.turn_on", "metadata": {}},
     ],
 )
-def test_service_schema(hass: HomeAssistant, config: dict[str, Any]) -> None:
+def test_service_schema(menuai: menuai, config: dict[str, Any]) -> None:
     """Test service_schema validation."""
     validated = cv.SERVICE_SCHEMA(config)
 
@@ -473,31 +473,31 @@ def test_service_schema(hass: HomeAssistant, config: dict[str, Any]) -> None:
         None,
         {"data": {"entity_id": "light.kitchen"}},
         {
-            "service": "homeassistant.turn_on",
-            "service_template": "homeassistant.turn_on",
+            "service": "menuai.turn_on",
+            "service_template": "menuai.turn_on",
         },
-        {"service": "homeassistant.turn_on", "data": None},
+        {"service": "menuai.turn_on", "data": None},
         {
-            "service": "homeassistant.turn_on",
+            "service": "menuai.turn_on",
             "data_template": {"brightness": "{{ no_end"},
         },
         {
-            "service": "homeassistant.turn_on",
-            "action": "homeassistant.turn_on",
+            "service": "menuai.turn_on",
+            "action": "menuai.turn_on",
         },
         {
-            "action": "homeassistant.turn_on",
-            "service_template": "homeassistant.turn_on",
+            "action": "menuai.turn_on",
+            "service_template": "menuai.turn_on",
         },
-        {"action": "homeassistant.turn_on", "data": None},
+        {"action": "menuai.turn_on", "data": None},
         {
-            "action": "homeassistant.turn_on",
+            "action": "menuai.turn_on",
             "data_template": {"brightness": "{{ no_end"},
         },
     ],
 )
 def test_invalid_service_schema(
-    hass: HomeAssistant, config: dict[str, Any] | None
+    menuai: menuai, config: dict[str, Any] | None
 ) -> None:
     """Test service_schema validation fails."""
     with pytest.raises(vol.MultipleInvalid):
@@ -570,7 +570,7 @@ def test_slug() -> None:
         schema(value)
 
 
-def test_string(hass: HomeAssistant) -> None:
+def test_string(menuai: menuai) -> None:
     """Test string validation."""
     schema = vol.Schema(cv.string)
 
@@ -600,7 +600,7 @@ def test_string(hass: HomeAssistant) -> None:
         ("(1, 2)", (1, 2)),
         ('{"hello": True}', {"hello": True}),
     ):
-        tpl = template.Template(text, hass)
+        tpl = template.Template(text, menuai)
         result = tpl.async_render()
         assert isinstance(result, template.ResultWrapper)
         assert result == native
@@ -655,7 +655,7 @@ def test_x10_address() -> None:
     schema("C11")
 
 
-def test_template(hass: HomeAssistant) -> None:
+def test_template(menuai: menuai) -> None:
     """Test template validator."""
     schema = vol.Schema(cv.template)
 
@@ -673,9 +673,9 @@ def test_template(hass: HomeAssistant) -> None:
         "Hello",
         "{{ beer }}",
         "{% if 1 == 1 %}Hello{% else %}World{% endif %}",
-        # Function 'expand' added as an extension by Home Assistant
+        # Function 'expand' added as an extension by MenuAI
         "{{ expand('group.foo')|map(attribute='entity_id')|list }}",
-        # Filter 'expand' added as an extension by Home Assistant
+        # Filter 'expand' added as an extension by MenuAI
         "{{ ['group.foo']|expand|map(attribute='entity_id')|list }}",
         # Non existing function 'no_such_function' is not detected by Jinja2
         "{{ no_such_function('group.foo')|map(attribute='entity_id')|list }}",
@@ -684,7 +684,7 @@ def test_template(hass: HomeAssistant) -> None:
         schema(value)
 
 
-async def test_template_no_hass(hass: HomeAssistant) -> None:
+async def test_template_no_menuai(menuai: menuai) -> None:
     """Test template validator."""
     schema = vol.Schema(cv.template)
 
@@ -693,28 +693,28 @@ async def test_template_no_hass(hass: HomeAssistant) -> None:
         "{{ partial_print }",
         "{% if True %}Hello",
         ["test"],
-        # Filter added as an extension by Home Assistant
+        # Filter added as an extension by MenuAI
         "{{ ['group.foo']|expand|map(attribute='entity_id')|list }}",
     ):
         with pytest.raises(vol.Invalid):
-            await hass.async_add_executor_job(schema, value)
+            await menuai.async_add_executor_job(schema, value)
 
     options = (
         1,
         "Hello",
         "{{ beer }}",
         "{% if 1 == 1 %}Hello{% else %}World{% endif %}",
-        # Function 'expand' added as an extension by Home Assistant, no error
+        # Function 'expand' added as an extension by MenuAI, no error
         # because non existing functions are not detected by Jinja2
         "{{ expand('group.foo')|map(attribute='entity_id')|list }}",
         # Non existing function 'no_such_function' is not detected by Jinja2
         "{{ no_such_function('group.foo')|map(attribute='entity_id')|list }}",
     )
     for value in options:
-        await hass.async_add_executor_job(schema, value)
+        await menuai.async_add_executor_job(schema, value)
 
 
-def test_dynamic_template(hass: HomeAssistant) -> None:
+def test_dynamic_template(menuai: menuai) -> None:
     """Test dynamic template validator."""
     schema = vol.Schema(cv.dynamic_template)
 
@@ -732,9 +732,9 @@ def test_dynamic_template(hass: HomeAssistant) -> None:
     options = (
         "{{ beer }}",
         "{% if 1 == 1 %}Hello{% else %}World{% endif %}",
-        # Function 'expand' added as an extension by Home Assistant
+        # Function 'expand' added as an extension by MenuAI
         "{{ expand('group.foo')|map(attribute='entity_id')|list }}",
-        # Filter 'expand' added as an extension by Home Assistant
+        # Filter 'expand' added as an extension by MenuAI
         "{{ ['group.foo']|expand|map(attribute='entity_id')|list }}",
         # Non existing function 'no_such_function' is not detected by Jinja2
         "{{ no_such_function('group.foo')|map(attribute='entity_id')|list }}",
@@ -743,7 +743,7 @@ def test_dynamic_template(hass: HomeAssistant) -> None:
         schema(value)
 
 
-async def test_dynamic_template_no_hass(hass: HomeAssistant) -> None:
+async def test_dynamic_template_no_menuai(menuai: menuai) -> None:
     """Test dynamic template validator."""
     schema = vol.Schema(cv.dynamic_template)
 
@@ -754,26 +754,26 @@ async def test_dynamic_template_no_hass(hass: HomeAssistant) -> None:
         "{% if True %}Hello",
         ["test"],
         "just a string",
-        # Filter added as an extension by Home Assistant
+        # Filter added as an extension by MenuAI
         "{{ ['group.foo']|expand|map(attribute='entity_id')|list }}",
     ):
         with pytest.raises(vol.Invalid):
-            await hass.async_add_executor_job(schema, value)
+            await menuai.async_add_executor_job(schema, value)
 
     options = (
         "{{ beer }}",
         "{% if 1 == 1 %}Hello{% else %}World{% endif %}",
-        # Function 'expand' added as an extension by Home Assistant, no error
+        # Function 'expand' added as an extension by MenuAI, no error
         # because non existing functions are not detected by Jinja2
         "{{ expand('group.foo')|map(attribute='entity_id')|list }}",
         # Non existing function 'no_such_function' is not detected by Jinja2
         "{{ no_such_function('group.foo')|map(attribute='entity_id')|list }}",
     )
     for value in options:
-        await hass.async_add_executor_job(schema, value)
+        await menuai.async_add_executor_job(schema, value)
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 def test_template_complex() -> None:
     """Test template_complex validator."""
     schema = vol.Schema(cv.template_complex)
@@ -922,7 +922,7 @@ def schema():
 @pytest.fixture
 def version(monkeypatch: pytest.MonkeyPatch) -> None:
     """Patch the version used for testing to 0.5.0."""
-    monkeypatch.setattr(homeassistant.const, "__version__", "0.5.0")
+    monkeypatch.setattr(menuai.const, "__version__", "0.5.0")
 
 
 def test_deprecated_with_no_optionals(caplog: pytest.LogCaptureFixture, schema) -> None:
@@ -940,7 +940,7 @@ def test_deprecated_with_no_optionals(caplog: pytest.LogCaptureFixture, schema) 
     assert len(caplog.records) == 1
     assert caplog.records[0].name in [
         __name__,
-        "homeassistant.helpers.config_validation",
+        "menuai.helpers.config_validation",
     ]
     assert (
         "The 'mars' option is deprecated, please remove it from your configuration"
@@ -1048,7 +1048,7 @@ def test_deprecated_with_default(caplog: pytest.LogCaptureFixture, schema) -> No
 
     test_data = {"mars": True}
     with patch(
-        "homeassistant.helpers.config_validation.get_integration_logger",
+        "menuai.helpers.config_validation.get_integration_logger",
         return_value=logging.getLogger(__name__),
     ):
         output = deprecated_schema(test_data.copy())
@@ -1415,7 +1415,7 @@ def test_key_value_schemas() -> None:
         schema({"mode": mode, "data": data})
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 def test_key_value_schemas_with_default() -> None:
     """Test key value schemas."""
     schema = vol.Schema(
@@ -1489,7 +1489,7 @@ def test_key_value_schemas_with_default() -> None:
         ),
     ],
 )
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 def test_script(caplog: pytest.LogCaptureFixture, config: dict, error: str) -> None:
     """Test script action validation is user friendly."""
     with pytest.raises(vol.Invalid, match=error):
@@ -1568,7 +1568,7 @@ def test_language() -> None:
         assert schema(value)
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 def test_positive_time_period_template() -> None:
     """Test positive time period template validation."""
     schema = vol.Schema(cv.positive_time_period_template)
@@ -1616,7 +1616,7 @@ def test_empty_schema_cant_find_module() -> None:
 
 
 def test_config_entry_only_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     issue_registry: ir.IssueRegistry,
 ) -> None:
@@ -1629,16 +1629,16 @@ def test_config_entry_only_schema(
 
     cv.config_entry_only_config_schema("test_domain")({})
     assert expected_message not in caplog.text
-    assert not issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
+    assert not issue_registry.async_get_issue(menuai_DOMAIN, expected_issue)
 
     cv.config_entry_only_config_schema("test_domain")({"test_domain": {}})
     assert expected_message in caplog.text
-    assert issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
-    issue_registry.async_delete(HOMEASSISTANT_DOMAIN, expected_issue)
+    assert issue_registry.async_get_issue(menuai_DOMAIN, expected_issue)
+    issue_registry.async_delete(menuai_DOMAIN, expected_issue)
 
     cv.config_entry_only_config_schema("test_domain")({"test_domain": {"foo": "bar"}})
     assert expected_message in caplog.text
-    assert issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
+    assert issue_registry.async_get_issue(menuai_DOMAIN, expected_issue)
 
 
 def test_config_entry_only_schema_cant_find_module() -> None:
@@ -1646,15 +1646,15 @@ def test_config_entry_only_schema_cant_find_module() -> None:
     cv.config_entry_only_config_schema("test_domain")({"test_domain": {"foo": "bar"}})
 
 
-def test_config_entry_only_schema_no_hass(
-    hass: HomeAssistant,
+def test_config_entry_only_schema_no_menuai(
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     issue_registry: ir.IssueRegistry,
 ) -> None:
-    """Test if the hass context is not set in our context."""
+    """Test if the menuai context is not set in our context."""
     with patch(
-        "homeassistant.helpers.config_validation.async_get_hass",
-        side_effect=HomeAssistantError,
+        "menuai.helpers.config_validation.async_get_menuai",
+        side_effect=menuaiError,
     ):
         cv.config_entry_only_config_schema("test_domain")(
             {"test_domain": {"foo": "bar"}}
@@ -1668,7 +1668,7 @@ def test_config_entry_only_schema_no_hass(
 
 
 def test_platform_only_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     issue_registry: ir.IssueRegistry,
 ) -> None:
@@ -1680,16 +1680,16 @@ def test_platform_only_schema(
     )
     cv.platform_only_config_schema("test_domain")({})
     assert expected_message not in caplog.text
-    assert not issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
+    assert not issue_registry.async_get_issue(menuai_DOMAIN, expected_issue)
 
     cv.platform_only_config_schema("test_domain")({"test_domain": {}})
     assert expected_message in caplog.text
-    assert issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
-    issue_registry.async_delete(HOMEASSISTANT_DOMAIN, expected_issue)
+    assert issue_registry.async_get_issue(menuai_DOMAIN, expected_issue)
+    issue_registry.async_delete(menuai_DOMAIN, expected_issue)
 
     cv.platform_only_config_schema("test_domain")({"test_domain": {"foo": "bar"}})
     assert expected_message in caplog.text
-    assert issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
+    assert issue_registry.async_get_issue(menuai_DOMAIN, expected_issue)
 
 
 def test_domain() -> None:
@@ -1754,7 +1754,7 @@ def test_determine_script_action_non_ambiguous() -> None:
     assert cv.determine_script_action({"delay": "00:00:05"}) == "delay"
 
 
-async def test_async_validate(hass: HomeAssistant, tmpdir: py.path.local) -> None:
+async def test_async_validate(menuai: menuai, tmpdir: py.path.local) -> None:
     """Test the async_validate helper."""
     validator_calls: dict[str, list[int]] = {}
 
@@ -1763,57 +1763,57 @@ async def test_async_validate(hass: HomeAssistant, tmpdir: py.path.local) -> Non
         calls.append(threading.get_ident())
         return real_func(*args)
 
-    CV_PREFIX = "homeassistant.helpers.config_validation"
+    CV_PREFIX = "menuai.helpers.config_validation"
     with (
         patch(f"{CV_PREFIX}.isdir", wraps=partial(_mock_validator_schema, cv.isdir)),
         patch(f"{CV_PREFIX}.string", wraps=partial(_mock_validator_schema, cv.string)),
     ):
         # Assert validation in event loop when not decorated with not_async_friendly
-        await cv.async_validate(hass, cv.string, "abcd")
-        assert validator_calls == {"string": [hass.loop_thread_id]}
+        await cv.async_validate(menuai, cv.string, "abcd")
+        assert validator_calls == {"string": [menuai.loop_thread_id]}
         validator_calls = {}
 
         # Assert validation in executor when decorated with not_async_friendly
-        await cv.async_validate(hass, cv.isdir, tmpdir)
-        assert validator_calls == {"isdir": [hass.loop_thread_id, ANY]}
-        assert validator_calls["isdir"][1] != hass.loop_thread_id
+        await cv.async_validate(menuai, cv.isdir, tmpdir)
+        assert validator_calls == {"isdir": [menuai.loop_thread_id, ANY]}
+        assert validator_calls["isdir"][1] != menuai.loop_thread_id
         validator_calls = {}
 
         # Assert validation in executor when decorated with not_async_friendly
-        await cv.async_validate(hass, vol.All(cv.isdir, cv.string), tmpdir)
-        assert validator_calls == {"isdir": [hass.loop_thread_id, ANY], "string": [ANY]}
-        assert validator_calls["isdir"][1] != hass.loop_thread_id
-        assert validator_calls["string"][0] != hass.loop_thread_id
+        await cv.async_validate(menuai, vol.All(cv.isdir, cv.string), tmpdir)
+        assert validator_calls == {"isdir": [menuai.loop_thread_id, ANY], "string": [ANY]}
+        assert validator_calls["isdir"][1] != menuai.loop_thread_id
+        assert validator_calls["string"][0] != menuai.loop_thread_id
         validator_calls = {}
 
         # Assert validation in executor when decorated with not_async_friendly
-        await cv.async_validate(hass, vol.All(cv.string, cv.isdir), tmpdir)
+        await cv.async_validate(menuai, vol.All(cv.string, cv.isdir), tmpdir)
         assert validator_calls == {
-            "isdir": [hass.loop_thread_id, ANY],
-            "string": [hass.loop_thread_id, ANY],
+            "isdir": [menuai.loop_thread_id, ANY],
+            "string": [menuai.loop_thread_id, ANY],
         }
-        assert validator_calls["isdir"][1] != hass.loop_thread_id
-        assert validator_calls["string"][1] != hass.loop_thread_id
+        assert validator_calls["isdir"][1] != menuai.loop_thread_id
+        assert validator_calls["string"][1] != menuai.loop_thread_id
         validator_calls = {}
 
         # Assert validation in event loop when not using cv.async_validate
         cv.isdir(tmpdir)
-        assert validator_calls == {"isdir": [hass.loop_thread_id]}
+        assert validator_calls == {"isdir": [menuai.loop_thread_id]}
         validator_calls = {}
 
         # Assert validation in event loop when not using cv.async_validate
         vol.All(cv.isdir, cv.string)(tmpdir)
         assert validator_calls == {
-            "isdir": [hass.loop_thread_id],
-            "string": [hass.loop_thread_id],
+            "isdir": [menuai.loop_thread_id],
+            "string": [menuai.loop_thread_id],
         }
         validator_calls = {}
 
         # Assert validation in event loop when not using cv.async_validate
         vol.All(cv.string, cv.isdir)(tmpdir)
         assert validator_calls == {
-            "isdir": [hass.loop_thread_id],
-            "string": [hass.loop_thread_id],
+            "isdir": [menuai.loop_thread_id],
+            "string": [menuai.loop_thread_id],
         }
         validator_calls = {}
 
@@ -1927,7 +1927,7 @@ async def test_trigger_backwards_compatibility() -> None:
 
 
 async def test_is_entity_service_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test cv.is_entity_service_schema."""
     for schema in (

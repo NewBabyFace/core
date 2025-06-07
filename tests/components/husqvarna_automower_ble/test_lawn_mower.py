@@ -7,9 +7,9 @@ from bleak import BleakError
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -31,7 +31,7 @@ pytestmark = pytest.mark.usefixtures("mock_automower_client")
     ],
 )
 async def test_setup_disconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: Mock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -42,13 +42,13 @@ async def test_setup_disconnect(
 ) -> None:
     """Test disconnected device."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    assert hass.states.get("lawn_mower.husqvarna_automower").state != STATE_UNAVAILABLE
+    assert menuai.states.get("lawn_mower.husqvarna_automower").state != STATE_UNAVAILABLE
 
     mock_automower_client.is_connected.side_effect = is_connected_side_effect
     mock_automower_client.is_connected.return_value = is_connected_return_value
@@ -56,10 +56,10 @@ async def test_setup_disconnect(
     mock_automower_client.connect.return_value = connect_return_value
 
     freezer.tick(timedelta(seconds=60))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("lawn_mower.husqvarna_automower").state == STATE_UNAVAILABLE
+    assert menuai.states.get("lawn_mower.husqvarna_automower").state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -71,7 +71,7 @@ async def test_setup_disconnect(
     ],
 )
 async def test_invalid_data_received(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: Mock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -79,19 +79,19 @@ async def test_invalid_data_received(
 ) -> None:
     """Test invalid data received."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
     getattr(mock_automower_client, attribute).return_value = None
 
     freezer.tick(timedelta(seconds=60))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("lawn_mower.husqvarna_automower").state == STATE_UNAVAILABLE
+    assert menuai.states.get("lawn_mower.husqvarna_automower").state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -103,7 +103,7 @@ async def test_invalid_data_received(
     ],
 )
 async def test_bleak_error_data_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: Mock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -111,16 +111,16 @@ async def test_bleak_error_data_update(
 ) -> None:
     """Test BleakError during data update."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
     getattr(mock_automower_client, attribute).side_effect = BleakError
 
     freezer.tick(timedelta(seconds=60))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("lawn_mower.husqvarna_automower").state == STATE_UNAVAILABLE
+    assert menuai.states.get("lawn_mower.husqvarna_automower").state == STATE_UNAVAILABLE

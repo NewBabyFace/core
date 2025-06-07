@@ -4,14 +4,14 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import notify, tts
-from homeassistant.components.media_player import (
+from menuai.components import notify, tts
+from menuai.components.media_player import (
     DOMAIN as DOMAIN_MP,
     SERVICE_PLAY_MEDIA,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.setup import async_setup_component
 
 from .common import MockTTSEntity, mock_config_entry_setup
 
@@ -19,10 +19,10 @@ from tests.common import assert_setup_component, async_mock_service
 
 
 @pytest.fixture(autouse=True)
-async def internal_url_mock(hass: HomeAssistant) -> None:
+async def internal_url_mock(menuai: menuai) -> None:
     """Mock internal URL of the instance."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
 
@@ -31,13 +31,13 @@ async def internal_url_mock(hass: HomeAssistant) -> None:
 async def disable_platforms() -> None:
     """Disable demo platforms."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [],
     ):
         yield
 
 
-async def test_setup_legacy_platform(hass: HomeAssistant) -> None:
+async def test_setup_legacy_platform(menuai: menuai) -> None:
     """Set up the tts notify platform ."""
     config = {
         notify.DOMAIN: {
@@ -48,13 +48,13 @@ async def test_setup_legacy_platform(hass: HomeAssistant) -> None:
         }
     }
     with assert_setup_component(1, notify.DOMAIN):
-        assert await async_setup_component(hass, notify.DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, notify.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service(notify.DOMAIN, "tts_test")
+    assert menuai.services.has_service(notify.DOMAIN, "tts_test")
 
 
-async def test_setup_platform(hass: HomeAssistant) -> None:
+async def test_setup_platform(menuai: menuai) -> None:
     """Set up the tts notify platform ."""
     config = {
         notify.DOMAIN: {
@@ -65,13 +65,13 @@ async def test_setup_platform(hass: HomeAssistant) -> None:
         }
     }
     with assert_setup_component(1, notify.DOMAIN):
-        assert await async_setup_component(hass, notify.DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, notify.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service(notify.DOMAIN, "tts_test")
+    assert menuai.services.has_service(notify.DOMAIN, "tts_test")
 
 
-async def test_setup_platform_missing_key(hass: HomeAssistant) -> None:
+async def test_setup_platform_missing_key(menuai: menuai) -> None:
     """Test platform without required tts_service or entity_id key."""
     config = {
         notify.DOMAIN: {
@@ -81,15 +81,15 @@ async def test_setup_platform_missing_key(hass: HomeAssistant) -> None:
         }
     }
     with assert_setup_component(0, notify.DOMAIN):
-        assert await async_setup_component(hass, notify.DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, notify.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    assert not hass.services.has_service(notify.DOMAIN, "tts_test")
+    assert not menuai.services.has_service(notify.DOMAIN, "tts_test")
 
 
-async def test_setup_legacy_service(hass: HomeAssistant) -> None:
+async def test_setup_legacy_service(menuai: menuai) -> None:
     """Set up the demo platform and call service."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     config = {
         tts.DOMAIN: {"platform": "demo"},
@@ -102,17 +102,17 @@ async def test_setup_legacy_service(hass: HomeAssistant) -> None:
         },
     }
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     with assert_setup_component(1, tts.DOMAIN):
-        assert await async_setup_component(hass, tts.DOMAIN, config)
+        assert await async_setup_component(menuai, tts.DOMAIN, config)
 
     with assert_setup_component(1, notify.DOMAIN):
-        assert await async_setup_component(hass, notify.DOMAIN, config)
+        assert await async_setup_component(menuai, notify.DOMAIN, config)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         notify.DOMAIN,
         "tts_test",
         {
@@ -121,16 +121,16 @@ async def test_setup_legacy_service(hass: HomeAssistant) -> None:
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
 
 
 async def test_setup_service(
-    hass: HomeAssistant, mock_tts_entity: MockTTSEntity
+    menuai: menuai, mock_tts_entity: MockTTSEntity
 ) -> None:
     """Set up platform and call service."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     config = {
         notify.DOMAIN: {
@@ -142,14 +142,14 @@ async def test_setup_service(
         },
     }
 
-    await mock_config_entry_setup(hass, mock_tts_entity)
+    await mock_config_entry_setup(menuai, mock_tts_entity)
 
     with assert_setup_component(1, notify.DOMAIN):
-        assert await async_setup_component(hass, notify.DOMAIN, config)
+        assert await async_setup_component(menuai, notify.DOMAIN, config)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         notify.DOMAIN,
         "tts_test",
         {
@@ -158,6 +158,6 @@ async def test_setup_service(
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1

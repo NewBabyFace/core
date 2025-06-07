@@ -4,21 +4,21 @@ from unittest.mock import MagicMock, patch
 
 from requests.exceptions import RequestException
 
-from homeassistant import config_entries
-from homeassistant.components.vera.const import (
+from menuai import config_entries
+from menuai.components.vera.const import (
     CONF_CONTROLLER,
     CONF_LEGACY_UNIQUE_ID,
     DOMAIN,
 )
-from homeassistant.const import CONF_EXCLUDE, CONF_LIGHTS, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import entity_registry as er
+from menuai.const import CONF_EXCLUDE, CONF_LIGHTS, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
-async def test_async_step_user_success(hass: HomeAssistant) -> None:
+async def test_async_step_user_success(menuai: menuai) -> None:
     """Test user step success."""
     with patch("pyvera.VeraController") as vera_controller_class_mock:
         controller = MagicMock()
@@ -26,13 +26,13 @@ async def test_async_step_user_success(hass: HomeAssistant) -> None:
         controller.serial_number = "serial_number_0"
         vera_controller_class_mock.return_value = controller
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == config_entries.SOURCE_USER
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_CONTROLLER: "http://127.0.0.1:123/",
@@ -51,11 +51,11 @@ async def test_async_step_user_success(hass: HomeAssistant) -> None:
         }
         assert result["result"].unique_id == controller.serial_number
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
 
 
-async def test_async_step_import_success(hass: HomeAssistant) -> None:
+async def test_async_step_import_success(menuai: menuai) -> None:
     """Test import step success."""
     with patch("pyvera.VeraController") as vera_controller_class_mock:
         controller = MagicMock()
@@ -63,7 +63,7 @@ async def test_async_step_import_success(hass: HomeAssistant) -> None:
         controller.serial_number = "serial_number_1"
         vera_controller_class_mock.return_value = controller
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={CONF_CONTROLLER: "http://127.0.0.1:123/"},
@@ -80,7 +80,7 @@ async def test_async_step_import_success(hass: HomeAssistant) -> None:
 
 
 async def test_async_step_import_success_with_legacy_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test import step success with legacy unique id."""
     entity_registry.async_get_or_create(
@@ -93,7 +93,7 @@ async def test_async_step_import_success_with_legacy_unique_id(
         controller.serial_number = "serial_number_1"
         vera_controller_class_mock.return_value = controller
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={CONF_CONTROLLER: "http://127.0.0.1:123/"},
@@ -109,14 +109,14 @@ async def test_async_step_import_success_with_legacy_unique_id(
         assert result["result"].unique_id == controller.serial_number
 
 
-async def test_async_step_finish_error(hass: HomeAssistant) -> None:
+async def test_async_step_finish_error(menuai: menuai) -> None:
     """Test finish step with error."""
     with patch("pyvera.VeraController") as vera_controller_class_mock:
         controller = MagicMock()
         controller.refresh_data = MagicMock(side_effect=RequestException())
         vera_controller_class_mock.return_value = controller
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={CONF_CONTROLLER: "http://127.0.0.1:123/"},
@@ -129,7 +129,7 @@ async def test_async_step_finish_error(hass: HomeAssistant) -> None:
         }
 
 
-async def test_options(hass: HomeAssistant) -> None:
+async def test_options(menuai: menuai) -> None:
     """Test updating options."""
     base_url = "http://127.0.0.1/"
     entry = MockConfigEntry(
@@ -138,15 +138,15 @@ async def test_options(hass: HomeAssistant) -> None:
         data={CONF_CONTROLLER: "http://127.0.0.1/"},
         options={CONF_LIGHTS: [1, 2, 3]},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}, data=None
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_LIGHTS: "1,2;3  4 5_6bb7",

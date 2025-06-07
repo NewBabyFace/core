@@ -15,9 +15,9 @@ from afsapi import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .const import (
     CONF_WEBFSAPI_URL,

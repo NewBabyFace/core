@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -33,7 +33,7 @@ MOCK_SWITCH_DEVICE = {
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -43,13 +43,13 @@ async def test_entities(
 
     mock_dio_chacon_client.search_all_devices.return_value = MOCK_SWITCH_DEVICE
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_switch_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -59,30 +59,30 @@ async def test_switch_actions(
 
     mock_dio_chacon_client.search_all_devices.return_value = MOCK_SWITCH_DEVICE
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: SWITCH_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(SWITCH_ENTITY_ID)
+    state = menuai.states.get(SWITCH_ENTITY_ID)
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: SWITCH_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(SWITCH_ENTITY_ID)
+    state = menuai.states.get(SWITCH_ENTITY_ID)
     # turn off does not change directly the state, it is made by a server side callback.
     assert state.state == STATE_ON
 
 
 async def test_switch_callbacks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -91,7 +91,7 @@ async def test_switch_callbacks(
 
     mock_dio_chacon_client.search_all_devices.return_value = MOCK_SWITCH_DEVICE
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Server side callback tests
     # We find the callback method on the mock client
@@ -108,17 +108,17 @@ async def test_switch_callbacks(
                 "is_on": is_on,
             }
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # And call it to effectively launch the callback as the server would do
     await _callback_device_state_function(False)
-    state = hass.states.get(SWITCH_ENTITY_ID)
+    state = menuai.states.get(SWITCH_ENTITY_ID)
     assert state
     assert state.state == STATE_OFF
 
 
 async def test_no_switch_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -127,6 +127,6 @@ async def test_no_switch_found(
 
     mock_dio_chacon_client.search_all_devices.return_value = None
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert not hass.states.async_entity_ids(SWITCH_DOMAIN)
+    assert not menuai.states.async_entity_ids(SWITCH_DOMAIN)

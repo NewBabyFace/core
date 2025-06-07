@@ -5,10 +5,10 @@ import logging
 
 from pylutron import Button, Keypad, Led, Lutron, OccupancyGroup, Output
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN
 
@@ -44,7 +44,7 @@ class LutronData:
     switches: list[tuple[str, Output]]
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up the Lutron integration."""
 
     host = config_entry.data[CONF_HOST]
@@ -52,12 +52,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     pwd = config_entry.data[CONF_PASSWORD]
 
     lutron_client = Lutron(host, uid, pwd)
-    await hass.async_add_executor_job(lutron_client.load_xml_db)
+    await menuai.async_add_executor_job(lutron_client.load_xml_db)
     lutron_client.connect()
     _LOGGER.debug("Connected to main repeater at %s", host)
 
-    entity_registry = er.async_get(hass)
-    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(menuai)
+    device_registry = dr.async_get(menuai)
 
     entry_data = LutronData(
         client=lutron_client,
@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 platform = Platform.SWITCH
 
             _async_check_entity_unique_id(
-                hass,
+                menuai,
                 entity_registry,
                 platform,
                 output.uuid,
@@ -98,7 +98,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 entry_data.client.guid,
             )
             _async_check_device_identifiers(
-                hass,
+                menuai,
                 device_registry,
                 output.uuid,
                 output.legacy_uuid,
@@ -123,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
                     platform = Platform.SCENE
                     _async_check_entity_unique_id(
-                        hass,
+                        menuai,
                         entity_registry,
                         platform,
                         button.uuid,
@@ -133,7 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                     if led is not None:
                         platform = Platform.SWITCH
                         _async_check_entity_unique_id(
-                            hass,
+                            menuai,
                             entity_registry,
                             platform,
                             led.uuid,
@@ -146,7 +146,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             entry_data.binary_sensors.append((area.name, area.occupancy_group))
             platform = Platform.BINARY_SENSOR
             _async_check_entity_unique_id(
-                hass,
+                menuai,
                 entity_registry,
                 platform,
                 area.occupancy_group.uuid,
@@ -154,7 +154,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 entry_data.client.guid,
             )
             _async_check_device_identifiers(
-                hass,
+                menuai,
                 device_registry,
                 area.occupancy_group.uuid,
                 area.occupancy_group.legacy_uuid,
@@ -168,15 +168,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         name="Main repeater",
     )
 
-    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = entry_data
+    menuai.data.setdefault(DOMAIN, {})[config_entry.entry_id] = entry_data
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
 def _async_check_entity_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     platform: str,
     uuid: str,
@@ -200,7 +200,7 @@ def _async_check_entity_unique_id(
 
 
 def _async_check_device_identifiers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     uuid: str,
     legacy_uuid: str,
@@ -221,6 +221,6 @@ def _async_check_device_identifiers(
         )
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Clean up resources and entities associated with the integration."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

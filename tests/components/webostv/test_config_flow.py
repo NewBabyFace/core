@@ -3,13 +3,13 @@
 from aiowebostv import WebOsTvPairError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.webostv.const import CONF_SOURCES, DOMAIN, LIVE_TV_APP_ID
-from homeassistant.config_entries import SOURCE_SSDP
-from homeassistant.const import CONF_CLIENT_SECRET, CONF_HOST, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai import config_entries
+from menuai.components.webostv.const import CONF_SOURCES, DOMAIN, LIVE_TV_APP_ID
+from menuai.config_entries import SOURCE_SSDP
+from menuai.const import CONF_CLIENT_SECRET, CONF_HOST, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -41,19 +41,19 @@ MOCK_DISCOVERY_INFO = SsdpServiceInfo(
 )
 
 
-async def test_form(hass: HomeAssistant, client) -> None:
+async def test_form(menuai: menuai, client) -> None:
     """Test successful user flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: config_entries.SOURCE_USER},
         data=MOCK_USER_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -81,20 +81,20 @@ async def test_form(hass: HomeAssistant, client) -> None:
     ],
 )
 async def test_options_flow_live_tv_in_apps(
-    hass: HomeAssistant, client, apps, inputs
+    menuai: menuai, client, apps, inputs
 ) -> None:
     """Test options config flow Live TV found in apps."""
     client.tv_state.apps = apps
     client.tv_state.inputs = inputs
-    entry = await setup_webostv(hass)
+    entry = await setup_webostv(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_SOURCES: ["Live TV", "Input01", "Input02"]},
     )
@@ -111,21 +111,21 @@ async def test_options_flow_live_tv_in_apps(
     ],
 )
 async def test_options_flow_errors(
-    hass: HomeAssistant, client, side_effect, error
+    menuai: menuai, client, side_effect, error
 ) -> None:
     """Test options config flow errors."""
-    entry = await setup_webostv(hass)
+    entry = await setup_webostv(menuai)
 
     client.connect.side_effect = side_effect
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
 
     # recover
     client.connect.side_effect = None
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=None,
     )
@@ -133,7 +133,7 @@ async def test_options_flow_errors(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_SOURCES: ["Input01", "Input02"]},
     )
@@ -142,16 +142,16 @@ async def test_options_flow_errors(
     assert result3["data"][CONF_SOURCES] == ["Input01", "Input02"]
 
 
-async def test_form_cannot_connect(hass: HomeAssistant, client) -> None:
+async def test_form_cannot_connect(menuai: menuai, client) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: config_entries.SOURCE_USER},
         data=MOCK_USER_CONFIG,
     )
 
     client.connect.side_effect = ConnectionResetError
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -160,7 +160,7 @@ async def test_form_cannot_connect(hass: HomeAssistant, client) -> None:
 
     # recover
     client.connect.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -168,16 +168,16 @@ async def test_form_cannot_connect(hass: HomeAssistant, client) -> None:
     assert result["title"] == TV_NAME
 
 
-async def test_form_pairexception(hass: HomeAssistant, client) -> None:
+async def test_form_pairexception(menuai: menuai, client) -> None:
     """Test pairing exception."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: config_entries.SOURCE_USER},
         data=MOCK_USER_CONFIG,
     )
 
     client.connect.side_effect = WebOsTvPairError
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -186,7 +186,7 @@ async def test_form_pairexception(hass: HomeAssistant, client) -> None:
 
     # recover
     client.connect.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -194,11 +194,11 @@ async def test_form_pairexception(hass: HomeAssistant, client) -> None:
     assert result["title"] == TV_NAME
 
 
-async def test_entry_already_configured(hass: HomeAssistant, client) -> None:
+async def test_entry_already_configured(menuai: menuai, client) -> None:
     """Test entry already configured."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: config_entries.SOURCE_USER},
         data=MOCK_USER_CONFIG,
@@ -208,17 +208,17 @@ async def test_entry_already_configured(hass: HomeAssistant, client) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_form_ssdp(hass: HomeAssistant, client) -> None:
+async def test_form_ssdp(menuai: menuai, client) -> None:
     """Test that the ssdp confirmation form is served."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=MOCK_DISCOVERY_INFO
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -228,39 +228,39 @@ async def test_form_ssdp(hass: HomeAssistant, client) -> None:
     assert config_entry.unique_id == FAKE_UUID
 
 
-async def test_ssdp_in_progress(hass: HomeAssistant, client) -> None:
+async def test_ssdp_in_progress(menuai: menuai, client) -> None:
     """Test abort if ssdp paring is already in progress."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: config_entries.SOURCE_USER},
         data=MOCK_USER_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
     # Start another ssdp flow to make sure it aborts as already in progress
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=MOCK_DISCOVERY_INFO
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_in_progress"
 
 
-async def test_form_abort_uuid_configured(hass: HomeAssistant, client) -> None:
+async def test_form_abort_uuid_configured(menuai: menuai, client) -> None:
     """Test abort if uuid is already configured, verify host update."""
-    entry = await setup_webostv(hass, MOCK_DISCOVERY_INFO.upnp[ATTR_UPNP_UDN][5:])
+    entry = await setup_webostv(menuai, MOCK_DISCOVERY_INFO.upnp[ATTR_UPNP_UDN][5:])
     assert entry.unique_id == MOCK_DISCOVERY_INFO.upnp[ATTR_UPNP_UDN][5:]
     assert entry.data[CONF_HOST] == HOST
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: config_entries.SOURCE_USER},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
@@ -268,17 +268,17 @@ async def test_form_abort_uuid_configured(hass: HomeAssistant, client) -> None:
     user_config = {CONF_HOST: "new_host"}
 
     # Start another flow to make sure it aborts and updates host
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: config_entries.SOURCE_USER},
         data=user_config,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -287,21 +287,21 @@ async def test_form_abort_uuid_configured(hass: HomeAssistant, client) -> None:
     assert entry.data[CONF_HOST] == "new_host"
 
 
-async def test_reauth_successful(hass: HomeAssistant, client) -> None:
+async def test_reauth_successful(menuai: menuai, client) -> None:
     """Test that the reauthorization is successful."""
-    entry = await setup_webostv(hass)
+    entry = await setup_webostv(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert entry.data[CONF_CLIENT_SECRET] == CLIENT_KEY
 
     client.client_key = "new_key"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -317,20 +317,20 @@ async def test_reauth_successful(hass: HomeAssistant, client) -> None:
         (ConnectionResetError, "cannot_connect"),
     ],
 )
-async def test_reauth_errors(hass: HomeAssistant, client, side_effect, error) -> None:
+async def test_reauth_errors(menuai: menuai, client, side_effect, error) -> None:
     """Test reauthorization errors."""
-    entry = await setup_webostv(hass)
+    entry = await setup_webostv(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     client.connect.side_effect = side_effect()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -338,7 +338,7 @@ async def test_reauth_errors(hass: HomeAssistant, client, side_effect, error) ->
     assert result["errors"] == {"base": error}
 
     client.connect.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -346,16 +346,16 @@ async def test_reauth_errors(hass: HomeAssistant, client, side_effect, error) ->
     assert result["reason"] == "reauth_successful"
 
 
-async def test_reconfigure_successful(hass: HomeAssistant, client) -> None:
+async def test_reconfigure_successful(menuai: menuai, client) -> None:
     """Test that the reconfigure is successful."""
-    entry = await setup_webostv(hass)
+    entry = await setup_webostv(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "new_host"},
     )
@@ -373,18 +373,18 @@ async def test_reconfigure_successful(hass: HomeAssistant, client) -> None:
     ],
 )
 async def test_reconfigure_errors(
-    hass: HomeAssistant, client, side_effect, error
+    menuai: menuai, client, side_effect, error
 ) -> None:
     """Test reconfigure errors."""
-    entry = await setup_webostv(hass)
+    entry = await setup_webostv(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     client.connect.side_effect = side_effect
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "new_host"},
     )
@@ -393,7 +393,7 @@ async def test_reconfigure_errors(
     assert result["errors"] == {"base": error}
 
     client.connect.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "new_host"},
     )
@@ -402,17 +402,17 @@ async def test_reconfigure_errors(
     assert result["reason"] == "reconfigure_successful"
 
 
-async def test_reconfigure_wrong_device(hass: HomeAssistant, client) -> None:
+async def test_reconfigure_wrong_device(menuai: menuai, client) -> None:
     """Test abort if reconfigure host is wrong webOS TV device."""
-    entry = await setup_webostv(hass)
+    entry = await setup_webostv(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     client.tv_info.hello = {"deviceUUID": "wrong_uuid"}
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "new_host"},
     )

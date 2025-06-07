@@ -6,9 +6,9 @@ from elmax_api.exceptions import ElmaxBadLoginError
 from elmax_api.http import Elmax, ElmaxLocal, GenericElmax
 from elmax_api.model.panel import PanelEntry
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryAuthFailed
 
 from .common import DirectPanel, build_direct_ssl_context, get_direct_api_url
 from .const import (
@@ -79,7 +79,7 @@ async def _check_cloud_panel_status(client: Elmax, panel_id: str) -> PanelEntry:
     return panel
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ElmaxConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ElmaxConfigEntry) -> bool:
     """Set up elmax-cloud from a config entry."""
     try:
         client, panel = await _load_elmax_panel_client(entry)
@@ -89,18 +89,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElmaxConfigEntry) -> boo
     # Create the API client object and attempt a login, so that we immediately know
     # if there is something wrong with user credentials
     coordinator = ElmaxCoordinator(
-        hass=hass,
+        menuai=menuai,
         entry=entry,
         elmax_api_client=client,
         panel=panel,
     )
 
-    async def _async_on_hass_stop(_: Event) -> None:
-        """Close connection when hass stops."""
+    async def _async_on_menuai_stop(_: Event) -> None:
+        """Close connection when menuai stops."""
         await coordinator.async_shutdown()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_on_hass_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_on_menuai_stop)
     )
 
     # Issue a first refresh, so that we trigger a re-auth flow if necessary
@@ -112,15 +112,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElmaxConfigEntry) -> boo
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # Perform platform initialization.
-    await hass.config_entries.async_forward_entry_setups(entry, ELMAX_PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, ELMAX_PLATFORMS)
     return True
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ElmaxConfigEntry) -> None:
+async def async_reload_entry(menuai: menuai, entry: ElmaxConfigEntry) -> None:
     """Handle an options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ElmaxConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ElmaxConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, ELMAX_PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, ELMAX_PLATFORMS)

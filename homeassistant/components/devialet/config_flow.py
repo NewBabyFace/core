@@ -8,10 +8,10 @@ from typing import Any
 from devialet.devialet_api import DevialetApi
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -36,7 +36,7 @@ class DevialetFlowHandler(ConfigFlow, domain=DOMAIN):
         """Validate the input using the Devialet API."""
 
         self._errors.clear()
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         client = DevialetApi(self._host, session)
 
         if not await client.async_update() or client.serial is None:

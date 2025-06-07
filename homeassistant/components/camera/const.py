@@ -5,18 +5,18 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from . import Camera
     from .prefs import CameraPreferences
 
 DOMAIN: Final = "camera"
-DATA_COMPONENT: HassKey[EntityComponent[Camera]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[Camera]] = menuaiKey(DOMAIN)
 
-DATA_CAMERA_PREFS: HassKey[CameraPreferences] = HassKey("camera_prefs")
+DATA_CAMERA_PREFS: menuaiKey[CameraPreferences] = menuaiKey("camera_prefs")
 
 PREF_PRELOAD_STREAM: Final = "preload_stream"
 PREF_ORIENTATION: Final = "orientation"
@@ -44,7 +44,7 @@ class StreamType(StrEnum):
     A camera that supports CAMERA_SUPPORT_STREAM may have a single stream
     type which is used to inform the frontend which player to use.
     Streams with RTSP sources typically use the stream component which uses
-    HLS for display. WebRTC streams use the home assistant core for a signal
+    HLS for display. WebRTC streams use the MenuAI core for a signal
     path to initiate a stream, but the stream itself is between the client and
     device.
     """

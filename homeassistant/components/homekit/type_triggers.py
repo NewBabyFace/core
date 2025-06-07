@@ -8,9 +8,9 @@ from typing import Any
 from pyhap.const import CATEGORY_SENSOR
 from pyhap.util import callback as pyhap_callback
 
-from homeassistant.core import CALLBACK_TYPE, Context, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.trigger import async_initialize_triggers
+from menuai.core import CALLBACK_TYPE, Context, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.trigger import async_initialize_triggers
 
 from .accessories import TYPES, HomeAccessory
 from .aidmanager import get_system_unique_id
@@ -45,7 +45,7 @@ class DeviceTriggerAccessory(HomeAccessory):
         self._remove_triggers: CALLBACK_TYPE | None = None
         self.triggers = []
         assert device_triggers is not None
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         for idx, trigger in enumerate(device_triggers):
             type_: str = trigger["type"]
             subtype: str | None = trigger.get("subtype")
@@ -59,7 +59,7 @@ class DeviceTriggerAccessory(HomeAccessory):
                 )
                 entity_id = entry.entity_id
             trigger_name_parts = []
-            if entity_id and (state := self.hass.states.get(entity_id)):
+            if entity_id and (state := self.menuai.states.get(entity_id)):
                 trigger_name_parts.append(state.name)
             trigger_name_parts.append(type_.replace("_", " ").title())
             if subtype:
@@ -100,7 +100,7 @@ class DeviceTriggerAccessory(HomeAccessory):
         """Start the accessory."""
         self._remove_triggers_if_configured()
         self._remove_triggers = await async_initialize_triggers(
-            self.hass,
+            self.menuai,
             self._device_triggers,
             self.async_trigger,
             "homekit",

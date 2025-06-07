@@ -10,14 +10,14 @@ import pytest
 import requests
 from requests_mock.mocker import Mocker
 
-from homeassistant.components.flume.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.flume.const import DOMAIN
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -75,7 +75,7 @@ NOTIFICATIONS_LIST = [NOTIFICATION]
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
+def config_entry_fixture(menuai: menuai) -> MockConfigEntry:
     """Fixture to create a config entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -88,7 +88,7 @@ def config_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
             CONF_CLIENT_SECRET: "client_secret",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
@@ -115,7 +115,7 @@ def access_token_fixture(requests_mock: Mocker) -> Generator[None]:
         status_code=HTTPStatus.OK,
         json={"data": [token_response]},
     )
-    with patch("homeassistant.components.flume.coordinator.FlumeAuth.write_token_file"):
+    with patch("menuai.components.flume.coordinator.FlumeAuth.write_token_file"):
         yield
 
 

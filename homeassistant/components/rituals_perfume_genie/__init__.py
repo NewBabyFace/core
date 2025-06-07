@@ -5,12 +5,12 @@ import asyncio
 import aiohttp
 from pyrituals import Account, Diffuser
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import ACCOUNT_HASH, DOMAIN, UPDATE_INTERVAL
 from .coordinator import RitualsDataUpdateCoordinator
@@ -24,9 +24,9 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Rituals Perfume Genie from a config entry."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     account = Account(session=session, account_hash=entry.data[ACCOUNT_HASH])
 
     try:
@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady from err
 
     # Migrate old unique_ids to the new format
-    async_migrate_entities_unique_ids(hass, entry, account_devices)
+    async_migrate_entities_unique_ids(menuai, entry, account_devices)
 
     # The API provided by Rituals is currently rate limited to 30 requests
     # per hour per IP address. To avoid hitting this limit, we will adjust
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create a coordinator for each diffuser
     coordinators = {
         diffuser.hublot: RitualsDataUpdateCoordinator(
-            hass, entry, diffuser, update_interval
+            menuai, entry, diffuser, update_interval
         )
         for diffuser in account_devices
     }
@@ -58,27 +58,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ]
     )
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
 @callback
 def async_migrate_entities_unique_ids(
-    hass: HomeAssistant, config_entry: ConfigEntry, diffusers: list[Diffuser]
+    menuai: menuai, config_entry: ConfigEntry, diffusers: list[Diffuser]
 ) -> None:
     """Migrate unique_ids in the entity registry to the new format."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     registry_entries = er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id
     )

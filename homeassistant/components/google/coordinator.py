@@ -14,10 +14,10 @@ from gcal_sync.sync import CalendarEventSyncManager
 from gcal_sync.timeline import Timeline
 from ical.iter import SortableItemValue
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .store import GoogleConfigEntry
 
@@ -52,14 +52,14 @@ class CalendarSyncUpdateCoordinator(DataUpdateCoordinator[Timeline]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GoogleConfigEntry,
         sync: CalendarEventSyncManager,
         name: str,
     ) -> None:
         """Create the CalendarSyncUpdateCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=name,
@@ -86,7 +86,7 @@ class CalendarSyncUpdateCoordinator(DataUpdateCoordinator[Timeline]):
     ) -> Iterable[Event]:
         """Get all events in a specific time frame."""
         if not self.data:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Unable to get events: Sync from server has not completed"
             )
         return self.data.overlapping(
@@ -113,7 +113,7 @@ class CalendarQueryUpdateCoordinator(DataUpdateCoordinator[list[Event]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GoogleConfigEntry,
         calendar_service: GoogleCalendarService,
         name: str,
@@ -122,7 +122,7 @@ class CalendarQueryUpdateCoordinator(DataUpdateCoordinator[list[Event]]):
     ) -> None:
         """Create the CalendarQueryUpdateCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=name,
@@ -149,7 +149,7 @@ class CalendarQueryUpdateCoordinator(DataUpdateCoordinator[list[Event]]):
                 result_items.extend(result_page.items)
         except ApiException as err:
             self.async_set_update_error(err)
-            raise HomeAssistantError(str(err)) from err
+            raise menuaiError(str(err)) from err
         return result_items
 
     async def _async_update_data(self) -> list[Event]:

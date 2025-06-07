@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import API, DEVICES, DOMAIN
 from .entity import SomaEntity
@@ -22,14 +22,14 @@ from .utils import is_api_response_success
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Soma cover platform."""
 
-    api = hass.data[DOMAIN][API]
-    devices = hass.data[DOMAIN][DEVICES]
+    api = menuai.data[DOMAIN][API]
+    devices = menuai.data[DOMAIN][DEVICES]
     entities: list[SomaTilt | SomaShade] = []
 
     for device in devices:
@@ -75,7 +75,7 @@ class SomaTilt(SomaEntity, CoverEntity):
         """Close the cover tilt."""
         response = self.api.set_shade_position(self.device["mac"], 100)
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while closing the cover ({self.name}): {response['msg']}"
             )
         self.set_position(0)
@@ -84,7 +84,7 @@ class SomaTilt(SomaEntity, CoverEntity):
         """Open the cover tilt."""
         response = self.api.set_shade_position(self.device["mac"], -100)
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while opening the cover ({self.name}): {response['msg']}"
             )
         self.set_position(100)
@@ -93,7 +93,7 @@ class SomaTilt(SomaEntity, CoverEntity):
         """Stop the cover tilt."""
         response = self.api.stop_shade(self.device["mac"])
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while stopping the cover ({self.name}): {response['msg']}"
             )
         # Set cover position to some value where up/down are both enabled
@@ -107,7 +107,7 @@ class SomaTilt(SomaEntity, CoverEntity):
         target_api_position = 100 - ((kwargs[ATTR_TILT_POSITION] / 50) * 100)
         response = self.api.set_shade_position(self.device["mac"], target_api_position)
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while setting the cover position ({self.name}):"
                 f" {response['msg']}"
             )
@@ -151,7 +151,7 @@ class SomaShade(SomaEntity, CoverEntity):
         """Close the cover."""
         response = self.api.set_shade_position(self.device["mac"], 100)
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while closing the cover ({self.name}): {response['msg']}"
             )
 
@@ -159,7 +159,7 @@ class SomaShade(SomaEntity, CoverEntity):
         """Open the cover."""
         response = self.api.set_shade_position(self.device["mac"], 0)
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while opening the cover ({self.name}): {response['msg']}"
             )
 
@@ -167,7 +167,7 @@ class SomaShade(SomaEntity, CoverEntity):
         """Stop the cover."""
         response = self.api.stop_shade(self.device["mac"])
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while stopping the cover ({self.name}): {response['msg']}"
             )
         # Set cover position to some value where up/down are both enabled
@@ -180,7 +180,7 @@ class SomaShade(SomaEntity, CoverEntity):
             self.device["mac"], 100 - kwargs[ATTR_POSITION]
         )
         if not is_api_response_success(response):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while setting the cover position ({self.name}):"
                 f" {response['msg']}"
             )

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from homeassistant import data_entry_flow
-from homeassistant.core import HomeAssistant
+from menuai import data_entry_flow
+from menuai.core import menuai
 
 
 class RepairsFlow(data_entry_flow.FlowHandler):
@@ -20,7 +20,7 @@ class RepairsProtocol(Protocol):
 
     async def async_create_fix_flow(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         issue_id: str,
         data: dict[str, str | int | float | None] | None,
     ) -> RepairsFlow:

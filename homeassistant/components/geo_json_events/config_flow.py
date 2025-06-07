@@ -7,8 +7,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
@@ -16,8 +16,8 @@ from homeassistant.const import (
     CONF_URL,
     UnitOfLength,
 )
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.util.unit_conversion import DistanceConverter
+from menuai.helpers import config_validation as cv, selector
+from menuai.util.unit_conversion import DistanceConverter
 
 from .const import DEFAULT_RADIUS_IN_M, DOMAIN
 
@@ -41,8 +41,8 @@ class GeoJsonEventsFlowHandler(ConfigFlow, domain=DOMAIN):
         if not user_input:
             suggested_values: Mapping[str, Any] = {
                 CONF_LOCATION: {
-                    CONF_LATITUDE: self.hass.config.latitude,
-                    CONF_LONGITUDE: self.hass.config.longitude,
+                    CONF_LATITUDE: self.menuai.config.latitude,
+                    CONF_LONGITUDE: self.menuai.config.longitude,
                     CONF_RADIUS: DEFAULT_RADIUS_IN_M,
                 }
             }

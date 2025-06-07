@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import STATE_OFF
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.const import STATE_OFF
+from menuai.core import menuai
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import UpCloudConfigEntry
 from .entity import UpCloudServerEntity
@@ -15,7 +15,7 @@ SIGNAL_UPDATE_UPCLOUD = "upcloud_update"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: UpCloudConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -32,7 +32,7 @@ class UpCloudSwitch(UpCloudServerEntity, SwitchEntity):
         """Start the server."""
         if self.state == STATE_OFF:
             self._server.start()
-            dispatcher_send(self.hass, SIGNAL_UPDATE_UPCLOUD)
+            dispatcher_send(self.menuai, SIGNAL_UPDATE_UPCLOUD)
 
     def turn_off(self, **kwargs: Any) -> None:
         """Stop the server."""

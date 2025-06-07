@@ -7,9 +7,9 @@ from aioacaia.acaiascale import AcaiaDeviceState
 from aioacaia.const import UnitMass as AcaiaUnitOfMass
 import pytest
 
-from homeassistant.components.acaia.const import CONF_IS_NEW_STYLE_SCALE, DOMAIN
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
+from menuai.components.acaia.const import CONF_IS_NEW_STYLE_SCALE, DOMAIN
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -20,7 +20,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.acaia.async_setup_entry", return_value=True
+        "menuai.components.acaia.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -29,13 +29,13 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_verify() -> Generator[AsyncMock]:
     """Override is_new_scale check."""
     with patch(
-        "homeassistant.components.acaia.config_flow.is_new_scale", return_value=True
+        "menuai.components.acaia.config_flow.is_new_scale", return_value=True
     ) as mock_verify:
         yield mock_verify
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return the default mocked config entry."""
     return MockConfigEntry(
         title="LUNAR-DDEEFF",
@@ -51,10 +51,10 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_scale: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_scale: MagicMock
 ) -> MockConfigEntry:
     """Set up the acaia integration for testing."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     return mock_config_entry
 
 
@@ -63,7 +63,7 @@ def mock_scale() -> Generator[MagicMock]:
     """Return a mocked acaia scale client."""
     with (
         patch(
-            "homeassistant.components.acaia.coordinator.AcaiaScale",
+            "menuai.components.acaia.coordinator.AcaiaScale",
             autospec=True,
         ) as scale_mock,
     ):

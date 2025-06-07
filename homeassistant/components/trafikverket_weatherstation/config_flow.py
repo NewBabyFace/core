@@ -14,11 +14,11 @@ from pytrafikverket.exceptions import (
 from pytrafikverket.trafikverket_weather import TrafikverketWeather
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -36,7 +36,7 @@ class TVWeatherConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def validate_input(self, sensor_api: str, station: str) -> None:
         """Validate input from user input."""
-        web_session = async_get_clientsession(self.hass)
+        web_session = async_get_clientsession(self.menuai)
         weather_api = TrafikverketWeather(web_session, sensor_api)
         await weather_api.async_get_weather(station)
 

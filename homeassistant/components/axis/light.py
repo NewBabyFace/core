@@ -5,14 +5,14 @@ from typing import Any
 
 from axis.models.event import Event, EventTopic
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ColorMode,
     LightEntity,
     LightEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AxisConfigEntry
 from .entity import TOPIC_TO_EVENT_TYPE, AxisEventDescription, AxisEventEntity
@@ -44,7 +44,7 @@ ENTITY_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AxisConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -74,9 +74,9 @@ class AxisLight(AxisEventEntity, LightEntity):
         self.current_intensity = 0
         self.max_intensity = 0
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe lights events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.current_intensity = (
             await self.hub.api.vapix.light_control.get_current_intensity(self._light_id)
         )

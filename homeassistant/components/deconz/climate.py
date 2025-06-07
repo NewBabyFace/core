@@ -12,7 +12,7 @@ from pydeconz.models.sensor.thermostat import (
     ThermostatPreset,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     DOMAIN as CLIMATE_DOMAIN,
     FAN_AUTO,
     FAN_HIGH,
@@ -28,9 +28,9 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeconzConfigEntry
 from .const import ATTR_LOCKED, ATTR_OFFSET, ATTR_VALVE
@@ -75,7 +75,7 @@ DECONZ_TO_PRESET_MODE = {value: key for key, value in PRESET_MODE_TO_DECONZ.item
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DeconzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -7,11 +7,11 @@ import logging
 from aioruuvigateway.api import get_gateway_history_data
 from aioruuvigateway.models import TagData
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import SCAN_INTERVAL
 
@@ -23,13 +23,13 @@ class RuuviGatewayUpdateCoordinator(DataUpdateCoordinator[list[TagData]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         logger: logging.Logger,
     ) -> None:
         """Initialize the coordinator using the given configuration (host, token)."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=config_entry.title,
@@ -41,7 +41,7 @@ class RuuviGatewayUpdateCoordinator(DataUpdateCoordinator[list[TagData]]):
 
     async def _async_update_data(self) -> list[TagData]:
         changed_tag_datas: list[TagData] = []
-        async with get_async_client(self.hass) as client:
+        async with get_async_client(self.menuai) as client:
             data = await get_gateway_history_data(
                 client,
                 host=self.host,

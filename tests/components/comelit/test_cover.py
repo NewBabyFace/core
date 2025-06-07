@@ -7,8 +7,8 @@ from aiocomelit.const import COVER, WATT
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.comelit.const import SCAN_INTERVAL
-from homeassistant.components.cover import (
+from menuai.components.comelit.const import SCAN_INTERVAL
+from menuai.components.cover import (
     DOMAIN as COVER_DOMAIN,
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
@@ -18,9 +18,9 @@ from homeassistant.components.cover import (
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -30,18 +30,18 @@ ENTITY_ID = "cover.cover0"
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.comelit.BRIDGE_PLATFORMS", [Platform.COVER]):
-        await setup_integration(hass, mock_serial_bridge_config_entry)
+    with patch("menuai.components.comelit.BRIDGE_PLATFORMS", [Platform.COVER]):
+        await setup_integration(menuai, mock_serial_bridge_config_entry)
 
     await snapshot_platform(
-        hass,
+        menuai,
         entity_registry,
         snapshot,
         mock_serial_bridge_config_entry.entry_id,
@@ -49,7 +49,7 @@ async def test_all_entities(
 
 
 async def test_cover_open(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
@@ -57,13 +57,13 @@ async def test_cover_open(
     """Test cover open service."""
 
     mock_serial_bridge.reset_mock()
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_UNKNOWN
 
     # Open cover
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -71,7 +71,7 @@ async def test_cover_open(
     )
     mock_serial_bridge.set_device_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_OPENING
 
     # Finish opening, update status
@@ -91,28 +91,28 @@ async def test_cover_open(
     }
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_OPEN
 
 
 async def test_cover_close(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test cover close and stop service."""
 
     mock_serial_bridge.reset_mock()
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_UNKNOWN
 
     # Close cover
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -120,11 +120,11 @@ async def test_cover_close(
     )
     mock_serial_bridge.set_device_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_CLOSING
 
     # Stop cover
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -132,25 +132,25 @@ async def test_cover_close(
     )
     mock_serial_bridge.set_device_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_CLOSED
 
 
 async def test_cover_stop_if_stopped(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test cover stop service when already stopped."""
 
     mock_serial_bridge.reset_mock()
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_UNKNOWN
 
     # Stop cover while not opening/closing
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -158,12 +158,12 @@ async def test_cover_stop_if_stopped(
     )
     mock_serial_bridge.set_device_status.assert_not_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_UNKNOWN
 
 
 async def test_cover_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
@@ -171,13 +171,13 @@ async def test_cover_restore_state(
     """Test cover restore state on reload."""
 
     mock_serial_bridge.reset_mock()
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_UNKNOWN
 
     # Open cover
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -185,11 +185,11 @@ async def test_cover_restore_state(
     )
     mock_serial_bridge.set_device_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_OPENING
 
-    await hass.config_entries.async_reload(mock_serial_bridge_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(mock_serial_bridge_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_OPENING

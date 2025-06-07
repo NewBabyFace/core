@@ -8,17 +8,17 @@ import time
 import voluptuous as vol
 from waterfurnace.waterfurnace import WaterFurnace, WFCredentialError, WFException
 
-from homeassistant.components import persistent_notification
-from homeassistant.const import (
+from menuai.components import persistent_notification
+from menuai.const import (
     CONF_PASSWORD,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
+def setup(menuai: menuai, base_config: ConfigType) -> bool:
     """Set up waterfurnace platform."""
 
     config = base_config[DOMAIN]
@@ -61,10 +61,10 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
         _LOGGER.error("Invalid credentials for waterfurnace login")
         return False
 
-    hass.data[DOMAIN] = WaterFurnaceData(hass, wfconn)
-    hass.data[DOMAIN].start()
+    menuai.data[DOMAIN] = WaterFurnaceData(menuai, wfconn)
+    menuai.data[DOMAIN].start()
 
-    discovery.load_platform(hass, Platform.SENSOR, DOMAIN, {}, config)
+    discovery.load_platform(menuai, Platform.SENSOR, DOMAIN, {}, config)
     return True
 
 
@@ -79,10 +79,10 @@ class WaterFurnaceData(threading.Thread):
     to do.
     """
 
-    def __init__(self, hass, client):
+    def __init__(self, menuai, client):
         """Initialize the data object."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self.client = client
         self.unit = self.client.gwid
         self.data = None
@@ -96,7 +96,7 @@ class WaterFurnaceData(threading.Thread):
         if self._fails > MAX_FAILS:
             _LOGGER.error("Failed to refresh login credentials. Thread stopped")
             persistent_notification.create(
-                self.hass,
+                self.menuai,
                 (
                     "Error:<br/>Connection to waterfurnace website failed "
                     "the maximum number of times. Thread has stopped"
@@ -126,7 +126,7 @@ class WaterFurnaceData(threading.Thread):
 
         @callback
         def register():
-            """Connect to hass for shutdown."""
+            """Connect to menuai for shutdown."""
 
             def shutdown(event):
                 """Shutdown the thread."""
@@ -134,9 +134,9 @@ class WaterFurnaceData(threading.Thread):
                 self._shutdown = True
                 self.join()
 
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
+            self.menuai.bus.async_listen_once(EVENT_menuai_STOP, shutdown)
 
-        self.hass.add_job(register)
+        self.menuai.add_job(register)
 
         # This does a tight loop in sending read calls to the
         # websocket. That's a blocking call, which returns pretty
@@ -160,5 +160,5 @@ class WaterFurnaceData(threading.Thread):
                 self._reconnect()
 
             else:
-                dispatcher_send(self.hass, UPDATE_TOPIC)
+                dispatcher_send(self.menuai, UPDATE_TOPIC)
                 time.sleep(SCAN_INTERVAL.total_seconds())

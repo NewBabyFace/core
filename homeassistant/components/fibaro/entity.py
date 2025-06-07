@@ -8,8 +8,8 @@ from typing import Any
 
 from pyfibaro.fibaro_device import DeviceModel
 
-from homeassistant.const import ATTR_ARMED, ATTR_BATTERY_LEVEL
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_ARMED, ATTR_BATTERY_LEVEL
+from menuai.helpers.entity import Entity
 
 from . import FibaroController
 
@@ -34,8 +34,8 @@ class FibaroEntity(Entity):
         if not fibaro_device.visible:
             self._attr_entity_registry_visible_default = False
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self.async_on_remove(
             self.controller.register(
                 self.fibaro_device.fibaro_id, self._update_callback

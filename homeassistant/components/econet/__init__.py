@@ -14,12 +14,12 @@ from pyeconet.errors import (
     PyeconetError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.event import async_track_time_interval
 
 from .const import PUSH_UPDATE
 
@@ -40,7 +40,7 @@ type EconetConfigEntry = ConfigEntry[dict[EquipmentType, list[Equipment]]]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: EconetConfigEntry
+    menuai: menuai, config_entry: EconetConfigEntry
 ) -> bool:
     """Set up EcoNet as config entry."""
 
@@ -65,13 +65,13 @@ async def async_setup_entry(
 
     config_entry.runtime_data = equipment
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     api.subscribe()
 
     def update_published():
         """Handle a push update."""
-        dispatcher_send(hass, PUSH_UPDATE)
+        dispatcher_send(menuai, PUSH_UPDATE)
 
     for _eqip in equipment[EquipmentType.WATER_HEATER]:
         _eqip.set_update_callback(update_published)
@@ -81,18 +81,18 @@ async def async_setup_entry(
 
     async def resubscribe(now):
         """Resubscribe to the MQTT updates."""
-        await hass.async_add_executor_job(api.unsubscribe)
+        await menuai.async_add_executor_job(api.unsubscribe)
         api.subscribe()
 
         # Refresh values
         await asyncio.sleep(60)
         await api.refresh_equipment()
 
-    config_entry.async_on_unload(async_track_time_interval(hass, resubscribe, INTERVAL))
+    config_entry.async_on_unload(async_track_time_interval(menuai, resubscribe, INTERVAL))
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EconetConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EconetConfigEntry) -> bool:
     """Unload a EcoNet config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

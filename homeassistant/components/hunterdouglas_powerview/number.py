@@ -7,14 +7,14 @@ from typing import Final
 from aiopvapi.helpers.constants import ATTR_NAME, MOTION_VELOCITY
 from aiopvapi.resources.shade import BaseShade, ShadePosition
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberEntityDescription,
     NumberMode,
     RestoreNumber,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import PowerviewShadeUpdateCoordinator
 from .entity import ShadeEntity
@@ -52,7 +52,7 @@ NUMBERS: Final = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PowerviewConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -101,9 +101,9 @@ class PowerViewNumber(ShadeEntity, RestoreNumber):
         self.entity_description.store_value_fn(self.coordinator, self._shade.id, value)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         last_number_data = await self.async_get_last_number_data()
         value = last_number_data.native_value if last_number_data is not None else 0
         self._attr_native_value = value

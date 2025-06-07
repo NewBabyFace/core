@@ -4,17 +4,17 @@ from unittest.mock import patch
 
 from energyflip import EnergyFlipException
 
-from homeassistant.components.huisbaasje.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ID, CONF_PASSWORD, CONF_USERNAME, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.components.huisbaasje.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ID, CONF_PASSWORD, CONF_USERNAME, STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from .test_data import MOCK_CURRENT_MEASUREMENTS
 
 from tests.common import MockConfigEntry
 
 
-async def test_setup_entry(hass: HomeAssistant) -> None:
+async def test_setup_entry(menuai: menuai) -> None:
     """Test for successfully setting a config entry."""
     with (
         patch(
@@ -39,17 +39,17 @@ async def test_setup_entry(hass: HomeAssistant) -> None:
             },
             source="test",
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
         assert config_entry.state is ConfigEntryState.NOT_LOADED
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         # Assert integration is loaded
         assert config_entry.state is ConfigEntryState.LOADED
 
         # Assert entities are loaded
-        entities = hass.states.async_entity_ids("sensor")
+        entities = menuai.states.async_entity_ids("sensor")
         assert len(entities) == 18
 
         # Assert mocks are called
@@ -58,7 +58,7 @@ async def test_setup_entry(hass: HomeAssistant) -> None:
         assert len(mock_current_measurements.mock_calls) == 1
 
 
-async def test_setup_entry_error(hass: HomeAssistant) -> None:
+async def test_setup_entry_error(menuai: menuai) -> None:
     """Test for successfully setting a config entry."""
     with patch(
         "energyflip.EnergyFlip.authenticate", side_effect=EnergyFlipException
@@ -74,25 +74,25 @@ async def test_setup_entry_error(hass: HomeAssistant) -> None:
             },
             source="test",
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
         assert config_entry.state is ConfigEntryState.NOT_LOADED
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         # Assert integration is loaded with error
         assert config_entry.state is ConfigEntryState.SETUP_ERROR
-        assert DOMAIN not in hass.data
+        assert DOMAIN not in menuai.data
 
         # Assert entities are not loaded
-        entities = hass.states.async_entity_ids("sensor")
+        entities = menuai.states.async_entity_ids("sensor")
         assert len(entities) == 0
 
         # Assert mocks are called
         assert len(mock_authenticate.mock_calls) == 1
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test for successfully unloading the config entry."""
     with (
         patch(
@@ -117,27 +117,27 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
             },
             source="test",
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
         # Load config entry
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.LOADED
-        entities = hass.states.async_entity_ids("sensor")
+        entities = menuai.states.async_entity_ids("sensor")
         assert len(entities) == 18
 
         # Unload config entry
-        await hass.config_entries.async_unload(config_entry.entry_id)
+        await menuai.config_entries.async_unload(config_entry.entry_id)
         assert config_entry.state is ConfigEntryState.NOT_LOADED
-        entities = hass.states.async_entity_ids("sensor")
+        entities = menuai.states.async_entity_ids("sensor")
         assert len(entities) == 18
         for entity in entities:
-            assert hass.states.get(entity).state == STATE_UNAVAILABLE
+            assert menuai.states.get(entity).state == STATE_UNAVAILABLE
 
         # Remove config entry
-        await hass.config_entries.async_remove(config_entry.entry_id)
-        await hass.async_block_till_done()
-        entities = hass.states.async_entity_ids("sensor")
+        await menuai.config_entries.async_remove(config_entry.entry_id)
+        await menuai.async_block_till_done()
+        entities = menuai.states.async_entity_ids("sensor")
         assert len(entities) == 0
 
         # Assert mocks are called

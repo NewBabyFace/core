@@ -16,7 +16,7 @@ from thinqconnect import (
     ThinQMQTTClient,
 )
 
-from homeassistant.core import Event, HomeAssistant
+from menuai.core import Event, menuai
 
 from .const import DEVICE_PUSH_MESSAGE, DEVICE_STATUS_MESSAGE
 from .coordinator import DeviceDataUpdateCoordinator
@@ -29,13 +29,13 @@ class ThinQMQTT:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         thinq_api: ThinQApi,
         client_id: str,
         coordinators: dict[str, DeviceDataUpdateCoordinator],
     ) -> None:
         """Initialize a mqtt."""
-        self.hass = hass
+        self.menuai = menuai
         self.thinq_api = thinq_api
         self.client_id = client_id
         self.coordinators = coordinators
@@ -83,7 +83,7 @@ class ThinQMQTT:
         _LOGGER.debug("async_refresh_subscribe: now=%s", now)
 
         tasks = [
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self.thinq_api.async_post_event_subscribe(coordinator.device_id)
             )
             for coordinator in self.coordinators.values()
@@ -102,13 +102,13 @@ class ThinQMQTT:
             return
 
         tasks = [
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self.thinq_api.async_post_push_subscribe(coordinator.device_id)
             )
             for coordinator in self.coordinators.values()
         ]
         tasks.extend(
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self.thinq_api.async_post_event_subscribe(coordinator.device_id)
             )
             for coordinator in self.coordinators.values()
@@ -125,13 +125,13 @@ class ThinQMQTT:
         _LOGGER.debug("async_end_subscribes")
 
         tasks = [
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self.thinq_api.async_delete_push_subscribe(coordinator.device_id)
             )
             for coordinator in self.coordinators.values()
         ]
         tasks.extend(
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self.thinq_api.async_delete_event_subscribe(coordinator.device_id)
             )
             for coordinator in self.coordinators.values()
@@ -159,7 +159,7 @@ class ThinQMQTT:
             return
 
         asyncio.run_coroutine_threadsafe(
-            self.async_handle_device_event(message), self.hass.loop
+            self.async_handle_device_event(message), self.menuai.loop
         ).result()
 
     async def async_handle_device_event(self, message: dict) -> None:

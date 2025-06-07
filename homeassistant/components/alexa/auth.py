@@ -10,11 +10,11 @@ from typing import Any
 
 import aiohttp
 
-from homeassistant.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.storage import Store
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.storage import Store
+from menuai.util import dt as dt_util
 
 from .const import STORAGE_ACCESS_TOKEN, STORAGE_REFRESH_TOKEN
 from .diagnostics import async_redact_lwa_params
@@ -33,15 +33,15 @@ STORAGE_EXPIRE_TIME = "expire_time"
 class Auth:
     """Handle authentication to send events to Alexa."""
 
-    def __init__(self, hass: HomeAssistant, client_id: str, client_secret: str) -> None:
+    def __init__(self, menuai: menuai, client_id: str, client_secret: str) -> None:
         """Initialize the Auth class."""
-        self.hass = hass
+        self.menuai = menuai
 
         self.client_id = client_id
         self.client_secret = client_secret
 
         self._prefs: dict[str, Any] | None = None
-        self._store: Store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+        self._store: Store = Store(menuai, STORAGE_VERSION, STORAGE_KEY)
 
         self._get_token_lock = asyncio.Lock()
 
@@ -114,7 +114,7 @@ class Auth:
 
     async def _async_request_new_token(self, lwa_params: dict[str, str]) -> str | None:
         try:
-            session = aiohttp_client.async_get_clientsession(self.hass)
+            session = aiohttp_client.async_get_clientsession(self.menuai)
             async with timeout(10):
                 response = await session.post(
                     LWA_TOKEN_URI,

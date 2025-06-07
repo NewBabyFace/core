@@ -1,14 +1,14 @@
 """Base class for all eQ-3 entities."""
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import (
+from menuai.core import callback
+from menuai.helpers.device_registry import (
     CONNECTION_BLUETOOTH,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.util import slugify
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.util import slugify
 
 from . import Eq3ConfigEntry
 from .const import (
@@ -42,28 +42,28 @@ class Eq3Entity(Entity):
         suffix = f"_{unique_id_key}" if unique_id_key else ""
         self._attr_unique_id = f"{format_mac(self._eq3_config.mac_address)}{suffix}"
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
 
         self._thermostat.register_update_callback(self._async_on_updated)
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SIGNAL_THERMOSTAT_DISCONNECTED}_{self._eq3_config.mac_address}",
                 self._async_on_disconnected,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SIGNAL_THERMOSTAT_CONNECTED}_{self._eq3_config.mac_address}",
                 self._async_on_connected,
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
 
         self._thermostat.unregister_update_callback(self._async_on_updated)
 

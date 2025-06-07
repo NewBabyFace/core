@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import CONF_MONITORED_CONDITIONS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.const import CONF_MONITORED_CONDITIONS
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import ATTR_VERSION, DATA_UPDATED, DOMAIN, SENSOR_TYPES
 
@@ -18,7 +18,7 @@ ATTR_REMOTE_PORT = "Remote Port"
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -29,14 +29,14 @@ async def async_setup_platform(
 
     entities = [
         Iperf3Sensor(iperf3_host, description)
-        for iperf3_host in hass.data[DOMAIN].values()
+        for iperf3_host in menuai.data[DOMAIN].values()
         for description in SENSOR_TYPES
         if description.key in discovery_info[CONF_MONITORED_CONDITIONS]
     ]
     async_add_entities(entities, True)
 
 
-# pylint: disable-next=hass-invalid-inheritance # needs fixing
+# pylint: disable-next=menuai-invalid-inheritance # needs fixing
 class Iperf3Sensor(RestoreEntity, SensorEntity):
     """A Iperf3 sensor implementation."""
 
@@ -59,13 +59,13 @@ class Iperf3Sensor(RestoreEntity, SensorEntity):
             ATTR_VERSION: self._iperf3_data.data[ATTR_VERSION],
         }
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DATA_UPDATED, self._schedule_immediate_update
+                self.menuai, DATA_UPDATED, self._schedule_immediate_update
             )
         )
 

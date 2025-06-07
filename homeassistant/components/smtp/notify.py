@@ -17,7 +17,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
@@ -25,7 +25,7 @@ from homeassistant.components.notify import (
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_PASSWORD,
     CONF_PORT,
     CONF_RECIPIENT,
@@ -35,13 +35,13 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.reload import setup_reload_service
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.ssl import create_client_context
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.reload import setup_reload_service
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
+from menuai.util.ssl import create_client_context
 
 from .const import (
     ATTR_HTML,
@@ -83,12 +83,12 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> MailNotificationService | None:
     """Get the mail notification service."""
-    setup_reload_service(hass, DOMAIN, PLATFORMS)
+    setup_reload_service(menuai, DOMAIN, PLATFORMS)
     ssl_context = create_client_context() if config[CONF_VERIFY_SSL] else None
     mail_service = MailNotificationService(
         config[CONF_SERVER],
@@ -204,14 +204,14 @@ class MailNotificationService(BaseNotificationService):
         if data := kwargs.get(ATTR_DATA):
             if ATTR_HTML in data:
                 msg = _build_html_msg(
-                    self.hass,
+                    self.menuai,
                     message,
                     data[ATTR_HTML],
                     images=data.get(ATTR_IMAGES, []),
                 )
             else:
                 msg = _build_multipart_msg(
-                    self.hass, message, images=data.get(ATTR_IMAGES, [])
+                    self.menuai, message, images=data.get(ATTR_IMAGES, [])
                 )
         else:
             msg = _build_text_msg(message)
@@ -229,7 +229,7 @@ class MailNotificationService(BaseNotificationService):
         else:
             msg["From"] = self._sender
 
-        msg["X-Mailer"] = "Home Assistant"
+        msg["X-Mailer"] = "MenuAI"
         msg["Date"] = email.utils.format_datetime(dt_util.now())
         msg["Message-Id"] = email.utils.make_msgid()
 
@@ -262,7 +262,7 @@ def _build_text_msg(message: str) -> MIMEText:
 
 
 def _attach_file(
-    hass: HomeAssistant, atch_name: str, content_id: str | None = None
+    menuai: menuai, atch_name: str, content_id: str | None = None
 ) -> MIMEImage | MIMEApplication | None:
     """Create a message attachment.
 
@@ -271,7 +271,7 @@ def _attach_file(
     """
     try:
         file_path = Path(atch_name).parent
-        if os.path.exists(file_path) and not hass.config.is_allowed_path(
+        if os.path.exists(file_path) and not menuai.config.is_allowed_path(
             str(file_path)
         ):
             allow_list = "allowlist_external_dirs"
@@ -318,7 +318,7 @@ def _attach_file(
 
 
 def _build_multipart_msg(
-    hass: HomeAssistant, message: str, images: list[str]
+    menuai: menuai, message: str, images: list[str]
 ) -> MIMEMultipart:
     """Build Multipart message with images as attachments."""
     _LOGGER.debug("Building multipart email with image attachme_build_html_msgnt(s)")
@@ -327,7 +327,7 @@ def _build_multipart_msg(
     msg.attach(body_txt)
 
     for atch_name in images:
-        attachment = _attach_file(hass, atch_name)
+        attachment = _attach_file(menuai, atch_name)
         if attachment:
             msg.attach(attachment)
 
@@ -335,7 +335,7 @@ def _build_multipart_msg(
 
 
 def _build_html_msg(
-    hass: HomeAssistant, text: str, html: str, images: list[str]
+    menuai: menuai, text: str, html: str, images: list[str]
 ) -> MIMEMultipart:
     """Build Multipart message with in-line images and rich HTML (UTF-8)."""
     _LOGGER.debug("Building HTML rich email")
@@ -347,7 +347,7 @@ def _build_html_msg(
 
     for atch_name in images:
         name = os.path.basename(atch_name)
-        attachment = _attach_file(hass, atch_name, name)
+        attachment = _attach_file(menuai, atch_name, name)
         if attachment:
             msg.attach(attachment)
     return msg

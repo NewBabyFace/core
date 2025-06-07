@@ -2,7 +2,7 @@
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ID,
     CONF_NAME,
     CONF_PROTOCOL,
@@ -10,8 +10,8 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.helpers import config_validation as cv
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import DOMAIN, EVENT, SERVICE_NAME
 from .const import (
@@ -59,9 +59,9 @@ class PilightBaseDevice(RestoreEntity):
 
     _attr_should_poll = False
 
-    def __init__(self, hass, name, config):
+    def __init__(self, menuai, name, config):
         """Initialize a device."""
-        self._hass = hass
+        self._menuai = menuai
         self._name = config.get(CONF_NAME, name)
         self._is_on = False
         self._code_on = config.get(CONF_ON_CODE)
@@ -82,13 +82,13 @@ class PilightBaseDevice(RestoreEntity):
                 code_list.append(_ReceiveHandle(code, echo))
 
         if any(self._code_on_receive) or any(self._code_off_receive):
-            hass.bus.listen(EVENT, self._handle_code)
+            menuai.bus.listen(EVENT, self._handle_code)
 
         self._brightness = 255
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if state := await self.async_get_last_state():
             self._is_on = state.state == STATE_ON
             self._brightness = state.attributes.get("brightness")
@@ -142,9 +142,9 @@ class PilightBaseDevice(RestoreEntity):
                 if dimlevel is not None:
                     code.update({"dimlevel": dimlevel})
 
-                self._hass.services.call(DOMAIN, SERVICE_NAME, code, blocking=True)
+                self._menuai.services.call(DOMAIN, SERVICE_NAME, code, blocking=True)
             else:
-                self._hass.services.call(
+                self._menuai.services.call(
                     DOMAIN, SERVICE_NAME, self._code_off, blocking=True
                 )
 

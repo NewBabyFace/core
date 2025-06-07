@@ -11,14 +11,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.websocket_api import ActiveConnection, messages
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.json import json_bytes
-from homeassistant.util import dt as dt_util
-from homeassistant.util.async_ import create_eager_task
+from menuai.components import websocket_api
+from menuai.components.recorder import get_instance
+from menuai.components.websocket_api import ActiveConnection, messages
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.json import json_bytes
+from menuai.util import dt as dt_util
+from menuai.util.async_ import create_eager_task
 
 from .const import DOMAIN
 from .helpers import (
@@ -51,10 +51,10 @@ class LogbookLiveStream:
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the logbook websocket API."""
-    websocket_api.async_register_command(hass, ws_get_events)
-    websocket_api.async_register_command(hass, ws_event_stream)
+    websocket_api.async_register_command(menuai, ws_get_events)
+    websocket_api.async_register_command(menuai, ws_event_stream)
 
 
 @callback
@@ -75,7 +75,7 @@ def _async_send_empty_response(
 
 
 async def _async_send_historical_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg_id: int,
     start_time: dt,
@@ -103,7 +103,7 @@ async def _async_send_historical_events(
 
     if not is_big_query:
         message, last_event_time = await _async_get_ws_stream_events(
-            hass,
+            menuai,
             msg_id,
             start_time,
             end_time,
@@ -124,7 +124,7 @@ async def _async_send_historical_events(
     # we fetch the old data
     recent_query_start = end_time - timedelta(hours=BIG_QUERY_RECENT_HOURS)
     recent_message, recent_query_last_event_time = await _async_get_ws_stream_events(
-        hass,
+        menuai,
         msg_id,
         recent_query_start,
         end_time,
@@ -135,7 +135,7 @@ async def _async_send_historical_events(
         connection.send_message(recent_message)
 
     older_message, older_query_last_event_time = await _async_get_ws_stream_events(
-        hass,
+        menuai,
         msg_id,
         start_time,
         recent_query_start,
@@ -155,7 +155,7 @@ async def _async_send_historical_events(
 
 
 async def _async_get_ws_stream_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     msg_id: int,
     start_time: dt,
     end_time: dt,
@@ -163,7 +163,7 @@ async def _async_get_ws_stream_events(
     partial: bool,
 ) -> tuple[bytes, dt | None]:
     """Async wrapper around _ws_formatted_get_events."""
-    return await get_instance(hass).async_add_executor_job(
+    return await get_instance(menuai).async_add_executor_job(
         _ws_stream_get_events,
         msg_id,
         start_time,
@@ -255,7 +255,7 @@ async def _async_events_consumer(
 )
 @websocket_api.async_response
 async def ws_event_stream(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle logbook stream events websocket command."""
     start_time_str = msg["start_time"]
@@ -283,14 +283,14 @@ async def ws_event_stream(
     device_ids = msg.get("device_ids")
     entity_ids = msg.get("entity_ids")
     if entity_ids:
-        entity_ids = async_filter_entities(hass, entity_ids)
+        entity_ids = async_filter_entities(menuai, entity_ids)
         if not entity_ids and not device_ids:
             _async_send_empty_response(connection, msg_id, start_time, end_time)
             return
 
-    event_types = async_determine_event_types(hass, entity_ids, device_ids)
+    event_types = async_determine_event_types(menuai, entity_ids, device_ids)
     event_processor = EventProcessor(
-        hass,
+        menuai,
         event_types,
         entity_ids,
         device_ids,
@@ -305,7 +305,7 @@ async def ws_event_stream(
         connection.send_result(msg_id)
         # Fetch everything from history
         await _async_send_historical_events(
-            hass,
+            menuai,
             connection,
             msg_id,
             start_time,
@@ -337,7 +337,7 @@ async def ws_event_stream(
 
     if end_time:
         live_stream.end_time_unsub = async_track_point_in_utc_time(
-            hass, _unsub, end_time
+            menuai, _unsub, end_time
         )
 
     @callback
@@ -354,11 +354,11 @@ async def ws_event_stream(
 
     entities_filter: Callable[[str], bool] | None = None
     if not event_processor.limited_select:
-        logbook_config: LogbookConfig = hass.data[DOMAIN]
+        logbook_config: LogbookConfig = menuai.data[DOMAIN]
         entities_filter = logbook_config.entity_filter
 
     async_subscribe_events(
-        hass,
+        menuai,
         subscriptions,
         _queue_or_cancel,
         event_types,
@@ -371,7 +371,7 @@ async def ws_event_stream(
     connection.send_result(msg_id)
     # Fetch everything from history
     last_event_time = await _async_send_historical_events(
-        hass,
+        menuai,
         connection,
         msg_id,
         start_time,
@@ -399,7 +399,7 @@ async def ws_event_stream(
         )
     )
 
-    if sync_future := get_instance(hass).async_get_commit_future():
+    if sync_future := get_instance(menuai).async_get_commit_future():
         # Set the future so we can cancel it if the client
         # unsubscribes before the commit is done so we don't
         # query the database needlessly
@@ -415,7 +415,7 @@ async def ws_event_stream(
     # we had from the last database query
     #
     await _async_send_historical_events(
-        hass,
+        menuai,
         connection,
         msg_id,
         # Add one microsecond so we are outside the window of
@@ -455,7 +455,7 @@ def _ws_formatted_get_events(
 )
 @websocket_api.async_response
 async def ws_get_events(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle logbook get events websocket command."""
     start_time_str = msg["start_time"]
@@ -484,16 +484,16 @@ async def ws_get_events(
     entity_ids = msg.get("entity_ids")
     context_id = msg.get("context_id")
     if entity_ids:
-        entity_ids = async_filter_entities(hass, entity_ids)
+        entity_ids = async_filter_entities(menuai, entity_ids)
         if not entity_ids and not device_ids:
             # Everything has been filtered away
             connection.send_result(msg["id"], [])
             return
 
-    event_types = async_determine_event_types(hass, entity_ids, device_ids)
+    event_types = async_determine_event_types(menuai, entity_ids, device_ids)
 
     event_processor = EventProcessor(
-        hass,
+        menuai,
         event_types,
         entity_ids,
         device_ids,
@@ -503,7 +503,7 @@ async def ws_get_events(
     )
 
     connection.send_message(
-        await get_instance(hass).async_add_executor_job(
+        await get_instance(menuai).async_add_executor_job(
             _ws_formatted_get_events,
             msg["id"],
             start_time,

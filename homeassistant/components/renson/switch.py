@@ -8,10 +8,10 @@ from typing import Any
 from renson_endura_delta.field_enum import CURRENT_LEVEL_FIELD, DataType
 from renson_endura_delta.renson import Level, RensonVentilation
 
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchDeviceClass, SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RensonCoordinator
 from .const import DOMAIN
@@ -41,14 +41,14 @@ class RensonBreezeSwitch(RensonEntity, SwitchEntity):
         """Turn on the switch."""
         _LOGGER.debug("Enable Breeze")
 
-        await self.hass.async_add_executor_job(self.api.set_manual_level, Level.BREEZE)
+        await self.menuai.async_add_executor_job(self.api.set_manual_level, Level.BREEZE)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
         _LOGGER.debug("Disable Breeze")
 
-        await self.hass.async_add_executor_job(self.api.set_manual_level, Level.OFF)
+        await self.menuai.async_add_executor_job(self.api.set_manual_level, Level.OFF)
         await self.coordinator.async_request_refresh()
 
     @callback
@@ -66,14 +66,14 @@ class RensonBreezeSwitch(RensonEntity, SwitchEntity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Call the Renson integration to setup."""
 
-    api: RensonVentilation = hass.data[DOMAIN][config_entry.entry_id].api
-    coordinator: RensonCoordinator = hass.data[DOMAIN][
+    api: RensonVentilation = menuai.data[DOMAIN][config_entry.entry_id].api
+    coordinator: RensonCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ].coordinator
 

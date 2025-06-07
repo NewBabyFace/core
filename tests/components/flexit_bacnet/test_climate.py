@@ -11,7 +11,7 @@ from flexit_bacnet import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
@@ -23,11 +23,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.flexit_bacnet.const import PRESET_TO_VENTILATION_MODE_MAP
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_component, entity_registry as er
+from menuai.components.flexit_bacnet.const import PRESET_TO_VENTILATION_MODE_MAP
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_component, entity_registry as er
 
 from . import setup_with_selected_platforms
 
@@ -37,29 +37,29 @@ ENTITY_ID = "climate.device_name"
 
 
 async def test_climate_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flexit_bacnet: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the initial parameters."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.CLIMATE])
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.CLIMATE])
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_set_hvac_preset_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flexit_bacnet: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the initial parameters."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.CLIMATE])
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.CLIMATE])
 
     # Set preset mode to away
     mock_flexit_bacnet.ventilation_mode = VENTILATION_MODE_AWAY
-    await hass.services.async_call(
+    await menuai.services.async_call(
         Platform.CLIMATE,
         SERVICE_SET_PRESET_MODE,
         {
@@ -69,7 +69,7 @@ async def test_set_hvac_preset_mode(
         blocking=True,
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_PRESET_MODE] == PRESET_AWAY
 
     mock_flexit_bacnet.set_ventilation_mode.assert_called_once_with(
@@ -78,7 +78,7 @@ async def test_set_hvac_preset_mode(
 
     # Set preset mode to home
     mock_flexit_bacnet.ventilation_mode = VENTILATION_MODE_HOME
-    await hass.services.async_call(
+    await menuai.services.async_call(
         Platform.CLIMATE,
         SERVICE_SET_PRESET_MODE,
         {
@@ -88,7 +88,7 @@ async def test_set_hvac_preset_mode(
         blocking=True,
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_PRESET_MODE] == PRESET_HOME
 
     mock_flexit_bacnet.set_ventilation_mode.assert_called_with(
@@ -96,8 +96,8 @@ async def test_set_hvac_preset_mode(
     )
 
     mock_flexit_bacnet.set_ventilation_mode.side_effect = asyncio.TimeoutError
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_PRESET_MODE,
             {
@@ -113,30 +113,30 @@ async def test_set_hvac_preset_mode(
 
 
 async def test_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flexit_bacnet: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting HVAC mode."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.CLIMATE])
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.CLIMATE])
 
     mock_flexit_bacnet.ventilation_mode = VENTILATION_MODE_STOP
-    await hass.services.async_call(
+    await menuai.services.async_call(
         Platform.CLIMATE,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HVAC_MODE: HVACMode.OFF},
         blocking=True,
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == HVACMode.OFF
     mock_flexit_bacnet.set_ventilation_mode.assert_called_once_with(
         VENTILATION_MODE_STOP
     )
 
     mock_flexit_bacnet.set_ventilation_mode.side_effect = asyncio.TimeoutError
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HVAC_MODE: HVACMode.OFF},
@@ -147,39 +147,39 @@ async def test_set_hvac_mode(
 
 
 async def test_hvac_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flexit_bacnet: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test hvac_action property."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.CLIMATE])
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.CLIMATE])
 
     # Simulate electric heater being ON
     mock_flexit_bacnet.electric_heater = True
-    await entity_component.async_update_entity(hass, ENTITY_ID)
+    await entity_component.async_update_entity(menuai, ENTITY_ID)
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.HEATING
 
     # Simulate electric heater being OFF
     mock_flexit_bacnet.electric_heater = False
-    await entity_component.async_update_entity(hass, ENTITY_ID)
+    await entity_component.async_update_entity(menuai, ENTITY_ID)
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.FAN
 
 
 async def test_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flexit_bacnet: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting the temperature."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.CLIMATE])
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.CLIMATE])
 
     # Set ventilation mode to HOME and set temperature to 22.5°C
     mock_flexit_bacnet.ventilation_mode = VENTILATION_MODE_HOME
-    await hass.services.async_call(
+    await menuai.services.async_call(
         Platform.CLIMATE,
         SERVICE_SET_TEMPERATURE,
         {
@@ -194,7 +194,7 @@ async def test_set_temperature(
 
     # Change ventilation mode to AWAY and set temperature
     mock_flexit_bacnet.ventilation_mode = VENTILATION_MODE_AWAY
-    await hass.services.async_call(
+    await menuai.services.async_call(
         Platform.CLIMATE,
         SERVICE_SET_TEMPERATURE,
         {
@@ -209,8 +209,8 @@ async def test_set_temperature(
 
     # Test handling of connection errors
     mock_flexit_bacnet.set_air_temp_setpoint_away.side_effect = ConnectionError
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_TEMPERATURE,
             {

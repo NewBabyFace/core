@@ -10,13 +10,13 @@ from solarlog_cli.solarlog_exceptions import (
     SolarLogUpdateError,
 )
 
-from homeassistant.components.solarlog.const import CONF_HAS_PWD, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.solarlog.const import CONF_HAS_PWD, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import setup_platform
 from .const import HOST
@@ -25,17 +25,17 @@ from tests.common import MockConfigEntry
 
 
 async def test_load_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_solarlog_connector: AsyncMock,
 ) -> None:
     """Test load and unload."""
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -47,7 +47,7 @@ async def test_load_unload(
     ],
 )
 async def test_setup_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: SolarLogError,
     error: str,
     mock_config_entry: MockConfigEntry,
@@ -57,13 +57,13 @@ async def test_setup_error(
 
     mock_solarlog_connector.login.side_effect = exception
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await hass.async_block_till_done()
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state == error
 
     if error == ConfigEntryState.SETUP_RETRY:
-        assert len(hass.config_entries.flow.async_progress()) == 0
+        assert len(menuai.config_entries.flow.async_progress()) == 0
 
 
 @pytest.mark.parametrize(
@@ -76,7 +76,7 @@ async def test_setup_error(
     ],
 )
 async def test_auth_error_during_first_refresh(
-    hass: HomeAssistant,
+    menuai: menuai,
     login_side_effect: Exception | None,
     login_return_value: bool,
     entry_state: str,
@@ -91,8 +91,8 @@ async def test_auth_error_during_first_refresh(
     mock_solarlog_connector.login.return_value = login_return_value
     mock_solarlog_connector.login.side_effect = login_side_effect
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await hass.async_block_till_done()
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state == entry_state
 
@@ -105,7 +105,7 @@ async def test_auth_error_during_first_refresh(
     ],
 )
 async def test_other_exceptions_during_first_refresh(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: SolarLogError,
     mock_config_entry: MockConfigEntry,
     mock_solarlog_connector: AsyncMock,
@@ -114,12 +114,12 @@ async def test_other_exceptions_during_first_refresh(
 
     mock_solarlog_connector.update_data.side_effect = exception
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await hass.async_block_till_done()
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state == ConfigEntryState.SETUP_RETRY
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
 
 @pytest.mark.parametrize(
@@ -130,7 +130,7 @@ async def test_other_exceptions_during_first_refresh(
     ],
 )
 async def test_migrate_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     minor_version: int,
     suffix: str,
     device_registry: DeviceRegistry,
@@ -147,7 +147,7 @@ async def test_migrate_config_entry(
         version=1,
         minor_version=minor_version,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -169,8 +169,8 @@ async def test_migrate_config_entry(
     assert entry.minor_version == minor_version
     assert sensor_entity.unique_id == f"{entry.entry_id}_{suffix}"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(sensor_entity.entity_id)
     assert entity_migrated

@@ -8,16 +8,16 @@ from pywilight.const import ITEM_SWITCH, SWITCH_PAUSE_VALVE, SWITCH_VALVE
 from pywilight.wilight_device import PyWiLightDevice
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import WiLightDevice
 from .parent_device import WiLightParent
-from .support import wilight_to_hass_trigger, wilight_trigger as wl_trigger
+from .support import wilight_to_menuai_trigger, wilight_trigger as wl_trigger
 
 # Attr of features supported by the valve switch entities
 ATTR_WATERING_TIME = "watering_time"
@@ -75,12 +75,12 @@ def entities_from_discovered_wilight(api_device: PyWiLightDevice) -> tuple[Any]:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up WiLight switches from a config entry."""
-    parent: WiLightParent = hass.data[DOMAIN][entry.entry_id]
+    parent: WiLightParent = menuai.data[DOMAIN][entry.entry_id]
 
     # Handle a discovered WiLight device.
     assert parent.api
@@ -135,13 +135,13 @@ async def async_setup_entry(
     )
 
 
-def wilight_to_hass_pause_time(value: int) -> int:
-    """Convert wilight pause_time seconds to hass hour."""
+def wilight_to_menuai_pause_time(value: int) -> int:
+    """Convert wilight pause_time seconds to menuai hour."""
     return round(value / 3600)
 
 
-def hass_to_wilight_pause_time(value: int) -> int:
-    """Convert hass pause_time hours to wilight seconds."""
+def menuai_to_wilight_pause_time(value: int) -> int:
+    """Convert menuai pause_time hours to wilight seconds."""
     return round(value * 3600)
 
 
@@ -186,22 +186,22 @@ class WiLightValveSwitch(WiLightDevice, SwitchEntity):
     @property
     def trigger_1_description(self) -> str | None:
         """Return trigger_1_description of valve switch."""
-        return wilight_to_hass_trigger(self._status.get("trigger_1"))
+        return wilight_to_menuai_trigger(self._status.get("trigger_1"))
 
     @property
     def trigger_2_description(self) -> str | None:
         """Return trigger_2_description of valve switch."""
-        return wilight_to_hass_trigger(self._status.get("trigger_2"))
+        return wilight_to_menuai_trigger(self._status.get("trigger_2"))
 
     @property
     def trigger_3_description(self) -> str | None:
         """Return trigger_3_description of valve switch."""
-        return wilight_to_hass_trigger(self._status.get("trigger_3"))
+        return wilight_to_menuai_trigger(self._status.get("trigger_3"))
 
     @property
     def trigger_4_description(self) -> str | None:
         """Return trigger_4_description of valve switch."""
-        return wilight_to_hass_trigger(self._status.get("trigger_4"))
+        return wilight_to_menuai_trigger(self._status.get("trigger_4"))
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -279,7 +279,7 @@ class WiLightValvePauseSwitch(WiLightDevice, SwitchEntity):
         """
         pause_time = self._status.get("timer_target")
         if pause_time is not None:
-            return wilight_to_hass_pause_time(pause_time)
+            return wilight_to_menuai_pause_time(pause_time)
         return pause_time
 
     @property
@@ -302,5 +302,5 @@ class WiLightValvePauseSwitch(WiLightDevice, SwitchEntity):
 
     async def async_set_pause_time(self, pause_time: int) -> None:
         """Set the pause time."""
-        target_time = hass_to_wilight_pause_time(pause_time)
+        target_time = menuai_to_wilight_pause_time(pause_time)
         await self._client.set_switch_time(self._index, target_time)

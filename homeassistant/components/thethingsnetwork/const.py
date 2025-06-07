@@ -1,6 +1,6 @@
 """The Things Network's integration constants."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "thethingsnetwork"
 TTN_API_HOST = "eu1.cloud.thethings.network"

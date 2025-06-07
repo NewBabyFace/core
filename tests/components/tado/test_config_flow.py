@@ -7,18 +7,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from PyTado.http import DeviceActivationStatus
 import pytest
 
-from homeassistant.components.tado.config_flow import TadoException
-from homeassistant.components.tado.const import (
+from menuai.components.tado.config_flow import TadoException
+from menuai.components.tado.const import (
     CONF_FALLBACK,
     CONF_REFRESH_TOKEN,
     CONST_OVERLAY_TADO_DEFAULT,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_HOMEKIT, SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.config_entries import SOURCE_HOMEKIT, SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -27,7 +27,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tado_api: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
@@ -41,16 +41,16 @@ async def test_full_flow(
 
     mock_tado_api.device_activation = mock_tado_api_device_activation
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "user"
 
     event.set()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "home name"
@@ -59,7 +59,7 @@ async def test_full_flow(
 
 
 async def test_full_flow_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tado_api: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
@@ -69,18 +69,18 @@ async def test_full_flow_reauth(
         unique_id="ABC-123-DEF-456",
         data={CONF_REFRESH_TOKEN: "totally_refresh_for_reauth"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     # The no user input
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -92,16 +92,16 @@ async def test_full_flow_reauth(
 
     mock_tado_api.device_activation = mock_tado_api_device_activation
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "user"
 
     event.set()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "home name"
@@ -109,14 +109,14 @@ async def test_full_flow_reauth(
 
 
 async def test_auth_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tado_api: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the auth timeout."""
     mock_tado_api.device_activation_status.return_value = DeviceActivationStatus.PENDING
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.SHOW_PROGRESS_DONE
@@ -126,11 +126,11 @@ async def test_auth_timeout(
         DeviceActivationStatus.COMPLETED
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "timeout"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -140,30 +140,30 @@ async def test_auth_timeout(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_no_homes(hass: HomeAssistant, mock_tado_api: MagicMock) -> None:
+async def test_no_homes(menuai: menuai, mock_tado_api: MagicMock) -> None:
     """Test the full flow of the config flow."""
     mock_tado_api.get_me.return_value["homes"] = []
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.SHOW_PROGRESS_DONE
     assert result["step_id"] == "finish_login"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_homes"
 
 
-async def test_tado_creation(hass: HomeAssistant) -> None:
+async def test_tado_creation(menuai: menuai) -> None:
     """Test we handle Form Exceptions."""
 
     with patch(
-        "homeassistant.components.tado.config_flow.Tado",
+        "menuai.components.tado.config_flow.Tado",
         side_effect=TadoException("Test exception"),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
@@ -178,7 +178,7 @@ async def test_tado_creation(hass: HomeAssistant) -> None:
     ],
 )
 async def test_wait_for_login_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tado_api: MagicMock,
     exception: Exception,
     error: str,
@@ -186,7 +186,7 @@ async def test_wait_for_login_exception(
     """Test that an exception in wait for login is handled properly."""
     mock_tado_api.device_activation.side_effect = exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     # @joostlek: I think the timeout step is not rightfully named, but heck, it works
@@ -195,21 +195,21 @@ async def test_wait_for_login_exception(
 
 
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tado_api: MagicMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test config flow options."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {CONF_FALLBACK: CONST_OVERLAY_TADO_DEFAULT},
     )
@@ -218,10 +218,10 @@ async def test_options_flow(
     assert result["data"] == {CONF_FALLBACK: CONST_OVERLAY_TADO_DEFAULT}
 
 
-async def test_homekit(hass: HomeAssistant, mock_tado_api: MagicMock) -> None:
+async def test_homekit(menuai: menuai, mock_tado_api: MagicMock) -> None:
     """Test that we abort from homekit if tado is already setup."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -237,23 +237,23 @@ async def test_homekit(hass: HomeAssistant, mock_tado_api: MagicMock) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "homekit_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].unique_id == "1"
 
 
 async def test_homekit_already_setup(
-    hass: HomeAssistant, mock_tado_api: MagicMock
+    menuai: menuai, mock_tado_api: MagicMock
 ) -> None:
     """Test that we abort from homekit if tado is already setup."""
 
     entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_USERNAME: "mock", CONF_PASSWORD: "mock"}
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(

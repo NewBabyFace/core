@@ -2,15 +2,15 @@
 
 from volvooncall import Connection
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_PASSWORD,
     CONF_REGION,
     CONF_UNIT_SYSTEM,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_SCANDINAVIAN_MILES,
@@ -23,7 +23,7 @@ from .coordinator import VolvoUpdateCoordinator
 from .models import VolvoData
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the Volvo On Call component from a ConfigEntry."""
 
     # added CONF_UNIT_SYSTEM / deprecated CONF_SCANDINAVIAN_MILES in 2022.10 to support imperial units
@@ -36,9 +36,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             UNIT_SYSTEM_SCANDINAVIAN_MILES if scandinavian_miles else UNIT_SYSTEM_METRIC
         )
 
-        hass.config_entries.async_update_entry(entry, data=new_conf)
+        menuai.config_entries.async_update_entry(entry, data=new_conf)
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     connection = Connection(
         session=session,
@@ -48,24 +48,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         region=entry.data[CONF_REGION],
     )
 
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
-    volvo_data = VolvoData(hass, connection, entry)
+    volvo_data = VolvoData(menuai, connection, entry)
 
-    coordinator = VolvoUpdateCoordinator(hass, entry, volvo_data)
+    coordinator = VolvoUpdateCoordinator(menuai, entry, volvo_data)
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    menuai.data[DOMAIN][entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

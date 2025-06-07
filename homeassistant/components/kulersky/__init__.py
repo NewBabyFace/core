@@ -2,12 +2,12 @@
 
 import logging
 
-from homeassistant.components.bluetooth import async_ble_device_from_address
-from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
-from homeassistant.const import CONF_ADDRESS, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.components.bluetooth import async_ble_device_from_address
+from menuai.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
+from menuai.const import CONF_ADDRESS, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 
@@ -16,27 +16,27 @@ PLATFORMS = [Platform.LIGHT]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Kuler Sky from a config entry."""
     ble_device = async_ble_device_from_address(
-        hass, entry.data[CONF_ADDRESS], connectable=True
+        menuai, entry.data[CONF_ADDRESS], connectable=True
     )
     if not ble_device:
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
             translation_key="cannot_connect",
         )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
@@ -44,7 +44,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     # thread to add devices. Version 2 has one config entry per device, and
     # supports core bluetooth discovery
     if config_entry.version == 1:
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         devices = dev_reg.devices.get_devices_for_config_entry_id(config_entry.entry_id)
 
         if len(devices) == 0:
@@ -54,7 +54,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         first_device = devices[0]
         domain_identifiers = [i for i in first_device.identifiers if i[0] == DOMAIN]
         address = next(iter(domain_identifiers))[1]
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry,
             title=first_device.name or address,
             data={CONF_ADDRESS: address},
@@ -67,8 +67,8 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             domain_identifiers = [i for i in device.identifiers if i[0] == DOMAIN]
             address = next(iter(domain_identifiers))[1]
 
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": SOURCE_INTEGRATION_DISCOVERY},
                     data={CONF_ADDRESS: address},

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from tesla_fleet_api.const import Scope
 from tesla_fleet_api.tesla import EnergySite, VehicleFleet
 
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.helpers.device_registry import DeviceInfo
 
 from .coordinator import (
     TeslaFleetEnergySiteHistoryCoordinator,

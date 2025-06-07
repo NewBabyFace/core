@@ -10,12 +10,12 @@ from typing import Any, cast
 from pyasuswrt import AsusWrtError
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     DEFAULT_CONSIDER_HOME,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_BASE,
     CONF_HOST,
     CONF_MODE,
@@ -24,15 +24,15 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.selector import SelectSelector, SelectSelectorConfig
+from menuai.helpers.typing import VolDictType
 
 from .bridge import AsusWrtBridge
 from .const import (
@@ -185,7 +185,7 @@ class AsusWrtFlowHandler(ConfigFlow, domain=DOMAIN):
         error: str | None = None
 
         conf = {**user_input, CONF_MODE: MODE_ROUTER}
-        api = AsusWrtBridge.get_bridge(self.hass, conf)
+        api = AsusWrtBridge.get_bridge(self.menuai, conf)
         try:
             await api.async_connect()
 
@@ -249,11 +249,11 @@ class AsusWrtFlowHandler(ConfigFlow, domain=DOMAIN):
             return self._show_setup_form(error="pwd_required")
         if not (pwd or ssh):
             return self._show_setup_form(error="pwd_or_ssh")
-        if ssh and not await self.hass.async_add_executor_job(_is_file, ssh):
+        if ssh and not await self.menuai.async_add_executor_job(_is_file, ssh):
             return self._show_setup_form(error="ssh_not_file")
 
         host: str = user_input[CONF_HOST]
-        if not await self.hass.async_add_executor_job(_get_ip, host):
+        if not await self.menuai.async_add_executor_job(_get_ip, host):
             return self._show_setup_form(error="invalid_host")
 
         result, unique_id = await self._async_check_connection(user_input)

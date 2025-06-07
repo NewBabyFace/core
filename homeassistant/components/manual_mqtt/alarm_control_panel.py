@@ -8,14 +8,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import mqtt
-from homeassistant.components.alarm_control_panel import (
+from menuai.components import mqtt
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_CODE,
     CONF_DELAY_TIME,
     CONF_DISARM_AFTER_TRIGGER,
@@ -24,16 +24,16 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TRIGGER_TIME,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import (
     async_track_point_in_time,
     async_track_state_change_event,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ PLATFORM_SCHEMA = vol.Schema(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -202,13 +202,13 @@ async def async_setup_platform(
     # Make sure MQTT integration is enabled and the client is available
     # We cannot count on dependencies as the alarm_control_panel platform setup
     # also will be triggered when mqtt is loading the `alarm_control_panel` platform
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return
     add_entities(
         [
             ManualMQTTAlarm(
-                hass,
+                menuai,
                 config[CONF_NAME],
                 config.get(CONF_CODE),
                 config.get(CONF_CODE_TEMPLATE),
@@ -252,7 +252,7 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
 
     def __init__(
         self,
-        hass,
+        menuai,
         name,
         code,
         code_template,
@@ -271,7 +271,7 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
     ):
         """Init the manual MQTT alarm panel."""
         self._state = AlarmControlPanelState.DISARMED
-        self._hass = hass
+        self._menuai = menuai
         self._attr_name = name
         if code_template:
             self._code = code_template
@@ -409,18 +409,18 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
         pending_time = self._pending_time(state)
         if state == AlarmControlPanelState.TRIGGERED:
             async_track_point_in_time(
-                self._hass, self.async_scheduled_update, self._state_ts + pending_time
+                self._menuai, self.async_scheduled_update, self._state_ts + pending_time
             )
 
             trigger_time = self._trigger_time_by_state[self._previous_state]
             async_track_point_in_time(
-                self._hass,
+                self._menuai,
                 self.async_scheduled_update,
                 self._state_ts + pending_time + trigger_time,
             )
         elif state in SUPPORTED_PENDING_STATES and pending_time:
             async_track_point_in_time(
-                self._hass, self.async_scheduled_update, self._state_ts + pending_time
+                self._menuai, self.async_scheduled_update, self._state_ts + pending_time
             )
 
     def _async_validate_code(self, code, state):
@@ -440,7 +440,7 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
         if not alarm_code or code == alarm_code:
             return
 
-        raise HomeAssistantError("Invalid alarm code provided")
+        raise menuaiError("Invalid alarm code provided")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -457,10 +457,10 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
         """Update state at a scheduled point in time."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
         async_track_state_change_event(
-            self.hass, [self.entity_id], self._async_state_changed_listener
+            self.menuai, [self.entity_id], self._async_state_changed_listener
         )
 
         async def message_received(msg):
@@ -482,7 +482,7 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
                 return
 
         await mqtt.async_subscribe(
-            self.hass, self._command_topic, message_received, self._qos
+            self.menuai, self._command_topic, message_received, self._qos
         )
 
     async def _async_state_changed_listener(
@@ -492,5 +492,5 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
         if (new_state := event.data["new_state"]) is None:
             return
         await mqtt.async_publish(
-            self.hass, self._state_topic, new_state.state, self._qos, True
+            self.menuai, self._state_topic, new_state.state, self._qos, True
         )

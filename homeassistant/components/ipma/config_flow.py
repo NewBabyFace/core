@@ -8,10 +8,10 @@ from pyipma.api import IPMA_API
 from pyipma.location import Location
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class IpmaFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match(user_input)
 
-            api = IPMA_API(async_get_clientsession(self.hass))
+            api = IPMA_API(async_get_clientsession(self.menuai))
 
             try:
                 location = await Location.get(
@@ -56,8 +56,8 @@ class IpmaFlowHandler(ConfigFlow, domain=DOMAIN):
                     }
                 ),
                 {
-                    CONF_LATITUDE: self.hass.config.latitude,
-                    CONF_LONGITUDE: self.hass.config.longitude,
+                    CONF_LATITUDE: self.menuai.config.latitude,
+                    CONF_LONGITUDE: self.menuai.config.longitude,
                 },
             ),
             errors=errors,

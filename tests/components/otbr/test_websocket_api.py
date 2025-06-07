@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import python_otbr_api
 
-from homeassistant.components import otbr, thread
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import otbr, thread
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import (
     BASE_URL,
@@ -23,10 +23,10 @@ from tests.typing import MockHAClientWebSocket, WebSocketGenerator
 
 @pytest.fixture
 async def websocket_client(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> MockHAClientWebSocket:
     """Create a websocket client."""
-    return await hass_ws_client(hass)
+    return await menuai_ws_client(menuai)
 
 
 @pytest.fixture(autouse=True)
@@ -35,7 +35,7 @@ def mock_supervisor_client(supervisor_client: AsyncMock) -> None:
 
 
 async def test_get_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -80,13 +80,13 @@ async def test_get_info(
 
 
 async def test_get_info_no_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test async_get_info."""
-    await async_setup_component(hass, "otbr", {})
-    websocket_client = await hass_ws_client(hass)
+    await async_setup_component(menuai, "otbr", {})
+    websocket_client = await menuai_ws_client(menuai)
     await websocket_client.send_json_auto_id({"type": "otbr/info"})
 
     msg = await websocket_client.receive_json()
@@ -95,7 +95,7 @@ async def test_get_info_no_entry(
 
 
 async def test_get_info_fetch_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -119,7 +119,7 @@ async def test_get_info_fetch_fails(
 
 
 async def test_create_network(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -138,10 +138,10 @@ async def test_create_network(
             return_value=TEST_BORDER_AGENT_EXTENDED_ADDRESS,
         ),
         patch(
-            "homeassistant.components.thread.dataset_store.DatasetStore.async_add"
+            "menuai.components.thread.dataset_store.DatasetStore.async_add"
         ) as mock_add,
         patch(
-            "homeassistant.components.otbr.util.random.randint",
+            "menuai.components.otbr.util.random.randint",
             return_value=0x1234,
         ),
     ):
@@ -170,13 +170,13 @@ async def test_create_network(
 
 
 async def test_create_network_no_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test create network."""
-    await async_setup_component(hass, "otbr", {})
-    websocket_client = await hass_ws_client(hass)
+    await async_setup_component(menuai, "otbr", {})
+    websocket_client = await menuai_ws_client(menuai)
     await websocket_client.send_json_auto_id(
         {"type": "otbr/create_network", "extended_address": "blah"}
     )
@@ -187,7 +187,7 @@ async def test_create_network_no_entry(
 
 
 async def test_create_network_fails_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -216,7 +216,7 @@ async def test_create_network_fails_1(
 
 
 async def test_create_network_fails_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -249,7 +249,7 @@ async def test_create_network_fails_2(
 
 
 async def test_create_network_fails_3(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -284,7 +284,7 @@ async def test_create_network_fails_3(
 
 
 async def test_create_network_fails_4(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -318,7 +318,7 @@ async def test_create_network_fails_4(
 
 
 async def test_create_network_fails_5(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -347,7 +347,7 @@ async def test_create_network_fails_5(
 
 
 async def test_create_network_fails_6(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -379,7 +379,7 @@ async def test_create_network_fails_6(
 
 
 async def test_create_network_fails_7(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -402,7 +402,7 @@ async def test_create_network_fails_7(
 
 
 async def test_create_network_fails_8(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -425,15 +425,15 @@ async def test_create_network_fails_8(
 
 
 async def test_set_network(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
 ) -> None:
     """Test set network."""
 
-    await thread.async_add_dataset(hass, "test", DATASET_CH15.hex())
-    dataset_store = await thread.dataset_store.async_get_store(hass)
+    await thread.async_add_dataset(menuai, "test", DATASET_CH15.hex())
+    dataset_store = await thread.dataset_store.async_get_store(menuai)
     dataset_id = list(dataset_store.datasets)[1]
 
     with (
@@ -465,13 +465,13 @@ async def test_set_network(
 
 
 async def test_set_network_no_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test set network."""
-    await async_setup_component(hass, "otbr", {})
-    websocket_client = await hass_ws_client(hass)
+    await async_setup_component(menuai, "otbr", {})
+    websocket_client = await menuai_ws_client(menuai)
     await websocket_client.send_json_auto_id(
         {
             "type": "otbr/set_network",
@@ -486,7 +486,7 @@ async def test_set_network_no_entry(
 
 
 async def test_set_network_channel_conflict(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     multiprotocol_addon_manager_mock,
     otbr_config_entry_multipan,
@@ -494,7 +494,7 @@ async def test_set_network_channel_conflict(
 ) -> None:
     """Test set network."""
 
-    dataset_store = await thread.dataset_store.async_get_store(hass)
+    dataset_store = await thread.dataset_store.async_get_store(menuai)
     dataset_id = list(dataset_store.datasets)[0]
 
     multiprotocol_addon_manager_mock.async_get_channel.return_value = 15
@@ -518,7 +518,7 @@ async def test_set_network_channel_conflict(
 
 
 async def test_set_network_unknown_dataset(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -544,14 +544,14 @@ async def test_set_network_unknown_dataset(
 
 
 async def test_set_network_fails_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
 ) -> None:
     """Test set network."""
-    await thread.async_add_dataset(hass, "test", DATASET_CH15.hex())
-    dataset_store = await thread.dataset_store.async_get_store(hass)
+    await thread.async_add_dataset(menuai, "test", DATASET_CH15.hex())
+    dataset_store = await thread.dataset_store.async_get_store(menuai)
     dataset_id = list(dataset_store.datasets)[1]
 
     with (
@@ -578,14 +578,14 @@ async def test_set_network_fails_1(
 
 
 async def test_set_network_fails_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
 ) -> None:
     """Test set network."""
-    await thread.async_add_dataset(hass, "test", DATASET_CH15.hex())
-    dataset_store = await thread.dataset_store.async_get_store(hass)
+    await thread.async_add_dataset(menuai, "test", DATASET_CH15.hex())
+    dataset_store = await thread.dataset_store.async_get_store(menuai)
     dataset_id = list(dataset_store.datasets)[1]
 
     with (
@@ -615,14 +615,14 @@ async def test_set_network_fails_2(
 
 
 async def test_set_network_fails_3(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
 ) -> None:
     """Test set network."""
-    await thread.async_add_dataset(hass, "test", DATASET_CH15.hex())
-    dataset_store = await thread.dataset_store.async_get_store(hass)
+    await thread.async_add_dataset(menuai, "test", DATASET_CH15.hex())
+    dataset_store = await thread.dataset_store.async_get_store(menuai)
     dataset_id = list(dataset_store.datasets)[1]
 
     with (
@@ -652,7 +652,7 @@ async def test_set_network_fails_3(
 
 
 async def test_set_network_fails_4(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -676,7 +676,7 @@ async def test_set_network_fails_4(
 
 
 async def test_set_network_fails_5(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -700,7 +700,7 @@ async def test_set_network_fails_5(
 
 
 async def test_set_channel(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_thread,
     websocket_client,
@@ -728,7 +728,7 @@ async def test_set_channel(
 
 
 async def test_set_channel_multiprotocol(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -756,13 +756,13 @@ async def test_set_channel_multiprotocol(
 
 
 async def test_set_channel_no_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test set channel."""
-    await async_setup_component(hass, "otbr", {})
-    websocket_client = await hass_ws_client(hass)
+    await async_setup_component(menuai, "otbr", {})
+    websocket_client = await menuai_ws_client(menuai)
     await websocket_client.send_json_auto_id(
         {
             "type": "otbr/set_channel",
@@ -777,7 +777,7 @@ async def test_set_channel_no_entry(
 
 
 async def test_set_channel_fails_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_thread,
     websocket_client,
@@ -807,7 +807,7 @@ async def test_set_channel_fails_1(
 
 
 async def test_set_channel_fails_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,
@@ -831,7 +831,7 @@ async def test_set_channel_fails_2(
 
 
 async def test_set_channel_fails_3(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     otbr_config_entry_multipan,
     websocket_client,

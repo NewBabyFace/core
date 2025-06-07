@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, patch
 from pushover_complete import BadAPIRequestError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.pushover.const import CONF_USER_KEY, DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.pushover.const import CONF_USER_KEY, DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import MOCK_CONFIG
 
@@ -29,18 +29,18 @@ def mock_pushover():
 def pushover_setup_fixture():
     """Patch pushover setup entry."""
     with patch(
-        "homeassistant.components.pushover.async_setup_entry", return_value=True
+        "menuai.components.pushover.async_setup_entry", return_value=True
     ):
         yield
 
 
-async def test_flow_user(hass: HomeAssistant) -> None:
+async def test_flow_user(menuai: menuai) -> None:
     """Test user initialized flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_CONFIG,
     )
@@ -49,20 +49,20 @@ async def test_flow_user(hass: HomeAssistant) -> None:
     assert result["data"] == MOCK_CONFIG
 
 
-async def test_flow_user_key_api_key_exists(hass: HomeAssistant) -> None:
+async def test_flow_user_key_api_key_exists(menuai: menuai) -> None:
     """Test user initialized flow with duplicate user key / api key pair."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_CONFIG,
     )
@@ -70,7 +70,7 @@ async def test_flow_user_key_api_key_exists(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_flow_name_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_name_already_configured(menuai: menuai) -> None:
     """Test user initialized flow with duplicate server."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -78,16 +78,16 @@ async def test_flow_name_already_configured(hass: HomeAssistant) -> None:
         unique_id="MYUSERKEY",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     new_config = MOCK_CONFIG.copy()
     new_config[CONF_USER_KEY] = "NEUSERWKEY"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=new_config,
     )
@@ -96,12 +96,12 @@ async def test_flow_name_already_configured(hass: HomeAssistant) -> None:
 
 
 async def test_flow_invalid_user_key(
-    hass: HomeAssistant, mock_pushover: MagicMock
+    menuai: menuai, mock_pushover: MagicMock
 ) -> None:
     """Test user initialized flow with wrong user key."""
 
     mock_pushover.side_effect = BadAPIRequestError("400: user key is invalid")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=MOCK_CONFIG,
@@ -112,12 +112,12 @@ async def test_flow_invalid_user_key(
 
 
 async def test_flow_invalid_api_key(
-    hass: HomeAssistant, mock_pushover: MagicMock
+    menuai: menuai, mock_pushover: MagicMock
 ) -> None:
     """Test user initialized flow with wrong api key."""
 
     mock_pushover.side_effect = BadAPIRequestError("400: application token is invalid")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=MOCK_CONFIG,
@@ -127,11 +127,11 @@ async def test_flow_invalid_api_key(
     assert result["errors"] == {CONF_API_KEY: "invalid_api_key"}
 
 
-async def test_flow_conn_err(hass: HomeAssistant, mock_pushover: MagicMock) -> None:
+async def test_flow_conn_err(menuai: menuai, mock_pushover: MagicMock) -> None:
     """Test user initialized flow with conn error."""
 
     mock_pushover.side_effect = BadAPIRequestError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=MOCK_CONFIG,
@@ -141,20 +141,20 @@ async def test_flow_conn_err(hass: HomeAssistant, mock_pushover: MagicMock) -> N
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_reauth_success(hass: HomeAssistant) -> None:
+async def test_reauth_success(menuai: menuai) -> None:
     """Test we can reauth."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: "NEWAPIKEY",
@@ -165,21 +165,21 @@ async def test_reauth_success(hass: HomeAssistant) -> None:
     assert result2["reason"] == "reauth_successful"
 
 
-async def test_reauth_failed(hass: HomeAssistant, mock_pushover: MagicMock) -> None:
+async def test_reauth_failed(menuai: menuai, mock_pushover: MagicMock) -> None:
     """Test we can reauth."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_pushover.side_effect = BadAPIRequestError("400: application token is invalid")
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: "WRONGAPIKEY",
@@ -192,13 +192,13 @@ async def test_reauth_failed(hass: HomeAssistant, mock_pushover: MagicMock) -> N
     }
 
 
-async def test_reauth_with_existing_config(hass: HomeAssistant) -> None:
+async def test_reauth_with_existing_config(menuai: menuai) -> None:
     """Test reauth fails if the api key entered exists in another entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     second_entry = MOCK_CONFIG.copy()
     second_entry[CONF_API_KEY] = "MYAPIKEY2"
@@ -207,14 +207,14 @@ async def test_reauth_with_existing_config(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         data=second_entry,
     )
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
 
-    result = await entry2.start_reauth_flow(hass)
+    result = await entry2.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: MOCK_CONFIG[CONF_API_KEY],

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import GeonetnzQuakesConfigEntry
 
@@ -30,7 +30,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GeonetnzQuakesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -62,10 +62,10 @@ class GeonetnzQuakesSensor(SensorEntity):
         self._removed = None
         self._remove_signal_status = None
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self._remove_signal_status = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             f"geonetnz_quakes_status_{self._config_entry_id}",
             self._update_status_callback,
         )
@@ -73,8 +73,8 @@ class GeonetnzQuakesSensor(SensorEntity):
         # First update is manual because of how the feed entity manager is updated.
         await self.async_update()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Call when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Call when entity will be removed from menuai."""
         if self._remove_signal_status:
             self._remove_signal_status()
 

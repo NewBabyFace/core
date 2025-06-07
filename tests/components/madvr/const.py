@@ -1,6 +1,6 @@
 """Constants for the MadVR tests."""
 
-from homeassistant.const import CONF_HOST, CONF_PORT
+from menuai.const import CONF_HOST, CONF_PORT
 
 MOCK_CONFIG = {
     CONF_HOST: "192.168.1.1",

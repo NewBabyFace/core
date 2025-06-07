@@ -11,16 +11,16 @@ from roombapy.discovery import RoombaDiscovery
 from roombapy.getpassword import RoombaPassword
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_DELAY, CONF_HOST, CONF_NAME, CONF_PASSWORD
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_DELAY, CONF_HOST, CONF_NAME, CONF_PASSWORD
+from menuai.core import menuai, callback
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import CannotConnect, async_connect_or_timeout, async_disconnect_or_timeout
 from .const import (
@@ -47,12 +47,12 @@ AUTH_HELP_URL_VALUE = (
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    roomba = await hass.async_add_executor_job(
+    roomba = await menuai.async_add_executor_job(
         partial(
             RoombaFactory.create_roomba,
             address=data[CONF_HOST],
@@ -63,9 +63,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         )
     )
 
-    info = await async_connect_or_timeout(hass, roomba)
+    info = await async_connect_or_timeout(menuai, roomba)
     if info:
-        await async_disconnect_or_timeout(hass, roomba)
+        await async_disconnect_or_timeout(menuai, roomba)
 
     return {
         ROOMBA_SESSION: info[ROOMBA_SESSION],
@@ -137,7 +137,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
             if flow_unique_id.startswith(self.blid):
                 return self.async_abort(reason="short_blid")
             if self.blid.startswith(flow_unique_id):
-                self.hass.config_entries.flow.async_abort(progress["flow_id"])
+                self.menuai.config_entries.flow.async_abort(progress["flow_id"])
 
         self.context["title_placeholders"] = {"host": self.host, "name": self.blid}
         return await self.async_step_user()
@@ -170,7 +170,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         already_configured = self._async_current_ids(False)
 
-        devices = await _async_discover_roombas(self.hass, self.host)
+        devices = await _async_discover_roombas(self.menuai, self.host)
 
         if devices:
             # Find already configured hosts
@@ -222,7 +222,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         self.host = user_input[CONF_HOST]
 
-        devices = await _async_discover_roombas(self.hass, self.host)
+        devices = await _async_discover_roombas(self.menuai, self.host)
         if not devices:
             return self.async_abort(reason="cannot_connect")
         self.blid = devices[0].blid
@@ -249,7 +249,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
         roomba_pw = RoombaPassword(self.host)
 
         try:
-            password = await self.hass.async_add_executor_job(roomba_pw.get_password)
+            password = await self.menuai.async_add_executor_job(roomba_pw.get_password)
         except OSError:
             return await self.async_step_link_manual()
 
@@ -265,7 +265,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if not self.name:
             try:
-                info = await validate_input(self.hass, config)
+                info = await validate_input(self.menuai, config)
             except CannotConnect:
                 return self.async_abort(reason="cannot_connect")
 
@@ -287,7 +287,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
                 **DEFAULT_OPTIONS,
             }
             try:
-                info = await validate_input(self.hass, config)
+                info = await validate_input(self.menuai, config)
             except CannotConnect:
                 errors = {"base": "cannot_connect"}
             else:
@@ -344,11 +344,11 @@ def _async_blid_from_hostname(hostname: str) -> str:
 
 
 async def _async_discover_roombas(
-    hass: HomeAssistant, host: str | None = None
+    menuai: menuai, host: str | None = None
 ) -> list[RoombaInfo]:
     discovered_hosts: set[str] = set()
     devices: list[RoombaInfo] = []
-    discover_lock = hass.data.setdefault(ROOMBA_DISCOVERY_LOCK, asyncio.Lock())
+    discover_lock = menuai.data.setdefault(ROOMBA_DISCOVERY_LOCK, asyncio.Lock())
     discover_attempts = HOST_ATTEMPTS if host else ALL_ATTEMPTS
 
     for attempt in range(discover_attempts + 1):
@@ -357,11 +357,11 @@ async def _async_discover_roombas(
             discovered: set[RoombaInfo] = set()
             try:
                 if host:
-                    device = await hass.async_add_executor_job(discovery.get, host)
+                    device = await menuai.async_add_executor_job(discovery.get, host)
                     if device:
                         discovered.add(device)
                 else:
-                    discovered = await hass.async_add_executor_job(discovery.get_all)
+                    discovered = await menuai.async_add_executor_job(discovery.get_all)
             except OSError:
                 # Socket temporarily unavailable
                 await asyncio.sleep(ROOMBA_WAKE_TIME * attempt)

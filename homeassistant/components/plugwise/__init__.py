@@ -1,28 +1,28 @@
-"""Plugwise platform for Home Assistant Core."""
+"""Plugwise platform for MenuAI Core."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN, LOGGER, PLATFORMS
 from .coordinator import PlugwiseConfigEntry, PlugwiseDataUpdateCoordinator
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PlugwiseConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: PlugwiseConfigEntry) -> bool:
     """Set up Plugwise components from a config entry."""
-    await er.async_migrate_entries(hass, entry.entry_id, async_migrate_entity_entry)
+    await er.async_migrate_entries(menuai, entry.entry_id, async_migrate_entity_entry)
 
-    coordinator = PlugwiseDataUpdateCoordinator(hass, entry)
+    coordinator = PlugwiseDataUpdateCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
-    migrate_sensor_entities(hass, coordinator)
+    migrate_sensor_entities(menuai, coordinator)
 
     entry.runtime_data = coordinator
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, str(coordinator.api.gateway_id))},
@@ -33,14 +33,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlugwiseConfigEntry) -> 
         sw_version=str(coordinator.api.smile_version),
     )  # required for adding the entity-less P1 Gateway
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: PlugwiseConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: PlugwiseConfigEntry) -> bool:
     """Unload the Plugwise components."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 @callback
@@ -71,11 +71,11 @@ def async_migrate_entity_entry(entry: er.RegistryEntry) -> dict[str, Any] | None
 
 
 def migrate_sensor_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     coordinator: PlugwiseDataUpdateCoordinator,
 ) -> None:
     """Migrate Sensors if needed."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     # Migrating opentherm_outdoor_temperature
     # to opentherm_outdoor_air_temperature sensor

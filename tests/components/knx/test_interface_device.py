@@ -6,11 +6,11 @@ from freezegun.api import FrozenDateTimeFactory
 from xknx.core import XknxConnectionState, XknxConnectionType
 from xknx.telegram import IndividualAddress
 
-from homeassistant.components.knx.sensor import SCAN_INTERVAL
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.knx.sensor import SCAN_INTERVAL
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import KNXTestKit
 
@@ -19,7 +19,7 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_diagnostic_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
@@ -52,10 +52,10 @@ async def test_diagnostic_entities(
     knx.xknx.connection_manager.cemi_count_outgoing = 10
     knx.xknx.connection_manager.cemi_count_outgoing_error = 2
 
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(events) == 3  # 5 polled sensors - 2 disabled
     events.clear()
@@ -68,12 +68,12 @@ async def test_diagnostic_entities(
         ("sensor.knx_interface_outgoing_telegram_errors", "2"),
         ("sensor.knx_interface_telegrams", "31"),
     ):
-        assert hass.states.get(entity_id).state == test_state
+        assert menuai.states.get(entity_id).state == test_state
 
     knx.xknx.connection_manager.connection_state_changed(
         state=XknxConnectionState.DISCONNECTED
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 4  # 3 not always_available + 3 force_update - 2 disabled
     events.clear()
 
@@ -82,7 +82,7 @@ async def test_diagnostic_entities(
         state=XknxConnectionState.CONNECTED,
         connection_type=XknxConnectionType.TUNNEL_UDP,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 6  # all diagnostic sensors - counters are reset on connect
 
     for entity_id, test_state in (
@@ -93,11 +93,11 @@ async def test_diagnostic_entities(
         ("sensor.knx_interface_outgoing_telegram_errors", "0"),
         ("sensor.knx_interface_telegrams", "0"),
     ):
-        assert hass.states.get(entity_id).state == test_state
+        assert menuai.states.get(entity_id).state == test_state
 
 
 async def test_removed_entity(
-    hass: HomeAssistant, knx: KNXTestKit, entity_registry: er.EntityRegistry
+    menuai: menuai, knx: KNXTestKit, entity_registry: er.EntityRegistry
 ) -> None:
     """Test unregister callback when entity is removed."""
     with patch(
@@ -113,15 +113,15 @@ async def test_removed_entity(
 
 
 async def test_remove_interface_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     device_registry: dr.DeviceRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test device removal."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     knx_devices = device_registry.devices.get_devices_for_config_entry_id(
         knx.mock_config_entry.entry_id
     )

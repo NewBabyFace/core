@@ -6,10 +6,10 @@ from http import HTTPStatus
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components import alexa
-from homeassistant.components.alexa import const
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.setup import async_setup_component
+from menuai.components import alexa
+from menuai.components.alexa import const
+from menuai.core import menuai, callback
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -24,23 +24,23 @@ NPR_NEWS_MP3_URL = "https://pd.npr.org/anon.npr-mp3/npr/news/newscast.mp3"
 
 @pytest.fixture
 async def alexa_client(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> TestClient:
-    """Initialize a Home Assistant server for testing this module."""
+    """Initialize a MenuAI server for testing this module."""
 
     @callback
     def mock_service(call):
         calls.append(call)
 
-    hass.services.async_register("test", "alexa", mock_service)
+    menuai.services.async_register("test", "alexa", mock_service)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         alexa.DOMAIN,
         {
             # Key is here to verify we allow other keys in config too
-            "homeassistant": {},
+            "menuai": {},
             "alexa": {
                 "flash_briefings": {
                     "password": "pass/abc",
@@ -64,7 +64,7 @@ async def alexa_client(
             },
         },
     )
-    return await hass_client()
+    return await menuai_client()
 
 
 def _flash_briefing_req(client, briefing_id, password="pass%2Fabc"):

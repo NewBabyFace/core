@@ -7,8 +7,8 @@ from linkplay.consts import API_ENDPOINT
 from linkplay.endpoint import LinkPlayApiEndpoint
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.linkplay.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.linkplay.const import DOMAIN
+from menuai.core import menuai
 
 from . import setup_integration
 from .conftest import HOST, mock_lp_aiohttp_client
@@ -19,8 +19,8 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -39,17 +39,17 @@ async def test_diagnostics(
         for endpoint in endpoints:
             mock_session.get(
                 API_ENDPOINT.format(str(endpoint), "getPlayerStatusEx"),
-                text=await async_load_fixture(hass, "getPlayerEx.json", DOMAIN),
+                text=await async_load_fixture(menuai, "getPlayerEx.json", DOMAIN),
             )
 
             mock_session.get(
                 API_ENDPOINT.format(str(endpoint), "getStatusEx"),
-                text=await async_load_fixture(hass, "getStatusEx.json", DOMAIN),
+                text=await async_load_fixture(menuai, "getStatusEx.json", DOMAIN),
             )
 
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
         assert (
-            await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+            await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
             == snapshot
         )

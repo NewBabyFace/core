@@ -2,11 +2,11 @@
 
 from enocean.utils import combine_hex
 
-from homeassistant.components.enocean import DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.enocean import DOMAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, assert_setup_component
 
@@ -23,7 +23,7 @@ SWITCH_CONFIG = {
 
 
 async def test_unique_id_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test EnOcean switch ID migration."""
@@ -37,7 +37,7 @@ async def test_unique_id_migration(
 
     entry = MockConfigEntry(domain=DOMAIN, data={"device": "/dev/null"})
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Add a switch with an old unique_id to the entity registry
     entity_entry = entity_registry.async_get_or_create(
@@ -56,12 +56,12 @@ async def test_unique_id_migration(
 
     with assert_setup_component(1, SWITCH_DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             SWITCH_DOMAIN,
             SWITCH_CONFIG,
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check that new entry has a new unique_id
     entity_entry = entity_registry.async_get(switch_entity_id)

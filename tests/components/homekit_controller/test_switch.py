@@ -10,8 +10,8 @@ from aiohomekit.model.characteristics import (
 )
 from aiohomekit.model.services import ServicesTypes
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -62,12 +62,12 @@ def create_char_switch_service(accessory: Accessory) -> None:
 
 
 async def test_switch_change_outlet_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit outlet on and off again."""
-    helper = await setup_test_component(hass, get_next_aid(), create_switch_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_switch_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -77,7 +77,7 @@ async def test_switch_change_outlet_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": "switch.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -89,10 +89,10 @@ async def test_switch_change_outlet_state(
 
 
 async def test_switch_read_outlet_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit outlet accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_switch_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_switch_service)
 
     # Initial state is that the switch is off and the outlet isn't in use
     switch_1 = await helper.poll_and_get_state()
@@ -124,12 +124,12 @@ async def test_switch_read_outlet_state(
 
 
 async def test_faucet_change_active_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit outlet on and off again."""
-    helper = await setup_test_component(hass, get_next_aid(), create_faucet_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_faucet_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -139,7 +139,7 @@ async def test_faucet_change_active_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": "switch.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -151,10 +151,10 @@ async def test_faucet_change_active_state(
 
 
 async def test_faucet_read_active_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit outlet accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_faucet_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_faucet_service)
 
     # Initial state is that the switch is off and the outlet isn't in use
     switch_1 = await helper.poll_and_get_state()
@@ -176,12 +176,12 @@ async def test_faucet_read_active_state(
 
 
 async def test_valve_change_active_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a valve on and off again."""
-    helper = await setup_test_component(hass, get_next_aid(), create_valve_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_valve_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -191,7 +191,7 @@ async def test_valve_change_active_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": "switch.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -203,10 +203,10 @@ async def test_valve_change_active_state(
 
 
 async def test_valve_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a valve accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_valve_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_valve_service)
 
     # Initial state is that the switch is off and the outlet isn't in use
     switch_1 = await helper.poll_and_get_state()
@@ -238,14 +238,14 @@ async def test_valve_read_state(
 
 
 async def test_char_switch_change_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a characteristic on and off again."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_char_switch_service, suffix="pairing_mode"
+        menuai, get_next_aid(), create_char_switch_service, suffix="pairing_mode"
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {"entity_id": "switch.testdevice_pairing_mode"},
@@ -258,7 +258,7 @@ async def test_char_switch_change_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_off",
         {"entity_id": "switch.testdevice_pairing_mode"},
@@ -273,11 +273,11 @@ async def test_char_switch_change_state(
 
 
 async def test_char_switch_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit characteristic switch."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_char_switch_service, suffix="pairing_mode"
+        menuai, get_next_aid(), create_char_switch_service, suffix="pairing_mode"
     )
 
     # Simulate that someone switched on the device in the real world not via HA
@@ -296,7 +296,7 @@ async def test_char_switch_read_state(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -313,7 +313,7 @@ async def test_migrate_unique_id(
         f"homekit-0001-aid:{aid}-sid:8-cid:9",
     )
     await setup_test_component(
-        hass, aid, create_char_switch_service, suffix="pairing_mode"
+        menuai, aid, create_char_switch_service, suffix="pairing_mode"
     )
 
     assert (

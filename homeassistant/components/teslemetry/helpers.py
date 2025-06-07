@@ -4,7 +4,7 @@ from typing import Any
 
 from tesla_fleet_api.exceptions import TeslaFleetError
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN, LOGGER
 
@@ -27,7 +27,7 @@ async def handle_command(command) -> dict[str, Any]:
     try:
         result = await command
     except TeslaFleetError as e:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="command_exception",
             translation_placeholders={"message": e.message},
@@ -42,26 +42,26 @@ async def handle_vehicle_command(command) -> Any:
     if (response := result.get("response")) is None:
         if error := result.get("error"):
             # No response with error
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_error",
                 translation_placeholders={"error": error},
             )
         # No response without error (unexpected)
-        raise HomeAssistantError(f"Unknown response: {response}")
+        raise menuaiError(f"Unknown response: {response}")
     if (result := response.get("result")) is not True:
         if reason := response.get("reason"):
             if reason in ("already_set", "not_charging", "requested"):
                 # Reason is acceptable
                 return result
             # Result of false with reason
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_reason",
                 translation_placeholders={"reason": reason},
             )
         # Result of false without reason (unexpected)
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN, translation_key="command_no_result"
         )
     # Response with result of true

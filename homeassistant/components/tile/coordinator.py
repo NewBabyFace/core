@@ -6,11 +6,11 @@ from pytile.api import API
 from pytile.errors import InvalidAuthError, SessionExpiredError, TileError
 from pytile.tile import Tile
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -23,11 +23,11 @@ class TileCoordinator(DataUpdateCoordinator[None]):
     config_entry: TileConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: TileConfigEntry, client: API, tile: Tile
+        self, menuai: menuai, entry: TileConfigEntry, client: API, tile: Tile
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             name=tile.name,
             config_entry=entry,

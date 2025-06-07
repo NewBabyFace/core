@@ -6,15 +6,15 @@ import logging
 
 from pyezvizapi.exceptions import HTTPError, InvalidHost, PyEzvizError
 
-from homeassistant.components import ffmpeg
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.components.ffmpeg import get_ffmpeg_manager
-from homeassistant.components.stream import CONF_USE_WALLCLOCK_AS_TIMESTAMPS
-from homeassistant.config_entries import SOURCE_IGNORE, SOURCE_INTEGRATION_DISCOVERY
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import discovery_flow
-from homeassistant.helpers.entity_platform import (
+from menuai.components import ffmpeg
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.components.ffmpeg import get_ffmpeg_manager
+from menuai.components.stream import CONF_USE_WALLCLOCK_AS_TIMESTAMPS
+from menuai.config_entries import SOURCE_IGNORE, SOURCE_INTEGRATION_DISCOVERY
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import discovery_flow
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
@@ -34,7 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -47,7 +47,7 @@ async def async_setup_entry(
     for camera, value in coordinator.data.items():
         camera_rtsp_entry = [
             item
-            for item in hass.config_entries.async_entries(DOMAIN)
+            for item in menuai.config_entries.async_entries(DOMAIN)
             if item.unique_id == camera and item.source != SOURCE_IGNORE
         ]
 
@@ -67,7 +67,7 @@ async def async_setup_entry(
 
         else:
             discovery_flow.async_create_flow(
-                hass,
+                menuai,
                 DOMAIN,
                 context={"source": SOURCE_INTEGRATION_DISCOVERY},
                 data={
@@ -91,7 +91,7 @@ async def async_setup_entry(
 
         camera_entities.append(
             EzvizCamera(
-                hass,
+                menuai,
                 coordinator,
                 camera,
                 camera_username,
@@ -118,7 +118,7 @@ class EzvizCamera(EzvizEntity, Camera):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: EzvizDataUpdateCoordinator,
         serial: str,
         camera_username: str,
@@ -136,7 +136,7 @@ class EzvizCamera(EzvizEntity, Camera):
         self._rtsp_stream = camera_rtsp_stream
         self._local_rtsp_port = local_rtsp_port
         self._ffmpeg_arguments = ffmpeg_arguments
-        self._ffmpeg = get_ffmpeg_manager(hass)
+        self._ffmpeg = get_ffmpeg_manager(menuai)
         self._attr_unique_id = serial
         if camera_password:
             self._attr_supported_features = CameraEntityFeature.STREAM
@@ -179,7 +179,7 @@ class EzvizCamera(EzvizEntity, Camera):
         if self._rtsp_stream is None:
             return None
         return await ffmpeg.async_get_image(
-            self.hass, self._rtsp_stream, width=width, height=height
+            self.menuai, self._rtsp_stream, width=width, height=height
         )
 
     async def stream_source(self) -> str | None:

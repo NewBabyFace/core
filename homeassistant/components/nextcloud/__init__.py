@@ -9,16 +9,16 @@ from nextcloudmonitor import (
     NextcloudMonitorRequestError,
 )
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_PASSWORD,
     CONF_URL,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import entity_registry as er
 
 from .coordinator import NextcloudConfigEntry, NextcloudDataUpdateCoordinator
 
@@ -28,11 +28,11 @@ PLATFORMS = (Platform.SENSOR, Platform.BINARY_SENSOR, Platform.UPDATE)
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: NextcloudConfigEntry) -> bool:
     """Set up the Nextcloud integration."""
 
     # migrate old entity unique ids
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     entities: list[er.RegistryEntry] = er.async_entries_for_config_entry(
         entity_reg, entry.entry_id
     )
@@ -54,14 +54,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) ->
         )
 
     try:
-        ncm = await hass.async_add_executor_job(_connect_nc)
+        ncm = await menuai.async_add_executor_job(_connect_nc)
     except NextcloudMonitorAuthorizationError as ex:
         raise ConfigEntryAuthFailed from ex
     except (NextcloudMonitorConnectionError, NextcloudMonitorRequestError) as ex:
         raise ConfigEntryNotReady from ex
 
     coordinator = NextcloudDataUpdateCoordinator(
-        hass,
+        menuai,
         ncm,
         entry,
     )
@@ -70,11 +70,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) ->
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NextcloudConfigEntry) -> bool:
     """Unload Nextcloud integration."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

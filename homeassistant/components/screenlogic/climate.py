@@ -10,7 +10,7 @@ from screenlogicpy.const.msg import CODE
 from screenlogicpy.device_const.heat import HEAT_MODE
 from screenlogicpy.device_const.system import EQUIPMENT_FLAG
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_PRESET_MODE,
     ClimateEntity,
     ClimateEntityDescription,
@@ -18,11 +18,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .entity import ScreenLogicPushEntity, ScreenLogicPushEntityDescription
 from .types import ScreenLogicConfigEntry
@@ -40,7 +40,7 @@ SUPPORTED_PRESETS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ScreenLogicConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -150,7 +150,7 @@ class ScreenLogicClimate(ScreenLogicPushEntity, ClimateEntity, RestoreEntity):
                 int(self._data_key), int(temperature)
             )
         except ScreenLogicCommunicationError as sle:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set_temperature {temperature} on body"
                 f" {self.entity_data[ATTR.BODY_TYPE][ATTR.VALUE]}:"
                 f" {sle.msg}"
@@ -167,7 +167,7 @@ class ScreenLogicClimate(ScreenLogicPushEntity, ClimateEntity, RestoreEntity):
         try:
             await self.gateway.async_set_heat_mode(int(self._data_key), int(mode.value))
         except ScreenLogicCommunicationError as sle:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set_hvac_mode {mode.name} on body"
                 f" {self.entity_data[ATTR.BODY_TYPE][ATTR.VALUE]}:"
                 f" {sle.msg}"
@@ -185,16 +185,16 @@ class ScreenLogicClimate(ScreenLogicPushEntity, ClimateEntity, RestoreEntity):
         try:
             await self.gateway.async_set_heat_mode(int(self._data_key), int(mode.value))
         except ScreenLogicCommunicationError as sle:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set_preset_mode {mode.name} on body"
                 f" {self.entity_data[ATTR.BODY_TYPE][ATTR.VALUE]}:"
                 f" {sle.msg}"
             ) from sle
         _LOGGER.debug("Set preset_mode on body %s to %s", self._data_key, mode.name)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity is about to be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         _LOGGER.debug("Startup last preset is %s", self._last_preset)
         if self._last_preset is not None:

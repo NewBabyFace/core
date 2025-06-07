@@ -7,10 +7,10 @@ from freezegun.api import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 from tests.typing import ClientSessionGenerator
@@ -20,35 +20,35 @@ from tests.typing import ClientSessionGenerator
 def calendar_only() -> Generator[None]:
     """Enable only the calendar platform."""
     with patch(
-        "homeassistant.components.habitica.PLATFORMS",
+        "menuai.components.habitica.PLATFORMS",
         [Platform.CALENDAR],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def set_tz(hass: HomeAssistant) -> None:
+async def set_tz(menuai: menuai) -> None:
     """Fixture to set timezone."""
-    await hass.config.async_set_time_zone("Europe/Berlin")
+    await menuai.config.async_set_time_zone("Europe/Berlin")
 
 
 @pytest.mark.usefixtures("habitica")
 @freeze_time("2024-09-20T22:00:00.000Z")
 async def test_calendar_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test setup of the Habitica calendar platform."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -73,21 +73,21 @@ async def test_calendar_platform(
 )
 @pytest.mark.usefixtures("habitica")
 async def test_api_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     entity: str,
     start_date: str,
     end_date: str,
 ) -> None:
     """Test calendar event."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         f"/api/calendars/{entity}?start={start_date}&end={end_date}"
     )

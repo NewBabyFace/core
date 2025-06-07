@@ -8,13 +8,13 @@ from typing import Any
 
 from webio_api import Output as NASwebOutput
 
-from homeassistant.components.switch import DOMAIN as DOMAIN_SWITCH, SwitchEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import (
+from menuai.components.switch import DOMAIN as DOMAIN_SWITCH, SwitchEntity
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import DiscoveryInfoType
+from menuai.helpers.update_coordinator import (
     BaseCoordinatorEntity,
     BaseDataUpdateCoordinatorProtocol,
 )
@@ -36,7 +36,7 @@ def _get_output(coordinator: NASwebCoordinator, index: int) -> NASwebOutput | No
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: NASwebConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -60,7 +60,7 @@ async def async_setup_entry(
             entities_to_add.append(new_output)
             current_outputs.add(index)
         async_add_entities(entities_to_add)
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         for index in removed:
             unique_id = f"{DOMAIN}.{config.unique_id}.relay_switch.{index}"
             if entity_id := entity_registry.async_get_entity_id(
@@ -97,9 +97,9 @@ class RelaySwitch(SwitchEntity, BaseCoordinatorEntity):
             identifiers={(DOMAIN, self._output.webio_serial)},
         )
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     @callback

@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from homeassistant.components.imeon_inverter.const import DOMAIN
-from homeassistant.config_entries import SOURCE_SSDP, SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_SERIAL
+from menuai.components.imeon_inverter.const import DOMAIN
+from menuai.config_entries import SOURCE_SSDP, SOURCE_USER
+from menuai.const import CONF_HOST, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_SERIAL
 
 from .conftest import TEST_DISCOVER, TEST_SERIAL, TEST_USER_INPUT
 
@@ -20,17 +20,17 @@ pytestmark = pytest.mark.usefixtures("mock_async_setup_entry")
 
 
 async def test_form_valid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_async_setup_entry: AsyncMock,
 ) -> None:
     """Test we get the form and the config is created with the good entries."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -42,16 +42,16 @@ async def test_form_valid(
 
 
 async def test_form_invalid_auth(
-    hass: HomeAssistant, mock_imeon_inverter: MagicMock
+    menuai: menuai, mock_imeon_inverter: MagicMock
 ) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
 
     mock_imeon_inverter.login.return_value = False
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -60,7 +60,7 @@ async def test_form_invalid_auth(
 
     mock_imeon_inverter.login.return_value = True
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -77,19 +77,19 @@ async def test_form_invalid_auth(
     ],
 )
 async def test_form_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imeon_inverter: MagicMock,
     error: Exception,
     expected: str,
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
 
     mock_imeon_inverter.login.side_effect = error
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -98,7 +98,7 @@ async def test_form_exception(
 
     mock_imeon_inverter.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -106,17 +106,17 @@ async def test_form_exception(
 
 
 async def test_manual_setup_already_exists(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test that a flow with an existing id aborts."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -125,16 +125,16 @@ async def test_manual_setup_already_exists(
 
 
 async def test_get_serial_timeout(
-    hass: HomeAssistant, mock_imeon_inverter: MagicMock
+    menuai: menuai, mock_imeon_inverter: MagicMock
 ) -> None:
     """Test the timeout error handling of getting the serial number."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
 
     mock_imeon_inverter.get_serial.side_effect = TimeoutError
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -143,16 +143,16 @@ async def test_get_serial_timeout(
 
     mock_imeon_inverter.get_serial.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_ssdp(hass: HomeAssistant) -> None:
+async def test_ssdp(menuai: menuai) -> None:
     """Test a ssdp discovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=TEST_DISCOVER,
@@ -164,7 +164,7 @@ async def test_ssdp(hass: HomeAssistant) -> None:
     user_input = TEST_USER_INPUT.copy()
     user_input.pop(CONF_HOST)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input
     )
 
@@ -174,13 +174,13 @@ async def test_ssdp(hass: HomeAssistant) -> None:
 
 
 async def test_ssdp_already_exist(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test that a ssdp discovery flow with an existing id aborts."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=TEST_DISCOVER,
@@ -190,12 +190,12 @@ async def test_ssdp_already_exist(
     assert result["reason"] == "already_configured"
 
 
-async def test_ssdp_abort(hass: HomeAssistant) -> None:
+async def test_ssdp_abort(menuai: menuai) -> None:
     """Test that a ssdp discovery aborts if serial is unknown."""
     data = deepcopy(TEST_DISCOVER)
     data.upnp.pop(ATTR_UPNP_SERIAL, None)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=data,

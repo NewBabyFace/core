@@ -11,18 +11,18 @@ from onedrive_personal_sdk.exceptions import OneDriveException
 from onedrive_personal_sdk.models.items import AppRoot, ItemUpdate
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
     SOURCE_USER,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
-from homeassistant.helpers.instance_id import async_get as async_get_instance_id
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.helpers.instance_id import async_get as async_get_instance_id
 
 from .const import (
     CONF_DELETE_PERMANENTLY,
@@ -79,7 +79,7 @@ class OneDriveConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
             return cast(str, data[CONF_TOKEN][CONF_ACCESS_TOKEN])
 
         self.client = OneDriveClient(
-            get_access_token, async_get_clientsession(self.hass)
+            get_access_token, async_get_clientsession(self.menuai)
         )
 
         try:
@@ -120,7 +120,7 @@ class OneDriveConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Step to ask for the folder name."""
         errors: dict[str, str] = {}
-        instance_id = await async_get_instance_id(self.hass)
+        instance_id = await async_get_instance_id(self.menuai)
         if user_input is not None:
             try:
                 folder = await self.client.create_folder(

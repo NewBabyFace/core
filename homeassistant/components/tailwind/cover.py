@@ -13,14 +13,14 @@ from gotailwind import (
     TailwindError,
 )
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, LOGGER
 from .coordinator import TailwindConfigEntry
@@ -28,7 +28,7 @@ from .entity import TailwindDoorEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TailwindConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -69,19 +69,19 @@ class TailwindDoorCoverEntity(TailwindDoorEntity, CoverEntity):
                 operation=TailwindDoorOperationCommand.OPEN,
             )
         except TailwindDoorDisabledError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="door_disabled",
             ) from exc
         except TailwindDoorLockedOutError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="door_locked_out",
             ) from exc
         except TailwindDoorAlreadyInStateError:
             LOGGER.debug("Already in the requested state: %s", self.entity_id)
         except TailwindError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
             ) from exc
@@ -103,19 +103,19 @@ class TailwindDoorCoverEntity(TailwindDoorEntity, CoverEntity):
                 operation=TailwindDoorOperationCommand.CLOSE,
             )
         except TailwindDoorDisabledError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="door_disabled",
             ) from exc
         except TailwindDoorLockedOutError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="door_locked_out",
             ) from exc
         except TailwindDoorAlreadyInStateError:
             LOGGER.debug("Already in the requested state: %s", self.entity_id)
         except TailwindError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
             ) from exc

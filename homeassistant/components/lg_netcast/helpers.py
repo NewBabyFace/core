@@ -6,9 +6,9 @@ import xml.etree.ElementTree as ET
 from pylgnetcast import LgNetCastClient
 from requests import RequestException
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import DOMAIN
 
@@ -26,11 +26,11 @@ class NetcastDetails(TypedDict):
 
 
 async def async_discover_netcast_details(
-    hass: HomeAssistant, client: LgNetCastClient
+    menuai: menuai, client: LgNetCastClient
 ) -> NetcastDetails:
     """Discover UUID and Model Name from Netcast Tv."""
     try:
-        resp = await hass.async_add_executor_job(client.query_device_info)
+        resp = await menuai.async_add_executor_job(client.query_device_info)
     except RequestException as err:
         raise LGNetCastDetailDiscoveryError(
             f"Error in connecting to {client.url}"
@@ -46,13 +46,13 @@ async def async_discover_netcast_details(
 
 @callback
 def async_get_device_entry_by_device_id(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> DeviceEntry:
     """Get Device Entry from Device Registry by device ID.
 
     Raises ValueError if device ID is invalid.
     """
-    device_reg = dr.async_get(hass)
+    device_reg = dr.async_get(menuai)
     if (device := device_reg.async_get(device_id)) is None:
         raise ValueError(f"Device {device_id} is not a valid {DOMAIN} device.")
 

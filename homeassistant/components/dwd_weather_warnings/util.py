@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .exceptions import EntityNotFoundError
 
 
 def get_position_data(
-    hass: HomeAssistant, registry_id: str
+    menuai: menuai, registry_id: str
 ) -> tuple[float, float] | None:
     """Extract longitude and latitude from a device tracker."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     registry_entry = registry.async_get(registry_id)
     if registry_entry is None:
         raise EntityNotFoundError(f"Failed to find registry entry {registry_id}")
 
-    entity = hass.states.get(registry_entry.entity_id)
+    entity = menuai.states.get(registry_entry.entity_id)
     if entity is None:
         raise EntityNotFoundError(f"Failed to find entity {registry_entry.entity_id}")
 

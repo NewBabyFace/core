@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from hole.exceptions import HoleError
 
-from homeassistant.components.pi_hole.const import (
+from menuai.components.pi_hole.const import (
     DEFAULT_LOCATION,
     DEFAULT_NAME,
     DEFAULT_SSL,
     DEFAULT_VERIFY_SSL,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_LOCATION,
@@ -142,16 +142,16 @@ def _create_mocked_hole(
 
 
 def _patch_init_hole(mocked_hole):
-    return patch("homeassistant.components.pi_hole.Hole", return_value=mocked_hole)
+    return patch("menuai.components.pi_hole.Hole", return_value=mocked_hole)
 
 
 def _patch_config_flow_hole(mocked_hole):
     return patch(
-        "homeassistant.components.pi_hole.config_flow.Hole", return_value=mocked_hole
+        "menuai.components.pi_hole.config_flow.Hole", return_value=mocked_hole
     )
 
 
 def _patch_setup_hole():
     return patch(
-        "homeassistant.components.pi_hole.async_setup_entry", return_value=True
+        "menuai.components.pi_hole.async_setup_entry", return_value=True
     )

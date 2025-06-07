@@ -2,29 +2,29 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.octoprint.const import (
+from menuai.components.octoprint.const import (
     CONF_BAUDRATE,
     DOMAIN,
     SERVICE_CONNECT,
 )
-from homeassistant.const import ATTR_DEVICE_ID, CONF_PORT, CONF_PROFILE_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.const import ATTR_DEVICE_ID, CONF_PORT, CONF_PROFILE_NAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import init_integration
 
 
 async def test_connect_default(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test the connect to printer service."""
-    await init_integration(hass, "sensor")
+    await init_integration(menuai, "sensor")
 
     device = dr.async_entries_for_config_entry(device_registry, "uuid")[0]
 
     # Test pausing the printer when it is printing
     with patch("pyoctoprintapi.OctoprintClient.connect") as connect_command:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CONNECT,
             {
@@ -40,16 +40,16 @@ async def test_connect_default(
 
 
 async def test_connect_all_arguments(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test the connect to printer service."""
-    await init_integration(hass, "sensor")
+    await init_integration(menuai, "sensor")
 
     device = dr.async_entries_for_config_entry(device_registry, "uuid")[0]
 
     # Test pausing the printer when it is printing
     with patch("pyoctoprintapi.OctoprintClient.connect") as connect_command:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CONNECT,
             {

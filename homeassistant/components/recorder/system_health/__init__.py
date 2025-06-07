@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import urlparse
 
-from homeassistant.components import system_health
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import system_health
+from menuai.core import menuai, callback
 
 from .. import get_instance
 from ..const import SupportedDialect
@@ -25,7 +25,7 @@ DIALECT_TO_GET_SIZE = {
 
 @callback
 def async_register(
-    hass: HomeAssistant, register: system_health.SystemHealthRegistration
+    menuai: menuai, register: system_health.SystemHealthRegistration
 ) -> None:
     """Register system health callbacks."""
     register.async_register_info(system_health_info)
@@ -55,9 +55,9 @@ def _async_get_db_engine_info(instance: Recorder) -> dict[str, Any]:
     return db_engine_info
 
 
-async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
+async def system_health_info(menuai: menuai) -> dict[str, Any]:
     """Get info for the info page."""
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
 
     recorder_runs_manager = instance.recorder_runs_manager
     database_name = urlparse(instance.db_url).path.lstrip("/")

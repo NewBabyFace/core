@@ -2,18 +2,18 @@
 
 from datetime import timedelta
 
-from homeassistant.components import notify
-from homeassistant.components.intent import TimerEventType, TimerInfo
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE_ID
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import notify
+from menuai.components.intent import TimerEventType, TimerInfo
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE_ID
+from menuai.core import menuai, callback
 
 from . import device_action
 
 
 @callback
 def async_handle_timer_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     event_type: TimerEventType,
     timer_info: TimerInfo,
@@ -28,9 +28,9 @@ def async_handle_timer_event(
         message = f"{timedelta(seconds=timer_info.created_seconds)} timer finished"
 
     entry.async_create_task(
-        hass,
+        menuai,
         device_action.async_call_action_from_config(
-            hass,
+            menuai,
             {
                 CONF_DEVICE_ID: timer_info.device_id,
                 notify.ATTR_MESSAGE: message,

@@ -5,13 +5,13 @@ from typing import Any
 
 from aioharmony.const import SendCommandDevice
 
-from homeassistant.components.harmony.const import (
+from menuai.components.harmony.const import (
     DOMAIN,
     SERVICE_CHANGE_CHANNEL,
     SERVICE_SYNC,
 )
-from homeassistant.components.harmony.remote import ATTR_CHANNEL, ATTR_DELAY_SECS
-from homeassistant.components.remote import (
+from menuai.components.harmony.remote import ATTR_CHANNEL, ATTR_DELAY_SECS
+from menuai.components.remote import (
     ATTR_ACTIVITY,
     ATTR_COMMAND,
     ATTR_DEVICE,
@@ -23,7 +23,7 @@ from homeassistant.components.remote import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_HOST,
     CONF_NAME,
@@ -31,8 +31,8 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import utcnow
+from menuai.core import menuai
+from menuai.util import utcnow
 
 from .conftest import ACTIVITIES_TO_IDS, TV_DEVICE_ID, TV_DEVICE_NAME
 from .const import ENTITY_REMOTE, HUB_NAME
@@ -46,107 +46,107 @@ STOP_COMMAND = "Stop"
 async def test_connection_state_changes(
     harmony_client,
     mock_hc,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_write_config,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Ensure connection changes are reflected in the remote state."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # mocks start with current activity == Watch TV
-    assert hass.states.is_state(ENTITY_REMOTE, STATE_ON)
+    assert menuai.states.is_state(ENTITY_REMOTE, STATE_ON)
 
     harmony_client.mock_disconnection()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Entities do not immediately show as unavailable
-    assert hass.states.is_state(ENTITY_REMOTE, STATE_ON)
+    assert menuai.states.is_state(ENTITY_REMOTE, STATE_ON)
 
     future_time = utcnow() + timedelta(seconds=10)
-    async_fire_time_changed(hass, future_time)
-    await hass.async_block_till_done()
-    assert hass.states.is_state(ENTITY_REMOTE, STATE_UNAVAILABLE)
+    async_fire_time_changed(menuai, future_time)
+    await menuai.async_block_till_done()
+    assert menuai.states.is_state(ENTITY_REMOTE, STATE_UNAVAILABLE)
 
     harmony_client.mock_reconnection()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.is_state(ENTITY_REMOTE, STATE_ON)
+    assert menuai.states.is_state(ENTITY_REMOTE, STATE_ON)
 
     harmony_client.mock_disconnection()
     harmony_client.mock_reconnection()
     future_time = utcnow() + timedelta(seconds=10)
-    async_fire_time_changed(hass, future_time)
+    async_fire_time_changed(menuai, future_time)
 
-    await hass.async_block_till_done()
-    assert hass.states.is_state(ENTITY_REMOTE, STATE_ON)
+    await menuai.async_block_till_done()
+    assert menuai.states.is_state(ENTITY_REMOTE, STATE_ON)
 
 
 async def test_remote_toggles(
-    mock_hc, hass: HomeAssistant, mock_write_config, mock_config_entry: MockConfigEntry
+    mock_hc, menuai: menuai, mock_write_config, mock_config_entry: MockConfigEntry
 ) -> None:
     """Ensure calls to the remote also updates the switches."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # mocks start remote with Watch TV default activity
-    state = hass.states.get(ENTITY_REMOTE)
+    state = menuai.states.get(ENTITY_REMOTE)
     assert state.state == STATE_ON
     assert state.attributes.get("current_activity") == "Watch TV"
 
     # turn off remote
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_REMOTE},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_REMOTE)
+    state = menuai.states.get(ENTITY_REMOTE)
     assert state.state == STATE_OFF
     assert state.attributes.get("current_activity") == "PowerOff"
 
     # turn on remote, restoring the last activity
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_REMOTE},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_REMOTE)
+    state = menuai.states.get(ENTITY_REMOTE)
     assert state.state == STATE_ON
     assert state.attributes.get("current_activity") == "Watch TV"
 
     # send new activity command, with activity name
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_REMOTE, ATTR_ACTIVITY: "Play Music"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_REMOTE)
+    state = menuai.states.get(ENTITY_REMOTE)
     assert state.state == STATE_ON
     assert state.attributes.get("current_activity") == "Play Music"
 
     # send new activity command, with activity id
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_REMOTE, ATTR_ACTIVITY: ACTIVITIES_TO_IDS["Watch TV"]},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_REMOTE)
+    state = menuai.states.get(ENTITY_REMOTE)
     assert state.state == STATE_ON
     assert state.attributes.get("current_activity") == "Watch TV"
 
@@ -154,27 +154,27 @@ async def test_remote_toggles(
 async def test_async_send_command(
     mock_hc,
     harmony_client,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_write_config,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Ensure calls to send remote commands properly propagate to devices."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     send_commands_mock = harmony_client.send_commands
 
     # No device provided
     await _send_commands_and_wait(
-        hass, {ATTR_ENTITY_ID: ENTITY_REMOTE, ATTR_COMMAND: PLAY_COMMAND}
+        menuai, {ATTR_ENTITY_ID: ENTITY_REMOTE, ATTR_COMMAND: PLAY_COMMAND}
     )
     send_commands_mock.assert_not_awaited()
 
     # Tell the TV to play by id
     await _send_commands_and_wait(
-        hass,
+        menuai,
         {
             ATTR_ENTITY_ID: ENTITY_REMOTE,
             ATTR_COMMAND: PLAY_COMMAND,
@@ -196,7 +196,7 @@ async def test_async_send_command(
 
     # Tell the TV to play by name
     await _send_commands_and_wait(
-        hass,
+        menuai,
         {
             ATTR_ENTITY_ID: ENTITY_REMOTE,
             ATTR_COMMAND: PLAY_COMMAND,
@@ -218,7 +218,7 @@ async def test_async_send_command(
 
     # Tell the TV to play and stop by name
     await _send_commands_and_wait(
-        hass,
+        menuai,
         {
             ATTR_ENTITY_ID: ENTITY_REMOTE,
             ATTR_COMMAND: [PLAY_COMMAND, STOP_COMMAND],
@@ -246,7 +246,7 @@ async def test_async_send_command(
 
     # Tell the TV to play by name multiple times
     await _send_commands_and_wait(
-        hass,
+        menuai,
         {
             ATTR_ENTITY_ID: ENTITY_REMOTE,
             ATTR_COMMAND: PLAY_COMMAND,
@@ -275,7 +275,7 @@ async def test_async_send_command(
 
     # Send commands to an unknown device
     await _send_commands_and_wait(
-        hass,
+        menuai,
         {
             ATTR_ENTITY_ID: ENTITY_REMOTE,
             ATTR_COMMAND: PLAY_COMMAND,
@@ -289,7 +289,7 @@ async def test_async_send_command(
 async def test_async_send_command_custom_delay(
     mock_hc,
     harmony_client,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_write_config,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -304,15 +304,15 @@ async def test_async_send_command_custom_delay(
         },
     )
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     send_commands_mock = harmony_client.send_commands
 
     # Tell the TV to play by id
     await _send_commands_and_wait(
-        hass,
+        menuai,
         {
             ATTR_ENTITY_ID: ENTITY_REMOTE,
             ATTR_COMMAND: PLAY_COMMAND,
@@ -336,26 +336,26 @@ async def test_async_send_command_custom_delay(
 async def test_change_channel(
     mock_hc,
     harmony_client,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_write_config,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test change channel commands."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     change_channel_mock = harmony_client.change_channel
 
     # Tell the remote to change channels
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHANGE_CHANNEL,
         {ATTR_ENTITY_ID: ENTITY_REMOTE, ATTR_CHANNEL: 100},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     change_channel_mock.assert_awaited_once_with(100)
 
@@ -364,37 +364,37 @@ async def test_sync(
     mock_hc,
     harmony_client,
     mock_write_config,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the sync command."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     sync_mock = harmony_client.sync
 
     # Tell the remote to change channels
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SYNC,
         {ATTR_ENTITY_ID: ENTITY_REMOTE},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     sync_mock.assert_awaited_once()
     mock_write_config.assert_called()
 
 
 async def _send_commands_and_wait(
-    hass: HomeAssistant, service_data: dict[str, Any]
+    menuai: menuai, service_data: dict[str, Any]
 ) -> None:
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         service_data,
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

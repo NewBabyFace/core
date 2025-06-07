@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.picnic import CONF_COUNTRY_CODE, DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.picnic import CONF_COUNTRY_CODE, DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.typing import WebSocketGenerator
@@ -32,7 +32,7 @@ def mock_config_entry() -> MockConfigEntry:
 @pytest.fixture
 def mock_picnic_api():
     """Return a mocked PicnicAPI client."""
-    with patch("homeassistant.components.picnic.PicnicAPI") as mock:
+    with patch("menuai.components.picnic.PicnicAPI") as mock:
         client = mock.return_value
         client.session.auth_token = "3q29fpwhulzes"
         client.get_cart.return_value = json.loads(load_fixture("picnic/cart.json"))
@@ -46,26 +46,26 @@ def mock_picnic_api():
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_picnic_api: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_picnic_api: MagicMock
 ) -> MockConfigEntry:
     """Set up the Picnic integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry
 
 
 @pytest.fixture
 async def get_items(
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> Callable[[], Awaitable[dict[str, str]]]:
     """Fixture to fetch items from the todo websocket."""
 
     async def get() -> list[dict[str, str]]:
         # Fetch items using To-do platform
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json_auto_id(
             {
                 "id": id,

@@ -9,13 +9,13 @@ from aiosteamist import Steamist
 from discovery30303 import Device30303, normalize_mac
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MODEL, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.typing import DiscoveryInfoType
+from menuai.config_entries import ConfigEntryState, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_MODEL, CONF_NAME
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.typing import DiscoveryInfoType
 
 from .const import CONNECTION_EXCEPTIONS, DISCOVER_SCAN_TIMEOUT, DOMAIN
 from .discovery import (
@@ -75,16 +75,16 @@ class SteamistConfigFlow(ConfigFlow, domain=DOMAIN):
         for entry in self._async_current_entries(include_ignore=False):
             if entry.unique_id == mac or entry.data[CONF_HOST] == host:
                 if (
-                    async_update_entry_from_discovery(self.hass, entry, device)
+                    async_update_entry_from_discovery(self.menuai, entry, device)
                     and entry.state is not ConfigEntryState.SETUP_IN_PROGRESS
                 ):
-                    self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                    self.menuai.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
         self.host = host
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
         if not device.name:
-            discovery = await async_discover_device(self.hass, device.ipaddress)
+            discovery = await async_discover_device(self.menuai, device.ipaddress)
             if not discovery:
                 return self.async_abort(reason="cannot_connect")
             self._discovered_device = discovery
@@ -144,7 +144,7 @@ class SteamistConfigFlow(ConfigFlow, domain=DOMAIN):
         }
         self._discovered_devices = {
             dr.format_mac(device.mac): device
-            for device in await async_discover_devices(self.hass, DISCOVER_SCAN_TIMEOUT)
+            for device in await async_discover_devices(self.menuai, DISCOVER_SCAN_TIMEOUT)
         }
         devices_name = {
             mac: f"{device.name} ({device.ipaddress})"
@@ -168,7 +168,7 @@ class SteamistConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if not (host := user_input[CONF_HOST]):
                 return await self.async_step_pick_device()
-            websession = async_get_clientsession(self.hass)
+            websession = async_get_clientsession(self.menuai)
             try:
                 await Steamist(host, websession).async_get_status()
             except CONNECTION_EXCEPTIONS:
@@ -177,7 +177,7 @@ class SteamistConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                if discovery := await async_discover_device(self.hass, host):
+                if discovery := await async_discover_device(self.menuai, host):
                     await self.async_set_unique_id(
                         dr.format_mac(discovery.mac), raise_on_progress=False
                     )

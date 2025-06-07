@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AcmedaConfigEntry
 from .const import ACMEDA_HUB_UPDATE
@@ -20,7 +20,7 @@ from .helpers import async_add_acmeda_entities
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AcmedaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -32,12 +32,12 @@ async def async_setup_entry(
     @callback
     def async_add_acmeda_covers() -> None:
         async_add_acmeda_entities(
-            hass, AcmedaCover, config_entry, current, async_add_entities
+            menuai, AcmedaCover, config_entry, current, async_add_entities
         )
 
     hub.cleanup_callbacks.append(
         async_dispatcher_connect(
-            hass,
+            menuai,
             ACMEDA_HUB_UPDATE.format(config_entry.entry_id),
             async_add_acmeda_covers,
         )

@@ -21,7 +21,7 @@ from gcal_sync.model import (
 from gcal_sync.store import ScopedCalendarStore
 from gcal_sync.sync import CalendarEventSyncManager
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     CREATE_EVENT_SCHEMA,
     ENTITY_ID_FORMAT,
     EVENT_DESCRIPTION,
@@ -37,14 +37,14 @@ from homeassistant.components.calendar import (
     extract_offset,
     is_offset_reached,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_ENTITIES, CONF_NAME, CONF_OFFSET
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, PlatformNotReady
-from homeassistant.helpers import entity_platform, entity_registry as er
-from homeassistant.helpers.entity import generate_entity_id
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_DEVICE_ID, CONF_ENTITIES, CONF_NAME, CONF_OFFSET
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError, PlatformNotReady
+from menuai.helpers import entity_platform, entity_registry as er
+from menuai.helpers.entity import generate_entity_id
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from . import (
     CONF_IGNORE_AVAILABILITY,
@@ -105,7 +105,7 @@ class GoogleCalendarEntityDescription(CalendarEntityDescription):
 
 
 def _get_entity_descriptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: GoogleConfigEntry,
     calendar_item: Calendar,
     calendar_info: Mapping[str, Any],
@@ -152,7 +152,7 @@ def _get_entity_descriptions(
             key=key,
             name=data[CONF_NAME].capitalize(),
             entity_id=generate_entity_id(
-                ENTITY_ID_FORMAT, data[CONF_DEVICE_ID], hass=hass
+                ENTITY_ID_FORMAT, data[CONF_DEVICE_ID], menuai=menuai
             ),
             read_only=read_only,
             ignore_availability=data.get(CONF_IGNORE_AVAILABILITY, False),
@@ -198,7 +198,7 @@ def _get_entity_descriptions(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: GoogleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -210,7 +210,7 @@ async def async_setup_entry(
     except ApiException as err:
         raise PlatformNotReady(str(err)) from err
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     registry_entries = er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id
     )
@@ -219,8 +219,8 @@ async def async_setup_entry(
     }
 
     # Yaml configuration may override objects from the API
-    calendars = await hass.async_add_executor_job(
-        load_config, hass.config.path(YAML_DEVICES)
+    calendars = await menuai.async_add_executor_job(
+        load_config, menuai.config.path(YAML_DEVICES)
     )
     new_calendars = []
     entities = []
@@ -230,12 +230,12 @@ async def async_setup_entry(
             calendar_info = calendars[calendar_id]
         else:
             calendar_info = get_calendar_info(
-                hass, calendar_item.dict(exclude_unset=True)
+                menuai, calendar_item.dict(exclude_unset=True)
             )
             new_calendars.append(calendar_info)
 
         for entity_description in _get_entity_descriptions(
-            hass, config_entry, calendar_item, calendar_info
+            menuai, config_entry, calendar_item, calendar_info
         ):
             unique_id = (
                 f"{config_entry.unique_id}-{entity_description.key}"
@@ -273,7 +273,7 @@ async def async_setup_entry(
             coordinator: CalendarSyncUpdateCoordinator | CalendarQueryUpdateCoordinator
             if not entity_description.local_sync:
                 coordinator = CalendarQueryUpdateCoordinator(
-                    hass,
+                    menuai,
                     config_entry,
                     calendar_service,
                     entity_description.name or entity_description.key,
@@ -293,7 +293,7 @@ async def async_setup_entry(
                     request_template=request_template,
                 )
                 coordinator = CalendarSyncUpdateCoordinator(
-                    hass,
+                    menuai,
                     config_entry,
                     sync,
                     entity_description.name or entity_description.key,
@@ -312,11 +312,11 @@ async def async_setup_entry(
     if calendars and new_calendars:
 
         def append_calendars_to_config() -> None:
-            path = hass.config.path(YAML_DEVICES)
+            path = menuai.config.path(YAML_DEVICES)
             for calendar in new_calendars:
                 update_config(path, calendar)
 
-        await hass.async_add_executor_job(append_calendars_to_config)
+        await menuai.async_add_executor_job(append_calendars_to_config)
 
     platform = entity_platform.async_get_current_platform()
     if (
@@ -407,21 +407,21 @@ class GoogleCalendarEntity(
             return True
         return event.transparency == OPAQUE
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
 
         # We do not ask for an update with async_add_entities()
         # because it will update disabled entities. This is started as a
         # task to let if sync in the background without blocking startup
         self.coordinator.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self.coordinator.async_request_refresh(),
             "google.calendar-refresh",
         )
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
         result_items = await self.coordinator.async_get_events(start_date, end_date)
@@ -485,7 +485,7 @@ class GoogleCalendarEntity(
                 CalendarSyncUpdateCoordinator, self.coordinator
             ).sync.store_service.async_add_event(event)
         except ApiException as err:
-            raise HomeAssistantError(f"Error while creating event: {err!s}") from err
+            raise menuaiError(f"Error while creating event: {err!s}") from err
         await self.coordinator.async_refresh()
 
     async def async_delete_event(
@@ -511,7 +511,7 @@ class GoogleCalendarEntity(
 def _get_calendar_event(event: Event) -> CalendarEvent:
     """Return a CalendarEvent from an API event."""
     rrule: str | None = None
-    # Home Assistant expects a single RRULE: and all other rule types are unsupported or ignored
+    # MenuAI expects a single RRULE: and all other rule types are unsupported or ignored
     if (
         len(event.recurrence) == 1
         and (raw_rule := event.recurrence[0])
@@ -534,7 +534,7 @@ async def async_create_event(entity: GoogleCalendarEntity, call: ServiceCall) ->
     """Add a new event to calendar."""
     start: DateOrDatetime | None = None
     end: DateOrDatetime | None = None
-    hass = entity.hass
+    menuai = entity.menuai
 
     if EVENT_IN in call.data:
         if EVENT_IN_DAYS in call.data[EVENT_IN]:
@@ -562,8 +562,8 @@ async def async_create_event(entity: GoogleCalendarEntity, call: ServiceCall) ->
     elif EVENT_START_DATETIME in call.data and EVENT_END_DATETIME in call.data:
         start_dt = call.data[EVENT_START_DATETIME]
         end_dt = call.data[EVENT_END_DATETIME]
-        start = DateOrDatetime(date_time=start_dt, timezone=str(hass.config.time_zone))
-        end = DateOrDatetime(date_time=end_dt, timezone=str(hass.config.time_zone))
+        start = DateOrDatetime(date_time=start_dt, timezone=str(menuai.config.time_zone))
+        end = DateOrDatetime(date_time=end_dt, timezone=str(menuai.config.time_zone))
 
     if start is None or end is None:
         raise ValueError("Missing required fields to set start or end date/datetime")
@@ -584,5 +584,5 @@ async def async_create_event(entity: GoogleCalendarEntity, call: ServiceCall) ->
             event,
         )
     except ApiException as err:
-        raise HomeAssistantError(str(err)) from err
+        raise menuaiError(str(err)) from err
     entity.async_write_ha_state()

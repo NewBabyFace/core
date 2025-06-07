@@ -14,13 +14,13 @@ from ibeacon_ble import (
     iBeaconParser,
 )
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.match import BluetoothCallbackMatcher
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.components import bluetooth
+from menuai.components.bluetooth.match import BluetoothCallbackMatcher
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_ALLOW_NAMELESS_UUIDS,
@@ -81,7 +81,7 @@ def async_name(
 
 @callback
 def _async_dispatch_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_id: str,
     service_info: bluetooth.BluetoothServiceInfoBleak,
     ibeacon_advertisement: iBeaconAdvertisement,
@@ -91,7 +91,7 @@ def _async_dispatch_update(
     """Dispatch an update."""
     if new:
         async_dispatcher_send(
-            hass,
+            menuai,
             SIGNAL_IBEACON_DEVICE_NEW,
             device_id,
             async_name(service_info, ibeacon_advertisement, unique_address),
@@ -100,7 +100,7 @@ def _async_dispatch_update(
         return
 
     async_dispatcher_send(
-        hass,
+        menuai,
         signal_seen(device_id),
         ibeacon_advertisement,
     )
@@ -110,10 +110,10 @@ class IBeaconCoordinator:
     """Set up the iBeacon Coordinator."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, registry: DeviceRegistry
+        self, menuai: menuai, entry: ConfigEntry, registry: DeviceRegistry
     ) -> None:
         """Initialize the Coordinator."""
-        self.hass = hass
+        self.menuai = menuai
         self._entry = entry
         self._dev_reg = registry
         self._ibeacon_parser = iBeaconParser()
@@ -172,7 +172,7 @@ class IBeaconCoordinator:
         address = service_info.address
         self._async_cancel_unavailable_tracker(address)
         for unique_id in self._unique_ids_by_address[address]:
-            async_dispatcher_send(self.hass, signal_unavailable(unique_id))
+            async_dispatcher_send(self.menuai, signal_unavailable(unique_id))
 
     @callback
     def _async_cancel_unavailable_tracker(self, address: str) -> None:
@@ -197,7 +197,7 @@ class IBeaconCoordinator:
         self._async_purge_untrackable_entities(unique_ids_to_purge)
         entry_data = self._entry.data
         new_data = entry_data | {CONF_IGNORE_UUIDS: list(self._ignore_uuids)}
-        self.hass.config_entries.async_update_entry(self._entry, data=new_data)
+        self.menuai.config_entries.async_update_entry(self._entry, data=new_data)
 
     @callback
     def _async_ignore_address(self, address: str) -> None:
@@ -206,7 +206,7 @@ class IBeaconCoordinator:
         self._async_cancel_unavailable_tracker(address)
         entry_data = self._entry.data
         new_data = entry_data | {CONF_IGNORE_ADDRESSES: list(self._ignore_addresses)}
-        self.hass.config_entries.async_update_entry(self._entry, data=new_data)
+        self.menuai.config_entries.async_update_entry(self._entry, data=new_data)
         self._async_purge_untrackable_entities(self._unique_ids_by_address[address])
         self._group_ids_by_address.pop(address)
         self._unique_ids_by_address.pop(address)
@@ -297,7 +297,7 @@ class IBeaconCoordinator:
         self._last_seen_by_group_id[group_id] = service_info
         self._unavailable_group_ids.discard(group_id)
         _async_dispatch_update(
-            self.hass, group_id, service_info, ibeacon_advertisement, new, False
+            self.menuai, group_id, service_info, ibeacon_advertisement, new, False
         )
 
     @callback
@@ -336,7 +336,7 @@ class IBeaconCoordinator:
         self._async_track_ibeacon_with_unique_address(address, group_id, unique_id)
         if address not in self._unavailable_trackers:
             self._unavailable_trackers[address] = bluetooth.async_track_unavailable(
-                self.hass, self._async_handle_unavailable, address
+                self.menuai, self._async_handle_unavailable, address
             )
 
         if not previously_tracked and new and ibeacon_advertisement.transient:
@@ -366,7 +366,7 @@ class IBeaconCoordinator:
             return
 
         _async_dispatch_update(
-            self.hass, unique_id, service_info, ibeacon_advertisement, new, True
+            self.menuai, unique_id, service_info, ibeacon_advertisement, new, True
         )
 
     @callback
@@ -399,7 +399,7 @@ class IBeaconCoordinator:
                 # the device is no longer advertising.
                 not (
                     latest_service_info := bluetooth.async_last_service_info(
-                        self.hass, service_info.address, connectable=False
+                        self.menuai, service_info.address, connectable=False
                     )
                 )
                 or now - latest_service_info.time > UNAVAILABLE_TIMEOUT
@@ -407,7 +407,7 @@ class IBeaconCoordinator:
         ]
         for group_id in gone_unavailable:
             self._unavailable_group_ids.add(group_id)
-            async_dispatcher_send(self.hass, signal_unavailable(group_id))
+            async_dispatcher_send(self.menuai, signal_unavailable(group_id))
 
     @callback
     def _async_update_rssi_and_transients(self) -> None:
@@ -426,7 +426,7 @@ class IBeaconCoordinator:
         ) in self._last_ibeacon_advertisement_by_unique_id.items():
             address = unique_id.split("_")[-1]
             service_info = bluetooth.async_last_service_info(
-                self.hass, address, connectable=False
+                self.menuai, address, connectable=False
             )
             if not service_info:
                 continue
@@ -436,7 +436,7 @@ class IBeaconCoordinator:
                 if self._transient_seen_count[address] == MIN_SEEN_TRANSIENT_NEW:
                     self._transient_seen_count.pop(address)
                     _async_dispatch_update(
-                        self.hass,
+                        self.menuai,
                         unique_id,
                         service_info,
                         ibeacon_advertisement,
@@ -452,13 +452,13 @@ class IBeaconCoordinator:
                 ibeacon_advertisement.source = service_info.source
                 ibeacon_advertisement.update_rssi(service_info.rssi)
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     signal_seen(unique_id),
                     ibeacon_advertisement,
                 )
 
     async def async_config_entry_updated(
-        self, hass: HomeAssistant, config_entry: ConfigEntry
+        self, menuai: menuai, config_entry: ConfigEntry
     ) -> None:
         """Restore ignored nameless beacons when the allowlist is updated."""
 
@@ -474,7 +474,7 @@ class IBeaconCoordinator:
 
                 if not (
                     service_info := bluetooth.async_last_service_info(
-                        self.hass, address, connectable=False
+                        self.menuai, address, connectable=False
                     )
                 ):
                     continue  # no longer available
@@ -519,7 +519,7 @@ class IBeaconCoordinator:
         entry = self._entry
         entry.async_on_unload(
             bluetooth.async_register_callback(
-                self.hass,
+                self.menuai,
                 self._async_update_ibeacon,
                 BluetoothCallbackMatcher(
                     connectable=False,
@@ -531,5 +531,5 @@ class IBeaconCoordinator:
         )
         entry.async_on_unload(self._async_stop)
         entry.async_on_unload(
-            async_track_time_interval(self.hass, self._async_update, UPDATE_INTERVAL)
+            async_track_time_interval(self.menuai, self._async_update, UPDATE_INTERVAL)
         )

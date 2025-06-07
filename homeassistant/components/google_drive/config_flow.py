@@ -8,10 +8,10 @@ from typing import Any, cast
 
 from google_drive_api.exceptions import GoogleDriveApiError
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow, instance_id
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers import config_entry_oauth2_flow, instance_id
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .api import AsyncConfigFlowAuth, DriveClient
 from .const import DOMAIN
@@ -62,9 +62,9 @@ class OAuth2FlowHandler(
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Create an entry for the flow, or update existing entry."""
         client = DriveClient(
-            await instance_id.async_get(self.hass),
+            await instance_id.async_get(self.menuai),
             AsyncConfigFlowAuth(
-                async_get_clientsession(self.hass), data[CONF_TOKEN][CONF_ACCESS_TOKEN]
+                async_get_clientsession(self.menuai), data[CONF_TOKEN][CONF_ACCESS_TOKEN]
             ),
         )
 

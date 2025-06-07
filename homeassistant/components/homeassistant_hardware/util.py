@@ -1,4 +1,4 @@
-"""Utility functions for Home Assistant SkyConnect integration."""
+"""Utility functions for MenuAI SkyConnect integration."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ import logging
 from universal_silabs_flasher.const import ApplicationType as FlasherApplicationType
 from universal_silabs_flasher.flasher import Flasher
 
-from homeassistant.components.hassio import AddonError, AddonManager, AddonState
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.singleton import singleton
+from menuai.components.menuaiio import AddonError, AddonManager, AddonState
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, callback
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.singleton import singleton
 
 from . import DATA_COMPONENT
 from .const import (
@@ -59,10 +59,10 @@ class ApplicationType(StrEnum):
 
 @singleton(OTBR_ADDON_MANAGER_DATA)
 @callback
-def get_otbr_addon_manager(hass: HomeAssistant) -> WaitingAddonManager:
+def get_otbr_addon_manager(menuai: menuai) -> WaitingAddonManager:
     """Get the OTBR add-on manager."""
     return WaitingAddonManager(
-        hass,
+        menuai,
         _LOGGER,
         OTBR_ADDON_NAME,
         OTBR_ADDON_SLUG,
@@ -71,10 +71,10 @@ def get_otbr_addon_manager(hass: HomeAssistant) -> WaitingAddonManager:
 
 @singleton(ZIGBEE_FLASHER_ADDON_MANAGER_DATA)
 @callback
-def get_zigbee_flasher_addon_manager(hass: HomeAssistant) -> WaitingAddonManager:
+def get_zigbee_flasher_addon_manager(menuai: menuai) -> WaitingAddonManager:
     """Get the flasher add-on manager."""
     return WaitingAddonManager(
-        hass,
+        menuai,
         _LOGGER,
         ZIGBEE_FLASHER_ADDON_NAME,
         ZIGBEE_FLASHER_ADDON_SLUG,
@@ -87,17 +87,17 @@ class OwningAddon:
 
     slug: str
 
-    def _get_addon_manager(self, hass: HomeAssistant) -> WaitingAddonManager:
+    def _get_addon_manager(self, menuai: menuai) -> WaitingAddonManager:
         return WaitingAddonManager(
-            hass,
+            menuai,
             _LOGGER,
             f"Add-on {self.slug}",
             self.slug,
         )
 
-    async def is_running(self, hass: HomeAssistant) -> bool:
+    async def is_running(self, menuai: menuai) -> bool:
         """Check if the add-on is running."""
-        addon_manager = self._get_addon_manager(hass)
+        addon_manager = self._get_addon_manager(menuai)
 
         try:
             addon_info = await addon_manager.async_get_addon_info()
@@ -107,9 +107,9 @@ class OwningAddon:
             return addon_info.state == AddonState.RUNNING
 
     @asynccontextmanager
-    async def temporarily_stop(self, hass: HomeAssistant) -> AsyncIterator[None]:
+    async def temporarily_stop(self, menuai: menuai) -> AsyncIterator[None]:
         """Temporarily stop the add-on, restarting it after completion."""
-        addon_manager = self._get_addon_manager(hass)
+        addon_manager = self._get_addon_manager(menuai)
 
         try:
             addon_info = await addon_manager.async_get_addon_info()
@@ -135,9 +135,9 @@ class OwningIntegration:
 
     config_entry_id: str
 
-    async def is_running(self, hass: HomeAssistant) -> bool:
+    async def is_running(self, menuai: menuai) -> bool:
         """Check if the integration is running."""
-        if (entry := hass.config_entries.async_get_entry(self.config_entry_id)) is None:
+        if (entry := menuai.config_entries.async_get_entry(self.config_entry_id)) is None:
             return False
 
         return entry.state in (
@@ -147,9 +147,9 @@ class OwningIntegration:
         )
 
     @asynccontextmanager
-    async def temporarily_stop(self, hass: HomeAssistant) -> AsyncIterator[None]:
+    async def temporarily_stop(self, menuai: menuai) -> AsyncIterator[None]:
         """Temporarily stop the integration, restarting it after completion."""
-        if (entry := hass.config_entries.async_get_entry(self.config_entry_id)) is None:
+        if (entry := menuai.config_entries.async_get_entry(self.config_entry_id)) is None:
             yield
             return
 
@@ -158,10 +158,10 @@ class OwningIntegration:
             return
 
         try:
-            await hass.config_entries.async_unload(entry.entry_id)
+            await menuai.config_entries.async_unload(entry.entry_id)
             yield
         finally:
-            await hass.config_entries.async_setup(entry.entry_id)
+            await menuai.config_entries.async_setup(entry.entry_id)
 
 
 @dataclass(kw_only=True)
@@ -175,9 +175,9 @@ class FirmwareInfo:
     source: str
     owners: list[OwningAddon | OwningIntegration]
 
-    async def is_running(self, hass: HomeAssistant) -> bool:
+    async def is_running(self, menuai: menuai) -> bool:
         """Check if the firmware owner is running."""
-        states = await asyncio.gather(*(o.is_running(hass) for o in self.owners))
+        states = await asyncio.gather(*(o.is_running(menuai) for o in self.owners))
         if not states:
             return False
 
@@ -185,7 +185,7 @@ class FirmwareInfo:
 
 
 async def get_otbr_addon_firmware_info(
-    hass: HomeAssistant, otbr_addon_manager: AddonManager
+    menuai: menuai, otbr_addon_manager: AddonManager
 ) -> FirmwareInfo | None:
     """Get firmware info from the OTBR add-on."""
     try:
@@ -210,19 +210,19 @@ async def get_otbr_addon_firmware_info(
 
 
 async def guess_hardware_owners(
-    hass: HomeAssistant, device_path: str
+    menuai: menuai, device_path: str
 ) -> list[FirmwareInfo]:
     """Guess the firmware info based on installed addons and other integrations."""
     device_guesses: defaultdict[str, list[FirmwareInfo]] = defaultdict(list)
 
-    async for firmware_info in hass.data[DATA_COMPONENT].iter_firmware_info():
+    async for firmware_info in menuai.data[DATA_COMPONENT].iter_firmware_info():
         device_guesses[firmware_info.device].append(firmware_info)
 
     # It may be possible for the OTBR addon to be present without the integration
-    if is_hassio(hass):
-        otbr_addon_manager = get_otbr_addon_manager(hass)
+    if is_menuaiio(menuai):
+        otbr_addon_manager = get_otbr_addon_manager(menuai)
         otbr_addon_fw_info = await get_otbr_addon_firmware_info(
-            hass, otbr_addon_manager
+            menuai, otbr_addon_manager
         )
         otbr_path = (
             otbr_addon_fw_info.device if otbr_addon_fw_info is not None else None
@@ -235,8 +235,8 @@ async def guess_hardware_owners(
             assert otbr_addon_fw_info is not None
             device_guesses[otbr_path].append(otbr_addon_fw_info)
 
-    if is_hassio(hass):
-        multipan_addon_manager = await get_multiprotocol_addon_manager(hass)
+    if is_menuaiio(menuai):
+        multipan_addon_manager = await get_multiprotocol_addon_manager(menuai)
 
         try:
             multipan_addon_info = await multipan_addon_manager.async_get_addon_info()
@@ -262,10 +262,10 @@ async def guess_hardware_owners(
     return device_guesses.get(device_path, [])
 
 
-async def guess_firmware_info(hass: HomeAssistant, device_path: str) -> FirmwareInfo:
+async def guess_firmware_info(menuai: menuai, device_path: str) -> FirmwareInfo:
     """Guess the firmware type based on installed addons and other integrations."""
 
-    hardware_owners = await guess_hardware_owners(hass, device_path)
+    hardware_owners = await guess_hardware_owners(menuai, device_path)
 
     # Fall back to EZSP if we have no way to guess
     if not hardware_owners:
@@ -279,7 +279,7 @@ async def guess_firmware_info(hass: HomeAssistant, device_path: str) -> Firmware
 
     # Prioritize guesses that are pulled from a real source
     guesses = [
-        (guess, sum([await owner.is_running(hass) for owner in guess.owners]))
+        (guess, sum([await owner.is_running(menuai) for owner in guess.owners]))
         for guess in hardware_owners
     ]
     guesses.sort(key=lambda p: p[1])

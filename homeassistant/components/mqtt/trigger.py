@@ -9,20 +9,20 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_PAYLOAD, CONF_PLATFORM, CONF_VALUE_TEMPLATE
-from homeassistant.core import (
+from menuai.const import CONF_PAYLOAD, CONF_PLATFORM, CONF_VALUE_TEMPLATE
+from menuai.core import (
     CALLBACK_TYPE,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger import TriggerActionType, TriggerData, TriggerInfo
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
-from homeassistant.util.json import json_loads
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.template import Template
+from menuai.helpers.trigger import TriggerActionType, TriggerData, TriggerInfo
+from menuai.helpers.typing import ConfigType, TemplateVarsType
+from menuai.util.json import json_loads
 
 from .client import async_subscribe_internal
 from .const import (
@@ -59,7 +59,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -75,7 +75,7 @@ async def async_attach_trigger(
     ).async_render_with_possible_json_value
     encoding: str | None = config[CONF_ENCODING] or None
     qos: int = config[CONF_QOS]
-    job = HassJob(action)
+    job = menuaiJob(action)
     variables: TemplateVarsType | None = None
     if trigger_info:
         variables = trigger_info.get("variables")
@@ -106,17 +106,17 @@ async def async_attach_trigger(
             with suppress(ValueError):
                 data["payload_json"] = json_loads(mqttmsg.payload)
 
-            hass.async_run_hass_job(job, {"trigger": data})
+            menuai.async_run_menuai_job(job, {"trigger": data})
 
     _LOGGER.debug(
         "Attaching MQTT trigger for topic: '%s', payload: '%s'", topic, wanted_payload
     )
 
     return async_subscribe_internal(
-        hass,
+        menuai,
         topic,
         mqtt_automation_listener,
         encoding=encoding,
         qos=qos,
-        job_type=HassJobType.Callback,
+        job_type=menuaiJobType.Callback,
     )

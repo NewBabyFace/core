@@ -2,20 +2,20 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.conversation import ConversationResult, async_converse
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers.intent import IntentResponse
+from menuai.components.conversation import ConversationResult, async_converse
+from menuai.core import Context, menuai
+from menuai.helpers.intent import IntentResponse
 
 
-async def test_async_converse(hass: HomeAssistant, init_components) -> None:
+async def test_async_converse(menuai: menuai, init_components) -> None:
     """Test the async_converse method."""
     context = Context()
     with patch(
-        "homeassistant.components.conversation.default_agent.DefaultAgent.async_process",
+        "menuai.components.conversation.default_agent.DefaultAgent.async_process",
         return_value=ConversationResult(response=IntentResponse(language="test lang")),
     ) as mock_process:
         await async_converse(
-            hass,
+            menuai,
             text="test command",
             conversation_id="test id",
             context=context,

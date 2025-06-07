@@ -9,13 +9,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt import CONF_STATE_TOPIC
-from homeassistant.components.sensor import (
+from menuai.components import mqtt
+from menuai.components.mqtt import CONF_STATE_TOPIC
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_ID,
     ATTR_ID,
     CONF_DEVICE_ID,
@@ -24,12 +24,12 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     STATE_NOT_HOME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, slugify
-from homeassistant.util.json import json_loads
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, slugify
+from menuai.util.json import json_loads
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ MQTT_PAYLOAD = vol.Schema(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -84,7 +84,7 @@ async def async_setup_platform(
     # Make sure MQTT integration is enabled and the client is available
     # We cannot count on dependencies as the sensor platform setup
     # also will be triggered when mqtt is loading the `sensor` platform
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return
     async_add_entities(
@@ -127,7 +127,7 @@ class MQTTRoomSensor(SensorEntity):
         self._distance = None
         self._updated = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
 
         @callback
@@ -165,7 +165,7 @@ class MQTTRoomSensor(SensorEntity):
                     ):
                         update_state(**device)
 
-        await mqtt.async_subscribe(self.hass, self._state_topic, message_received, 1)
+        await mqtt.async_subscribe(self.menuai, self._state_topic, message_received, 1)
 
     @property
     def name(self):

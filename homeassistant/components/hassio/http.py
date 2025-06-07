@@ -1,4 +1,4 @@
-"""HTTP Support for Hass.io."""
+"""HTTP Support for menuai.io."""
 
 from __future__ import annotations
 
@@ -23,15 +23,15 @@ from aiohttp.hdrs import (
 )
 from aiohttp.web_exceptions import HTTPBadGateway
 
-from homeassistant.components.http import (
+from menuai.components.http import (
     KEY_AUTHENTICATED,
-    KEY_HASS,
-    KEY_HASS_USER,
-    HomeAssistantView,
+    KEY_menuai,
+    KEY_menuai_USER,
+    menuaiView,
 )
-from homeassistant.components.onboarding import async_is_onboarded
+from menuai.components.onboarding import async_is_onboarded
 
-from .const import X_HASS_SOURCE
+from .const import X_menuai_SOURCE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -134,20 +134,20 @@ RESPONSE_HEADERS_FILTER = {
 }
 
 
-class HassIOView(HomeAssistantView):
-    """Hass.io view to handle base part."""
+class menuaiIOView(menuaiView):
+    """menuai.io view to handle base part."""
 
-    name = "api:hassio"
-    url = "/api/hassio/{path:.+}"
+    name = "api:menuaiio"
+    url = "/api/menuaiio/{path:.+}"
     requires_auth = False
 
     def __init__(self, host: str, websession: aiohttp.ClientSession) -> None:
-        """Initialize a Hass.io base view."""
+        """Initialize a menuai.io base view."""
         self._host = host
         self._websession = websession
 
     async def _handle(self, request: web.Request, path: str) -> web.StreamResponse:
-        """Return a client request with proxy origin for Hass.io supervisor.
+        """Return a client request with proxy origin for menuai.io supervisor.
 
         Use cases:
         - Onboarding allows restoring backups
@@ -158,14 +158,14 @@ class HassIOView(HomeAssistantView):
         if path != unquote(path):
             return web.Response(status=HTTPStatus.BAD_REQUEST)
 
-        hass = request.app[KEY_HASS]
-        is_admin = request[KEY_AUTHENTICATED] and request[KEY_HASS_USER].is_admin
+        menuai = request.app[KEY_menuai]
+        is_admin = request[KEY_AUTHENTICATED] and request[KEY_menuai_USER].is_admin
         authorized = is_admin
 
         if is_admin:
             allowed_paths = PATHS_ADMIN
 
-        elif not async_is_onboarded(hass):
+        elif not async_is_onboarded(menuai):
             allowed_paths = PATHS_NOT_ONBOARDED
 
             # During onboarding we need the user to manage backups
@@ -177,7 +177,7 @@ class HassIOView(HomeAssistantView):
 
         no_auth_path = PATHS_NO_AUTH.match(path)
         headers = {
-            X_HASS_SOURCE: "core.http",
+            X_menuai_SOURCE: "core.http",
         }
 
         if no_auth_path:

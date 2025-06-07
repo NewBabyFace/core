@@ -24,17 +24,17 @@ from flux_led.protocol import (
 )
 from flux_led.scanner import FluxLEDDiscovery
 
-from homeassistant.components.flux_led.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.components.flux_led.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from tests.common import MockConfigEntry
 
-MODULE = "homeassistant.components.flux_led"
-MODULE_CONFIG_FLOW = "homeassistant.components.flux_led.config_flow"
+MODULE = "menuai.components.flux_led"
+MODULE_CONFIG_FLOW = "menuai.components.flux_led.config_flow"
 IP_ADDRESS = "127.0.0.1"
 MODEL_NUM_HEX = "0x35"
 MODEL_NUM = 0x35
@@ -79,13 +79,13 @@ FLUX_DISCOVERY = FluxLEDDiscovery(
 )
 
 
-def _mock_config_entry_for_bulb(hass: HomeAssistant) -> ConfigEntry:
+def _mock_config_entry_for_bulb(menuai: menuai) -> ConfigEntry:
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
@@ -207,30 +207,30 @@ def _mocked_switch() -> AIOWifiLedBulb:
     return switch
 
 
-async def async_mock_device_turn_off(hass: HomeAssistant, bulb: AIOWifiLedBulb) -> None:
+async def async_mock_device_turn_off(menuai: menuai, bulb: AIOWifiLedBulb) -> None:
     """Mock the device being off."""
     bulb.is_on = False
     bulb.raw_state._replace(power_state=0x24)
     bulb.data_receive_callback()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def async_mock_device_turn_on(hass: HomeAssistant, bulb: AIOWifiLedBulb) -> None:
+async def async_mock_device_turn_on(menuai: menuai, bulb: AIOWifiLedBulb) -> None:
     """Mock the device being on."""
     bulb.is_on = True
     bulb.raw_state._replace(power_state=0x23)
     bulb.data_receive_callback()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def async_mock_effect_speed(
-    hass: HomeAssistant, bulb: AIOWifiLedBulb, effect: str, speed: int
+    menuai: menuai, bulb: AIOWifiLedBulb, effect: str, speed: int
 ) -> None:
     """Mock the device being on with an effect."""
     bulb.speed = speed
     bulb.effect = effect
     bulb.data_receive_callback()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 def _patch_discovery(device=None, no_device=False):
@@ -243,11 +243,11 @@ def _patch_discovery(device=None, no_device=False):
     def _patcher():
         with (
             patch(
-                "homeassistant.components.flux_led.discovery.AIOBulbScanner.async_scan",
+                "menuai.components.flux_led.discovery.AIOBulbScanner.async_scan",
                 new=_discovery,
             ),
             patch(
-                "homeassistant.components.flux_led.discovery.AIOBulbScanner.getBulbInfo",
+                "menuai.components.flux_led.discovery.AIOBulbScanner.getBulbInfo",
                 return_value=[] if no_device else [device or FLUX_DISCOVERY],
             ),
         ):
@@ -264,4 +264,4 @@ def _patch_wifibulb(device=None, no_device=False):
             return bulb
         return device if device else _mocked_bulb()
 
-    return patch("homeassistant.components.flux_led.AIOWifiLedBulb", new=_wifi_led_bulb)
+    return patch("menuai.components.flux_led.AIOWifiLedBulb", new=_wifi_led_bulb)

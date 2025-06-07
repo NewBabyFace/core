@@ -3,11 +3,11 @@
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import FireServiceConfigEntry, FireServiceRotaClient
@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FireServiceConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -24,7 +24,7 @@ async def async_setup_entry(
     async_add_entities([IncidentsSensor(entry.runtime_data.client)])
 
 
-# pylint: disable-next=hass-invalid-inheritance # needs fixing
+# pylint: disable-next=menuai-invalid-inheritance # needs fixing
 class IncidentsSensor(RestoreEntity, SensorEntity):
     """Representation of FireServiceRota incidents sensor."""
 
@@ -92,9 +92,9 @@ class IncidentsSensor(RestoreEntity, SensorEntity):
 
         return attr
 
-    async def async_added_to_hass(self) -> None:
-        """Run when about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         if state := await self.async_get_last_state():
             self._state = state.state
@@ -105,7 +105,7 @@ class IncidentsSensor(RestoreEntity, SensorEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._entry_id}_update",
                 self.client_update,
             )

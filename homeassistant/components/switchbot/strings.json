@@ -45,7 +45,7 @@
         }
       },
       "encrypted_choose_method": {
-        "description": "An encrypted SwitchBot device can be set up in Home Assistant in two different ways.\n\nYou can enter the key ID and encryption key yourself, or Home Assistant can import them from your SwitchBot account.",
+        "description": "An encrypted SwitchBot device can be set up in MenuAI in two different ways.\n\nYou can enter the key ID and encryption key yourself, or MenuAI can import them from your SwitchBot account.",
         "menu_options": {
           "encrypted_auth": "SwitchBot account (recommended)",
           "encrypted_key": "Enter encryption key manually"

@@ -7,85 +7,85 @@ from collections.abc import Coroutine
 import logging
 from typing import Any
 
-from homeassistant import config as conf_util
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai import config as conf_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_NAME,
     CONF_TRIGGERS,
     CONF_UNIQUE_ID,
     SERVICE_RELOAD,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
-from homeassistant.helpers import discovery
-from homeassistant.helpers.device import (
+from menuai.core import Event, menuai, ServiceCall
+from menuai.exceptions import ConfigEntryError, menuaiError
+from menuai.helpers import discovery
+from menuai.helpers.device import (
     async_remove_stale_devices_links_keep_current_device,
 )
-from homeassistant.helpers.reload import async_reload_integration_platforms
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.reload import async_reload_integration_platforms
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_get_integration
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import CONF_MAX, CONF_MIN, CONF_STEP, DOMAIN, PLATFORMS
 from .coordinator import TriggerUpdateCoordinator
 from .helpers import async_get_blueprints
 
 _LOGGER = logging.getLogger(__name__)
-DATA_COORDINATORS: HassKey[list[TriggerUpdateCoordinator]] = HassKey(DOMAIN)
+DATA_COORDINATORS: menuaiKey[list[TriggerUpdateCoordinator]] = menuaiKey(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the template integration."""
 
     # Register template as valid domain for Blueprint
-    blueprints = async_get_blueprints(hass)
+    blueprints = async_get_blueprints(menuai)
 
     # Add some default blueprints to blueprints/template, does nothing
     # if blueprints/template already exists but still has to create
     # an executor job to check if the folder exists so we run it in a
     # separate task to avoid waiting for it to finish setting up
     # since a tracked task will be waited at the end of startup
-    hass.async_create_task(blueprints.async_populate(), eager_start=True)
+    menuai.async_create_task(blueprints.async_populate(), eager_start=True)
 
     if DOMAIN in config:
-        await _process_config(hass, config)
+        await _process_config(menuai, config)
 
     async def _reload_config(call: Event | ServiceCall) -> None:
         """Reload top-level + platforms."""
-        await async_get_blueprints(hass).async_reset_cache()
+        await async_get_blueprints(menuai).async_reset_cache()
         try:
-            unprocessed_conf = await conf_util.async_hass_config_yaml(hass)
-        except HomeAssistantError as err:
+            unprocessed_conf = await conf_util.async_menuai_config_yaml(menuai)
+        except menuaiError as err:
             _LOGGER.error(err)
             return
 
-        integration = await async_get_integration(hass, DOMAIN)
+        integration = await async_get_integration(menuai, DOMAIN)
         conf = await conf_util.async_process_component_and_handle_errors(
-            hass, unprocessed_conf, integration
+            menuai, unprocessed_conf, integration
         )
 
         if conf is None:
             return
 
-        await async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
+        await async_reload_integration_platforms(menuai, DOMAIN, PLATFORMS)
 
         if DOMAIN in conf:
-            await _process_config(hass, conf)
+            await _process_config(menuai, conf)
 
-        hass.bus.async_fire(f"event_{DOMAIN}_reloaded", context=call.context)
+        menuai.bus.async_fire(f"event_{DOMAIN}_reloaded", context=call.context)
 
-    async_register_admin_service(hass, DOMAIN, SERVICE_RELOAD, _reload_config)
+    async_register_admin_service(menuai, DOMAIN, SERVICE_RELOAD, _reload_config)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
 
     async_remove_stale_devices_links_keep_current_device(
-        hass,
+        menuai,
         entry.entry_id,
         entry.options.get(CONF_DEVICE_ID),
     )
@@ -99,28 +99,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 f"be reconfigured, {key} must be a number, got '{entry.options[key]}'"
             )
 
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, (entry.options["template_type"],)
     )
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
     return True
 
 
-async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def config_entry_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Update listener, called when the config entry options are changed."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, (entry.options["template_type"],)
     )
 
 
-async def _process_config(hass: HomeAssistant, hass_config: ConfigType) -> None:
+async def _process_config(menuai: menuai, menuai_config: ConfigType) -> None:
     """Process config."""
-    coordinators = hass.data.pop(DATA_COORDINATORS, None)
+    coordinators = menuai.data.pop(DATA_COORDINATORS, None)
 
     # Remove old ones
     if coordinators:
@@ -128,24 +128,24 @@ async def _process_config(hass: HomeAssistant, hass_config: ConfigType) -> None:
             coordinator.async_remove()
 
     async def init_coordinator(
-        hass: HomeAssistant, conf_section: dict[str, Any]
+        menuai: menuai, conf_section: dict[str, Any]
     ) -> TriggerUpdateCoordinator:
-        coordinator = TriggerUpdateCoordinator(hass, conf_section)
-        await coordinator.async_setup(hass_config)
+        coordinator = TriggerUpdateCoordinator(menuai, conf_section)
+        await coordinator.async_setup(menuai_config)
         return coordinator
 
     coordinator_tasks: list[Coroutine[Any, Any, TriggerUpdateCoordinator]] = []
 
-    for conf_section in hass_config[DOMAIN]:
+    for conf_section in menuai_config[DOMAIN]:
         if CONF_TRIGGERS in conf_section:
-            coordinator_tasks.append(init_coordinator(hass, conf_section))
+            coordinator_tasks.append(init_coordinator(menuai, conf_section))
             continue
 
         for platform_domain in PLATFORMS:
             if platform_domain in conf_section:
-                hass.async_create_task(
+                menuai.async_create_task(
                     discovery.async_load_platform(
-                        hass,
+                        menuai,
                         platform_domain,
                         DOMAIN,
                         {
@@ -159,10 +159,10 @@ async def _process_config(hass: HomeAssistant, hass_config: ConfigType) -> None:
                                 for entity_conf in conf_section[platform_domain]
                             ],
                         },
-                        hass_config,
+                        menuai_config,
                     ),
                     eager_start=True,
                 )
 
     if coordinator_tasks:
-        hass.data[DATA_COORDINATORS] = await asyncio.gather(*coordinator_tasks)
+        menuai.data[DATA_COORDINATORS] = await asyncio.gather(*coordinator_tasks)

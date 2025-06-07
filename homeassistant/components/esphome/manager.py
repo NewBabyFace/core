@@ -15,7 +15,7 @@ from aioesphomeapi import (
     DeviceInfo as EsphomeDeviceInfo,
     EncryptionPlaintextAPIError,
     EntityInfo,
-    HomeassistantServiceCall,
+    menuaiServiceCall,
     InvalidAuthAPIError,
     InvalidEncryptionKeyAPIError,
     LogLevel,
@@ -27,41 +27,41 @@ from aioesphomeapi import (
 from awesomeversion import AwesomeVersion
 import voluptuous as vol
 
-from homeassistant.components import bluetooth, tag, zeroconf
-from homeassistant.const import (
+from menuai.components import bluetooth, tag, zeroconf
+from menuai.const import (
     ATTR_DEVICE_ID,
     CONF_MODE,
-    EVENT_HOMEASSISTANT_CLOSE,
+    EVENT_menuai_CLOSE,
     EVENT_LOGGING_CHANGED,
     Platform,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     State,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError, TemplateError
-from homeassistant.helpers import (
+from menuai.exceptions import menuaiError, TemplateError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
     template,
 )
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.issue_registry import (
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.service import async_set_service_schema
-from homeassistant.helpers.template import Template
-from homeassistant.util.async_ import create_eager_task
+from menuai.helpers.service import async_set_service_schema
+from menuai.helpers.template import Template
+from menuai.util.async_ import create_eager_task
 
 from .bluetooth import async_connect_scanner
 from .const import (
@@ -119,7 +119,7 @@ ANSI_ESCAPE_78BIT = re.compile(
 
 @callback
 def _async_check_firmware_version(
-    hass: HomeAssistant, device_info: EsphomeDeviceInfo, api_version: APIVersion
+    menuai: menuai, device_info: EsphomeDeviceInfo, api_version: APIVersion
 ) -> None:
     """Create or delete an the ble_firmware_outdated issue."""
     # ESPHome device_info.mac_address is the unique_id
@@ -131,10 +131,10 @@ def _async_check_firmware_version(
         or (device_info.project_name and device_info.project_name not in PROJECT_URLS)
         or AwesomeVersion(device_info.esphome_version) >= STABLE_BLE_VERSION
     ):
-        async_delete_issue(hass, DOMAIN, issue)
+        async_delete_issue(menuai, DOMAIN, issue)
         return
     async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         issue,
         is_fixable=False,
@@ -150,16 +150,16 @@ def _async_check_firmware_version(
 
 @callback
 def _async_check_using_api_password(
-    hass: HomeAssistant, device_info: EsphomeDeviceInfo, has_password: bool
+    menuai: menuai, device_info: EsphomeDeviceInfo, has_password: bool
 ) -> None:
     """Create or delete an the api_password_deprecated issue."""
     # ESPHome device_info.mac_address is the unique_id
     issue = f"api_password_deprecated-{device_info.mac_address}"
     if not has_password:
-        async_delete_issue(hass, DOMAIN, issue)
+        async_delete_issue(menuai, DOMAIN, issue)
         return
     async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         issue,
         is_fixable=False,
@@ -183,7 +183,7 @@ class ESPHomeManager:
         "domain_data",
         "entry",
         "entry_data",
-        "hass",
+        "menuai",
         "host",
         "password",
         "reconnect_logic",
@@ -192,7 +192,7 @@ class ESPHomeManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ESPHomeConfigEntry,
         host: str,
         password: str | None,
@@ -201,7 +201,7 @@ class ESPHomeManager:
         domain_data: DomainData,
     ) -> None:
         """Initialize the esphome manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.host = host
         self.password = password
         self.entry = entry
@@ -224,16 +224,16 @@ class ESPHomeManager:
         return f"service_calls_not_enabled-{self.entry.unique_id}"
 
     @callback
-    def async_on_service_call(self, service: HomeassistantServiceCall) -> None:
+    def async_on_service_call(self, service: menuaiServiceCall) -> None:
         """Call service when user automation in ESPHome config is triggered."""
-        hass = self.hass
+        menuai = self.menuai
         domain, service_name = service.service.split(".", 1)
         service_data = service.data
 
         if service.data_template:
             try:
                 data_template = {
-                    key: Template(value, hass)
+                    key: Template(value, menuai)
                     for key, value in service.data_template.items()
                 }
                 service_data.update(
@@ -261,10 +261,10 @@ class ESPHomeManager:
             # Call native tag scan
             if service_name == "tag_scanned" and device_id is not None:
                 tag_id = service_data["tag_id"]
-                hass.async_create_task(tag.async_scan_tag(hass, tag_id, device_id))
+                menuai.async_create_task(tag.async_scan_tag(menuai, tag_id, device_id))
                 return
 
-            hass.bus.async_fire(
+            menuai.bus.async_fire(
                 service.service,
                 {
                     ATTR_DEVICE_ID: device_id,
@@ -274,8 +274,8 @@ class ESPHomeManager:
         elif self.entry.options.get(
             CONF_ALLOW_SERVICE_CALLS, DEFAULT_ALLOW_SERVICE_CALLS
         ):
-            hass.async_create_task(
-                hass.services.async_call(
+            menuai.async_create_task(
+                menuai.services.async_call(
                     domain, service_name, service_data, blocking=True
                 )
             )
@@ -283,7 +283,7 @@ class ESPHomeManager:
             device_info = self.entry_data.device_info
             assert device_info is not None
             async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 self.services_issue,
                 is_fixable=False,
@@ -296,7 +296,7 @@ class ESPHomeManager:
             _LOGGER.error(
                 "%s: Service call %s.%s: with data %s rejected; "
                 "If you trust this device and want to allow access for it to make "
-                "Home Assistant service calls, you can enable this "
+                "MenuAI service calls, you can enable this "
                 "functionality in the options flow",
                 device_info.friendly_name or device_info.name,
                 domain,
@@ -308,7 +308,7 @@ class ESPHomeManager:
     def _send_home_assistant_state(
         self, entity_id: str, attribute: str | None, state: State | None
     ) -> None:
-        """Forward Home Assistant states to ESPHome."""
+        """Forward MenuAI states to ESPHome."""
         if state is None or (attribute and attribute not in state.attributes):
             return
 
@@ -329,7 +329,7 @@ class ESPHomeManager:
         attribute: str | None,
         event: Event[EventStateChangedData],
     ) -> None:
-        """Forward Home Assistant states updates to ESPHome."""
+        """Forward MenuAI states updates to ESPHome."""
         event_data = event.data
         new_state = event_data["new_state"]
         old_state = event_data["old_state"]
@@ -352,17 +352,17 @@ class ESPHomeManager:
         self, entity_id: str, attribute: str | None = None
     ) -> None:
         """Subscribe and forward states for requested entities."""
-        hass = self.hass
+        menuai = self.menuai
         self.entry_data.disconnect_callbacks.add(
             async_track_state_change_event(
-                hass,
+                menuai,
                 [entity_id],
                 partial(self._send_home_assistant_state_event, attribute),
             )
         )
         # Send initial state
         self._send_home_assistant_state(
-            entity_id, attribute, hass.states.get(entity_id)
+            entity_id, attribute, menuai.states.get(entity_id)
         )
 
     @callback
@@ -371,7 +371,7 @@ class ESPHomeManager:
     ) -> None:
         """Forward state for requested entity."""
         self._send_home_assistant_state(
-            entity_id, attribute, self.hass.states.get(entity_id)
+            entity_id, attribute, self.menuai.states.get(entity_id)
         )
 
     async def on_connect(self) -> None:
@@ -420,7 +420,7 @@ class ESPHomeManager:
         entry_data = self.entry_data
         reconnect_logic = self.reconnect_logic
         assert reconnect_logic is not None, "Reconnect logic must be set"
-        hass = self.hass
+        menuai = self.menuai
         cli = self.cli
         stored_device_name: str | None = entry.data.get(CONF_DEVICE_NAME)
         unique_id_is_mac_address = unique_id and ":" in unique_id
@@ -440,7 +440,7 @@ class ESPHomeManager:
         if (
             bluetooth_mac_address := device_info.bluetooth_mac_address
         ) and entry.data.get(CONF_BLUETOOTH_MAC_ADDRESS) != bluetooth_mac_address:
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry,
                 data={**entry.data, CONF_BLUETOOTH_MAC_ADDRESS: bluetooth_mac_address},
             )
@@ -450,7 +450,7 @@ class ESPHomeManager:
         #
         # This was changed in 2023.1
         if not mac_address_matches and not unique_id_is_mac_address:
-            hass.config_entries.async_update_entry(entry, unique_id=device_mac)
+            menuai.config_entries.async_update_entry(entry, unique_id=device_mac)
 
         issue = DEVICE_CONFLICT_ISSUE_FORMAT.format(entry.entry_id)
         if not mac_address_matches and unique_id_is_mac_address:
@@ -473,7 +473,7 @@ class ESPHomeManager:
                     "ip": self.host,
                 }
                 async_create_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     issue,
                     is_fixable=True,
@@ -503,14 +503,14 @@ class ESPHomeManager:
             # flow.
             return
 
-        async_delete_issue(hass, DOMAIN, issue)
+        async_delete_issue(menuai, DOMAIN, issue)
         # Make sure we have the correct device name stored
         # so we can map the device to ESPHome Dashboard config
         # If we got here, we know the mac address matches or we
         # did a migration to the mac address so we can update
         # the device name.
         if stored_device_name != device_info.name:
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry, data={**entry.data, CONF_DEVICE_NAME: device_info.name}
             )
 
@@ -526,34 +526,34 @@ class ESPHomeManager:
                 "No `friendly_name` set in the `esphome:` section of the "
                 "YAML config for device '%s' (MAC: %s); It's recommended "
                 "to add one for easier identification and better alignment "
-                "with Home Assistant naming conventions",
+                "with MenuAI naming conventions",
                 device_info.name,
                 device_mac,
             )
-        self.device_id = _async_setup_device_registry(hass, entry, entry_data)
+        self.device_id = _async_setup_device_registry(menuai, entry, entry_data)
 
         entry_data.async_update_device_state()
         await entry_data.async_update_static_infos(
-            hass, entry, entity_infos, device_info.mac_address
+            menuai, entry, entity_infos, device_info.mac_address
         )
-        _setup_services(hass, entry_data, services)
+        _setup_services(menuai, entry_data, services)
 
         if device_info.bluetooth_proxy_feature_flags_compat(api_version):
             entry_data.disconnect_callbacks.add(
                 async_connect_scanner(
-                    hass, entry_data, cli, device_info, self.device_id
+                    menuai, entry_data, cli, device_info, self.device_id
                 )
             )
         else:
             bluetooth.async_remove_scanner(
-                hass, device_info.bluetooth_mac_address or device_info.mac_address
+                menuai, device_info.bluetooth_mac_address or device_info.mac_address
             )
 
         if device_info.voice_assistant_feature_flags_compat(api_version) and (
             Platform.ASSIST_SATELLITE not in entry_data.loaded_platforms
         ):
             # Create assist satellite entity
-            await self.hass.config_entries.async_forward_entry_setups(
+            await self.menuai.config_entries.async_forward_entry_setups(
                 self.entry, [Platform.ASSIST_SATELLITE]
             )
             entry_data.loaded_platforms.add(Platform.ASSIST_SATELLITE)
@@ -566,13 +566,13 @@ class ESPHomeManager:
         )
 
         entry_data.async_save_to_store()
-        _async_check_firmware_version(hass, device_info, api_version)
-        _async_check_using_api_password(hass, device_info, bool(self.password))
+        _async_check_firmware_version(menuai, device_info, api_version)
+        _async_check_using_api_password(menuai, device_info, bool(self.password))
 
     async def on_disconnect(self, expected_disconnect: bool) -> None:
         """Run disconnect callbacks on API disconnect."""
         entry_data = self.entry_data
-        hass = self.hass
+        menuai = self.menuai
         host = self.host
         name = entry_data.device_info.name if entry_data.device_info else host
         _LOGGER.debug(
@@ -590,7 +590,7 @@ class ESPHomeManager:
             for state_dict in entry_data.state.values()
             for key, entity_state in state_dict.items()
         }
-        if not hass.is_stopping:
+        if not menuai.is_stopping:
             # Avoid marking every esphome entity as unavailable on shutdown
             # since it generates a lot of state changed events and database
             # writes when we already know we're shutting down and the state
@@ -598,7 +598,7 @@ class ESPHomeManager:
             entry_data.async_update_device_state()
 
         if Platform.ASSIST_SATELLITE in self.entry_data.loaded_platforms:
-            await self.hass.config_entries.async_unload_platforms(
+            await self.menuai.config_entries.async_unload_platforms(
                 self.entry, [Platform.ASSIST_SATELLITE]
             )
 
@@ -644,7 +644,7 @@ class ESPHomeManager:
                     if self.reconnect_logic:
                         await self.reconnect_logic.stop()
                     return
-        self.entry.async_start_reauth(self.hass)
+        self.entry.async_start_reauth(self.menuai)
 
     @callback
     def _async_handle_logging_changed(self, _event: Event) -> None:
@@ -659,7 +659,7 @@ class ESPHomeManager:
     def _async_cleanup(self) -> None:
         """Cleanup stale issues and entities."""
         assert self.entry_data.device_info is not None
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         # Cleanup stale assist_in_progress entity and issue,
         # Remove this after 2026.4
         if not (
@@ -673,7 +673,7 @@ class ESPHomeManager:
         stale_entry = ent_reg.async_get(stale_entry_entity_id)
         assert stale_entry is not None
         ent_reg.async_remove(stale_entry_entity_id)
-        issue_reg = ir.async_get(self.hass)
+        issue_reg = ir.async_get(self.menuai)
         if issue := issue_reg.async_get_issue(
             DOMAIN, f"assist_in_progress_deprecated_{stale_entry.id}"
         ):
@@ -681,12 +681,12 @@ class ESPHomeManager:
 
     async def async_start(self) -> None:
         """Start the esphome connection manager."""
-        hass = self.hass
+        menuai = self.menuai
         entry = self.entry
         entry_data = self.entry_data
 
         if entry.options.get(CONF_ALLOW_SERVICE_CALLS, DEFAULT_ALLOW_SERVICE_CALLS):
-            async_delete_issue(hass, DOMAIN, self.services_issue)
+            async_delete_issue(menuai, DOMAIN, self.services_issue)
 
         reconnect_logic = ReconnectLogic(
             client=self.cli,
@@ -699,15 +699,15 @@ class ESPHomeManager:
         self.reconnect_logic = reconnect_logic
 
         # Use async_listen instead of async_listen_once so that we don't deregister
-        # the callback twice when shutting down Home Assistant.
+        # the callback twice when shutting down MenuAI.
         # "Unable to remove unknown listener
         # <function EventBus.async_listen_once.<locals>.onetime_listener>"
         # We only close the connection at the last possible moment
         # when the CLOSE event is fired so anything using a Bluetooth
         # proxy has a chance to shut down properly.
-        bus = hass.bus
+        bus = menuai.bus
         cleanups = (
-            bus.async_listen(EVENT_HOMEASSISTANT_CLOSE, self.on_stop),
+            bus.async_listen(EVENT_menuai_CLOSE, self.on_stop),
             bus.async_listen(EVENT_LOGGING_CHANGED, self._async_handle_logging_changed),
             reconnect_logic.stop_callback,
         )
@@ -716,9 +716,9 @@ class ESPHomeManager:
         infos, services = await entry_data.async_load_from_store()
         if entry.unique_id:
             await entry_data.async_update_static_infos(
-                hass, entry, infos, entry.unique_id.upper()
+                menuai, entry, infos, entry.unique_id.upper()
             )
-        _setup_services(hass, entry_data, services)
+        _setup_services(menuai, entry_data, services)
 
         if (device_info := entry_data.device_info) is not None:
             self._async_cleanup()
@@ -727,7 +727,7 @@ class ESPHomeManager:
             if (
                 bluetooth_mac_address := device_info.bluetooth_mac_address
             ) and entry.data.get(CONF_BLUETOOTH_MAC_ADDRESS) != bluetooth_mac_address:
-                hass.config_entries.async_update_entry(
+                menuai.config_entries.async_update_entry(
                     entry,
                     data={
                         **entry.data,
@@ -735,7 +735,7 @@ class ESPHomeManager:
                     },
                 )
             if entry.unique_id is None:
-                hass.config_entries.async_update_entry(
+                menuai.config_entries.async_update_entry(
                     entry, unique_id=format_mac(device_info.mac_address)
                 )
 
@@ -748,7 +748,7 @@ class ESPHomeManager:
 
 @callback
 def _async_setup_device_registry(
-    hass: HomeAssistant, entry: ESPHomeConfigEntry, entry_data: RuntimeEntryData
+    menuai: menuai, entry: ESPHomeConfigEntry, entry_data: RuntimeEntryData
 ) -> str:
     """Set up device registry feature for a particular config entry."""
     device_info = entry_data.device_info
@@ -764,11 +764,11 @@ def _async_setup_device_registry(
         host = f"[{entry_host}]" if ":" in entry_host else entry_host
         configuration_url = f"http://{host}:{device_info.webserver_port}"
     elif (
-        (dashboard := async_get_dashboard(hass))
+        (dashboard := async_get_dashboard(menuai))
         and dashboard.data
         and dashboard.data.get(device_info.name)
     ):
-        configuration_url = f"homeassistant://hassio/ingress/{dashboard.addon_slug}"
+        configuration_url = f"menuai://menuaiio/ingress/{dashboard.addon_slug}"
 
     manufacturer = "espressif"
     if device_info.manufacturer:
@@ -786,7 +786,7 @@ def _async_setup_device_registry(
     if device_info.suggested_area:
         suggested_area = device_info.suggested_area
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         configuration_url=configuration_url,
@@ -865,7 +865,7 @@ def execute_service(
     try:
         entry_data.client.execute_service(service, call.data)
     except APIConnectionError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="action_call_failed",
             translation_placeholders={
@@ -883,7 +883,7 @@ def build_service_name(device_info: EsphomeDeviceInfo, service: UserService) -> 
 
 @callback
 def _async_register_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_data: RuntimeEntryData,
     device_info: EsphomeDeviceInfo,
     service: UserService,
@@ -912,14 +912,14 @@ def _async_register_service(
             "selector": metadata.selector,
         }
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         service_name,
         partial(execute_service, entry_data, service),
         vol.Schema(schema),
     )
     async_set_service_schema(
-        hass,
+        menuai,
         DOMAIN,
         service_name,
         {
@@ -933,7 +933,7 @@ def _async_register_service(
 
 @callback
 def _setup_services(
-    hass: HomeAssistant, entry_data: RuntimeEntryData, services: list[UserService]
+    menuai: menuai, entry_data: RuntimeEntryData, services: list[UserService]
 ) -> None:
     device_info = entry_data.device_info
     if device_info is None:
@@ -959,10 +959,10 @@ def _setup_services(
 
     for service in to_unregister:
         service_name = build_service_name(device_info, service)
-        hass.services.async_remove(DOMAIN, service_name)
+        menuai.services.async_remove(DOMAIN, service_name)
 
     for service in to_register:
-        _async_register_service(hass, entry_data, device_info, service)
+        _async_register_service(menuai, entry_data, device_info, service)
 
 
 async def cleanup_instance(entry: ESPHomeConfigEntry) -> RuntimeEntryData:
@@ -977,24 +977,24 @@ async def cleanup_instance(entry: ESPHomeConfigEntry) -> RuntimeEntryData:
 
 
 async def async_replace_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_id: str,
     old_mac: str,  # will be lower case (format_mac)
     new_mac: str,  # will be lower case (format_mac)
 ) -> None:
     """Migrate an ESPHome entry to replace an existing device."""
-    entry = hass.config_entries.async_get_entry(entry_id)
+    entry = menuai.config_entries.async_get_entry(entry_id)
     assert entry is not None
-    hass.config_entries.async_update_entry(entry, unique_id=new_mac)
+    menuai.config_entries.async_update_entry(entry, unique_id=new_mac)
 
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     for device in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
         dev_reg.async_update_device(
             device.id,
             new_connections={(dr.CONNECTION_NETWORK_MAC, new_mac)},
         )
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     upper_mac = new_mac.upper()
     old_upper_mac = old_mac.upper()
     for entity in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
@@ -1006,8 +1006,8 @@ async def async_replace_device(
         ):
             ent_reg.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
 
-    domain_data = DomainData.get(hass)
-    store = domain_data.get_or_create_store(hass, entry)
+    domain_data = DomainData.get(menuai)
+    store = domain_data.get_or_create_store(menuai, entry)
     if data := await store.async_load():
         data["device_info"]["mac_address"] = upper_mac
         await store.async_save(data)

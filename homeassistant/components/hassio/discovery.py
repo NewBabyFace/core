@@ -1,4 +1,4 @@
-"""Implement the services discovery feature from Hass.io for Add-ons."""
+"""Implement the services discovery feature from menuai.io for Add-ons."""
 
 from __future__ import annotations
 
@@ -12,26 +12,26 @@ from aiohasupervisor.models import Discovery
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPServiceUnavailable
 
-from homeassistant import config_entries
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.const import ATTR_SERVICE, EVENT_HOMEASSISTANT_START
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import discovery_flow
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+from menuai import config_entries
+from menuai.components.http import menuaiView
+from menuai.const import ATTR_SERVICE, EVENT_menuai_START
+from menuai.core import Event, menuai, callback
+from menuai.helpers import discovery_flow
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
 
 from .const import ATTR_ADDON, ATTR_UUID, DOMAIN
-from .handler import HassIO, get_supervisor_client
+from .handler import menuaiIO, get_supervisor_client
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_setup_discovery_view(hass: HomeAssistant, hassio: HassIO) -> None:
+def async_setup_discovery_view(menuai: menuai, menuaiio: menuaiIO) -> None:
     """Discovery setup."""
-    hassio_discovery = HassIODiscovery(hass, hassio)
-    supervisor_client = get_supervisor_client(hass)
-    hass.http.register_view(hassio_discovery)
+    menuaiio_discovery = menuaiIODiscovery(menuai, menuaiio)
+    supervisor_client = get_supervisor_client(menuai)
+    menuai.http.register_view(menuaiio_discovery)
 
     # Handle exists discovery messages
     async def _async_discovery_start_handler(event: Event) -> None:
@@ -43,14 +43,14 @@ def async_setup_discovery_view(hass: HomeAssistant, hassio: HassIO) -> None:
             return
 
         jobs = [
-            asyncio.create_task(hassio_discovery.async_process_new(discovery))
+            asyncio.create_task(menuaiio_discovery.async_process_new(discovery))
             for discovery in data
         ]
         if jobs:
             await asyncio.wait(jobs)
 
-    hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_START, _async_discovery_start_handler
+    menuai.bus.async_listen_once(
+        EVENT_menuai_START, _async_discovery_start_handler
     )
 
     async def _handle_config_entry_removed(
@@ -62,26 +62,26 @@ def async_setup_discovery_view(hass: HomeAssistant, hassio: HassIO) -> None:
                 continue
             uuid = key
             _LOGGER.debug("Rediscover addon %s", uuid)
-            await hassio_discovery.async_rediscover(uuid)
+            await menuaiio_discovery.async_rediscover(uuid)
 
     async_dispatcher_connect(
-        hass,
+        menuai,
         config_entries.signal_discovered_config_entry_removed(DOMAIN),
         _handle_config_entry_removed,
     )
 
 
-class HassIODiscovery(HomeAssistantView):
-    """Hass.io view to handle base part."""
+class menuaiIODiscovery(menuaiView):
+    """menuai.io view to handle base part."""
 
-    name = "api:hassio_push:discovery"
-    url = "/api/hassio_push/discovery/{uuid}"
+    name = "api:menuaiio_push:discovery"
+    url = "/api/menuaiio_push/discovery/{uuid}"
 
-    def __init__(self, hass: HomeAssistant, hassio: HassIO) -> None:
+    def __init__(self, menuai: menuai, menuaiio: menuaiIO) -> None:
         """Initialize WebView."""
-        self.hass = hass
-        self.hassio = hassio
-        self._supervisor_client = get_supervisor_client(hass)
+        self.menuai = menuai
+        self.menuaiio = menuaiio
+        self._supervisor_client = get_supervisor_client(menuai)
 
     async def post(self, request: web.Request, uuid: str) -> web.Response:
         """Handle new discovery requests."""
@@ -124,10 +124,10 @@ class HassIODiscovery(HomeAssistantView):
 
         # Use config flow
         discovery_flow.async_create_flow(
-            self.hass,
+            self.menuai,
             data.service,
-            context={"source": config_entries.SOURCE_HASSIO},
-            data=HassioServiceInfo(
+            context={"source": config_entries.SOURCE_menuaiIO},
+            data=menuaiioServiceInfo(
                 config=data.config,
                 name=addon_info.name,
                 slug=data.addon,
@@ -155,7 +155,7 @@ class HassIODiscovery(HomeAssistantView):
             return
 
         # Use config flow
-        for entry in self.hass.config_entries.async_entries(service):
-            if entry.source != config_entries.SOURCE_HASSIO or entry.unique_id != uuid:
+        for entry in self.menuai.config_entries.async_entries(service):
+            if entry.source != config_entries.SOURCE_menuaiIO or entry.unique_id != uuid:
                 continue
-            await self.hass.config_entries.async_remove(entry.entry_id)
+            await self.menuai.config_entries.async_remove(entry.entry_id)

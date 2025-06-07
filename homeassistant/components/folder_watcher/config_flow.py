@@ -8,15 +8,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.core import callback
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.config_entries import ConfigFlowResult
+from menuai.core import callback
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -38,7 +38,7 @@ async def validate_setup(
         raise SchemaFlowError("not_dir")
     if not os.access(dir_in, os.R_OK):
         raise SchemaFlowError("not_readable_dir")
-    if not handler.parent_handler.hass.config.is_allowed_path(value):
+    if not handler.parent_handler.menuai.config.is_allowed_path(value):
         raise SchemaFlowError("not_allowed_dir")
 
     return user_input

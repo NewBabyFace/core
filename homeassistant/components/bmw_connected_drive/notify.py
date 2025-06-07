@@ -9,16 +9,16 @@ from bimmer_connected.models import MyBMWAPIError, PointOfInterest
 from bimmer_connected.vehicle import MyBMWVehicle
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     BaseNotificationService,
 )
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, BMWConfigEntry
 
@@ -41,12 +41,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> BMWNotificationService:
     """Get the BMW notification service."""
-    config_entry: BMWConfigEntry | None = hass.config_entries.async_get_entry(
+    config_entry: BMWConfigEntry | None = menuai.config_entries.async_get_entry(
         (discovery_info or {})[CONF_ENTITY_ID]
     )
 
@@ -106,7 +106,7 @@ class BMWNotificationService(BaseNotificationService):
             try:
                 await vehicle.remote_services.trigger_send_poi(poi)
             except MyBMWAPIError as ex:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="remote_service_error",
                     translation_placeholders={"exception": str(ex)},

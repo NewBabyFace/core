@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fastdotcom.const import DEFAULT_NAME, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
+from menuai.components.fastdotcom.const import DEFAULT_NAME, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -14,8 +14,8 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_get_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test if get_config_entry_diagnostics returns the correct data."""
@@ -29,15 +29,15 @@ async def test_get_config_entry_diagnostics(
         unique_id="UNIQUE_TEST_ID",
         minor_version=1,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.fastdotcom.coordinator.fast_com", return_value=50.3
+        "menuai.components.fastdotcom.coordinator.fast_com", return_value=50.3
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         == snapshot
     )

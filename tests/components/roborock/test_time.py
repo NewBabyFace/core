@@ -6,10 +6,10 @@ from unittest.mock import Mock
 import pytest
 import roborock
 
-from homeassistant.components.time import SERVICE_SET_VALUE
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.time import SERVICE_SET_VALUE
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
@@ -28,7 +28,7 @@ def platforms() -> list[Platform]:
     ],
 )
 async def test_update_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_send_message: Mock,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
@@ -36,8 +36,8 @@ async def test_update_success(
 ) -> None:
     """Test turning switch entities on and off."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id) is not None
-    await hass.services.async_call(
+    assert menuai.states.get(entity_id) is not None
+    await menuai.services.async_call(
         "time",
         SERVICE_SET_VALUE,
         service_data={"time": time(hour=1, minute=1)},
@@ -57,7 +57,7 @@ async def test_update_success(
     "send_message_side_effect", [roborock.exceptions.RoborockTimeout]
 )
 async def test_update_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_send_message: Mock,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
@@ -65,9 +65,9 @@ async def test_update_failure(
 ) -> None:
     """Test turning switch entities on and off."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id) is not None
-    with pytest.raises(HomeAssistantError, match="Failed to update Roborock options"):
-        await hass.services.async_call(
+    assert menuai.states.get(entity_id) is not None
+    with pytest.raises(menuaiError, match="Failed to update Roborock options"):
+        await menuai.services.async_call(
             "time",
             SERVICE_SET_VALUE,
             service_data={"time": time(hour=1, minute=1)},

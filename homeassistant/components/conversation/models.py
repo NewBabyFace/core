@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from homeassistant.core import Context
-from homeassistant.helpers import intent
+from menuai.core import Context
+from menuai.helpers import intent
 
 
 @dataclass(frozen=True)

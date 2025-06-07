@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from devialet.const import NORMAL_INPUTS
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER, SOUND_MODES
 from .coordinator import DevialetConfigEntry, DevialetCoordinator
@@ -36,7 +36,7 @@ DEVIALET_TO_HA_FEATURE_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DevialetConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -13,10 +13,10 @@ from apple_weatherkit.client import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     LocationSelector,
     LocationSelectorConfig,
     TextSelector,
@@ -94,8 +94,8 @@ class WeatherKitFlowHandler(ConfigFlow, domain=DOMAIN):
 
         suggested_values: Mapping[str, Any] = {
             CONF_LOCATION: {
-                CONF_LATITUDE: self.hass.config.latitude,
-                CONF_LONGITUDE: self.hass.config.longitude,
+                CONF_LATITUDE: self.menuai.config.latitude,
+                CONF_LONGITUDE: self.menuai.config.longitude,
             }
         }
 
@@ -132,7 +132,7 @@ class WeatherKitFlowHandler(ConfigFlow, domain=DOMAIN):
             service_id=user_input[CONF_SERVICE_ID],
             team_id=user_input[CONF_TEAM_ID],
             key_pem=user_input[CONF_KEY_PEM],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
 
         location = user_input[CONF_LOCATION]

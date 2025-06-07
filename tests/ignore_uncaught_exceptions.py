@@ -26,8 +26,8 @@ IGNORE_UNCAUGHT_EXCEPTIONS = [
         "test_config_entry_unloaded_during_platform_setup",
     ),
     (
-        "test_homeassistant_bridge",
-        "test_homeassistant_bridge_fan_setup",
+        "test_menuai_bridge",
+        "test_menuai_bridge_fan_setup",
     ),
     (
         "tests.components.owntracks.test_device_tracker",

@@ -10,10 +10,10 @@ from unittest.mock import patch
 from pydeconz.websocket import Signal
 import pytest
 
-from homeassistant.components.deconz.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
+from menuai.components.deconz.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONTENT_TYPE_JSON
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.light.conftest import mock_light_profiles  # noqa: F401
@@ -204,7 +204,7 @@ def fixture_sensor_data() -> dict[str, Any]:
 
 @pytest.fixture(name="config_entry_factory")
 async def fixture_config_entry_factory(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_requests: Callable[[str], None],
 ) -> ConfigEntryFactoryType:
@@ -213,10 +213,10 @@ async def fixture_config_entry_factory(
     async def __mock_setup_config_entry(
         entry: MockConfigEntry = config_entry, /
     ) -> MockConfigEntry:
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
         mock_requests(entry.data[CONF_HOST])
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
         return entry
 
     return __mock_setup_config_entry

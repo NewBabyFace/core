@@ -10,14 +10,14 @@ from tesla_fleet_api.teslemetry import Vehicle
 from teslemetry_stream import Signal
 from teslemetry_stream.const import WindowState
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import TeslemetryConfigEntry
 from .entity import (
@@ -35,7 +35,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TeslemetryConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -91,9 +91,9 @@ async def async_setup_entry(
 class CoverRestoreEntity(RestoreEntity, CoverEntity):
     """Restore class for cover entities."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (state := await self.async_get_last_state()) is not None:
             if state.state == "open":
                 self._attr_is_closed = False
@@ -177,9 +177,9 @@ class TeslemetryStreamingWindowEntity(
             self._attr_supported_features = CoverEntityFeature(0)
         self._attr_is_closed = None
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.stream.async_add_listener(
                 self._handle_stream_update,
@@ -193,7 +193,7 @@ class TeslemetryStreamingWindowEntity(
             Signal.RP_WINDOW,
         ):
             self.vehicle.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self.add_field(signal),
                 f"Adding field {signal} to {self.vehicle.vin}",
             )
@@ -297,9 +297,9 @@ class TeslemetryStreamingChargePortEntity(
             self._attr_supported_features = CoverEntityFeature(0)
         self._attr_is_closed = None
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.vehicle.stream_vehicle.listen_ChargePortDoorOpen(
                 self._async_value_from_stream
@@ -360,9 +360,9 @@ class TeslemetryStreamingFrontTrunkEntity(
             self._attr_supported_features = CoverEntityFeature(0)
         self._attr_is_closed = None
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.vehicle.stream_vehicle.listen_TrunkFront(self._async_value_from_stream)
         )
@@ -430,9 +430,9 @@ class TeslemetryStreamingRearTrunkEntity(
             self._attr_supported_features = CoverEntityFeature(0)
         self._attr_is_closed = None
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.vehicle.stream_vehicle.listen_TrunkRear(self._async_value_from_stream)
         )

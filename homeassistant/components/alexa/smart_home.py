@@ -6,17 +6,17 @@ from typing import Any
 from aiohttp import web
 from yarl import URL
 
-from homeassistant import core
-from homeassistant.auth.models import User
-from homeassistant.components.http import (
-    KEY_HASS,
-    HomeAssistantRequest,
-    HomeAssistantView,
+from menuai import core
+from menuai.auth.models import User
+from menuai.components.http import (
+    KEY_menuai,
+    menuaiRequest,
+    menuaiView,
 )
-from homeassistant.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.core import Context, menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.typing import ConfigType
 
 from .auth import Auth
 from .config import AbstractConfig
@@ -43,13 +43,13 @@ class AlexaConfig(AbstractConfig):
 
     _auth: Auth | None
 
-    def __init__(self, hass: HomeAssistant, config: ConfigType) -> None:
+    def __init__(self, menuai: menuai, config: ConfigType) -> None:
         """Initialize Alexa config."""
-        super().__init__(hass)
+        super().__init__(menuai)
         self._config = config
 
         if config.get(CONF_CLIENT_ID) and config.get(CONF_CLIENT_SECRET):
-            self._auth = Auth(hass, config[CONF_CLIENT_ID], config[CONF_CLIENT_SECRET])
+            self._auth = Auth(menuai, config[CONF_CLIENT_ID], config[CONF_CLIENT_SECRET])
         else:
             self._auth = None
 
@@ -89,7 +89,7 @@ class AlexaConfig(AbstractConfig):
         if not self._config[CONF_FILTER].empty_filter:
             return bool(self._config[CONF_FILTER](entity_id))
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         if registry_entry := entity_registry.async_get(entity_id):
             auxiliary_entity = (
                 registry_entry.entity_category is not None
@@ -116,7 +116,7 @@ class AlexaConfig(AbstractConfig):
         return await self._auth.async_do_auth(code)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> None:
+async def async_setup(menuai: menuai, config: ConfigType) -> None:
     """Activate Smart Home functionality of Alexa component.
 
     This is optional, triggered by having a `smart_home:` sub-section in the
@@ -125,15 +125,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> None:
     Even if that's disabled, the functionality in this module may still be used
     by the cloud component which will call async_handle_message directly.
     """
-    smart_home_config = AlexaConfig(hass, config)
+    smart_home_config = AlexaConfig(menuai, config)
     await smart_home_config.async_initialize()
-    hass.http.register_view(SmartHomeView(smart_home_config))
+    menuai.http.register_view(SmartHomeView(smart_home_config))
 
     if smart_home_config.should_report_state:
         await smart_home_config.async_enable_proactive_mode()
 
 
-class SmartHomeView(HomeAssistantView):
+class SmartHomeView(menuaiView):
     """Expose Smart Home v3 payload interface via HTTP POST."""
 
     url = SMART_HOME_HTTP_ENDPOINT
@@ -143,15 +143,15 @@ class SmartHomeView(HomeAssistantView):
         """Initialize."""
         self.smart_home_config = smart_home_config
 
-    async def post(self, request: HomeAssistantRequest) -> web.Response | bytes:
+    async def post(self, request: menuaiRequest) -> web.Response | bytes:
         """Handle Alexa Smart Home requests.
 
         The Smart Home API requires the endpoint to be implemented in AWS
         Lambda, which will need to forward the requests to here and pass back
         the response.
         """
-        hass = request.app[KEY_HASS]
-        user: User = request["hass_user"]
+        menuai = request.app[KEY_menuai]
+        user: User = request["menuai_user"]
         message: dict[str, Any] = await request.json()
 
         if _LOGGER.isEnabledFor(logging.DEBUG):
@@ -161,7 +161,7 @@ class SmartHomeView(HomeAssistantView):
             )
 
         response = await async_handle_message(
-            hass, self.smart_home_config, message, context=core.Context(user_id=user.id)
+            menuai, self.smart_home_config, message, context=core.Context(user_id=user.id)
         )
         if _LOGGER.isEnabledFor(logging.DEBUG):
             _LOGGER.debug(
@@ -173,7 +173,7 @@ class SmartHomeView(HomeAssistantView):
 
 
 async def async_handle_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: AbstractConfig,
     request: dict[str, Any],
     context: Context | None = None,
@@ -195,17 +195,17 @@ async def async_handle_message(
     try:
         if not enabled:
             raise AlexaBridgeUnreachableError(  # noqa: TRY301
-                "Alexa API not enabled in Home Assistant configuration"
+                "Alexa API not enabled in MenuAI configuration"
             )
 
         await config.set_authorized(True)
 
         if directive.has_endpoint:
-            directive.load_entity(hass, config)
+            directive.load_entity(menuai, config)
 
         funct_ref = HANDLERS.get((directive.namespace, directive.name))
         if funct_ref:
-            response = await funct_ref(hass, config, directive, context)
+            response = await funct_ref(menuai, config, directive, context)
             if directive.has_endpoint:
                 response.merge_context_properties(directive.endpoint)
         else:
@@ -237,7 +237,7 @@ async def async_handle_message(
         assert directive.entity_id is not None
         request_info["entity_id"] = directive.entity_id
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ALEXA_SMART_HOME,
         {
             "request": request_info,

@@ -2,32 +2,32 @@
 
 import pytest
 
-from homeassistant.components.matrix import MatrixBot
-from homeassistant.components.matrix.const import DOMAIN
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.const import EVENT_HOMEASSISTANT_START
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.matrix import MatrixBot
+from menuai.components.matrix.const import DOMAIN
+from menuai.components.notify import DOMAIN as NOTIFY_DOMAIN
+from menuai.const import EVENT_menuai_START
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .conftest import MOCK_CONFIG_DATA, TEST_BAD_ROOM, TEST_JOINABLE_ROOMS
 
 
 async def test_join(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_client,
     mock_save_json,
     mock_allowed_path,
 ) -> None:
     """Test joining configured rooms."""
-    assert await async_setup_component(hass, DOMAIN, MOCK_CONFIG_DATA)
-    assert await async_setup_component(hass, NOTIFY_DOMAIN, MOCK_CONFIG_DATA)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    assert await async_setup_component(menuai, DOMAIN, MOCK_CONFIG_DATA)
+    assert await async_setup_component(menuai, NOTIFY_DOMAIN, MOCK_CONFIG_DATA)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    # Accessing hass.data in tests is not desirable, but all the tests here
+    # Accessing menuai.data in tests is not desirable, but all the tests here
     # currently do this.
-    matrix_bot = hass.data[DOMAIN]
+    matrix_bot = menuai.data[DOMAIN]
 
     for room_id in TEST_JOINABLE_ROOMS:
         assert f"Joined or already in room '{room_id}'" in caplog.messages
@@ -41,8 +41,8 @@ async def test_join(
     )
 
 
-async def test_resolve_aliases(hass: HomeAssistant, matrix_bot: MatrixBot) -> None:
+async def test_resolve_aliases(menuai: menuai, matrix_bot: MatrixBot) -> None:
     """Test resolving configured room aliases into room ids."""
 
-    await hass.async_start()
+    await menuai.async_start()
     assert matrix_bot._listening_rooms == TEST_JOINABLE_ROOMS

@@ -10,12 +10,12 @@ from freezegun.api import FrozenDateTimeFactory
 from pysensibo.model import SensiboData
 import pytest
 
-from homeassistant.components.sensibo.const import DOMAIN
-from homeassistant.components.sensibo.util import NoUsernameError
-from homeassistant.config_entries import SOURCE_USER, ConfigEntry, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.sensibo.const import DOMAIN
+from menuai.components.sensibo.util import NoUsernameError
+from menuai.config_entries import SOURCE_USER, ConfigEntry, ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import ENTRY_CONFIG
 
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.typing import WebSocketGenerator
 
 
-async def test_load_unload_entry(hass: HomeAssistant, mock_client: MagicMock) -> None:
+async def test_load_unload_entry(menuai: menuai, mock_client: MagicMock) -> None:
     """Test setup and unload config entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -32,20 +32,20 @@ async def test_load_unload_entry(hass: HomeAssistant, mock_client: MagicMock) ->
         unique_id="firstnamelastname",
         version=2,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_migrate_entry(hass: HomeAssistant, mock_client: MagicMock) -> None:
+async def test_migrate_entry(menuai: menuai, mock_client: MagicMock) -> None:
     """Test migrate entry unique id."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -55,17 +55,17 @@ async def test_migrate_entry(hass: HomeAssistant, mock_client: MagicMock) -> Non
         unique_id="someother",
         version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert entry.version == 2
     assert entry.unique_id == "firstnamelastname"
 
 
-async def test_migrate_entry_fails(hass: HomeAssistant, mock_client: MagicMock) -> None:
+async def test_migrate_entry_fails(menuai: menuai, mock_client: MagicMock) -> None:
     """Test migrate entry fails."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -75,12 +75,12 @@ async def test_migrate_entry_fails(hass: HomeAssistant, mock_client: MagicMock) 
         unique_id="someother",
         version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_client.async_get_me.side_effect = NoUsernameError("No username returned")
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
     assert entry.version == 1
@@ -88,18 +88,18 @@ async def test_migrate_entry_fails(hass: HomeAssistant, mock_client: MagicMock) 
 
 
 async def test_device_remove_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     load_int: ConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test we can only remove a device that no longer exists."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     entity = entity_registry.entities["climate.hallway"]
 
     device_entry = device_registry.async_get(entity.device_id)
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device_entry.id, load_int.entry_id)
     assert not response["success"]
 
@@ -126,7 +126,7 @@ async def test_device_remove_devices(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_automatic_device_addition_and_removal(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     get_data: tuple[SensiboData, dict[str, Any], dict[str, Any]],
@@ -138,7 +138,7 @@ async def test_automatic_device_addition_and_removal(
 ) -> None:
     """Test for automatic device addition and removal."""
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert entity_registry.async_get(entity_id)
     for device_id in device_ids:
@@ -157,10 +157,10 @@ async def test_automatic_device_addition_and_removal(
     mock_client.async_get_devices_data.return_value = SensiboData(new_raw, new_data)
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert not state
     assert not entity_registry.async_get(entity_id)
     for device_id in device_ids:
@@ -171,10 +171,10 @@ async def test_automatic_device_addition_and_removal(
     mock_client.async_get_devices_data.return_value = get_data[0]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert entity_registry.async_get(entity_id)
     for device_id in device_ids:

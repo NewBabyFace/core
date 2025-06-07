@@ -6,18 +6,18 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import (
+from menuai.components import onboarding
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_UUID
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_UUID
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import SelectSelector, SelectSelectorConfig
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_IGNORE_CEC, CONF_KNOWN_HOSTS, DOMAIN
 
@@ -78,7 +78,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm the setup."""
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             return self.async_create_entry(title="Google Cast", data=self._get_data())
 
         return self.async_show_form(step_id="confirm")
@@ -117,7 +117,7 @@ class CastOptionsFlowHandler(OptionsFlow):
             if self.show_advanced_options:
                 return await self.async_step_advanced_options()
 
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, data=self.updated_config
             )
             return self.async_create_entry(title="", data={})
@@ -147,7 +147,7 @@ class CastOptionsFlowHandler(OptionsFlow):
             if not bad_cec and not bad_uuid:
                 self.updated_config[CONF_IGNORE_CEC] = ignore_cec
                 self.updated_config[CONF_UUID] = wanted_uuid
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self.config_entry, data=self.updated_config
                 )
                 return self.async_create_entry(title="", data={})

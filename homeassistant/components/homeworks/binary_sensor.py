@@ -7,12 +7,12 @@ from typing import Any
 
 from pyhomeworks.pyhomeworks import HW_KEYPAD_LED_CHANGED, Homeworks
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeworksConfigEntry, HomeworksKeypad
 from .const import (
@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeworksConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -78,12 +78,12 @@ class HomeworksBinarySensor(HomeworksEntity, BinarySensorEntity):
         )
         self._keypad = keypad
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         signal = f"homeworks_entity_{self._controller_id}_{self._addr}"
         _LOGGER.debug("connecting %s", signal)
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, signal, self._update_callback)
+            async_dispatcher_connect(self.menuai, signal, self._update_callback)
         )
         await self._keypad.request_keypad_led_states()
 

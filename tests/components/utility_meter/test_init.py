@@ -7,33 +7,33 @@ from datetime import timedelta
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.utility_meter import (
+from menuai.components.utility_meter import (
     select as um_select,
     sensor as um_sensor,
 )
-from homeassistant.components.utility_meter.const import DOMAIN, SERVICE_RESET
-from homeassistant.const import (
+from menuai.components.utility_meter.const import DOMAIN, SERVICE_RESET
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_PLATFORM,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     Platform,
     UnitOfEnergy,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, State
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, mock_restore_cache
 
 
-async def test_restore_state(hass: HomeAssistant) -> None:
+async def test_restore_state(menuai: menuai) -> None:
     """Test utility sensor restore state."""
     config = {
         "utility_meter": {
@@ -44,7 +44,7 @@ async def test_restore_state(hass: HomeAssistant) -> None:
         }
     }
     mock_restore_cache(
-        hass,
+        menuai,
         [
             State(
                 "select.energy_bill",
@@ -53,12 +53,12 @@ async def test_restore_state(hass: HomeAssistant) -> None:
         ],
     )
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    assert await async_setup_component(hass, Platform.SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    assert await async_setup_component(menuai, Platform.SENSOR, config)
+    await menuai.async_block_till_done()
 
     # restore from cache
-    state = hass.states.get("select.energy_bill")
+    state = menuai.states.get("select.energy_bill")
     assert state.state == "midpeak"
 
 
@@ -69,7 +69,7 @@ async def test_restore_state(hass: HomeAssistant) -> None:
         "select.energy_bill",
     ],
 )
-async def test_services(hass: HomeAssistant, meter) -> None:
+async def test_services(menuai: menuai, meter) -> None:
     """Test energy sensor reset service."""
     config = {
         "utility_meter": {
@@ -86,99 +86,99 @@ async def test_services(hass: HomeAssistant, meter) -> None:
         }
     }
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    assert await async_setup_component(hass, Platform.SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    assert await async_setup_component(menuai, Platform.SENSOR, config)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
     entity_id = config[DOMAIN]["energy_bill"]["source"]
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id, 1, {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     now = dt_util.utcnow() + timedelta(seconds=10)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             3,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "2"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "0"
 
     # Change tariff
     data = {ATTR_ENTITY_ID: "select.energy_bill", ATTR_OPTION: "offpeak"}
-    await hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
+    await menuai.async_block_till_done()
 
     now += timedelta(seconds=10)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             4,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "2"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "1"
 
     # Change tariff
     data = {ATTR_ENTITY_ID: "select.energy_bill", "option": "wrong_tariff"}
-    await hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
+    await menuai.async_block_till_done()
 
     # Inexisting tariff, ignoring
-    assert hass.states.get("select.energy_bill").state != "wrong_tariff"
+    assert menuai.states.get("select.energy_bill").state != "wrong_tariff"
 
     data = {ATTR_ENTITY_ID: "select.energy_bill", "option": "peak"}
-    await hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
+    await menuai.async_block_till_done()
 
     now += timedelta(seconds=10)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             5,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "3"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "1"
 
     # Reset meters
     data = {ATTR_ENTITY_ID: meter}
-    await hass.services.async_call(DOMAIN, SERVICE_RESET, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_RESET, data)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "0"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "0"
 
     # meanwhile energy_bill2_peak accumulated all kWh
-    state = hass.states.get("sensor.energy_bill2_peak")
+    state = menuai.states.get("sensor.energy_bill2_peak")
     assert state.state == "4"
 
 
-async def test_services_config_entry(hass: HomeAssistant) -> None:
+async def test_services_config_entry(menuai: menuai) -> None:
     """Test energy sensor reset service."""
     config_entry = MockConfigEntry(
         data={},
@@ -195,8 +195,8 @@ async def test_services_config_entry(hass: HomeAssistant) -> None:
         },
         title="Energy bill",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     config_entry = MockConfigEntry(
         data={},
         domain=DOMAIN,
@@ -212,99 +212,99 @@ async def test_services_config_entry(hass: HomeAssistant) -> None:
         },
         title="Energy bill2",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
     entity_id = "sensor.energy"
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id, 1, {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     now = dt_util.utcnow() + timedelta(seconds=10)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             3,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "2"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "0"
 
     # Change tariff
     data = {ATTR_ENTITY_ID: "select.energy_bill", "option": "offpeak"}
-    await hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
+    await menuai.async_block_till_done()
 
     now += timedelta(seconds=10)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             4,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "2"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "1"
 
     # Change tariff
     data = {ATTR_ENTITY_ID: "select.energy_bill", "option": "wrong_tariff"}
-    await hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
+    await menuai.async_block_till_done()
 
     # Inexisting tariff, ignoring
-    assert hass.states.get("select.energy_bill").state != "wrong_tariff"
+    assert menuai.states.get("select.energy_bill").state != "wrong_tariff"
 
     data = {ATTR_ENTITY_ID: "select.energy_bill", "option": "peak"}
-    await hass.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SELECT_DOMAIN, SERVICE_SELECT_OPTION, data)
+    await menuai.async_block_till_done()
 
     now += timedelta(seconds=10)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             5,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfEnergy.KILO_WATT_HOUR},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "3"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "1"
 
     # Reset meters
     data = {ATTR_ENTITY_ID: "select.energy_bill"}
-    await hass.services.async_call(DOMAIN, SERVICE_RESET, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_RESET, data)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_bill_peak")
+    state = menuai.states.get("sensor.energy_bill_peak")
     assert state.state == "0"
 
-    state = hass.states.get("sensor.energy_bill_offpeak")
+    state = menuai.states.get("sensor.energy_bill_offpeak")
     assert state.state == "0"
 
     # meanwhile energy_bill2_peak accumulated all kWh
-    state = hass.states.get("sensor.energy_bill2_peak")
+    state = menuai.states.get("sensor.energy_bill2_peak")
     assert state.state == "4"
 
 
-async def test_cron(hass: HomeAssistant) -> None:
+async def test_cron(menuai: menuai) -> None:
     """Test cron pattern."""
 
     config = {
@@ -316,10 +316,10 @@ async def test_cron(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, DOMAIN, config)
+    assert await async_setup_component(menuai, DOMAIN, config)
 
 
-async def test_cron_and_meter(hass: HomeAssistant) -> None:
+async def test_cron_and_meter(menuai: menuai) -> None:
     """Test cron pattern and meter type fails."""
     config = {
         "utility_meter": {
@@ -331,10 +331,10 @@ async def test_cron_and_meter(hass: HomeAssistant) -> None:
         }
     }
 
-    assert not await async_setup_component(hass, DOMAIN, config)
+    assert not await async_setup_component(menuai, DOMAIN, config)
 
 
-async def test_both_cron_and_meter(hass: HomeAssistant) -> None:
+async def test_both_cron_and_meter(menuai: menuai) -> None:
     """Test cron pattern and meter type passes in different meter."""
     config = {
         "utility_meter": {
@@ -349,11 +349,11 @@ async def test_both_cron_and_meter(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
 
-async def test_cron_and_offset(hass: HomeAssistant) -> None:
+async def test_cron_and_offset(menuai: menuai) -> None:
     """Test cron pattern and offset fails."""
 
     config = {
@@ -366,23 +366,23 @@ async def test_cron_and_offset(hass: HomeAssistant) -> None:
         }
     }
 
-    assert not await async_setup_component(hass, DOMAIN, config)
+    assert not await async_setup_component(menuai, DOMAIN, config)
 
 
-async def test_bad_cron(hass: HomeAssistant) -> None:
+async def test_bad_cron(menuai: menuai) -> None:
     """Test bad cron pattern."""
 
     config = {
         "utility_meter": {"energy_bill": {"source": "sensor.energy", "cron": "*"}}
     }
 
-    assert not await async_setup_component(hass, DOMAIN, config)
+    assert not await async_setup_component(menuai, DOMAIN, config)
 
 
-async def test_setup_missing_discovery(hass: HomeAssistant) -> None:
+async def test_setup_missing_discovery(menuai: menuai) -> None:
     """Test setup with configuration missing discovery_info."""
-    assert not await um_select.async_setup_platform(hass, {CONF_PLATFORM: DOMAIN}, None)
-    assert not await um_sensor.async_setup_platform(hass, {CONF_PLATFORM: DOMAIN}, None)
+    assert not await um_select.async_setup_platform(menuai, {CONF_PLATFORM: DOMAIN}, None)
+    assert not await um_sensor.async_setup_platform(menuai, {CONF_PLATFORM: DOMAIN}, None)
 
 
 @pytest.mark.parametrize(
@@ -403,7 +403,7 @@ async def test_setup_missing_discovery(hass: HomeAssistant) -> None:
     ],
 )
 async def test_setup_and_remove_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     tariffs: str,
     expected_entities: list[str],
@@ -427,27 +427,27 @@ async def test_setup_and_remove_config_entry(
         },
         title="Electricity meter",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == len(expected_entities)
+    assert len(menuai.states.async_all()) == len(expected_entities)
     assert len(entity_registry.entities) == len(expected_entities)
     for entity in expected_entities:
-        assert hass.states.get(entity)
+        assert menuai.states.get(entity)
         assert entity in entity_registry.entities
 
     # Remove the config entry
-    assert await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the state and entity registry entry are removed
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
     assert len(entity_registry.entities) == 0
 
 
 async def test_device_cleaning(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -455,7 +455,7 @@ async def test_device_cleaning(
 
     # Source entity device config entry
     source_config_entry = MockConfigEntry()
-    source_config_entry.add_to_hass(hass)
+    source_config_entry.add_to_menuai(menuai)
 
     # Device entry of the source entity
     source_device1_entry = device_registry.async_get_or_create(
@@ -472,7 +472,7 @@ async def test_device_cleaning(
         config_entry=source_config_entry,
         device_id=source_device1_entry.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     # Configure the configuration entry for Utility Meter
@@ -491,9 +491,9 @@ async def test_device_cleaning(
         },
         title="Meter",
     )
-    utility_meter_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(utility_meter_config_entry.entry_id)
-    await hass.async_block_till_done()
+    utility_meter_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(utility_meter_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the meter sensor
     utility_meter_entity = entity_registry.async_get("sensor.meter")
@@ -511,7 +511,7 @@ async def test_device_cleaning(
         identifiers={("sensor", "identifier_test3")},
         connections={("mac", "30:31:32:33:34:03")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Before reloading the config entry, two devices are expected to be linked
     devices_before_reload = device_registry.devices.get_devices_for_config_entry_id(
@@ -520,8 +520,8 @@ async def test_device_cleaning(
     assert len(devices_before_reload) == 3
 
     # Config entry reload
-    await hass.config_entries.async_reload(utility_meter_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(utility_meter_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the meter sensor after reload
     utility_meter_entity = entity_registry.async_get("sensor.meter")

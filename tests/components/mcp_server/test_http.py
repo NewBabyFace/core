@@ -13,21 +13,21 @@ import mcp.client.sse
 from mcp.shared.exceptions import McpError
 import pytest
 
-from homeassistant.components.conversation import DOMAIN as CONVERSATION_DOMAIN
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.components.mcp_server.const import STATELESS_LLM_API
-from homeassistant.components.mcp_server.http import MESSAGES_API, SSE_API
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_LLM_HASS_API, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.components.conversation import DOMAIN as CONVERSATION_DOMAIN
+from menuai.components.menuai.exposed_entities import async_expose_entity
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.components.mcp_server.const import STATELESS_LLM_API
+from menuai.components.mcp_server.http import MESSAGES_API, SSE_API
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_LLM_menuai_API, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_registry as er,
     llm,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, setup_test_component_platform
 from tests.components.light.common import MockLight
@@ -59,15 +59,15 @@ EXPECTED_PROMPT_SUFFIX = """
 
 
 @pytest.fixture
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Set up the config entry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
 
 @pytest.fixture(autouse=True)
 async def mock_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     area_registry: ar.AreaRegistry,
@@ -77,18 +77,18 @@ async def mock_entities(
     entity = MockLight("Kitchen Light", STATE_OFF)
     entity.entity_id = TEST_ENTITY
     entity.unique_id = "test-light-unique-id"
-    setup_test_component_platform(hass, LIGHT_DOMAIN, [entity])
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, [entity])
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {LIGHT_DOMAIN: [{"platform": "test"}]},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     kitchen = area_registry.async_get_or_create("Kitchen")
     entity_registry.async_update_entity(TEST_ENTITY, area_id=kitchen.id)
 
-    async_expose_entity(hass, CONVERSATION_DOMAIN, TEST_ENTITY, True)
+    async_expose_entity(menuai, CONVERSATION_DOMAIN, TEST_ENTITY, True)
 
 
 async def sse_response_reader(
@@ -117,13 +117,13 @@ async def sse_response_reader(
 
 
 async def test_http_sse(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test SSE endpoint can be used to receive MCP messages."""
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Start an SSE session
     response = await client.get(SSE_API)
@@ -149,13 +149,13 @@ async def test_http_sse(
 
 
 async def test_http_messages_missing_session_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the tools list endpoint."""
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.post(MESSAGES_API.format(session_id="invalid-session-id"))
     assert response.status == HTTPStatus.NOT_FOUND
     response_data = await response.text()
@@ -163,13 +163,13 @@ async def test_http_messages_missing_session_id(
 
 
 async def test_http_messages_invalid_message_format(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the tools list endpoint."""
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(SSE_API)
     assert response.status == HTTPStatus.OK
     reader = sse_response_reader(response)
@@ -183,9 +183,9 @@ async def test_http_messages_invalid_message_format(
 
 
 async def test_http_sse_multiple_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the SSE endpoint will fail with multiple config entries.
 
@@ -194,12 +194,12 @@ async def test_http_sse_multiple_config_entries(
     """
 
     config_entry = MockConfigEntry(
-        domain="mcp_server", data={CONF_LLM_HASS_API: "llm-api-id"}
+        domain="mcp_server", data={CONF_LLM_menuai_API: "llm-api-id"}
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Attempt to start an SSE session will fail
     response = await client.get(SSE_API)
@@ -209,17 +209,17 @@ async def test_http_sse_multiple_config_entries(
 
 
 async def test_http_sse_no_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the SSE endpoint fails with a missing config entry."""
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Start an SSE session
     response = await client.get(SSE_API)
@@ -229,14 +229,14 @@ async def test_http_sse_no_config_entry(
 
 
 async def test_http_messages_no_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the message endpoint will fail if the config entry is unloaded."""
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Start an SSE session
     response = await client.get(SSE_API)
@@ -246,11 +246,11 @@ async def test_http_messages_no_config_entry(
     assert event == "endpoint"
 
     # Invalidate the session by unloading the config entry
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
     # Reload the config entry and ensure the session is not found
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
     response = await client.post(endpoint_url, json=INITIALIZE_MESSAGE)
@@ -260,13 +260,13 @@ async def test_http_messages_no_config_entry(
 
 
 async def test_http_requires_authentication(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test the SSE endpoint requires authentication."""
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     response = await client.get(SSE_API)
     assert response.status == HTTPStatus.UNAUTHORIZED
@@ -276,20 +276,20 @@ async def test_http_requires_authentication(
 
 
 @pytest.fixture
-async def mcp_sse_url(hass_client: ClientSessionGenerator) -> str:
+async def mcp_sse_url(menuai_client: ClientSessionGenerator) -> str:
     """Fixture to get the MCP integration SSE URL."""
-    client = await hass_client()
+    client = await menuai_client()
     return str(client.make_url(SSE_API))
 
 
 @asynccontextmanager
 async def mcp_session(
     mcp_sse_url: str,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
 ) -> AsyncGenerator[mcp.client.session.ClientSession]:
     """Create an MCP session."""
 
-    headers = {"Authorization": f"Bearer {hass_supervisor_access_token}"}
+    headers = {"Authorization": f"Bearer {menuai_supervisor_access_token}"}
 
     async with (
         mcp.client.sse.sse_client(mcp_sse_url, headers=headers) as streams,
@@ -299,22 +299,22 @@ async def mcp_session(
         yield session
 
 
-@pytest.mark.parametrize("llm_hass_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
+@pytest.mark.parametrize("llm_menuai_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
 async def test_mcp_tools_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     mcp_sse_url: str,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
 ) -> None:
     """Test the tools list endpoint."""
 
-    async with mcp_session(mcp_sse_url, hass_supervisor_access_token) as session:
+    async with mcp_session(mcp_sse_url, menuai_supervisor_access_token) as session:
         result = await session.list_tools()
 
     # Pick a single arbitrary tool and test that description and parameters
     # are converted correctly.
-    tool = next(iter(tool for tool in result.tools if tool.name == "HassTurnOn"))
-    assert tool.name == "HassTurnOn"
+    tool = next(iter(tool for tool in result.tools if tool.name == "menuaiTurnOn"))
+    assert tool.name == "menuaiTurnOn"
     assert tool.description is not None
     assert tool.inputSchema
     assert tool.inputSchema.get("type") == "object"
@@ -322,22 +322,22 @@ async def test_mcp_tools_list(
     assert properties.get("name") == {"type": "string"}
 
 
-@pytest.mark.parametrize("llm_hass_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
+@pytest.mark.parametrize("llm_menuai_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
 async def test_mcp_tool_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     mcp_sse_url: str,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
 ) -> None:
     """Test the tool call endpoint."""
 
-    state = hass.states.get("light.kitchen")
+    state = menuai.states.get("light.kitchen")
     assert state
     assert state.state == STATE_OFF
 
-    async with mcp_session(mcp_sse_url, hass_supervisor_access_token) as session:
+    async with mcp_session(mcp_sse_url, menuai_supervisor_access_token) as session:
         result = await session.call_tool(
-            name="HassTurnOn",
+            name="menuaiTurnOn",
             arguments={"name": "kitchen light"},
         )
 
@@ -350,22 +350,22 @@ async def test_mcp_tool_call(
     assert not content.get("data", {}).get("failed")
 
     # Verify tool call invocation
-    state = hass.states.get("light.kitchen")
+    state = menuai.states.get("light.kitchen")
     assert state
     assert state.state == STATE_ON
 
 
 async def test_mcp_tool_call_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     mcp_sse_url: str,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
 ) -> None:
     """Test the tool call endpoint with a failure."""
 
-    async with mcp_session(mcp_sse_url, hass_supervisor_access_token) as session:
+    async with mcp_session(mcp_sse_url, menuai_supervisor_access_token) as session:
         result = await session.call_tool(
-            name="HassTurnOn",
+            name="menuaiTurnOn",
             arguments={"name": "backyard"},
         )
 
@@ -375,52 +375,52 @@ async def test_mcp_tool_call_failed(
     assert "Error calling tool" in result.content[0].text
 
 
-@pytest.mark.parametrize("llm_hass_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
+@pytest.mark.parametrize("llm_menuai_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
 async def test_prompt_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     mcp_sse_url: str,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
 ) -> None:
     """Test the list prompt endpoint."""
 
-    async with mcp_session(mcp_sse_url, hass_supervisor_access_token) as session:
+    async with mcp_session(mcp_sse_url, menuai_supervisor_access_token) as session:
         result = await session.list_prompts()
 
     assert len(result.prompts) == 1
     prompt = result.prompts[0]
     assert prompt.name == "Assist"
-    assert prompt.description == "Default prompt for Home Assistant Assist API"
+    assert prompt.description == "Default prompt for MenuAI Assist API"
 
 
-@pytest.mark.parametrize("llm_hass_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
+@pytest.mark.parametrize("llm_menuai_api", [llm.LLM_API_ASSIST, STATELESS_LLM_API])
 async def test_prompt_get(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     mcp_sse_url: str,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
 ) -> None:
     """Test the get prompt endpoint."""
 
-    async with mcp_session(mcp_sse_url, hass_supervisor_access_token) as session:
+    async with mcp_session(mcp_sse_url, menuai_supervisor_access_token) as session:
         result = await session.get_prompt(name="Assist")
 
-    assert result.description == "Default prompt for Home Assistant Assist API"
+    assert result.description == "Default prompt for MenuAI Assist API"
     assert len(result.messages) == 1
     assert result.messages[0].role == "assistant"
     assert result.messages[0].content.type == "text"
-    assert "When controlling Home Assistant" in result.messages[0].content.text
+    assert "When controlling MenuAI" in result.messages[0].content.text
     assert result.messages[0].content.text.endswith(EXPECTED_PROMPT_SUFFIX)
 
 
 async def test_get_unknwon_prompt(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     mcp_sse_url: str,
-    hass_supervisor_access_token: str,
+    menuai_supervisor_access_token: str,
 ) -> None:
     """Test the get prompt endpoint."""
 
-    async with mcp_session(mcp_sse_url, hass_supervisor_access_token) as session:
+    async with mcp_session(mcp_sse_url, menuai_supervisor_access_token) as session:
         with pytest.raises(McpError):
             await session.get_prompt(name="Unknown")

@@ -7,7 +7,7 @@ from typing import Any, Self
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     CONF_ICON,
     CONF_ID,
@@ -18,15 +18,15 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.entity import ToggleEntity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-import homeassistant.helpers.service
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.loader import bind_hass
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.entity import ToggleEntity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+import menuai.helpers.service
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.loader import bind_menuai
 
 DOMAIN = "input_boolean"
 
@@ -81,15 +81,15 @@ class InputBooleanStorageCollection(collection.DictStorageCollection):
         return {CONF_ID: item[CONF_ID]} | update_data
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Test if input_boolean is True."""
-    return hass.states.is_state(entity_id, STATE_ON)
+    return menuai.states.is_state(entity_id, STATE_ON)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up an input boolean."""
-    component = EntityComponent[InputBoolean](_LOGGER, DOMAIN, hass)
+    component = EntityComponent[InputBoolean](_LOGGER, DOMAIN, menuai)
 
     id_manager = collection.IDManager()
 
@@ -97,15 +97,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         logging.getLogger(f"{__name__}.yaml_collection"), id_manager
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, yaml_collection, InputBoolean
+        menuai, DOMAIN, DOMAIN, component, yaml_collection, InputBoolean
     )
 
     storage_collection = InputBooleanStorageCollection(
-        Store(hass, STORAGE_VERSION, STORAGE_KEY),
+        Store(menuai, STORAGE_VERSION, STORAGE_KEY),
         id_manager,
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, storage_collection, InputBoolean
+        menuai, DOMAIN, DOMAIN, component, storage_collection, InputBoolean
     )
 
     await yaml_collection.async_load(
@@ -115,7 +115,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     collection.DictStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, STORAGE_FIELDS, STORAGE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     async def reload_service_handler(service_call: ServiceCall) -> None:
         """Remove all input booleans and load new ones from config."""
@@ -129,8 +129,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ]
         )
 
-    homeassistant.helpers.service.async_register_admin_service(
-        hass,
+    menuai.helpers.service.async_register_admin_service(
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         reload_service_handler,
@@ -190,10 +190,10 @@ class InputBoolean(collection.CollectionEntity, ToggleEntity, RestoreEntity):
         """Return the state attributes of the entity."""
         return {ATTR_EDITABLE: self.editable}
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
         # Don't restore if we got an initial value.
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self._config.get(CONF_INITIAL) is not None:
             return
 

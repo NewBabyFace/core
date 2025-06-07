@@ -18,14 +18,14 @@ from aiowithings import (
     WorkoutCategory,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     PERCENTAGE,
     Platform,
     UnitOfLength,
@@ -34,11 +34,11 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util
 
 from . import WithingsConfigEntry
 from .const import (
@@ -690,12 +690,12 @@ def get_current_goals(goals: Goals) -> set[str]:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: WithingsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the sensor config entry."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     withings_data = entry.runtime_data
 
@@ -840,12 +840,12 @@ async def async_setup_entry(
         new_devices = received_devices - current_devices
         old_devices = current_devices - received_devices
         if new_devices:
-            device_registry = dr.async_get(hass)
+            device_registry = dr.async_get(menuai)
             for device_id in new_devices:
                 if device := device_registry.async_get_device({(DOMAIN, device_id)}):
                     if any(
                         (
-                            config_entry := hass.config_entries.async_get_entry(
+                            config_entry := menuai.config_entries.async_get_entry(
                                 config_entry_id
                             )
                         )
@@ -860,7 +860,7 @@ async def async_setup_entry(
                 current_devices.add(device_id)
 
         if old_devices:
-            device_registry = dr.async_get(hass)
+            device_registry = dr.async_get(menuai)
             for device_id in old_devices:
                 if device := device_registry.async_get_device({(DOMAIN, device_id)}):
                     device_registry.async_update_device(

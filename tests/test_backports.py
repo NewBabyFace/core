@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from functools import cached_property  # pylint: disable=hass-deprecated-import
+from functools import cached_property  # pylint: disable=menuai-deprecated-import
 from types import ModuleType
 from typing import Any
 
 import pytest
 
-from homeassistant.backports import (
+from menuai.backports import (
     enum as backports_enum,
     functools as backports_functools,
 )

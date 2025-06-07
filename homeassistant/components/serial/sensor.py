@@ -10,15 +10,15 @@ from serial import SerialException
 import serial_asyncio_fast as serial_asyncio
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import CONF_NAME, CONF_VALUE_TEMPLATE, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_NAME, CONF_VALUE_TEMPLATE, EVENT_menuai_STOP
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -108,7 +108,7 @@ async def async_setup_platform(
         value_template,
     )
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, sensor.stop_serial_read)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, sensor.stop_serial_read)
     async_add_entities([sensor], True)
 
 
@@ -145,9 +145,9 @@ class SerialSensor(SensorEntity):
         self._template = value_template
         self._attributes = None
 
-    async def async_added_to_hass(self) -> None:
-        """Handle when an entity is about to be added to Home Assistant."""
-        self._serial_loop_task = self.hass.loop.create_task(
+    async def async_added_to_menuai(self) -> None:
+        """Handle when an entity is about to be added to MenuAI."""
+        self._serial_loop_task = self.menuai.loop.create_task(
             self.serial_read(
                 self._port,
                 self._baudrate,

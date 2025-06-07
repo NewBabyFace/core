@@ -3,7 +3,7 @@
 import aioharmony.exceptions as harmony_exceptions
 from aioharmony.harmonyapi import HarmonyAPI
 
-from homeassistant.const import CONF_NAME
+from menuai.const import CONF_NAME
 
 
 def find_unique_id_for_remote(harmony: HarmonyAPI):

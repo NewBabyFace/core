@@ -7,16 +7,16 @@ control of RFLink switch devices.
 
 import pytest
 
-from homeassistant.components.light import ATTR_BRIGHTNESS
-from homeassistant.components.rflink.entity import EVENT_BUTTON_PRESSED
-from homeassistant.const import (
+from menuai.components.light import ATTR_BRIGHTNESS
+from menuai.components.rflink.entity import EVENT_BUTTON_PRESSED
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import CoreState, HomeAssistant, State, callback
+from menuai.core import CoreState, menuai, State, callback
 
 from .test_init import mock_rflink
 
@@ -41,19 +41,19 @@ CONFIG = {
 
 
 async def test_default_setup(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test all basic functionality of the RFLink switch component."""
     # setup mocking rflink module
     event_callback, create, protocol, _ = await mock_rflink(
-        hass, CONFIG, DOMAIN, monkeypatch
+        menuai, CONFIG, DOMAIN, monkeypatch
     )
 
     # make sure arguments are passed
     assert create.call_args_list[0][1]["ignore"]
 
     # test default state of light loaded from config
-    light_initial = hass.states.get(f"{DOMAIN}.test")
+    light_initial = menuai.states.get(f"{DOMAIN}.test")
     assert light_initial.state == "off"
     assert light_initial.attributes["assumed_state"]
 
@@ -62,68 +62,68 @@ async def test_default_setup(
 
     # mock incoming command event for this device
     event_callback({"id": "protocol_0_0", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    light_after_first_command = hass.states.get(f"{DOMAIN}.test")
+    light_after_first_command = menuai.states.get(f"{DOMAIN}.test")
     assert light_after_first_command.state == "on"
     # also after receiving first command state not longer has to be assumed
     assert not light_after_first_command.attributes.get("assumed_state")
 
     # mock incoming command event for this device
     event_callback({"id": "protocol_0_0", "command": "off"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
 
     # should respond to group command
     event_callback({"id": "protocol_0_0", "command": "allon"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    light_after_first_command = hass.states.get(f"{DOMAIN}.test")
+    light_after_first_command = menuai.states.get(f"{DOMAIN}.test")
     assert light_after_first_command.state == "on"
 
     # should respond to group command
     event_callback({"id": "protocol_0_0", "command": "alloff"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
 
     # test following aliases
     # mock incoming command event for this device alias
     event_callback({"id": "test_alias_0_0", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "on"
 
     # test event for new unconfigured sensor
     event_callback({"id": "protocol2_0_1", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.protocol2_0_1").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.protocol2_0_1").state == "on"
 
     # test changing state from HA propagates to RFLink
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.test"}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    await menuai.async_block_till_done()
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
     assert protocol.send_command_ack.call_args_list[0][0][0] == "protocol_0_0"
     assert protocol.send_command_ack.call_args_list[0][0][1] == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: f"{DOMAIN}.test"}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(f"{DOMAIN}.test").state == "on"
+    await menuai.async_block_till_done()
+    assert menuai.states.get(f"{DOMAIN}.test").state == "on"
     assert protocol.send_command_ack.call_args_list[1][0][1] == "on"
 
     # protocols supporting dimming and on/off should create hybrid light entity
     event_callback({"id": "newkaku_0_1", "command": "off"})
-    await hass.async_block_till_done()
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: f"{DOMAIN}.newkaku_0_1"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # dimmable should send highest dim level when turning on
     assert protocol.send_command_ack.call_args_list[2][0][1] == "15"
@@ -131,27 +131,27 @@ async def test_default_setup(
     # and send on command for fallback
     assert protocol.send_command_ack.call_args_list[3][0][1] == "on"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: f"{DOMAIN}.newkaku_0_1", ATTR_BRIGHTNESS: 128},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert protocol.send_command_ack.call_args_list[4][0][1] == "7"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: f"{DOMAIN}.dim_test", ATTR_BRIGHTNESS: 128},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert protocol.send_command_ack.call_args_list[5][0][1] == "7"
 
 
 async def test_firing_bus_event(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Incoming RFLink command events should be put on the HA event bus."""
     config = {
@@ -169,7 +169,7 @@ async def test_firing_bus_event(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
     calls = []
 
@@ -177,18 +177,18 @@ async def test_firing_bus_event(
     def listener(event):
         calls.append(event)
 
-    hass.bus.async_listen_once(EVENT_BUTTON_PRESSED, listener)
+    menuai.bus.async_listen_once(EVENT_BUTTON_PRESSED, listener)
 
     # test event for new unconfigured sensor
     event_callback({"id": "protocol_0_0", "command": "off"})
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert calls[0].data == {"state": "off", "entity_id": f"{DOMAIN}.test"}
 
 
 async def test_signal_repetitions(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Command should be sent amount of configured repetitions."""
     config = {
@@ -206,26 +206,26 @@ async def test_signal_repetitions(
 
     # setup mocking rflink module
     event_callback, _, protocol, _ = await mock_rflink(
-        hass, config, DOMAIN, monkeypatch
+        menuai, config, DOMAIN, monkeypatch
     )
 
     # test if signal repetition is performed according to configuration
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.test"}
     )
 
     # wait for commands and repetitions to finish
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert protocol.send_command_ack.call_count == 2
 
     # test if default apply to configured devices
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.test1"}
     )
 
     # wait for commands and repetitions to finish
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert protocol.send_command_ack.call_count == 5
 
@@ -233,20 +233,20 @@ async def test_signal_repetitions(
     event_callback({"id": "protocol_0_2", "command": "off"})
 
     # make sure entity is created before setting state
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.protocol_0_2"}
     )
 
     # wait for commands and repetitions to finish
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert protocol.send_command_ack.call_count == 8
 
 
 async def test_signal_repetitions_alternation(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Simultaneously switching entities must alternate repetitions."""
     config = {
@@ -261,16 +261,16 @@ async def test_signal_repetitions_alternation(
     }
 
     # setup mocking rflink module
-    _, _, protocol, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    _, _, protocol, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.test"}
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.test1"}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert protocol.send_command_ack.call_args_list[0][0][0] == "protocol_0_0"
     assert protocol.send_command_ack.call_args_list[1][0][0] == "protocol_0_1"
@@ -279,7 +279,7 @@ async def test_signal_repetitions_alternation(
 
 
 async def test_signal_repetitions_cancelling(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Cancel outstanding repetitions when state changed."""
     config = {
@@ -291,18 +291,18 @@ async def test_signal_repetitions_cancelling(
     }
 
     # setup mocking rflink module
-    _, _, protocol, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
-    await hass.async_block_till_done()
+    _, _, protocol, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.test"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: f"{DOMAIN}.test"}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert [call[0][1] for call in protocol.send_command_ack.call_args_list] == [
         "off",
@@ -315,7 +315,7 @@ async def test_signal_repetitions_cancelling(
 
 
 async def test_type_toggle(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test toggle type lights (on/on)."""
     config = {
@@ -327,42 +327,42 @@ async def test_type_toggle(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
     # default value = 'off'
-    assert hass.states.get(f"{DOMAIN}.toggle_test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.toggle_test").state == "off"
 
     # test sending 'on' command, must set state = 'on'
     event_callback({"id": "toggle_0_0", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.toggle_test").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.toggle_test").state == "on"
 
     # test sending 'on' command again, must set state = 'off'
     event_callback({"id": "toggle_0_0", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.toggle_test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.toggle_test").state == "off"
 
     # test async_turn_off, must set state = 'on' ('off' + toggle)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: f"{DOMAIN}.toggle_test"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.toggle_test").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.toggle_test").state == "on"
 
     # test async_turn_on, must set state = 'off' (yes, sounds crazy)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: f"{DOMAIN}.toggle_test"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.toggle_test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.toggle_test").state == "off"
 
 
 async def test_set_level_command(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test 'set_level=XX' events."""
     config = {
@@ -379,79 +379,79 @@ async def test_set_level_command(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
     # test sending command to a newkaku device
     event_callback({"id": "newkaku_12345678_0", "command": "set_level=10"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should affect state
-    state = hass.states.get(f"{DOMAIN}.l1")
+    state = menuai.states.get(f"{DOMAIN}.l1")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 170
     # turn off
     event_callback({"id": "newkaku_12345678_0", "command": "off"})
-    await hass.async_block_till_done()
-    state = hass.states.get(f"{DOMAIN}.l1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(f"{DOMAIN}.l1")
     assert state
     assert state.state == STATE_OFF
     # off light shouldn't have brightness
     assert not state.attributes.get(ATTR_BRIGHTNESS)
     # turn on
     event_callback({"id": "newkaku_12345678_0", "command": "on"})
-    await hass.async_block_till_done()
-    state = hass.states.get(f"{DOMAIN}.l1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(f"{DOMAIN}.l1")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 170
 
     # test sending command to a no dimmable device
     event_callback({"id": "test_no_dimmable", "command": "set_level=10"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should NOT affect state
-    state = hass.states.get(f"{DOMAIN}.l2")
+    state = menuai.states.get(f"{DOMAIN}.l2")
     assert state
     assert state.state == STATE_OFF
     assert not state.attributes.get(ATTR_BRIGHTNESS)
 
     # test sending command to a dimmable device
     event_callback({"id": "test_dimmable", "command": "set_level=5"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should affect state
-    state = hass.states.get(f"{DOMAIN}.l3")
+    state = menuai.states.get(f"{DOMAIN}.l3")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 85
 
     # test sending command to a hybrid device
     event_callback({"id": "test_hybrid", "command": "set_level=15"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should affect state
-    state = hass.states.get(f"{DOMAIN}.l4")
+    state = menuai.states.get(f"{DOMAIN}.l4")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 255
 
     event_callback({"id": "test_hybrid", "command": "off"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should affect state
-    state = hass.states.get(f"{DOMAIN}.l4")
+    state = menuai.states.get(f"{DOMAIN}.l4")
     assert state
     assert state.state == STATE_OFF
     # off light shouldn't have brightness
     assert not state.attributes.get(ATTR_BRIGHTNESS)
 
     event_callback({"id": "test_hybrid", "command": "set_level=0"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should affect state
-    state = hass.states.get(f"{DOMAIN}.l4")
+    state = menuai.states.get(f"{DOMAIN}.l4")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 0
 
 
 async def test_group_alias(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Group aliases should only respond to group commands (allon/alloff)."""
     config = {
@@ -470,27 +470,27 @@ async def test_group_alias(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
 
     # test sending group command to group alias
     event_callback({"id": "test_group_0_0", "command": "allon"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "on"
-    assert hass.states.get(f"{DOMAIN}.test2").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.test2").state == "on"
 
     # test sending group command to group alias
     event_callback({"id": "test_group_0_0", "command": "off"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "on"
-    assert hass.states.get(f"{DOMAIN}.test2").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.test2").state == "on"
 
 
 async def test_nogroup_alias(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Non group aliases should not respond to group commands."""
     config = {
@@ -507,25 +507,25 @@ async def test_nogroup_alias(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
 
     # test sending group command to nogroup alias
     event_callback({"id": "test_nogroup_0_0", "command": "allon"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should not affect state
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
 
     # test sending group commands to nogroup alias
     event_callback({"id": "test_nogroup_0_0", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should affect state
-    assert hass.states.get(f"{DOMAIN}.test").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "on"
 
 
 async def test_nogroup_device_id(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Device id that do not respond to group commands (allon/alloff)."""
     config = {
@@ -537,25 +537,25 @@ async def test_nogroup_device_id(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
 
     # test sending group command to nogroup
     event_callback({"id": "test_nogroup_0_0", "command": "allon"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should not affect state
-    assert hass.states.get(f"{DOMAIN}.test").state == "off"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "off"
 
     # test sending group command to nogroup
     event_callback({"id": "test_nogroup_0_0", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # should affect state
-    assert hass.states.get(f"{DOMAIN}.test").state == "on"
+    assert menuai.states.get(f"{DOMAIN}.test").state == "on"
 
 
 async def test_disable_automatic_add(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """If disabled new devices should not be automatically added."""
     config = {
@@ -564,18 +564,18 @@ async def test_disable_automatic_add(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
     # test event for new unconfigured sensor
     event_callback({"id": "protocol_0_0", "command": "off"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # make sure new device is not added
-    assert not hass.states.get(f"{DOMAIN}.protocol_0_0")
+    assert not menuai.states.get(f"{DOMAIN}.protocol_0_0")
 
 
 async def test_restore_state(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Ensure states are restored on startup."""
     config = {
@@ -593,7 +593,7 @@ async def test_restore_state(
     }
 
     mock_restore_cache(
-        hass,
+        menuai,
         (
             State(f"{DOMAIN}.l1", STATE_ON, {ATTR_BRIGHTNESS: "123"}),
             State(f"{DOMAIN}.l2", STATE_ON, {ATTR_BRIGHTNESS: "321"}),
@@ -602,30 +602,30 @@ async def test_restore_state(
         ),
     )
 
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
     # setup mocking rflink module
-    _, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    _, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
     # hybrid light must restore brightness
-    state = hass.states.get(f"{DOMAIN}.l1")
+    state = menuai.states.get(f"{DOMAIN}.l1")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 123
 
     # normal light do NOT must restore brightness
-    state = hass.states.get(f"{DOMAIN}.l2")
+    state = menuai.states.get(f"{DOMAIN}.l2")
     assert state
     assert state.state == STATE_ON
     assert not state.attributes.get(ATTR_BRIGHTNESS)
 
     # OFF state also restores (or not)
-    state = hass.states.get(f"{DOMAIN}.l3")
+    state = menuai.states.get(f"{DOMAIN}.l3")
     assert state
     assert state.state == STATE_OFF
 
     # not cached light must default values
-    state = hass.states.get(f"{DOMAIN}.l4")
+    state = menuai.states.get(f"{DOMAIN}.l4")
     assert state
     assert state.state == STATE_OFF
     # off light shouldn't have brightness
@@ -633,7 +633,7 @@ async def test_restore_state(
     assert state.attributes["assumed_state"]
 
     # test coverage for dimmable light
-    state = hass.states.get(f"{DOMAIN}.l5")
+    state = menuai.states.get(f"{DOMAIN}.l5")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 222

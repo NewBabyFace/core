@@ -8,11 +8,11 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.accuweather.const import (
+from menuai.components.accuweather.const import (
     UPDATE_INTERVAL_DAILY_FORECAST,
     UPDATE_INTERVAL_OBSERVATION,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_UNAVAILABLE,
@@ -21,10 +21,10 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from . import init_integration
 
@@ -33,27 +33,27 @@ from tests.common import async_fire_time_changed, snapshot_platform
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_accuweather_client: AsyncMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test states of the sensor."""
-    with patch("homeassistant.components.accuweather.PLATFORMS", [Platform.SENSOR]):
-        entry = await init_integration(hass)
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    with patch("menuai.components.accuweather.PLATFORMS", [Platform.SENSOR]):
+        entry = await init_integration(menuai)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_accuweather_client: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Ensure that we mark the entities unavailable correctly when service is offline."""
     entity_id = "sensor.home_cloud_ceiling"
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "3200.0"
@@ -61,20 +61,20 @@ async def test_availability(
     mock_accuweather_client.async_get_current_conditions.side_effect = ConnectionError
 
     freezer.tick(UPDATE_INTERVAL_OBSERVATION)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
     mock_accuweather_client.async_get_current_conditions.side_effect = None
 
     freezer.tick(UPDATE_INTERVAL_OBSERVATION)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "3200.0"
@@ -91,7 +91,7 @@ async def test_availability(
     ],
 )
 async def test_availability_forecast(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     mock_accuweather_client: AsyncMock,
     freezer: FrozenDateTimeFactory,
@@ -99,9 +99,9 @@ async def test_availability_forecast(
     """Ensure that we mark the entities unavailable correctly when service is offline."""
     entity_id = "sensor.home_hours_of_sun_day_2"
 
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "5.7"
@@ -109,37 +109,37 @@ async def test_availability_forecast(
     mock_accuweather_client.async_get_daily_forecast.side_effect = exception
 
     freezer.tick(UPDATE_INTERVAL_DAILY_FORECAST)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
     mock_accuweather_client.async_get_daily_forecast.side_effect = None
 
     freezer.tick(UPDATE_INTERVAL_DAILY_FORECAST)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "5.7"
 
 
 async def test_manual_update_entity(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
+    menuai: menuai, mock_accuweather_client: AsyncMock
 ) -> None:
-    """Test manual update entity via service homeassistant/update_entity."""
-    await init_integration(hass)
+    """Test manual update entity via service menuai/update_entity."""
+    await init_integration(menuai)
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     assert mock_accuweather_client.async_get_current_conditions.call_count == 1
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {ATTR_ENTITY_ID: ["sensor.home_cloud_ceiling"]},
         blocking=True,
@@ -150,23 +150,23 @@ async def test_manual_update_entity(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_imperial_units(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
+    menuai: menuai, mock_accuweather_client: AsyncMock
 ) -> None:
     """Test states of the sensor without forecast."""
-    hass.config.units = US_CUSTOMARY_SYSTEM
-    await init_integration(hass)
+    menuai.config.units = US_CUSTOMARY_SYSTEM
+    await init_integration(menuai)
 
-    state = hass.states.get("sensor.home_cloud_ceiling")
+    state = menuai.states.get("sensor.home_cloud_ceiling")
     assert state
     assert state.state == "10498.687664042"
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfLength.FEET
 
-    state = hass.states.get("sensor.home_wind_speed")
+    state = menuai.states.get("sensor.home_wind_speed")
     assert state
     assert float(state.state) == pytest.approx(9.00988)
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfSpeed.MILES_PER_HOUR
 
-    state = hass.states.get("sensor.home_realfeel_temperature")
+    state = menuai.states.get("sensor.home_realfeel_temperature")
     assert state
     assert state.state == "77.18"
     assert (
@@ -175,16 +175,16 @@ async def test_sensor_imperial_units(
 
 
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_accuweather_client: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Ensure the sensor state changes after updating the data."""
     entity_id = "sensor.home_cloud_ceiling"
 
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "3200.0"
@@ -194,10 +194,10 @@ async def test_state_update(
     ]["Value"] = 3300
 
     freezer.tick(UPDATE_INTERVAL_OBSERVATION)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "3300"

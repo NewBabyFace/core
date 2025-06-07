@@ -7,16 +7,16 @@ from nibe.connection.modbus import Modbus
 from nibe.connection.nibegw import NibeGW, ProductInfo
 from nibe.heatpump import HeatPump, Model
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_IP_ADDRESS,
     CONF_MODEL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
 
 from .const import (
     CONF_CONNECTION_TYPE,
@@ -45,7 +45,7 @@ PLATFORMS: list[Platform] = [
 COIL_READ_RETRIES = 5
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Nibe Heat Pump from a config entry."""
 
     heatpump = HeatPump(Model[entry.data[CONF_MODEL]])
@@ -68,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             heatpump, entry.data[CONF_MODBUS_URL], entry.data[CONF_MODBUS_UNIT]
         )
     else:
-        raise HomeAssistantError(f"Connection type {connection_type} is not supported.")
+        raise menuaiError(f"Connection type {connection_type} is not supported.")
 
     await connection.start()
 
@@ -78,15 +78,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await connection.stop()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_stop)
     )
 
-    coordinator = CoilCoordinator(hass, entry, heatpump, connection)
+    coordinator = CoilCoordinator(menuai, entry, heatpump, connection)
 
-    data = hass.data.setdefault(DOMAIN, {})
+    data = menuai.data.setdefault(DOMAIN, {})
     data[entry.entry_id] = coordinator
 
-    reg = dr.async_get(hass)
+    reg = dr.async_get(menuai)
     device_entry = reg.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.unique_id or entry.entry_id)},
@@ -106,16 +106,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         reg.async_update_device(device_id=device_entry.id, model=heatpump.model.name)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Trigger a refresh again now that all platforms have registered
-    hass.async_create_task(coordinator.async_refresh())
+    menuai.async_create_task(coordinator.async_refresh())
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

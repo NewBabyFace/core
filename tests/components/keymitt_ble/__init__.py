@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.const import CONF_ADDRESS
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.const import CONF_ADDRESS
 
 from tests.components.bluetooth import generate_advertisement_data, generate_ble_device
 
@@ -25,7 +25,7 @@ USER_INPUT_INVALID = {
 def patch_async_setup_entry(return_value=True):
     """Patch async setup entry to return True."""
     return patch(
-        "homeassistant.components.keymitt_ble.async_setup_entry",
+        "menuai.components.keymitt_ble.async_setup_entry",
         return_value=return_value,
     )
 

@@ -7,11 +7,11 @@ from pypalazzetti.fan import FanType
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN, SERVICE_SET_VALUE
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.number import DOMAIN as NUMBER_DOMAIN, SERVICE_SET_VALUE
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -22,29 +22,29 @@ FAN_ENTITY_ID = "number.stove_left_fan_speed"
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.palazzetti.PLATFORMS", [Platform.NUMBER]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.palazzetti.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_async_set_data_power(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting number data via service call."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Set value: Success
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: POWER_ENTITY_ID, "value": 1},
@@ -56,8 +56,8 @@ async def test_async_set_data_power(
     # Set value: Error
     mock_palazzetti_client.set_power_mode.side_effect = CommunicationError()
     message = "Could not connect to the device"
-    with pytest.raises(HomeAssistantError, match=message):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=message):
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: POWER_ENTITY_ID, "value": 1},
@@ -68,7 +68,7 @@ async def test_async_set_data_power(
     mock_palazzetti_client.set_power_mode.side_effect = ValidationError()
     message = "Combustion power 1.0 is invalid"
     with pytest.raises(ServiceValidationError, match=message):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: POWER_ENTITY_ID, "value": 1},
@@ -77,15 +77,15 @@ async def test_async_set_data_power(
 
 
 async def test_async_set_data_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting number data via service call."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Set value: Success
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: FAN_ENTITY_ID, "value": 1},
@@ -97,8 +97,8 @@ async def test_async_set_data_fan(
     # Set value: Error
     mock_palazzetti_client.set_fan_speed.side_effect = CommunicationError()
     message = "Could not connect to the device"
-    with pytest.raises(HomeAssistantError, match=message):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=message):
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: FAN_ENTITY_ID, "value": 1},
@@ -109,7 +109,7 @@ async def test_async_set_data_fan(
     mock_palazzetti_client.set_fan_speed.side_effect = ValidationError()
     message = "Fan left speed 1.0 is invalid"
     with pytest.raises(ServiceValidationError, match=message):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: FAN_ENTITY_ID, "value": 1},

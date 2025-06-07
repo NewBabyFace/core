@@ -11,13 +11,13 @@ from unittest.mock import patch
 from pyrainbird import encryption
 import pytest
 
-from homeassistant.components.rainbird import DOMAIN
-from homeassistant.components.rainbird.const import (
+from menuai.components.rainbird import DOMAIN
+from menuai.components.rainbird.const import (
     ATTR_DURATION,
     DEFAULT_TRIGGER_TIME_MINUTES,
 )
-from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import EVENT_menuai_CLOSE, Platform
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker, AiohttpClientMockResponse
@@ -138,46 +138,46 @@ async def config_entry(
 
 @pytest.fixture(autouse=True)
 async def add_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry | None
+    menuai: menuai, config_entry: MockConfigEntry | None
 ) -> None:
     """Fixture to add the config entry."""
     if config_entry:
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
 
 @pytest.fixture(autouse=True)
 def setup_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     platforms: list[str],
 ) -> None:
     """Fixture for setting up the default platforms."""
 
-    with patch(f"homeassistant.components.{DOMAIN}.PLATFORMS", platforms):
+    with patch(f"menuai.components.{DOMAIN}.PLATFORMS", platforms):
         yield
 
 
 @pytest.fixture(autouse=True)
-def aioclient_mock(hass: HomeAssistant) -> Generator[AiohttpClientMocker]:
+def aioclient_mock(menuai: menuai) -> Generator[AiohttpClientMocker]:
     """Context manager to mock aiohttp client."""
     mocker = AiohttpClientMocker()
 
     def create_session():
-        session = mocker.create_session(hass.loop)
+        session = mocker.create_session(menuai.loop)
 
         async def close_session(event):
             """Close session."""
             await session.close()
 
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, close_session)
+        menuai.bus.async_listen_once(EVENT_menuai_CLOSE, close_session)
         return session
 
     with (
         patch(
-            "homeassistant.components.rainbird.async_create_clientsession",
+            "menuai.components.rainbird.async_create_clientsession",
             side_effect=create_session,
         ),
         patch(
-            "homeassistant.components.rainbird.config_flow.async_create_clientsession",
+            "menuai.components.rainbird.config_flow.async_create_clientsession",
             side_effect=create_session,
         ),
     ):

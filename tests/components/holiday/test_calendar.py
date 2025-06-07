@@ -5,15 +5,15 @@ from datetime import datetime, timedelta
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     DOMAIN as CALENDAR_DOMAIN,
     SERVICE_GET_EVENTS,
 )
-from homeassistant.components.holiday.const import CONF_PROVINCE, DOMAIN
-from homeassistant.const import CONF_COUNTRY
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.holiday.const import CONF_PROVINCE, DOMAIN
+from menuai.const import CONF_COUNTRY
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -22,12 +22,12 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     "time_zone", ["Asia/Tokyo", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_holiday_calendar_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     time_zone: str,
 ) -> None:
     """Test HolidayCalendarEntity functionality."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     zone = await dt_util.async_get_time_zone(time_zone)
     freezer.move_to(datetime(2023, 1, 1, 0, 1, 1, tzinfo=zone))  # New Years Day
 
@@ -36,15 +36,15 @@ async def test_holiday_calendar_entity(
         data={CONF_COUNTRY: "US", CONF_PROVINCE: "AK"},
         title="United States, AK",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await async_setup_component(hass, "calendar", {})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "calendar", {})
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -67,7 +67,7 @@ async def test_holiday_calendar_entity(
         }
     }
 
-    state = hass.states.get("calendar.united_states_ak")
+    state = menuai.states.get("calendar.united_states_ak")
     assert state is not None
     assert state.state == "on"
 
@@ -75,14 +75,14 @@ async def test_holiday_calendar_entity(
         datetime(2023, 1, 2, 0, 1, 1, tzinfo=zone)
     )  # Day after New Years Day
 
-    state = hass.states.get("calendar.united_states_ak")
+    state = menuai.states.get("calendar.united_states_ak")
     assert state is not None
     assert state.state == "on"
 
     # Test holidays for the next year
     freezer.move_to(datetime(2023, 12, 31, 12, tzinfo=zone))
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -110,12 +110,12 @@ async def test_holiday_calendar_entity(
     "time_zone", ["Asia/Tokyo", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_default_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     time_zone: str,
 ) -> None:
     """Test default language."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     zone = await dt_util.async_get_time_zone(time_zone)
     freezer.move_to(datetime(2023, 1, 1, 12, tzinfo=zone))
 
@@ -124,13 +124,13 @@ async def test_default_language(
         data={CONF_COUNTRY: "FR", CONF_PROVINCE: "BL"},
         title="France, BL",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test French calendar with English language
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -154,12 +154,12 @@ async def test_default_language(
     }
 
     # Test French calendar with French language
-    hass.config.language = "fr"
+    menuai.config.language = "fr"
 
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -187,12 +187,12 @@ async def test_default_language(
     "time_zone", ["Asia/Tokyo", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_no_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     time_zone: str,
 ) -> None:
     """Test language defaults to English if language not exist."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     zone = await dt_util.async_get_time_zone(time_zone)
     freezer.move_to(datetime(2023, 1, 1, 12, tzinfo=zone))
 
@@ -201,12 +201,12 @@ async def test_no_language(
         data={CONF_COUNTRY: "AL"},
         title="Albania",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -234,12 +234,12 @@ async def test_no_language(
     "time_zone", ["Asia/Tokyo", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_no_next_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     time_zone: str,
 ) -> None:
     """Test if there is no next event."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     zone = await dt_util.async_get_time_zone(time_zone)
     freezer.move_to(datetime(2023, 1, 1, 12, tzinfo=zone))
 
@@ -248,16 +248,16 @@ async def test_no_next_event(
         data={CONF_COUNTRY: "DE"},
         title="Germany",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Move time to out of reach
     freezer.move_to(datetime(dt_util.now().year + 5, 1, 1, 12, tzinfo=zone))
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
-    state = hass.states.get("calendar.germany")
+    state = menuai.states.get("calendar.germany")
     assert state is not None
     assert state.state == "off"
     assert state.attributes == {"friendly_name": "Germany"}
@@ -267,16 +267,16 @@ async def test_no_next_event(
     "time_zone", ["Asia/Tokyo", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_language_not_exist(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     time_zone: str,
 ) -> None:
     """Test when language doesn't exist it will fallback to country default language."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     zone = await dt_util.async_get_time_zone(time_zone)
 
-    hass.config.language = "nb"  # Norweigan language "Norks bokmål"
-    hass.config.country = "NO"
+    menuai.config.language = "nb"  # Norweigan language "Norks bokmål"
+    menuai.config.country = "NO"
 
     freezer.move_to(datetime(2023, 1, 1, 12, tzinfo=zone))
 
@@ -285,12 +285,12 @@ async def test_language_not_exist(
         data={CONF_COUNTRY: "NO"},
         title="Norge",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("calendar.norge")
+    state = menuai.states.get("calendar.norge")
     assert state is not None
     assert state.state == "on"
     assert state.attributes == {
@@ -303,7 +303,7 @@ async def test_language_not_exist(
         "start_time": "2023-01-01 00:00:00",
     }
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -327,11 +327,11 @@ async def test_language_not_exist(
     }
 
     # Test with English as exist as optional language for Norway
-    hass.config.language = "en"
-    hass.config.country = "NO"
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
-    response = await hass.services.async_call(
+    menuai.config.language = "en"
+    menuai.config.country = "NO"
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    response = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {

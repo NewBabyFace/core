@@ -7,12 +7,12 @@ from typing import Any, cast
 from holidays import list_supported_countries
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_COUNTRY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.selector import (
+from menuai import data_entry_flow
+from menuai.components.repairs import ConfirmRepairFlow, RepairsFlow
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_COUNTRY
+from menuai.core import menuai
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -48,10 +48,10 @@ class CountryFixFlow(RepairsFlow):
             if not all_countries[user_input[CONF_COUNTRY]]:
                 options = dict(self.entry.options)
                 new_options = {**options, **user_input, CONF_PROVINCE: None}
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self.entry, options=new_options
                 )
-                await self.hass.config_entries.async_reload(self.entry.entry_id)
+                await self.menuai.config_entries.async_reload(self.entry.entry_id)
                 return self.async_create_entry(data={})
             self.country = user_input[CONF_COUNTRY]
             return await self.async_step_province()
@@ -81,8 +81,8 @@ class CountryFixFlow(RepairsFlow):
             user_input.setdefault(CONF_PROVINCE, None)
             options = dict(self.entry.options)
             new_options = {**options, **user_input, CONF_COUNTRY: self.country}
-            self.hass.config_entries.async_update_entry(self.entry, options=new_options)
-            await self.hass.config_entries.async_reload(self.entry.entry_id)
+            self.menuai.config_entries.async_update_entry(self.entry, options=new_options)
+            await self.menuai.config_entries.async_reload(self.entry.entry_id)
             return self.async_create_entry(data={})
 
         assert self.country
@@ -136,16 +136,16 @@ class HolidayFixFlow(RepairsFlow):
             options = dict(self.entry.options)
             new_options = {**options, **user_input}
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     validate_custom_dates, new_options
                 )
             except Exception:  # noqa: BLE001
                 errors["remove_holidays"] = "remove_holiday_error"
             else:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self.entry, options=new_options
                 )
-                await self.hass.config_entries.async_reload(self.entry.entry_id)
+                await self.menuai.config_entries.async_reload(self.entry.entry_id)
                 return self.async_create_entry(data={})
 
         remove_holidays = self.entry.options[CONF_REMOVE_HOLIDAYS]
@@ -180,7 +180,7 @@ class HolidayFixFlow(RepairsFlow):
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, Any] | None,
 ) -> RepairsFlow:
@@ -188,7 +188,7 @@ async def async_create_fix_flow(
     entry = None
     if data and (entry_id := data.get("entry_id")):
         entry_id = cast(str, entry_id)
-        entry = hass.config_entries.async_get_entry(entry_id)
+        entry = menuai.config_entries.async_get_entry(entry_id)
 
     if data and (holiday := data.get("named_holiday")) and entry:
         # Bad named holiday in configuration

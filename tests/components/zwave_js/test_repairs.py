@@ -7,10 +7,10 @@ import pytest
 from zwave_js_server.event import Event
 from zwave_js_server.model.node import Node
 
-from homeassistant.components.zwave_js import DOMAIN
-from homeassistant.components.zwave_js.helpers import get_device_id
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
+from menuai.components.zwave_js import DOMAIN
+from menuai.components.zwave_js.helpers import get_device_id
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, issue_registry as ir
 
 from tests.common import MockConfigEntry
 from tests.components.repairs import (
@@ -22,7 +22,7 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 async def _trigger_repair_issue(
-    hass: HomeAssistant, client, multisensor_6_state
+    menuai: menuai, client, multisensor_6_state
 ) -> Node:
     """Trigger repair issue."""
     # Create a node
@@ -42,7 +42,7 @@ async def _trigger_repair_issue(
         return_value=True,
     ):
         client.driver.controller.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     client.async_send_command_no_wait.reset_mock()
 
@@ -50,16 +50,16 @@ async def _trigger_repair_issue(
 
 
 async def test_device_config_file_changed_confirm_step(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     client,
     multisensor_6_state,
     integration,
 ) -> None:
     """Test the device_config_file_changed issue confirm step."""
-    node = await _trigger_repair_issue(hass, client, multisensor_6_state)
+    node = await _trigger_repair_issue(menuai, client, multisensor_6_state)
 
     client.async_send_command_no_wait.reset_mock()
 
@@ -69,9 +69,9 @@ async def test_device_config_file_changed_confirm_step(
     assert device
     issue_id = f"device_config_file_changed.{device.id}"
 
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    http_client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    http_client = await menuai_client()
 
     # Assert the issue is present
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
@@ -100,7 +100,7 @@ async def test_device_config_file_changed_confirm_step(
 
     assert data["type"] == "create_entry"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command_no_wait.call_args_list) == 1
     assert client.async_send_command_no_wait.call_args[0][0] == {
@@ -116,16 +116,16 @@ async def test_device_config_file_changed_confirm_step(
 
 
 async def test_device_config_file_changed_ignore_step(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     client,
     multisensor_6_state,
     integration,
 ) -> None:
     """Test the device_config_file_changed issue ignore step."""
-    node = await _trigger_repair_issue(hass, client, multisensor_6_state)
+    node = await _trigger_repair_issue(menuai, client, multisensor_6_state)
 
     client.async_send_command_no_wait.reset_mock()
 
@@ -135,9 +135,9 @@ async def test_device_config_file_changed_ignore_step(
     assert device
     issue_id = f"device_config_file_changed.{device.id}"
 
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    http_client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    http_client = await menuai_client()
 
     # Assert the issue is present
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
@@ -168,7 +168,7 @@ async def test_device_config_file_changed_ignore_step(
     assert data["reason"] == "issue_ignored"
     assert data["description_placeholders"] == {"device_name": device.name}
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command_no_wait.call_args_list) == 0
 
@@ -185,14 +185,14 @@ async def test_device_config_file_changed_ignore_step(
     ["component.zwave_js.issues.invalid_issue.title"],
 )
 async def test_invalid_issue(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     integration,
 ) -> None:
     """Test the invalid issue."""
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         "invalid_issue_id",
         is_fixable=True,
@@ -200,9 +200,9 @@ async def test_invalid_issue(
         translation_key="invalid_issue",
     )
 
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    http_client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    http_client = await menuai_client()
 
     # Assert the issue is present
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
@@ -222,7 +222,7 @@ async def test_invalid_issue(
 
     assert data["type"] == "create_entry"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Assert the issue is resolved
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -232,16 +232,16 @@ async def test_invalid_issue(
 
 
 async def test_abort_confirm(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     client,
     multisensor_6_state,
     integration,
 ) -> None:
     """Test aborting device_config_file_changed issue in confirm step."""
-    node = await _trigger_repair_issue(hass, client, multisensor_6_state)
+    node = await _trigger_repair_issue(menuai, client, multisensor_6_state)
 
     device = device_registry.async_get_device(
         identifiers={get_device_id(client.driver, node)}
@@ -249,9 +249,9 @@ async def test_abort_confirm(
     assert device
     issue_id = f"device_config_file_changed.{device.id}"
 
-    await async_process_repairs_platforms(hass)
-    await hass_ws_client(hass)
-    http_client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    await menuai_ws_client(menuai)
+    http_client = await menuai_client()
 
     data = await start_repair_fix_flow(http_client, DOMAIN, issue_id)
 
@@ -259,7 +259,7 @@ async def test_abort_confirm(
     assert data["step_id"] == "init"
 
     # Unload config entry so we can't connect to the node
-    await hass.config_entries.async_unload(integration.entry_id)
+    await menuai.config_entries.async_unload(integration.entry_id)
 
     # Apply fix
     data = await process_repair_fix_flow(
@@ -273,9 +273,9 @@ async def test_abort_confirm(
 
 @pytest.mark.usefixtures("client")
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the migrate unique id flow."""
     old_unique_id = "123456789"
@@ -287,13 +287,13 @@ async def test_migrate_unique_id(
         },
         unique_id=old_unique_id,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    http_client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    http_client = await menuai_client()
 
     # Assert the issue is present
     await ws_client.send_json_auto_id({"type": "repairs/list_issues"})
@@ -329,9 +329,9 @@ async def test_migrate_unique_id(
 
 @pytest.mark.usefixtures("client")
 async def test_migrate_unique_id_missing_config_entry(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the migrate unique id flow with missing config entry."""
     old_unique_id = "123456789"
@@ -343,13 +343,13 @@ async def test_migrate_unique_id_missing_config_entry(
         },
         unique_id=old_unique_id,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    http_client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    http_client = await menuai_client()
 
     # Assert the issue is present
     await ws_client.send_json_auto_id({"type": "repairs/list_issues"})
@@ -360,9 +360,9 @@ async def test_migrate_unique_id_missing_config_entry(
     issue_id = issue["issue_id"]
     assert issue_id == f"migrate_unique_id.{config_entry.entry_id}"
 
-    await hass.config_entries.async_remove(config_entry.entry_id)
+    await menuai.config_entries.async_remove(config_entry.entry_id)
 
-    assert not hass.config_entries.async_get_entry(config_entry.entry_id)
+    assert not menuai.config_entries.async_get_entry(config_entry.entry_id)
 
     data = await start_repair_fix_flow(http_client, DOMAIN, issue_id)
 

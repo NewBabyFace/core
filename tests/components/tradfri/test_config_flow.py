@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.tradfri import config_flow
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai import config_entries
+from menuai.components.tradfri import config_flow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -26,7 +26,7 @@ def mock_auth_fixture():
         yield auth
 
 
-async def test_already_paired(hass: HomeAssistant, mock_entry_setup) -> None:
+async def test_already_paired(menuai: menuai, mock_entry_setup) -> None:
     """Test Gateway already paired."""
     with patch(
         f"{TRADFRI_PATH}.config_flow.APIFactory",
@@ -35,10 +35,10 @@ async def test_already_paired(hass: HomeAssistant, mock_entry_setup) -> None:
         mock_it = AsyncMock()
         mock_it.generate_psk.return_value = None
         mock_lib.init.return_value = mock_it
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             "tradfri", context={"source": config_entries.SOURCE_USER}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"host": "123.123.123.123", "security_code": "abcd"}
         )
 
@@ -47,16 +47,16 @@ async def test_already_paired(hass: HomeAssistant, mock_entry_setup) -> None:
 
 
 async def test_user_connection_successful(
-    hass: HomeAssistant, mock_auth, mock_entry_setup
+    menuai: menuai, mock_auth, mock_entry_setup
 ) -> None:
     """Test a successful connection."""
-    mock_auth.side_effect = lambda hass, host, code: {"host": host, "gateway_id": "bla"}
+    mock_auth.side_effect = lambda menuai, host, code: {"host": host, "gateway_id": "bla"}
 
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         "tradfri", context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow["flow_id"], {"host": "123.123.123.123", "security_code": "abcd"}
     )
 
@@ -70,16 +70,16 @@ async def test_user_connection_successful(
 
 
 async def test_user_connection_timeout(
-    hass: HomeAssistant, mock_auth, mock_entry_setup
+    menuai: menuai, mock_auth, mock_entry_setup
 ) -> None:
     """Test a connection timeout."""
     mock_auth.side_effect = config_flow.AuthError("timeout")
 
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         "tradfri", context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow["flow_id"], {"host": "127.0.0.1", "security_code": "abcd"}
     )
 
@@ -90,16 +90,16 @@ async def test_user_connection_timeout(
 
 
 async def test_user_connection_bad_key(
-    hass: HomeAssistant, mock_auth, mock_entry_setup
+    menuai: menuai, mock_auth, mock_entry_setup
 ) -> None:
     """Test a connection with bad key."""
     mock_auth.side_effect = config_flow.AuthError("invalid_security_code")
 
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         "tradfri", context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow["flow_id"], {"host": "127.0.0.1", "security_code": "abcd"}
     )
 
@@ -110,12 +110,12 @@ async def test_user_connection_bad_key(
 
 
 async def test_discovery_connection(
-    hass: HomeAssistant, mock_auth, mock_entry_setup
+    menuai: menuai, mock_auth, mock_entry_setup
 ) -> None:
     """Test a connection via discovery."""
-    mock_auth.side_effect = lambda hass, host, code: {"host": host, "gateway_id": "bla"}
+    mock_auth.side_effect = lambda menuai, host, code: {"host": host, "gateway_id": "bla"}
 
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         "tradfri",
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -129,7 +129,7 @@ async def test_discovery_connection(
         ),
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow["flow_id"], {"security_code": "abcd"}
     )
 
@@ -143,14 +143,14 @@ async def test_discovery_connection(
     }
 
 
-async def test_discovery_duplicate_aborted(hass: HomeAssistant) -> None:
+async def test_discovery_duplicate_aborted(menuai: menuai) -> None:
     """Test a duplicate discovery host aborts and updates existing entry."""
     entry = MockConfigEntry(
         domain="tradfri", data={"host": "some-host"}, unique_id="homekit-id"
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         "tradfri",
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -171,10 +171,10 @@ async def test_discovery_duplicate_aborted(hass: HomeAssistant) -> None:
 
 
 async def test_duplicate_discovery(
-    hass: HomeAssistant, mock_auth, mock_entry_setup
+    menuai: menuai, mock_auth, mock_entry_setup
 ) -> None:
     """Test a duplicate discovery in progress is ignored."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "tradfri",
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -190,7 +190,7 @@ async def test_duplicate_discovery(
 
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         "tradfri",
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -207,15 +207,15 @@ async def test_duplicate_discovery(
     assert result2["type"] is FlowResultType.ABORT
 
 
-async def test_discovery_updates_unique_id(hass: HomeAssistant) -> None:
+async def test_discovery_updates_unique_id(menuai: menuai) -> None:
     """Test a duplicate discovery host aborts and updates existing entry."""
     entry = MockConfigEntry(
         domain="tradfri",
         data={"host": "123.123.123.123"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         "tradfri",
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(

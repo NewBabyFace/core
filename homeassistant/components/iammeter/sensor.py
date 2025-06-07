@@ -11,14 +11,14 @@ import logging
 from iammeter.client import IamMeter
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
@@ -30,18 +30,18 @@ from homeassistant.const import (
     UnitOfFrequency,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import (
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import (
     config_validation as cv,
     debounce,
     entity_registry as er,
     update_coordinator,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEVICE_3080, DOMAIN
 
@@ -63,10 +63,10 @@ PLATFORM_TIMEOUT = 8
 
 
 def _migrate_to_new_unique_id(
-    hass: HomeAssistant, model: str, serial_number: str
+    menuai: menuai, model: str, serial_number: str
 ) -> None:
     """Migrate old unique ids to new unique ids."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     name_list = [
         "Voltage",
         "Current",
@@ -108,7 +108,7 @@ def _migrate_to_new_unique_id(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -118,7 +118,7 @@ async def async_setup_platform(
     config_port = config[CONF_PORT]
     config_name = config[CONF_NAME]
     try:
-        api = await hass.async_add_executor_job(
+        api = await menuai.async_add_executor_job(
             IamMeter, config_host, config_port, config_name
         )
     except TimeoutError as err:
@@ -128,24 +128,24 @@ async def async_setup_platform(
     async def async_update_data():
         try:
             async with timeout(PLATFORM_TIMEOUT):
-                return await hass.async_add_executor_job(api.client.get_data)
+                return await menuai.async_add_executor_job(api.client.get_data)
         except TimeoutError as err:
             raise UpdateFailed from err
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         name=config_name,
         update_method=async_update_data,
         update_interval=SCAN_INTERVAL,
         request_refresh_debouncer=debounce.Debouncer(
-            hass, _LOGGER, cooldown=0.3, immediate=True
+            menuai, _LOGGER, cooldown=0.3, immediate=True
         ),
     )
     await coordinator.async_refresh()
     model = coordinator.data["Model"]
     serial_number = coordinator.data["sn"]
-    _migrate_to_new_unique_id(hass, model, serial_number)
+    _migrate_to_new_unique_id(menuai, model, serial_number)
     if model == DEVICE_3080:
         async_add_entities(
             IammeterSensor(coordinator, description)

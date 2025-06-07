@@ -13,11 +13,11 @@ from open_meteo import (
     WindSpeedUnit,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_ZONE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_ZONE
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL
 
@@ -29,21 +29,21 @@ class OpenMeteoDataUpdateCoordinator(DataUpdateCoordinator[Forecast]):
 
     config_entry: OpenMeteoConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: OpenMeteoConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: OpenMeteoConfigEntry) -> None:
         """Initialize the Open-Meteo coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_{config_entry.data[CONF_ZONE]}",
             update_interval=SCAN_INTERVAL,
         )
-        session = async_get_clientsession(hass)
+        session = async_get_clientsession(menuai)
         self.open_meteo = OpenMeteo(session=session)
 
     async def _async_update_data(self) -> Forecast:
         """Fetch data from Sensibo."""
-        if (zone := self.hass.states.get(self.config_entry.data[CONF_ZONE])) is None:
+        if (zone := self.menuai.states.get(self.config_entry.data[CONF_ZONE])) is None:
             raise UpdateFailed(f"Zone '{self.config_entry.data[CONF_ZONE]}' not found")
 
         try:

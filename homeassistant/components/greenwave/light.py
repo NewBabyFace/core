@@ -10,18 +10,18 @@ from typing import Any
 import greenwavereality as greenwave
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,21 +35,21 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=1)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Greenwave Reality Platform."""
     host = config.get(CONF_HOST)
-    tokenfilename = hass.config.path(".greenwave")
+    tokenfilename = menuai.config.path(".greenwave")
     if config.get(CONF_VERSION) == 3:
         if os.path.exists(tokenfilename):
             with open(tokenfilename, encoding="utf8") as tokenfile:
                 token = tokenfile.read()
         else:
             try:
-                token = greenwave.grab_token(host, "hass", "homeassistant")
+                token = greenwave.grab_token(host, "menuai", "menuai")
             except PermissionError:
                 _LOGGER.error("The Gateway Is Not In Sync Mode")
                 raise
@@ -75,7 +75,7 @@ class GreenwaveLight(LightEntity):
         self._did = int(light["did"])
         self._attr_name = light["name"]
         self._state = int(light["state"])
-        self._attr_brightness = greenwave.hass_brightness(light)
+        self._attr_brightness = greenwave.menuai_brightness(light)
         self._host = host
         self._attr_available = greenwave.check_online(light)
         self._token = token
@@ -102,7 +102,7 @@ class GreenwaveLight(LightEntity):
         bulbs = self._gatewaydata.greenwave
 
         self._state = int(bulbs[self._did]["state"])
-        self._attr_brightness = greenwave.hass_brightness(bulbs[self._did])
+        self._attr_brightness = greenwave.menuai_brightness(bulbs[self._did])
         self._attr_available = greenwave.check_online(bulbs[self._did])
         self._attr_name = bulbs[self._did]["name"]
 

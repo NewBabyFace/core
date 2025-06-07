@@ -6,8 +6,8 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import Service, ServicesTypes
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -33,12 +33,12 @@ def create_lock_service(accessory: Accessory) -> Service:
 
 
 async def test_switch_change_lock_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit lock on and off again."""
-    helper = await setup_test_component(hass, get_next_aid(), create_lock_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_lock_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "lock", "lock", {"entity_id": "lock.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -48,7 +48,7 @@ async def test_switch_change_lock_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "lock", "unlock", {"entity_id": "lock.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -60,10 +60,10 @@ async def test_switch_change_lock_state(
 
 
 async def test_switch_read_lock_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit lock accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_lock_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_lock_service)
 
     state = await helper.async_update(
         ServicesTypes.LOCK_MECHANISM,
@@ -126,7 +126,7 @@ async def test_switch_read_lock_state(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -137,7 +137,7 @@ async def test_migrate_unique_id(
         "homekit_controller",
         f"homekit-00:00:00:00:00:00-{aid}-8",
     )
-    await setup_test_component(hass, aid, create_lock_service)
+    await setup_test_component(menuai, aid, create_lock_service)
 
     assert (
         entity_registry.async_get(lock_entry.entity_id).unique_id

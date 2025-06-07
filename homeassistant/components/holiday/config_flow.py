@@ -8,15 +8,15 @@ from babel import Locale, UnknownLocaleError
 from holidays import PUBLIC, country_holidays, list_supported_countries
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_COUNTRY
-from homeassistant.core import callback
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_COUNTRY
+from menuai.core import callback
+from menuai.helpers.selector import (
     CountrySelector,
     CountrySelectorConfig,
     SelectOptionDict,
@@ -24,7 +24,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import CONF_CATEGORIES, CONF_PROVINCE, DOMAIN
 
@@ -126,7 +126,7 @@ class HolidayConfigFlow(ConfigFlow, domain=DOMAIN):
 
             selected_country = user_input[CONF_COUNTRY]
 
-            options_schema = await self.hass.async_add_executor_job(
+            options_schema = await self.menuai.async_add_executor_job(
                 get_options_schema, selected_country
             )
             if options_schema.schema:
@@ -135,7 +135,7 @@ class HolidayConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match({CONF_COUNTRY: user_input[CONF_COUNTRY]})
 
             try:
-                locale = Locale.parse(self.hass.config.language, sep="-")
+                locale = Locale.parse(self.menuai.config.language, sep="-")
             except UnknownLocaleError:
                 # Default to (US) English if language not recognized by babel
                 # Mainly an issue with English flavors such as "en-GB"
@@ -146,7 +146,7 @@ class HolidayConfigFlow(ConfigFlow, domain=DOMAIN):
         user_schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_COUNTRY, default=self.hass.config.country
+                    CONF_COUNTRY, default=self.menuai.config.country
                 ): CountrySelector(
                     CountrySelectorConfig(
                         countries=list(SUPPORTED_COUNTRIES),
@@ -172,12 +172,12 @@ class HolidayConfigFlow(ConfigFlow, domain=DOMAIN):
 
             self._async_abort_entries_match({**data, **(options or {})})
 
-            name = await self.hass.async_add_executor_job(
-                get_entry_name, self.hass.config.language, country, province
+            name = await self.menuai.async_add_executor_job(
+                get_entry_name, self.menuai.config.language, country, province
             )
             return self.async_create_entry(title=name, data=data, options=options)
 
-        options_schema = await self.hass.async_add_executor_job(
+        options_schema = await self.menuai.async_add_executor_job(
             get_options_schema, self.data[CONF_COUNTRY]
         )
         return self.async_show_form(
@@ -203,8 +203,8 @@ class HolidayConfigFlow(ConfigFlow, domain=DOMAIN):
 
             self._async_abort_entries_match({**data, **(options or {})})
 
-            name = await self.hass.async_add_executor_job(
-                get_entry_name, self.hass.config.language, country, province
+            name = await self.menuai.async_add_executor_job(
+                get_entry_name, self.menuai.config.language, country, province
             )
 
             if options:
@@ -215,7 +215,7 @@ class HolidayConfigFlow(ConfigFlow, domain=DOMAIN):
                 reconfigure_entry, title=name, data=data
             )
 
-        options_schema = await self.hass.async_add_executor_job(
+        options_schema = await self.menuai.async_add_executor_job(
             get_options_schema, reconfigure_entry.data[CONF_COUNTRY]
         )
 
@@ -237,7 +237,7 @@ class HolidayOptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        categories = await self.hass.async_add_executor_job(
+        categories = await self.menuai.async_add_executor_job(
             get_optional_categories, self.config_entry.data[CONF_COUNTRY]
         )
         if not categories:

@@ -6,7 +6,7 @@ import sys
 
 import requests
 
-from .hassfest.serializer import format_python_namespace
+from .menuaifest.serializer import format_python_namespace
 
 tag = sys.argv[1] if len(sys.argv) > 1 else "dev"
 
@@ -66,7 +66,7 @@ NATIVE_ENTITY_IDS = {
     "tr",  # Türkçe
 }
 
-Path("homeassistant/generated/languages.py").write_text(
+Path("menuai/generated/languages.py").write_text(
     format_python_namespace(
         {
             "DEFAULT_LANGUAGE": "en",

@@ -6,11 +6,11 @@ import logging
 from httpx import HTTPError, InvalidURL
 from ical.calendar import Calendar
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 from .ics import InvalidIcsException, parse_calendar
@@ -29,18 +29,18 @@ class RemoteCalendarDataUpdateCoordinator(DataUpdateCoordinator[Calendar]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RemoteCalendarConfigEntry,
     ) -> None:
         """Initialize data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
             always_update=True,
         )
-        self._client = get_async_client(hass)
+        self._client = get_async_client(menuai)
         self._url = config_entry.data[CONF_URL]
 
     async def _async_update_data(self) -> Calendar:
@@ -56,7 +56,7 @@ class RemoteCalendarDataUpdateCoordinator(DataUpdateCoordinator[Calendar]):
             ) from err
         try:
             self.ics = res.text
-            return await parse_calendar(self.hass, res.text)
+            return await parse_calendar(self.menuai, res.text)
         except InvalidIcsException as err:
             raise UpdateFailed(
                 translation_domain=DOMAIN,

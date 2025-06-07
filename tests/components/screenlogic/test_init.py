@@ -7,14 +7,14 @@ import pytest
 from screenlogicpy import ScreenLogicError, ScreenLogicGateway
 from screenlogicpy.const.common import ScreenLogicConnectionError
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.components.screenlogic import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import slugify
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.number import DOMAIN as NUMBER_DOMAIN
+from menuai.components.screenlogic import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import slugify
 
 from . import (
     DATA_MIN_MIGRATION,
@@ -116,7 +116,7 @@ def _migration_connect(*args, **kwargs):
     ids=[ent_data.old_name for ent_data in TEST_MIGRATING_ENTITIES],
 )
 async def test_async_migrate_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
@@ -124,7 +124,7 @@ async def test_async_migrate_entries(
     ent_data: EntityMigrationData,
 ) -> None:
     """Test migration to new entity names."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     device: dr.DeviceEntry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -169,8 +169,8 @@ async def test_async_migrate_entries(
             _async_connected_request=DEFAULT,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(new_eid)
     assert entity_migrated
@@ -180,13 +180,13 @@ async def test_async_migrate_entries(
 
 
 async def test_entity_migration_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test ENTITY_MIGRATION data guards."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     device: dr.DeviceEntry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -219,7 +219,7 @@ async def test_entity_migration_data(
     # This patch simulates bad data being added to ENTITY_MIGRATIONS
     with (
         patch.dict(
-            "homeassistant.components.screenlogic.data.ENTITY_MIGRATIONS",
+            "menuai.components.screenlogic.data.ENTITY_MIGRATIONS",
             {
                 "missing_device": {
                     "new_key": "state",
@@ -239,8 +239,8 @@ async def test_entity_migration_data(
             _async_connected_request=DEFAULT,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(
         slugify(f"{MOCK_ADAPTER_NAME} Bad ENTITY_MIGRATIONS Entry")
@@ -252,7 +252,7 @@ async def test_entity_migration_data(
 
 
 async def test_platform_setup(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test setup for platforms that define expected data."""
 
@@ -267,7 +267,7 @@ async def test_platform_setup(
         f"{NUMBER_DOMAIN}.{device_prefix}_pool_chlorinator_setpoint",
     ]
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -281,11 +281,11 @@ async def test_platform_setup(
             _async_connected_request=DEFAULT,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         for entity_id in tested_entity_ids:
-            assert hass.states.get(entity_id) is not None
+            assert menuai.states.get(entity_id) is not None
 
 
 @pytest.mark.parametrize(
@@ -293,14 +293,14 @@ async def test_platform_setup(
     [ScreenLogicConnectionError, ScreenLogicError],
 )
 async def test_retry_on_connect_exception(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, exception: Exception
+    menuai: menuai, mock_config_entry: MockConfigEntry, exception: Exception
 ) -> None:
     """Test setup retries on expected exceptions."""
 
     def stub_connect(*args, **kwargs):
         raise exception
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -314,7 +314,7 @@ async def test_retry_on_connect_exception(
             _async_connected_request=DEFAULT,
         ),
     ):
-        assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY

@@ -5,20 +5,20 @@ from unittest.mock import create_autospec
 import pytest
 import pywemo
 
-from homeassistant.components.homeassistant import (
+from menuai.components.menuai import (
     DOMAIN as HA_DOMAIN,
     SERVICE_UPDATE_ENTITY,
 )
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_SUPPORTED_COLOR_MODES,
     DOMAIN as LIGHT_DOMAIN,
     ColorMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import entity_test_helpers
 
@@ -46,40 +46,40 @@ def pywemo_bridge_light_fixture(pywemo_device):
 
 
 async def test_async_update_locked_callback_and_update(
-    hass: HomeAssistant, pywemo_bridge_light, wemo_entity, pywemo_device
+    menuai: menuai, pywemo_bridge_light, wemo_entity, pywemo_device
 ) -> None:
     """Test that a callback and a state update request can't both happen at the same time."""
     await entity_test_helpers.test_async_update_locked_callback_and_update(
-        hass,
+        menuai,
         pywemo_device,
         wemo_entity,
     )
 
 
 async def test_async_update_locked_multiple_updates(
-    hass: HomeAssistant, pywemo_bridge_light, wemo_entity, pywemo_device
+    menuai: menuai, pywemo_bridge_light, wemo_entity, pywemo_device
 ) -> None:
     """Test that two state updates do not proceed at the same time."""
     await entity_test_helpers.test_async_update_locked_multiple_updates(
-        hass,
+        menuai,
         pywemo_device,
         wemo_entity,
     )
 
 
 async def test_async_update_locked_multiple_callbacks(
-    hass: HomeAssistant, pywemo_bridge_light, wemo_entity, pywemo_device
+    menuai: menuai, pywemo_bridge_light, wemo_entity, pywemo_device
 ) -> None:
     """Test that two device callback state updates do not proceed at the same time."""
     await entity_test_helpers.test_async_update_locked_multiple_callbacks(
-        hass,
+        menuai,
         pywemo_device,
         wemo_entity,
     )
 
 
 async def test_available_after_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     pywemo_registry,
     pywemo_device,
     pywemo_bridge_light,
@@ -89,33 +89,33 @@ async def test_available_after_update(
     pywemo_bridge_light.turn_on.side_effect = pywemo.exceptions.ActionException
     pywemo_bridge_light.state["onoff"] = 1
     await entity_test_helpers.test_avaliable_after_update(
-        hass, pywemo_registry, pywemo_device, wemo_entity, LIGHT_DOMAIN
+        menuai, pywemo_registry, pywemo_device, wemo_entity, LIGHT_DOMAIN
     )
 
 
 async def test_turn_off_state(
-    hass: HomeAssistant, pywemo_bridge_light, wemo_entity
+    menuai: menuai, pywemo_bridge_light, wemo_entity
 ) -> None:
     """Test that the device state is updated after turning off."""
-    await entity_test_helpers.test_turn_off_state(hass, wemo_entity, LIGHT_DOMAIN)
+    await entity_test_helpers.test_turn_off_state(menuai, wemo_entity, LIGHT_DOMAIN)
 
 
 async def test_light_update_entity(
-    hass: HomeAssistant, pywemo_registry, pywemo_bridge_light, wemo_entity
+    menuai: menuai, pywemo_registry, pywemo_bridge_light, wemo_entity
 ) -> None:
     """Verify that the light performs state updates."""
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, HA_DOMAIN, {})
 
     # On state.
     pywemo_bridge_light.state["onoff"] = 1
     pywemo_bridge_light.state["temperature_mireds"] = 432
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: [wemo_entity.entity_id]},
         blocking=True,
     )
-    state = hass.states.get(wemo_entity.entity_id)
+    state = menuai.states.get(wemo_entity.entity_id)
     assert state.attributes.get(ATTR_COLOR_TEMP_KELVIN) == 2314
     assert state.attributes.get(ATTR_SUPPORTED_COLOR_MODES) == [ColorMode.COLOR_TEMP]
     assert state.attributes.get(ATTR_COLOR_MODE) == ColorMode.COLOR_TEMP
@@ -123,10 +123,10 @@ async def test_light_update_entity(
 
     # Off state.
     pywemo_bridge_light.state["onoff"] = 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: [wemo_entity.entity_id]},
         blocking=True,
     )
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_OFF
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_OFF

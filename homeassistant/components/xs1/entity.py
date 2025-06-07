@@ -4,7 +4,7 @@ import asyncio
 
 from xs1_api_client.device import XS1Device
 
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.entity import Entity
 
 # Lock used to limit the amount of concurrent update requests
 # as the XS1 Gateway can only handle a very
@@ -22,4 +22,4 @@ class XS1DeviceEntity(Entity):
     async def async_update(self) -> None:
         """Retrieve latest device state."""
         async with UPDATE_LOCK:
-            await self.hass.async_add_executor_job(self.device.update)
+            await self.menuai.async_add_executor_job(self.device.update)

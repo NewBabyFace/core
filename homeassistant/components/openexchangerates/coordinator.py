@@ -13,10 +13,10 @@ from aioopenexchangerates import (
     OpenExchangeRatesClientError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CLIENT_TIMEOUT, DOMAIN, LOGGER
 
@@ -28,7 +28,7 @@ class OpenexchangeratesCoordinator(DataUpdateCoordinator[Latest]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         session: ClientSession,
         api_key: str,
@@ -37,7 +37,7 @@ class OpenexchangeratesCoordinator(DataUpdateCoordinator[Latest]):
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} base {base}",

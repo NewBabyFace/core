@@ -6,10 +6,10 @@ import socket
 
 import motionmount
 
-from homeassistant.components.select import SelectEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import MotionMountConfigEntry
 from .const import DOMAIN, WALL_PRESET_NAME
@@ -21,7 +21,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MotionMountConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -75,13 +75,13 @@ class MotionMountPresets(MotionMountEntity, SelectEntity):
         if not self.mm.is_authenticated:
             if self.pin is None:
                 await self.mm.disconnect()
-                self.config_entry.async_start_reauth(self.hass)
+                self.config_entry.async_start_reauth(self.menuai)
                 return False
             await self.mm.authenticate(self.pin)
             if not self.mm.is_authenticated:
                 self.pin = None
                 await self.mm.disconnect()
-                self.config_entry.async_start_reauth(self.hass)
+                self.config_entry.async_start_reauth(self.menuai)
                 return False
 
         _LOGGER.debug("Successfully reconnected to MotionMount")
@@ -127,7 +127,7 @@ class MotionMountPresets(MotionMountEntity, SelectEntity):
         try:
             await self.mm.go_to_preset(index)
         except (TimeoutError, socket.gaierror) as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_communication",
             ) from ex

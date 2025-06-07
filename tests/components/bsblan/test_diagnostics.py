@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -12,15 +12,15 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bsblan: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
 
     diagnostics_data = await get_diagnostics_for_config_entry(
-        hass, hass_client, init_integration
+        menuai, menuai_client, init_integration
     )
     assert diagnostics_data == snapshot

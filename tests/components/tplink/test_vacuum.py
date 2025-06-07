@@ -6,7 +6,7 @@ from kasa import Device, Module
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     ATTR_BATTERY_LEVEL,
     ATTR_FAN_SPEED,
     DOMAIN as VACUUM_DOMAIN,
@@ -17,9 +17,9 @@ from homeassistant.components.vacuum import (
     SERVICE_START,
     VacuumActivity,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     translation,
@@ -33,14 +33,14 @@ ENTITY_ID = "vacuum.my_vacuum"
 
 
 @pytest.fixture
-async def mocked_vacuum(hass: HomeAssistant) -> Device:
+async def mocked_vacuum(menuai: menuai) -> Device:
     """Return mocked tplink vacuum."""
 
     return _mocked_device(modules=[Module.Clean, Module.Speaker], alias="my_vacuum")
 
 
 async def test_vacuum(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -48,7 +48,7 @@ async def test_vacuum(
 ) -> None:
     """Test initialization."""
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.VACUUM, mocked_vacuum
+        menuai, mock_config_entry, Platform.VACUUM, mocked_vacuum
     )
 
     device_entries = dr.async_entries_for_config_entry(
@@ -60,19 +60,19 @@ async def test_vacuum(
     assert entity
     assert entity.unique_id == f"{DEVICE_ID}-vacuum"
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == VacuumActivity.DOCKED
 
     assert state.attributes[ATTR_FAN_SPEED] == "max"
     assert state.attributes[ATTR_BATTERY_LEVEL] == 100
     result = translation.async_translate_state(
-        hass, "max", "vacuum", "tplink", "vacuum.state_attributes.fan_speed", None
+        menuai, "max", "vacuum", "tplink", "vacuum.state_attributes.fan_speed", None
     )
     assert result == "Max"
 
 
 async def test_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -81,10 +81,10 @@ async def test_states(
 ) -> None:
     """Test vacuum states."""
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.VACUUM, mocked_vacuum
+        menuai, mock_config_entry, Platform.VACUUM, mocked_vacuum
     )
     await snapshot_platform(
-        hass, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
+        menuai, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
     )
 
 
@@ -104,7 +104,7 @@ async def test_states(
     ],
 )
 async def test_vacuum_module(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mocked_vacuum: Device,
     service_call: str,
@@ -116,18 +116,18 @@ async def test_vacuum_module(
     vacuum = mocked_vacuum
     module = vacuum.modules[module_name]
 
-    await setup_platform_for_device(hass, mock_config_entry, Platform.VACUUM, vacuum)
+    await setup_platform_for_device(menuai, mock_config_entry, Platform.VACUUM, vacuum)
 
     mock_method = getattr(module, method)
 
     service_data = {ATTR_ENTITY_ID: ENTITY_ID}
     service_data |= params
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN, service_call, service_data, blocking=True
     )
 
     # Is this required when using blocking=True?
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     mock_method.assert_called()

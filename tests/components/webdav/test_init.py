@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock
 from aiowebdav2.exceptions import WebDavError
 import pytest
 
-from homeassistant.components.webdav.const import CONF_BACKUP_PATH, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.webdav.const import CONF_BACKUP_PATH, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_migrate_wrong_path(
-    hass: HomeAssistant, webdav_client: AsyncMock
+    menuai: menuai, webdav_client: AsyncMock
 ) -> None:
     """Test migration of wrong encoded folder path."""
     webdav_client.list_with_properties.return_value = [
@@ -34,7 +34,7 @@ async def test_migrate_wrong_path(
         },
         entry_id="01JKXV07ASC62D620DGYNG2R8H",
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
     webdav_client.move.assert_called_once_with("/wrong%20path", "/wrong path")
 
@@ -51,7 +51,7 @@ async def test_migrate_wrong_path(
     ],
 )
 async def test_migrate_non_wrong_path(
-    hass: HomeAssistant,
+    menuai: menuai,
     webdav_client: AsyncMock,
     expected_path: str,
     remote_path_check: bool,
@@ -76,13 +76,13 @@ async def test_migrate_non_wrong_path(
         entry_id="01JKXV07ASC62D620DGYNG2R8H",
     )
 
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
     webdav_client.move.assert_not_called()
 
 
 async def test_migrate_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     webdav_client: AsyncMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -103,7 +103,7 @@ async def test_migrate_error(
         },
         entry_id="01JKXV07ASC62D620DGYNG2R8H",
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
     assert (

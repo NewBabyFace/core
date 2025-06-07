@@ -9,12 +9,12 @@ from PyViCare.PyViCareUtils import (
 )
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.vicare.const import DOMAIN
-from homeassistant.config_entries import SOURCE_DHCP, SOURCE_USER
-from homeassistant.const import CONF_CLIENT_ID, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.components.vicare.const import DOMAIN
+from menuai.config_entries import SOURCE_DHCP, SOURCE_USER
+from menuai.const import CONF_CLIENT_ID, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import MOCK_MAC, MODULE
 
@@ -36,11 +36,11 @@ DHCP_INFO = DhcpServiceInfo(
 
 
 async def test_user_create_entry(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, snapshot: SnapshotAssertion
+    menuai: menuai, mock_setup_entry: AsyncMock, snapshot: SnapshotAssertion
 ) -> None:
     """Test that the user step works."""
     # start user flow
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -54,11 +54,11 @@ async def test_user_create_entry(
             {"error": "foo", "error_description": "bar"}
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             VALID_CONFIG,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "invalid_auth"}
@@ -68,11 +68,11 @@ async def test_user_create_entry(
         f"{MODULE}.config_flow.login",
         side_effect=PyViCareInvalidCredentialsError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             VALID_CONFIG,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "invalid_auth"}
@@ -82,11 +82,11 @@ async def test_user_create_entry(
         f"{MODULE}.config_flow.login",
         return_value=None,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             VALID_CONFIG,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "ViCare"
@@ -94,7 +94,7 @@ async def test_user_create_entry(
     mock_setup_entry.assert_called_once()
 
 
-async def test_step_reauth(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_step_reauth(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test reauth flow."""
     new_password = "ABCD"
     new_client_id = "EFGH"
@@ -102,9 +102,9 @@ async def test_step_reauth(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> 
         domain=DOMAIN,
         data=VALID_CONFIG,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
@@ -115,7 +115,7 @@ async def test_step_reauth(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> 
             {"error": "foo", "error_description": "bar"}
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_PASSWORD: new_password, CONF_CLIENT_ID: new_client_id},
         )
@@ -128,29 +128,29 @@ async def test_step_reauth(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> 
         f"{MODULE}.config_flow.login",
         return_value=None,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_PASSWORD: new_password, CONF_CLIENT_ID: new_client_id},
         )
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "reauth_successful"
 
-        assert len(hass.config_entries.async_entries()) == 1
+        assert len(menuai.config_entries.async_entries()) == 1
         assert (
-            hass.config_entries.async_entries()[0].data[CONF_PASSWORD] == new_password
+            menuai.config_entries.async_entries()[0].data[CONF_PASSWORD] == new_password
         )
         assert (
-            hass.config_entries.async_entries()[0].data[CONF_CLIENT_ID] == new_client_id
+            menuai.config_entries.async_entries()[0].data[CONF_CLIENT_ID] == new_client_id
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 async def test_form_dhcp(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, snapshot: SnapshotAssertion
+    menuai: menuai, mock_setup_entry: AsyncMock, snapshot: SnapshotAssertion
 ) -> None:
     """Test we can setup from dhcp."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DHCP_INFO,
@@ -163,11 +163,11 @@ async def test_form_dhcp(
         f"{MODULE}.config_flow.login",
         return_value=None,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             VALID_CONFIG,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "ViCare"
@@ -175,15 +175,15 @@ async def test_form_dhcp(
     mock_setup_entry.assert_called_once()
 
 
-async def test_dhcp_single_instance_allowed(hass: HomeAssistant) -> None:
+async def test_dhcp_single_instance_allowed(menuai: menuai) -> None:
     """Test that configuring more than one instance is rejected."""
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
         data=VALID_CONFIG,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DHCP_INFO,
@@ -192,16 +192,16 @@ async def test_dhcp_single_instance_allowed(hass: HomeAssistant) -> None:
     assert result["reason"] == "single_instance_allowed"
 
 
-async def test_user_input_single_instance_allowed(hass: HomeAssistant) -> None:
+async def test_user_input_single_instance_allowed(menuai: menuai) -> None:
     """Test that configuring more than one instance is rejected."""
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="ViCare",
         data=VALID_CONFIG,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT

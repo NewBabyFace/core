@@ -23,18 +23,18 @@ from pycec.network import HDMINetwork, PhysicalAddress
 from pycec.tcp import TcpAdapter
 import voluptuous as vol
 
-from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER
-from homeassistant.components.switch import DOMAIN as SWITCH
-from homeassistant.const import (
+from menuai.components.media_player import DOMAIN as MEDIA_PLAYER
+from menuai.components.switch import DOMAIN as SWITCH
+from menuai.const import (
     CONF_DEVICES,
     CONF_HOST,
     CONF_PLATFORM,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HassJob, HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, discovery, event
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuaiJob, menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv, discovery, event
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, EVENT_HDMI_CEC_UNAVAILABLE
 
@@ -157,10 +157,10 @@ def parse_mapping(mapping, parents=None):
                 yield (val, pad_physical_address(cur))
 
 
-def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:  # noqa: C901
+def setup(menuai: menuai, base_config: ConfigType) -> bool:  # noqa: C901
     """Set up the CEC capability."""
 
-    hass.data[DOMAIN] = {}
+    menuai.data[DOMAIN] = {}
 
     # Parse configuration into a dict of device name to physical address
     # represented as a list of four elements.
@@ -174,7 +174,7 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:  # noqa: C901
 
     loop = (
         # Create own thread if more than 1 CPU
-        hass.loop if multiprocessing.cpu_count() < 2 else None
+        menuai.loop if multiprocessing.cpu_count() < 2 else None
     )
     host = base_config[DOMAIN].get(CONF_HOST)
     display_name = base_config[DOMAIN].get(CONF_DISPLAY_NAME, DEFAULT_DISPLAY_NAME)
@@ -186,18 +186,18 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:  # noqa: C901
 
     def _adapter_watchdog(now=None):
         _LOGGER.debug("Reached _adapter_watchdog")
-        event.call_later(hass, WATCHDOG_INTERVAL, _adapter_watchdog_job)
+        event.call_later(menuai, WATCHDOG_INTERVAL, _adapter_watchdog_job)
         if not adapter.initialized:
             _LOGGER.warning("Adapter not initialized; Trying to restart")
-            hass.bus.fire(EVENT_HDMI_CEC_UNAVAILABLE)
+            menuai.bus.fire(EVENT_HDMI_CEC_UNAVAILABLE)
             adapter.init()
 
-    _adapter_watchdog_job = HassJob(_adapter_watchdog, cancel_on_shutdown=True)
+    _adapter_watchdog_job = menuaiJob(_adapter_watchdog, cancel_on_shutdown=True)
 
     @callback
     def _async_initialized_callback(*_: Any):
         """Add watchdog on initialization."""
-        return event.async_call_later(hass, WATCHDOG_INTERVAL, _adapter_watchdog_job)
+        return event.async_call_later(menuai, WATCHDOG_INTERVAL, _adapter_watchdog_job)
 
     hdmi_network.set_initialized_callback(_async_initialized_callback)
 
@@ -272,7 +272,7 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:  # noqa: C901
         if addr in device_aliases:
             addr = device_aliases[addr]
         else:
-            entity = hass.states.get(addr)
+            entity = menuai.states.get(addr)
             _LOGGER.debug("Selecting entity %s", entity)
             if entity is not None:
                 addr = entity.attributes["physical_address"]
@@ -297,14 +297,14 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:  # noqa: C901
     def _new_device(device):
         """Handle new devices which are detected by HDMI network."""
         key = f"{DOMAIN}.{device.name}"
-        hass.data[DOMAIN][key] = device
+        menuai.data[DOMAIN][key] = device
         ent_platform = base_config[DOMAIN][CONF_TYPES].get(key, platform)
         discovery.load_platform(
-            hass,
+            menuai,
             ent_platform,
             DOMAIN,
             discovered={ATTR_NEW: [key]},
-            hass_config=base_config,
+            menuai_config=base_config,
         )
 
     def _shutdown(call):
@@ -312,25 +312,25 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:  # noqa: C901
 
     def _start_cec(callback_event):
         """Register services and start HDMI network to watch for devices."""
-        hass.services.register(
+        menuai.services.register(
             DOMAIN, SERVICE_SEND_COMMAND, _tx, SERVICE_SEND_COMMAND_SCHEMA
         )
-        hass.services.register(
+        menuai.services.register(
             DOMAIN, SERVICE_VOLUME, _volume, schema=SERVICE_VOLUME_SCHEMA
         )
-        hass.services.register(
+        menuai.services.register(
             DOMAIN,
             SERVICE_UPDATE_DEVICES,
             _update,
             schema=SERVICE_UPDATE_DEVICES_SCHEMA,
         )
-        hass.services.register(DOMAIN, SERVICE_POWER_ON, _power_on)
-        hass.services.register(DOMAIN, SERVICE_STANDBY, _standby)
-        hass.services.register(DOMAIN, SERVICE_SELECT_DEVICE, _select_device)
+        menuai.services.register(DOMAIN, SERVICE_POWER_ON, _power_on)
+        menuai.services.register(DOMAIN, SERVICE_STANDBY, _standby)
+        menuai.services.register(DOMAIN, SERVICE_SELECT_DEVICE, _select_device)
 
         hdmi_network.set_new_device_callback(_new_device)
         hdmi_network.start()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, _start_cec)
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown)
+    menuai.bus.listen_once(EVENT_menuai_START, _start_cec)
+    menuai.bus.listen_once(EVENT_menuai_STOP, _shutdown)
     return True

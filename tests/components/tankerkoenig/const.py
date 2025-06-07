@@ -2,8 +2,8 @@
 
 from aiotankerkoenig import PriceInfo, Station, Status
 
-from homeassistant.components.tankerkoenig.const import CONF_STATIONS
-from homeassistant.const import (
+from menuai.components.tankerkoenig.const import CONF_STATIONS
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LOCATION,

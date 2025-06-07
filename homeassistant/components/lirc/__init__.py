@@ -6,11 +6,11 @@ import time
 
 import lirc
 
-from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.issue_registry import IssueSeverity, create_issue
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import EVENT_menuai_START, EVENT_menuai_STOP
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.issue_registry import IssueSeverity, create_issue
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,11 +25,11 @@ ICON = "mdi:remote"
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the LIRC capability."""
     create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,
@@ -42,10 +42,10 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         },
     )
     # blocking=True gives unexpected behavior (multiple responses for 1 press)
-    # also by not blocking, we allow hass to shut down the thread gracefully
+    # also by not blocking, we allow menuai to shut down the thread gracefully
     # on exit.
     lirc.init("home-assistant", blocking=False)
-    lirc_interface = LircInterface(hass)
+    lirc_interface = LircInterface(menuai)
 
     def _start_lirc(_event):
         lirc_interface.start()
@@ -53,8 +53,8 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def _stop_lirc(_event):
         lirc_interface.stopped.set()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, _start_lirc)
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, _stop_lirc)
+    menuai.bus.listen_once(EVENT_menuai_START, _start_lirc)
+    menuai.bus.listen_once(EVENT_menuai_STOP, _stop_lirc)
 
     return True
 
@@ -67,12 +67,12 @@ class LircInterface(threading.Thread):
     around until a non-empty response is obtained from lirc.
     """
 
-    def __init__(self, hass):
+    def __init__(self, menuai):
         """Construct a LIRC interface object."""
         threading.Thread.__init__(self)
         self.daemon = True
         self.stopped = threading.Event()
-        self.hass = hass
+        self.menuai = menuai
 
     def run(self):
         """Run the loop of the LIRC interface thread."""
@@ -87,7 +87,7 @@ class LircInterface(threading.Thread):
             if code:
                 code = code[0]
                 _LOGGER.debug("Got new LIRC code %s", code)
-                self.hass.bus.fire(EVENT_IR_COMMAND_RECEIVED, {BUTTON_NAME: code})
+                self.menuai.bus.fire(EVENT_IR_COMMAND_RECEIVED, {BUTTON_NAME: code})
             else:
                 time.sleep(0.2)
         lirc.deinit()

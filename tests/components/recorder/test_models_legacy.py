@@ -5,8 +5,8 @@ from unittest.mock import PropertyMock
 
 import pytest
 
-from homeassistant.components.recorder.models.legacy import LegacyLazyState
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.models.legacy import LegacyLazyState
+from menuai.util import dt as dt_util
 
 
 async def test_legacy_lazy_state_prefers_shared_attrs_over_attrs(

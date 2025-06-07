@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.significant_change import (
+from menuai.core import menuai, callback
+from menuai.helpers.significant_change import (
     check_absolute_change,
     check_valid_float,
 )
@@ -20,7 +20,7 @@ SIGNIFICANT_ATTRIBUTES: set[str] = {
 
 @callback
 def async_check_significant_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     old_state: str,
     old_attrs: dict,
     new_state: str,

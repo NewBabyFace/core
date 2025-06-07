@@ -9,22 +9,22 @@ from typing import Any
 from haphilipsjs import ConnectionFailure, PairingFailure, PhilipsTV
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_VERSION,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PIN,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import menuai, callback
+from menuai.helpers import selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
@@ -55,7 +55,7 @@ OPTIONS_FLOW = {
 
 
 async def _validate_input(
-    hass: HomeAssistant, host: str, api_version: int
+    menuai: menuai, host: str, api_version: int
 ) -> PhilipsTV:
     """Validate the user input allows us to connect."""
     hub = PhilipsTV(host, api_version)
@@ -163,7 +163,7 @@ class PhilipsJSConfigFlow(ConfigFlow, domain=DOMAIN):
             self._current = user_input
             try:
                 hub = await _validate_input(
-                    self.hass, user_input[CONF_HOST], user_input[CONF_API_VERSION]
+                    self.menuai, user_input[CONF_HOST], user_input[CONF_API_VERSION]
                 )
             except ConnectionFailure as exc:
                 LOGGER.error(exc)

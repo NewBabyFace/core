@@ -3,8 +3,8 @@
 from enum import StrEnum
 from typing import Final, NamedTuple, TypedDict
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.typing import StateType
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.typing import StateType
 
 DOMAIN: Final = "fronius"
 

@@ -10,9 +10,9 @@ from aiohasupervisor import SupervisorError
 from aiohasupervisor.models import ContextType
 import voluptuous as vol
 
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
+from menuai.components.repairs import RepairsFlow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult
 
 from . import get_addons_info, get_issues_info
 from .const import (
@@ -52,16 +52,16 @@ class SupervisorIssueRepairFlow(RepairsFlow):
     _data: dict[str, Any] | None = None
     _issue: Issue | None = None
 
-    def __init__(self, hass: HomeAssistant, issue_id: str) -> None:
+    def __init__(self, menuai: menuai, issue_id: str) -> None:
         """Initialize repair flow."""
         self._issue_id = issue_id
-        self._supervisor_client = get_supervisor_client(hass)
+        self._supervisor_client = get_supervisor_client(menuai)
         super().__init__()
 
     @property
     def issue(self) -> Issue | None:
         """Get associated issue."""
-        supervisor_issues = get_issues_info(self.hass)
+        supervisor_issues = get_issues_info(self.menuai)
         if not self._issue and supervisor_issues:
             self._issue = supervisor_issues.get_issue(self._issue_id)
 
@@ -160,16 +160,16 @@ class DockerConfigIssueRepairFlow(SupervisorIssueRepairFlow):
     def description_placeholders(self) -> dict[str, str] | None:
         """Get description placeholders for steps."""
         placeholders = {PLACEHOLDER_KEY_COMPONENTS: ""}
-        supervisor_issues = get_issues_info(self.hass)
+        supervisor_issues = get_issues_info(self.menuai)
         if supervisor_issues and self.issue:
-            addons = get_addons_info(self.hass) or {}
+            addons = get_addons_info(self.menuai) or {}
             components: list[str] = []
             for issue in supervisor_issues.issues:
                 if issue.key == self.issue.key or issue.type != self.issue.type:
                     continue
 
                 if issue.context == ContextType.CORE:
-                    components.insert(0, "Home Assistant")
+                    components.insert(0, "MenuAI")
                 elif issue.context == ContextType.ADDON:
                     components.append(
                         next(
@@ -195,7 +195,7 @@ class AddonIssueRepairFlow(SupervisorIssueRepairFlow):
         """Get description placeholders for steps."""
         placeholders: dict[str, str] = super().description_placeholders or {}
         if self.issue and self.issue.reference:
-            addons = get_addons_info(self.hass)
+            addons = get_addons_info(self.menuai)
             if addons and self.issue.reference in addons:
                 placeholders[PLACEHOLDER_KEY_ADDON] = addons[self.issue.reference][
                     "name"
@@ -207,19 +207,19 @@ class AddonIssueRepairFlow(SupervisorIssueRepairFlow):
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:
     """Create flow."""
-    supervisor_issues = get_issues_info(hass)
+    supervisor_issues = get_issues_info(menuai)
     issue = supervisor_issues and supervisor_issues.get_issue(issue_id)
     if issue and issue.key == ISSUE_KEY_SYSTEM_DOCKER_CONFIG:
-        return DockerConfigIssueRepairFlow(hass, issue_id)
+        return DockerConfigIssueRepairFlow(menuai, issue_id)
     if issue and issue.key in {
         ISSUE_KEY_ADDON_DETACHED_ADDON_REMOVED,
         ISSUE_KEY_ADDON_BOOT_FAIL,
     }:
-        return AddonIssueRepairFlow(hass, issue_id)
+        return AddonIssueRepairFlow(menuai, issue_id)
 
-    return SupervisorIssueRepairFlow(hass, issue_id)
+    return SupervisorIssueRepairFlow(menuai, issue_id)

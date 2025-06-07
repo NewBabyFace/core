@@ -14,16 +14,16 @@ from aiovodafone.exceptions import (
     GenericLoginError,
 )
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import _LOGGER, DOMAIN
 from .coordinator import VodafoneConfigEntry, VodafoneStationRouter
@@ -78,7 +78,7 @@ BUTTON_TYPES: Final = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: VodafoneConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -121,8 +121,8 @@ class VodafoneStationSensorEntity(
         try:
             await self.entity_description.press_action(self.coordinator)
         except CannotAuthenticate as err:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="cannot_authenticate",
                 translation_placeholders={"error": repr(err)},
@@ -134,7 +134,7 @@ class VodafoneStationSensorEntity(
             JSONDecodeError,
         ) as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="cannot_execute_action",
                 translation_placeholders={"error": repr(err)},

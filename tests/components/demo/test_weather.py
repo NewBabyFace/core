@@ -7,9 +7,9 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import weather
-from homeassistant.components.demo.weather import WEATHER_UPDATE_INTERVAL
-from homeassistant.components.weather import (
+from menuai.components import weather
+from menuai.components.demo.weather import WEATHER_UPDATE_INTERVAL
+from menuai.components.weather import (
     ATTR_WEATHER_HUMIDITY,
     ATTR_WEATHER_OZONE,
     ATTR_WEATHER_PRESSURE,
@@ -17,10 +17,10 @@ from homeassistant.components.weather import (
     ATTR_WEATHER_WIND_BEARING,
     ATTR_WEATHER_WIND_SPEED,
 )
-from homeassistant.const import ATTR_ATTRIBUTION, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.const import ATTR_ATTRIBUTION, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from tests.typing import WebSocketGenerator
 
@@ -29,21 +29,21 @@ from tests.typing import WebSocketGenerator
 async def weather_only() -> None:
     """Enable only the datetime platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.WEATHER],
     ):
         yield
 
 
-async def test_attributes(hass: HomeAssistant, weather_only) -> None:
+async def test_attributes(menuai: menuai, weather_only) -> None:
     """Test weather attributes."""
     assert await async_setup_component(
-        hass, weather.DOMAIN, {"weather": {"platform": "demo"}}
+        menuai, weather.DOMAIN, {"weather": {"platform": "demo"}}
     )
-    hass.config.units = METRIC_SYSTEM
-    await hass.async_block_till_done()
+    menuai.config.units = METRIC_SYSTEM
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.demo_weather_south")
+    state = menuai.states.get("weather.demo_weather_south")
     assert state is not None
 
     assert state.state == "sunny"
@@ -55,7 +55,7 @@ async def test_attributes(hass: HomeAssistant, weather_only) -> None:
     assert data.get(ATTR_WEATHER_WIND_SPEED) == 1.8  # 0.5 m/s -> km/h
     assert data.get(ATTR_WEATHER_WIND_BEARING) is None
     assert data.get(ATTR_WEATHER_OZONE) is None
-    assert data.get(ATTR_ATTRIBUTION) == "Powered by Home Assistant"
+    assert data.get(ATTR_ATTRIBUTION) == "Powered by MenuAI"
 
 
 TEST_TIME_ADVANCE_INTERVAL = datetime.timedelta(seconds=5 + 1)
@@ -124,8 +124,8 @@ TEST_TIME_ADVANCE_INTERVAL = datetime.timedelta(seconds=5 + 1)
     ],
 )
 async def test_forecast(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     weather_only: None,
     forecast_type: str,
@@ -133,12 +133,12 @@ async def test_forecast(
 ) -> None:
     """Test multiple forecast."""
     assert await async_setup_component(
-        hass, weather.DOMAIN, {"weather": {"platform": "demo"}}
+        menuai, weather.DOMAIN, {"weather": {"platform": "demo"}}
     )
-    hass.config.units = METRIC_SYSTEM
-    await hass.async_block_till_done()
+    menuai.config.units = METRIC_SYSTEM
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -164,7 +164,7 @@ async def test_forecast(
         assert forecast1[6][key] == val
 
     freezer.tick(WEATHER_UPDATE_INTERVAL + datetime.timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await client.receive_json()
     assert msg["id"] == subscription_id

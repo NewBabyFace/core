@@ -24,15 +24,15 @@ from pyisy.constants import (
 from pyisy.helpers import EventListener, NodeProperty
 from pyisy.nodes import Node, NodeChangedEvent
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory, Platform, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     _LOGGER,
@@ -43,7 +43,7 @@ from .const import (
     UOM_TO_STATES,
 )
 from .entity import ISYNodeEntity
-from .helpers import convert_isy_value_to_hass
+from .helpers import convert_isy_value_to_menuai
 from .models import IsyConfigEntry
 
 # Disable general purpose and redundant sensors by default
@@ -106,7 +106,7 @@ ISY_CONTROL_TO_ENTITY_CATEGORY = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -197,20 +197,20 @@ class ISYSensorEntity(ISYNodeEntity, SensorEntity):
             return cast(str, self.target.formatted)
 
         # Handle ISY precision and rounding
-        value = convert_isy_value_to_hass(value, uom, self.target.prec)
+        value = convert_isy_value_to_menuai(value, uom, self.target.prec)
         if value is None:
             return None
 
-        # Convert temperatures to Home Assistant's unit
+        # Convert temperatures to MenuAI's unit
         if uom in (UnitOfTemperature.CELSIUS, UnitOfTemperature.FAHRENHEIT):
-            value = self.hass.config.units.temperature(value, uom)
+            value = self.menuai.config.units.temperature(value, uom)
 
         assert isinstance(value, (int, float))
         return value
 
     @property
     def native_unit_of_measurement(self) -> str | None:
-        """Get the Home Assistant unit of measurement for the device."""
+        """Get the MenuAI unit of measurement for the device."""
         raw_units = self.raw_unit_of_measurement
         # Check if this is a known index pair UOM
         if isinstance(raw_units, dict) or raw_units in (UOM_ON_OFF, UOM_INDEX):
@@ -220,7 +220,7 @@ class ISYSensorEntity(ISYNodeEntity, SensorEntity):
             UnitOfTemperature.CELSIUS,
             UOM_DOUBLE_TEMP,
         ):
-            return self.hass.config.units.temperature_unit
+            return self.menuai.config.units.temperature_unit
         return raw_units
 
 
@@ -262,8 +262,8 @@ class ISYAuxSensorEntity(ISYSensorEntity):
         """Return the target value."""
         return None if self.target is None else self.target.value
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node control change events.
 
         Overloads the default ISYNodeEntity updater to only update when

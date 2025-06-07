@@ -10,10 +10,10 @@ from aiohomeconnect.model import EventKey, OptionKey, ProgramKey, SettingKey
 from aiohomeconnect.model.error import HomeConnectError
 from aiohomeconnect.model.program import Execution
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import setup_home_connect_entry
 from .const import (
@@ -336,7 +336,7 @@ def _get_option_entities_for_appliance(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -387,9 +387,9 @@ class HomeConnectProgramSelectEntity(HomeConnectEntity, SelectEntity):
         self.set_options()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.async_add_listener(
                 self.refresh_options,
@@ -416,7 +416,7 @@ class HomeConnectProgramSelectEntity(HomeConnectEntity, SelectEntity):
                 program_key,
             )
         except HomeConnectError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key=self.entity_description.error_translation_key,
                 translation_placeholders={
@@ -456,7 +456,7 @@ class HomeConnectSelectEntity(HomeConnectEntity, SelectEntity):
                 value=value,
             )
         except HomeConnectError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_setting_entity",
                 translation_placeholders={
@@ -474,9 +474,9 @@ class HomeConnectSelectEntity(HomeConnectEntity, SelectEntity):
             data.value
         )
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         await self.async_fetch_options()
 
     @constraint_fetcher

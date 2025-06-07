@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Final
 
-from homeassistant.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
 
 DOMAIN: Final = "fitbit"
 
@@ -52,7 +52,7 @@ class FitbitUnitSystem(StrEnum):
     This is used as a header to tell the Fitbit API which type of units to return.
     https://dev.fitbit.com/build/reference/web-api/developer-guide/application-design/#Units
 
-    Prefer to leave unset for newer configurations to use the Home Assistant default units.
+    Prefer to leave unset for newer configurations to use the MenuAI default units.
     """
 
     LEGACY_DEFAULT = "default"

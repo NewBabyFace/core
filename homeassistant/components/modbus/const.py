@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_BINARY_SENSORS,
     CONF_COVERS,

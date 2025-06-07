@@ -1,8 +1,8 @@
 """Mockup Nuki device."""
 
-from homeassistant.components.nuki.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.nuki.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT, CONF_TOKEN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -17,7 +17,7 @@ ID_HEX = "BC614E"
 MOCK_INFO = load_json_object_fixture("info.json", DOMAIN)
 
 
-async def setup_nuki_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def setup_nuki_integration(menuai: menuai) -> MockConfigEntry:
     """Create the Nuki device."""
 
     entry = MockConfigEntry(
@@ -25,6 +25,6 @@ async def setup_nuki_integration(hass: HomeAssistant) -> MockConfigEntry:
         unique_id=ID_HEX,
         data={CONF_HOST: HOST, CONF_PORT: 8080, CONF_TOKEN: "test-token"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     return entry

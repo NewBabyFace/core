@@ -8,16 +8,16 @@ from unittest.mock import MagicMock
 from pylitterbot import Robot
 import pytest
 
-from homeassistant.components.litterrobot.vacuum import SERVICE_SET_SLEEP_MODE
-from homeassistant.components.vacuum import (
+from menuai.components.litterrobot.vacuum import SERVICE_SET_SLEEP_MODE
+from menuai.components.vacuum import (
     DOMAIN as VACUUM_DOMAIN,
     SERVICE_START,
     SERVICE_STOP,
     VacuumActivity,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
 
 from .common import DOMAIN, VACUUM_ENTITY_ID
 from .conftest import setup_integration
@@ -30,7 +30,7 @@ COMPONENT_SERVICE_DOMAIN = {
 
 
 async def test_vacuum(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, mock_account: MagicMock
+    menuai: menuai, entity_registry: er.EntityRegistry, mock_account: MagicMock
 ) -> None:
     """Tests the vacuum entity was set up."""
     entity_registry.async_get_or_create(
@@ -42,10 +42,10 @@ async def test_vacuum(
     ent_reg_entry = entity_registry.async_get(VACUUM_ENTITY_ID)
     assert ent_reg_entry.unique_id == VACUUM_UNIQUE_ID
 
-    await setup_integration(hass, mock_account, VACUUM_DOMAIN)
-    assert hass.services.has_service(DOMAIN, SERVICE_SET_SLEEP_MODE)
+    await setup_integration(menuai, mock_account, VACUUM_DOMAIN)
+    assert menuai.services.has_service(DOMAIN, SERVICE_SET_SLEEP_MODE)
 
-    vacuum = hass.states.get(VACUUM_ENTITY_ID)
+    vacuum = menuai.states.get(VACUUM_ENTITY_ID)
     assert vacuum
     assert vacuum.state == VacuumActivity.DOCKED
 
@@ -54,26 +54,26 @@ async def test_vacuum(
 
 
 async def test_no_robots(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_account_with_no_robots: MagicMock,
 ) -> None:
     """Tests the vacuum entity was set up."""
-    entry = await setup_integration(hass, mock_account_with_no_robots, VACUUM_DOMAIN)
+    entry = await setup_integration(menuai, mock_account_with_no_robots, VACUUM_DOMAIN)
 
     assert len(entity_registry.entities) == 0
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_vacuum_with_error(
-    hass: HomeAssistant, mock_account_with_error: MagicMock
+    menuai: menuai, mock_account_with_error: MagicMock
 ) -> None:
     """Tests a vacuum entity with an error."""
-    await setup_integration(hass, mock_account_with_error, VACUUM_DOMAIN)
+    await setup_integration(menuai, mock_account_with_error, VACUUM_DOMAIN)
 
-    vacuum = hass.states.get(VACUUM_ENTITY_ID)
+    vacuum = menuai.states.get(VACUUM_ENTITY_ID)
     assert vacuum
     assert vacuum.state == VacuumActivity.ERROR
 
@@ -90,17 +90,17 @@ async def test_vacuum_with_error(
     ],
 )
 async def test_activities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_account_with_litterrobot_4: MagicMock,
     robot_data: dict[str, str | bool],
     expected_state: str,
 ) -> None:
     """Test sending commands to the switch."""
-    await setup_integration(hass, mock_account_with_litterrobot_4, VACUUM_DOMAIN)
+    await setup_integration(menuai, mock_account_with_litterrobot_4, VACUUM_DOMAIN)
     robot: Robot = mock_account_with_litterrobot_4.robots[0]
     robot._update_data(robot_data, partial=True)
 
-    vacuum = hass.states.get(VACUUM_ENTITY_ID)
+    vacuum = menuai.states.get(VACUUM_ENTITY_ID)
     assert vacuum
     assert vacuum.state == expected_state
 
@@ -120,7 +120,7 @@ async def test_activities(
     ],
 )
 async def test_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_account: MagicMock,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -129,9 +129,9 @@ async def test_commands(
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test sending commands to the vacuum."""
-    await setup_integration(hass, mock_account, VACUUM_DOMAIN)
+    await setup_integration(menuai, mock_account, VACUUM_DOMAIN)
 
-    vacuum = hass.states.get(VACUUM_ENTITY_ID)
+    vacuum = menuai.states.get(VACUUM_ENTITY_ID)
     assert vacuum
     assert vacuum.state == VacuumActivity.DOCKED
 
@@ -139,7 +139,7 @@ async def test_commands(
     data = {ATTR_ENTITY_ID: VACUUM_ENTITY_ID, **extra.get("data", {})}
     issues = extra.get("issues", set())
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COMPONENT_SERVICE_DOMAIN.get(service, VACUUM_DOMAIN),
         service,
         data,

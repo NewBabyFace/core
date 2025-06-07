@@ -5,12 +5,12 @@ from unittest.mock import ANY, patch
 
 import pytest
 
-from homeassistant.components import mqtt_eventstream as eventstream
-from homeassistant.const import EVENT_STATE_CHANGED, MATCH_ALL
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import mqtt_eventstream as eventstream
+from menuai.const import EVENT_STATE_CHANGED, MATCH_ALL
+from menuai.core import menuai, State, callback
+from menuai.helpers.json import JSONEncoder
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     async_fire_mqtt_message,
@@ -21,7 +21,7 @@ from tests.typing import MqttMockHAClient
 
 
 async def add_eventstream(
-    hass: HomeAssistant,
+    menuai: menuai,
     sub_topic: str | None = None,
     pub_topic: str | None = None,
     ignore_event: list[str] | None = None,
@@ -35,68 +35,68 @@ async def add_eventstream(
     if ignore_event:
         config["ignore_event"] = ignore_event
     return await async_setup_component(
-        hass, eventstream.DOMAIN, {eventstream.DOMAIN: config}
+        menuai, eventstream.DOMAIN, {eventstream.DOMAIN: config}
     )
 
 
-async def test_setup_succeeds(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_setup_succeeds(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test the success of the setup."""
-    assert await add_eventstream(hass)
+    assert await add_eventstream(menuai)
 
 
 async def test_setup_no_mqtt(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the failure of the setup if mqtt is not set up."""
-    assert not await add_eventstream(hass)
+    assert not await add_eventstream(menuai)
     assert "MQTT integration is not available" in caplog.text
 
 
-async def test_setup_with_pub(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_setup_with_pub(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test the setup with subscription."""
     # Should start off with no listeners for all events
-    assert not hass.bus.async_listeners().get("*")
+    assert not menuai.bus.async_listeners().get("*")
 
-    assert await add_eventstream(hass, pub_topic="bar")
-    await hass.async_block_till_done()
+    assert await add_eventstream(menuai, pub_topic="bar")
+    await menuai.async_block_till_done()
 
     # Verify that the event handler has been added as a listener
-    assert hass.bus.async_listeners().get("*") == 1
+    assert menuai.bus.async_listeners().get("*") == 1
 
 
-async def test_subscribe(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_subscribe(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test the subscription."""
     sub_topic = "foo"
-    assert await add_eventstream(hass, sub_topic=sub_topic)
-    await hass.async_block_till_done()
+    assert await add_eventstream(menuai, sub_topic=sub_topic)
+    await menuai.async_block_till_done()
 
     # Verify that the this entity was subscribed to the topic
     mqtt_mock.async_subscribe.assert_called_with(sub_topic, ANY, 0, ANY, ANY)
 
 
 async def test_state_changed_event_sends_message(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the sending of a new message if event changed."""
     now = dt_util.as_utc(dt_util.now())
     e_id = "fake.entity"
     pub_topic = "bar"
     with patch(
-        ("homeassistant.core.dt_util.utcnow"),
+        ("menuai.core.dt_util.utcnow"),
         return_value=now,
     ):
         # Add the eventstream component for publishing events
-        assert await add_eventstream(hass, pub_topic=pub_topic)
-        await hass.async_block_till_done()
+        assert await add_eventstream(menuai, pub_topic=pub_topic)
+        await menuai.async_block_till_done()
 
         # Reset the mock because it will have already gotten calls for the
         # mqtt_eventstream state change on initialization, etc.
         mqtt_mock.async_publish.reset_mock()
 
         # Set a state of an entity
-        mock_state_change_event(hass, State(e_id, "on"))
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        mock_state_change_event(menuai, State(e_id, "on"))
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # The order of the JSON is indeterminate,
     # so first just check that publish was called
@@ -125,28 +125,28 @@ async def test_state_changed_event_sends_message(
 
 
 async def test_time_event_does_not_send_message(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the sending of a new message if time event."""
-    assert await add_eventstream(hass, pub_topic="bar")
-    await hass.async_block_till_done()
+    assert await add_eventstream(menuai, pub_topic="bar")
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_eventstream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
-    async_fire_time_changed(hass, dt_util.utcnow())
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow())
+    await menuai.async_block_till_done()
     assert not mqtt_mock.async_publish.called
 
 
-async def test_receiving_remote_event_fires_hass_event(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+async def test_receiving_remote_event_fires_menuai_event(
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the receiving of the remotely fired event."""
     sub_topic = "foo"
-    assert await add_eventstream(hass, sub_topic=sub_topic)
-    await hass.async_block_till_done()
+    assert await add_eventstream(menuai, sub_topic=sub_topic)
+    await menuai.async_block_till_done()
 
     calls = []
 
@@ -154,27 +154,27 @@ async def test_receiving_remote_event_fires_hass_event(
     def listener(_):
         calls.append(1)
 
-    hass.bus.async_listen_once("test_event", listener)
-    await hass.async_block_till_done()
+    menuai.bus.async_listen_once("test_event", listener)
+    await menuai.async_block_till_done()
 
     payload = json.dumps(
         {"event_type": "test_event", "event_data": {}}, cls=JSONEncoder
     )
-    async_fire_mqtt_message(hass, sub_topic, payload)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, sub_topic, payload)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_receiving_blocked_event_fires_hass_event(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+async def test_receiving_blocked_event_fires_menuai_event(
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the receiving of blocked event does not fire."""
     sub_topic = "foo"
-    assert await add_eventstream(hass, sub_topic=sub_topic)
-    await hass.async_block_till_done()
+    assert await add_eventstream(menuai, sub_topic=sub_topic)
+    await menuai.async_block_till_done()
 
     calls = []
 
@@ -182,25 +182,25 @@ async def test_receiving_blocked_event_fires_hass_event(
     def listener(_):
         calls.append(1)
 
-    hass.bus.async_listen(MATCH_ALL, listener)
-    await hass.async_block_till_done()
+    menuai.bus.async_listen(MATCH_ALL, listener)
+    await menuai.async_block_till_done()
 
     for event in eventstream.BLOCKED_EVENTS:
         payload = json.dumps({"event_type": event, "event_data": {}}, cls=JSONEncoder)
-        async_fire_mqtt_message(hass, sub_topic, payload)
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, sub_topic, payload)
+        await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_ignored_event_doesnt_send_over_stream(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the ignoring of sending events if defined."""
-    assert await add_eventstream(hass, pub_topic="bar", ignore_event=["state_changed"])
-    await hass.async_block_till_done()
+    assert await add_eventstream(menuai, pub_topic="bar", ignore_event=["state_changed"])
+    await menuai.async_block_till_done()
 
     e_id = "entity.test_id"
     event = {}
@@ -213,19 +213,19 @@ async def test_ignored_event_doesnt_send_over_stream(
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State(e_id, "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_wrong_ignored_event_sends_over_stream(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the ignoring of sending events if defined."""
-    assert await add_eventstream(hass, pub_topic="bar", ignore_event=["statee_changed"])
-    await hass.async_block_till_done()
+    assert await add_eventstream(menuai, pub_topic="bar", ignore_event=["statee_changed"])
+    await menuai.async_block_till_done()
 
     e_id = "entity.test_id"
     event = {}
@@ -238,8 +238,8 @@ async def test_wrong_ignored_event_sends_over_stream(
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State(e_id, "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mqtt_mock.async_publish.called

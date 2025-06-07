@@ -11,15 +11,15 @@ from python_picnic_api2.session import PicnicAuthError
 import requests
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_COUNTRY_CODE,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import COUNTRY_CODES, DOMAIN
 
@@ -46,7 +46,7 @@ class PicnicHub:
         return picnic.session.auth_token, picnic.get_user()
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
@@ -54,7 +54,7 @@ async def validate_input(hass: HomeAssistant, data):
     hub = PicnicHub()
 
     try:
-        auth_token, user_data = await hass.async_add_executor_job(
+        auth_token, user_data = await menuai.async_add_executor_job(
             hub.authenticate,
             data[CONF_USERNAME],
             data[CONF_PASSWORD],
@@ -99,7 +99,7 @@ class PicnicConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            auth_token, info = await validate_input(self.hass, user_input)
+            auth_token, info = await validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -121,8 +121,8 @@ class PicnicConfigFlow(ConfigFlow, domain=DOMAIN):
 
             # In case of re-auth, only continue if an exiting account exists with the same unique id
             if existing_entry:
-                self.hass.config_entries.async_update_entry(existing_entry, data=data)
-                await self.hass.config_entries.async_reload(existing_entry.entry_id)
+                self.menuai.config_entries.async_update_entry(existing_entry, data=data)
+                await self.menuai.config_entries.async_reload(existing_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
             # Set the error because the account is different
@@ -133,9 +133,9 @@ class PicnicConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import mqtt, update
-from homeassistant.components.update import DOMAIN as UPDATE_DOMAIN, SERVICE_INSTALL
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.components import mqtt, update
+from menuai.components.update import DOMAIN as UPDATE_DOMAIN, SERVICE_INSTALL
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .common import (
     help_custom_config,
@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "device_class"),
+    ("menuai_config", "device_class"),
     [
         (
             {
@@ -94,7 +94,7 @@ DEFAULT_CONFIG = {
     ],
 )
 async def test_run_update_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     device_class: str | None,
 ) -> None:
@@ -103,12 +103,12 @@ async def test_run_update_setup(
     latest_version_topic = "test/latest-version"
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, installed_version_topic, "1.9.0")
-    async_fire_mqtt_message(hass, latest_version_topic, "1.9.0")
+    async_fire_mqtt_message(menuai, installed_version_topic, "1.9.0")
+    async_fire_mqtt_message(menuai, latest_version_topic, "1.9.0")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "1.9.0"
@@ -118,18 +118,18 @@ async def test_run_update_setup(
     assert state.attributes.get("entity_picture") == "https://example.com/icon.png"
     assert state.attributes.get("device_class") == device_class
 
-    async_fire_mqtt_message(hass, latest_version_topic, "2.0.0")
+    async_fire_mqtt_message(menuai, latest_version_topic, "2.0.0")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "2.0.0"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -147,19 +147,19 @@ async def test_run_update_setup(
     ],
 )
 async def test_run_update_setup_float(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that it fetches the given payload when the version is parsable as a number."""
     installed_version_topic = "test/installed-version"
     latest_version_topic = "test/latest-version"
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, installed_version_topic, "1.9")
-    async_fire_mqtt_message(hass, latest_version_topic, "1.9")
+    async_fire_mqtt_message(menuai, installed_version_topic, "1.9")
+    async_fire_mqtt_message(menuai, latest_version_topic, "1.9")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "1.9"
     assert state.attributes.get("latest_version") == "1.9"
@@ -168,18 +168,18 @@ async def test_run_update_setup_float(
     assert state.attributes.get("title") == "Test Update Title"
     assert state.attributes.get("entity_picture") == "https://example.com/icon.png"
 
-    async_fire_mqtt_message(hass, latest_version_topic, "2.0")
+    async_fire_mqtt_message(menuai, latest_version_topic, "2.0")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
     assert state.attributes.get("installed_version") == "1.9"
     assert state.attributes.get("latest_version") == "2.0"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -195,36 +195,36 @@ async def test_run_update_setup_float(
     ],
 )
 async def test_value_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that it fetches the given payload with a template."""
     installed_version_topic = "test/installed-version"
     latest_version_topic = "test/latest-version"
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, installed_version_topic, '{"installed":"1.9.0"}')
-    async_fire_mqtt_message(hass, latest_version_topic, '{"latest":"1.9.0"}')
+    async_fire_mqtt_message(menuai, installed_version_topic, '{"installed":"1.9.0"}')
+    async_fire_mqtt_message(menuai, latest_version_topic, '{"latest":"1.9.0"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "1.9.0"
     assert state.attributes.get("entity_picture") is None
 
-    async_fire_mqtt_message(hass, latest_version_topic, '{"latest":"2.0.0"}')
+    async_fire_mqtt_message(menuai, latest_version_topic, '{"latest":"2.0.0"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "2.0.0"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -242,7 +242,7 @@ async def test_value_template(
     ],
 )
 async def test_errornous_value_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -264,9 +264,9 @@ async def test_errornous_value_template(
         "voltage": 232,
     }
 
-    async_fire_mqtt_message(hass, state_topic, json.dumps(example_payload))
-    await hass.async_block_till_done()
-    assert hass.states.get("update.test_update") is not None
+    async_fire_mqtt_message(menuai, state_topic, json.dumps(example_payload))
+    await menuai.async_block_till_done()
+    assert menuai.states.get("update.test_update") is not None
     assert "Unable to process payload '" in caplog.text
 
     # Add update info
@@ -276,10 +276,10 @@ async def test_errornous_value_template(
         "progress": 20,
     }
 
-    async_fire_mqtt_message(hass, state_topic, json.dumps(example_payload))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, state_topic, json.dumps(example_payload))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state is not None
 
     assert state.state == STATE_ON
@@ -289,7 +289,7 @@ async def test_errornous_value_template(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -305,36 +305,36 @@ async def test_errornous_value_template(
     ],
 )
 async def test_value_template_float(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that it fetches the given payload with a template when the version is parsable as a number."""
     installed_version_topic = "test/installed-version"
     latest_version_topic = "test/latest-version"
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, installed_version_topic, '{"installed":"1.9"}')
-    async_fire_mqtt_message(hass, latest_version_topic, '{"latest":"1.9"}')
+    async_fire_mqtt_message(menuai, installed_version_topic, '{"installed":"1.9"}')
+    async_fire_mqtt_message(menuai, latest_version_topic, '{"latest":"1.9"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "1.9"
     assert state.attributes.get("latest_version") == "1.9"
     assert state.attributes.get("entity_picture") is None
 
-    async_fire_mqtt_message(hass, latest_version_topic, '{"latest":"2.0"}')
+    async_fire_mqtt_message(menuai, latest_version_topic, '{"latest":"2.0"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
     assert state.attributes.get("installed_version") == "1.9"
     assert state.attributes.get("latest_version") == "2.0"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -347,22 +347,22 @@ async def test_value_template_float(
     ],
 )
 async def test_empty_json_state_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test an empty JSON payload."""
     state_topic = "test/state-topic"
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, state_topic, "{}")
+    async_fire_mqtt_message(menuai, state_topic, "{}")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -375,7 +375,7 @@ async def test_empty_json_state_message(
     ],
 )
 async def test_invalid_json_state_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -384,7 +384,7 @@ async def test_invalid_json_state_message(
     await mqtt_mock_entry()
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         state_topic,
         '{"installed_version":"1.9.0","latest_version":"1.9.0",'
         '"title":"Test Update 1 Title","release_url":"https://example.com/release1",'
@@ -392,9 +392,9 @@ async def test_invalid_json_state_message(
         '"entity_picture": "https://example.com/icon1.png"}',
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "1.9.0"
@@ -404,9 +404,9 @@ async def test_invalid_json_state_message(
     assert state.attributes.get("entity_picture") == "https://example.com/icon1.png"
 
     # Test update schema validation with invalid value in JSON update
-    async_fire_mqtt_message(hass, state_topic, '{"update_percentage":101}')
+    async_fire_mqtt_message(menuai, state_topic, '{"update_percentage":101}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
         "Schema violation after processing payload '{\"update_percentage\":101}' on "
         "topic 'test/state-topic' for entity 'update.test_update': value must be at "
@@ -415,7 +415,7 @@ async def test_invalid_json_state_message(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -429,14 +429,14 @@ async def test_invalid_json_state_message(
     ],
 )
 async def test_json_state_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test whether it fetches data from a JSON payload."""
     state_topic = "test/state-topic"
     await mqtt_mock_entry()
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         state_topic,
         '{"installed_version":"1.9.0","latest_version":"1.9.0",'
         '"title":"Test Update 1 Title","release_url":"https://example.com/release1",'
@@ -444,9 +444,9 @@ async def test_json_state_message(
         '"entity_picture": "https://example.com/icon1.png"}',
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "1.9.0"
@@ -456,15 +456,15 @@ async def test_json_state_message(
     assert state.attributes.get("entity_picture") == "https://example.com/icon1.png"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         state_topic,
         '{"installed_version":"1.9.0","latest_version":"2.0.0",'
         '"title":"Test Update 2 Title","entity_picture":"https://example.com/icon2.png"}',
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "2.0.0"
@@ -473,10 +473,10 @@ async def test_json_state_message(
     assert state.attributes.get("update_percentage") is None
 
     # Test in_progress status
-    async_fire_mqtt_message(hass, state_topic, '{"in_progress":true}')
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, state_topic, '{"in_progress":true}')
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "2.0.0"
@@ -484,34 +484,34 @@ async def test_json_state_message(
     assert state.attributes.get("in_progress") is True
     assert state.attributes.get("update_percentage") is None
 
-    async_fire_mqtt_message(hass, state_topic, '{"in_progress":false}')
-    await hass.async_block_till_done()
-    state = hass.states.get("update.test_update")
+    async_fire_mqtt_message(menuai, state_topic, '{"in_progress":false}')
+    await menuai.async_block_till_done()
+    state = menuai.states.get("update.test_update")
     assert state.attributes.get("in_progress") is False
 
     # Test update_percentage status
-    async_fire_mqtt_message(hass, state_topic, '{"update_percentage":51.75}')
-    await hass.async_block_till_done()
-    state = hass.states.get("update.test_update")
+    async_fire_mqtt_message(menuai, state_topic, '{"update_percentage":51.75}')
+    await menuai.async_block_till_done()
+    state = menuai.states.get("update.test_update")
     assert state.attributes.get("in_progress") is True
     assert state.attributes.get("update_percentage") == 51.75
     assert state.attributes.get("display_precision") == 1
 
-    async_fire_mqtt_message(hass, state_topic, '{"update_percentage":100}')
-    await hass.async_block_till_done()
-    state = hass.states.get("update.test_update")
+    async_fire_mqtt_message(menuai, state_topic, '{"update_percentage":100}')
+    await menuai.async_block_till_done()
+    state = menuai.states.get("update.test_update")
     assert state.attributes.get("in_progress") is True
     assert state.attributes.get("update_percentage") == 100
 
-    async_fire_mqtt_message(hass, state_topic, '{"update_percentage":null}')
-    await hass.async_block_till_done()
-    state = hass.states.get("update.test_update")
+    async_fire_mqtt_message(menuai, state_topic, '{"update_percentage":null}')
+    await menuai.async_block_till_done()
+    state = menuai.states.get("update.test_update")
     assert state.attributes.get("in_progress") is False
     assert state.attributes.get("update_percentage") is None
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -526,33 +526,33 @@ async def test_json_state_message(
     ],
 )
 async def test_json_state_message_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test whether it fetches data from a JSON payload with template."""
     state_topic = "test/state-topic"
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, state_topic, '{"installed":"1.9.0","latest":"1.9.0"}')
+    async_fire_mqtt_message(menuai, state_topic, '{"installed":"1.9.0","latest":"1.9.0"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "1.9.0"
 
-    async_fire_mqtt_message(hass, state_topic, '{"installed":"1.9.0","latest":"2.0.0"}')
+    async_fire_mqtt_message(menuai, state_topic, '{"installed":"1.9.0","latest":"2.0.0"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
     assert state.attributes.get("installed_version") == "1.9.0"
     assert state.attributes.get("latest_version") == "2.0.0"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -568,7 +568,7 @@ async def test_json_state_message_with_template(
     ],
 )
 async def test_run_install_service(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that install service works."""
     installed_version_topic = "test/installed-version"
@@ -577,15 +577,15 @@ async def test_run_install_service(
 
     mqtt_mock = await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, installed_version_topic, "1.9.0")
-    async_fire_mqtt_message(hass, latest_version_topic, "2.0.0")
+    async_fire_mqtt_message(menuai, installed_version_topic, "1.9.0")
+    async_fire_mqtt_message(menuai, latest_version_topic, "2.0.0")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.test_update")
+    state = menuai.states.get("update.test_update")
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.test_update"},
@@ -595,96 +595,96 @@ async def test_run_install_service(
     mqtt_mock.async_publish.assert_called_once_with(command_topic, "install", 0, False)
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
     await help_test_availability_when_connection_lost(
-        hass, mqtt_mock_entry, update.DOMAIN
+        menuai, mqtt_mock_entry, update.DOMAIN
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     await help_test_default_availability_payload(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     await help_test_custom_availability_payload(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -707,22 +707,22 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique id option only creates one update per unique_id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, update.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, update.DOMAIN)
 
 
 async def test_discovery_removal_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered update."""
     data = json.dumps(DEFAULT_CONFIG[mqtt.DOMAIN][update.DOMAIN])
-    await help_test_discovery_removal(hass, mqtt_mock_entry, update.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, update.DOMAIN, data)
 
 
 async def test_discovery_update_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered update."""
     config1 = {
@@ -737,115 +737,115 @@ async def test_discovery_update_update(
     }
 
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, update.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, update.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered update."""
     data1 = '{ "name": "Beer", "state_topic": "installed-topic", "latest_version_topic": "latest-topic"}'
     with patch(
-        "homeassistant.components.mqtt.update.MqttUpdate.discovery_update"
+        "menuai.components.mqtt.update.MqttUpdate.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, update.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, update.DOMAIN, data1, discovery_update
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer" }'
     data2 = '{ "name": "Milk", "state_topic": "installed-topic", "latest_version_topic": "latest-topic" }'
 
-    await help_test_discovery_broken(hass, mqtt_mock_entry, update.DOMAIN, data1, data2)
+    await help_test_discovery_broken(menuai, mqtt_mock_entry, update.DOMAIN, data1, data2)
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT update device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT update device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, update.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = update.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unloading the config entry."""
     domain = update.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_unload_config_entry_with_platform(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    menuai: menuai, mqtt_client_mock: MqttMockPahoClient
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = update.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             update.DOMAIN,
@@ -887,7 +887,7 @@ async def test_reloadable(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -895,7 +895,7 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)
 
 
 VALUE_TEMMPLATES = {
@@ -905,7 +905,7 @@ VALUE_TEMMPLATES = {
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             update.DOMAIN,
@@ -922,13 +922,13 @@ VALUE_TEMMPLATES = {
     ids=VALUE_TEMMPLATES,
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text
@@ -936,12 +936,12 @@ async def test_value_template_fails(
 
 
 async def test_entity_icon_and_entity_picture(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test the entity icon or picture setup."""
     domain = update.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_entity_icon_and_entity_picture(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )

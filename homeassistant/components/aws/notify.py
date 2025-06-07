@@ -10,36 +10,36 @@ from typing import Any
 
 from aiobotocore.session import AioSession
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_NAME,
     CONF_PLATFORM,
     CONF_PROFILE_NAME,
     CONF_SERVICE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers.json import JSONEncoder
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_CONTEXT, CONF_CREDENTIAL_NAME, CONF_REGION, DATA_SESSIONS
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def get_available_regions(hass, service):
+async def get_available_regions(menuai, service):
     """Get available regions for a service."""
     session = AioSession()
     return await session.get_available_regions(service)
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> AWSNotify | None:
@@ -55,7 +55,7 @@ async def async_get_service(
     service = conf[CONF_SERVICE]
     region_name = conf[CONF_REGION]
 
-    available_regions = await get_available_regions(hass, service)
+    available_regions = await get_available_regions(menuai, service)
     if region_name not in available_regions:
         _LOGGER.error(
             "Region %s is not available for %s service, must in %s",
@@ -78,8 +78,8 @@ async def async_get_service(
 
     if not aws_config:
         # no platform config, use the first aws component credential instead
-        if hass.data[DATA_SESSIONS]:
-            session = next(iter(hass.data[DATA_SESSIONS].values()))
+        if menuai.data[DATA_SESSIONS]:
+            session = next(iter(menuai.data[DATA_SESSIONS].values()))
         else:
             _LOGGER.error("Missing aws credential for %s", config[CONF_NAME])
             return None
@@ -87,7 +87,7 @@ async def async_get_service(
     if session is None:
         credential_name = aws_config.get(CONF_CREDENTIAL_NAME)
         if credential_name is not None:
-            session = hass.data[DATA_SESSIONS].get(credential_name)
+            session = menuai.data[DATA_SESSIONS].get(credential_name)
             if session is None:
                 _LOGGER.warning("No available aws session for %s", credential_name)
             del aws_config[CONF_CREDENTIAL_NAME]
@@ -265,7 +265,7 @@ class AWSEventBridge(AWSNotify):
             entries = []
             for target in kwargs.get(ATTR_TARGET, [None]):
                 entry = {
-                    "Source": data.get("source", "homeassistant"),
+                    "Source": data.get("source", "menuai"),
                     "Resources": data.get("resources", []),
                     "Detail": detail,
                     "DetailType": data.get("detail_type", ""),

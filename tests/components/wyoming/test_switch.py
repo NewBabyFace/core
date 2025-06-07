@@ -1,43 +1,43 @@
 """Test Wyoming switch devices."""
 
-from homeassistant.components.wyoming.devices import SatelliteDevice
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.components.wyoming.devices import SatelliteDevice
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from . import reload_satellite
 
 
 async def test_muted(
-    hass: HomeAssistant,
+    menuai: menuai,
     satellite_config_entry: ConfigEntry,
     satellite_device: SatelliteDevice,
 ) -> None:
     """Test satellite muted."""
-    muted_id = satellite_device.get_muted_entity_id(hass)
+    muted_id = satellite_device.get_muted_entity_id(menuai)
     assert muted_id
 
-    state = hass.states.get(muted_id)
+    state = menuai.states.get(muted_id)
     assert state is not None
     assert state.state == STATE_OFF
     assert not satellite_device.is_muted
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {"entity_id": muted_id},
         blocking=True,
     )
 
-    state = hass.states.get(muted_id)
+    state = menuai.states.get(muted_id)
     assert state is not None
     assert state.state == STATE_ON
     assert satellite_device.is_muted
 
     # test restore
-    satellite_device = await reload_satellite(hass, satellite_config_entry.entry_id)
+    satellite_device = await reload_satellite(menuai, satellite_config_entry.entry_id)
 
-    state = hass.states.get(muted_id)
+    state = menuai.states.get(muted_id)
     assert state is not None
     assert state.state == STATE_ON
     assert satellite_device.is_muted

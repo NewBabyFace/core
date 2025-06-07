@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from homeassistant.const import STATE_OFF, STATE_ON
+from menuai.const import STATE_OFF, STATE_ON
 
 CONF_WRITE_TIMEOUT: Final = "write_timeout"
 

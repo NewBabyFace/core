@@ -8,17 +8,17 @@ from typing import Literal
 from pywaze.route_calculator import CalcRoutesResponse, WazeRouteCalculator, WRCError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_REGION, Platform, UnitOfLength
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_REGION, Platform, UnitOfLength
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.location import find_coordinates
-from homeassistant.helpers.selector import (
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.location import find_coordinates
+from menuai.helpers.selector import (
     BooleanSelector,
     SelectSelector,
     SelectSelectorConfig,
@@ -27,7 +27,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.util.unit_conversion import DistanceConverter
+from menuai.util.unit_conversion import DistanceConverter
 
 from .const import (
     CONF_AVOID_FERRIES,
@@ -104,21 +104,21 @@ SERVICE_GET_TRAVEL_TIMES_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Load the saved entities."""
-    if SEMAPHORE not in hass.data.setdefault(DOMAIN, {}):
-        hass.data.setdefault(DOMAIN, {})[SEMAPHORE] = asyncio.Semaphore(1)
+    if SEMAPHORE not in menuai.data.setdefault(DOMAIN, {}):
+        menuai.data.setdefault(DOMAIN, {})[SEMAPHORE] = asyncio.Semaphore(1)
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     async def async_get_travel_times_service(service: ServiceCall) -> ServiceResponse:
-        httpx_client = get_async_client(hass)
+        httpx_client = get_async_client(menuai)
         client = WazeRouteCalculator(
             region=service.data[CONF_REGION].upper(), client=httpx_client
         )
 
-        origin_coordinates = find_coordinates(hass, service.data[CONF_ORIGIN])
-        destination_coordinates = find_coordinates(hass, service.data[CONF_DESTINATION])
+        origin_coordinates = find_coordinates(menuai, service.data[CONF_ORIGIN])
+        destination_coordinates = find_coordinates(menuai, service.data[CONF_DESTINATION])
 
         origin = origin_coordinates if origin_coordinates else service.data[CONF_ORIGIN]
         destination = (
@@ -142,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         )
         return {"routes": [vars(route) for route in response]} if response else None
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_TRAVEL_TIMES,
         async_get_travel_times_service,
@@ -252,12 +252,12 @@ async def async_get_travel_times(
         return filtered_routes
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate an old config entry."""
 
     if config_entry.version == 1:
@@ -275,7 +275,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             options[CONF_EXCL_FILTER] = [excl_filters]
         else:
             options[CONF_EXCL_FILTER] = DEFAULT_FILTER
-        hass.config_entries.async_update_entry(config_entry, options=options, version=2)
+        menuai.config_entries.async_update_entry(config_entry, options=options, version=2)
         _LOGGER.debug(
             "Migration to version %s.%s successful",
             config_entry.version,

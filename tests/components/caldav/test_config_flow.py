@@ -7,11 +7,11 @@ from caldav.lib.error import AuthorizationError, DAVError
 import pytest
 import requests
 
-from homeassistant import config_entries
-from homeassistant.components.caldav.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.caldav.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import TEST_PASSWORD, TEST_URL, TEST_USERNAME
 
@@ -22,23 +22,23 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        f"homeassistant.components.{DOMAIN}.async_setup_entry", return_value=True
+        f"menuai.components.{DOMAIN}.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test successful config flow setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
     assert not result.get("errors")
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: TEST_URL,
@@ -47,7 +47,7 @@ async def test_form(
             CONF_VERIFY_SSL: False,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.CREATE_ENTRY
     assert result2.get("title") == TEST_USERNAME
@@ -71,19 +71,19 @@ async def test_form(
     ],
 )
 async def test_caldav_client_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     side_effect: Exception,
     expected_error: str,
     dav_client: Mock,
 ) -> None:
     """Test CalDav client errors during configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     dav_client.return_value.principal.side_effect = side_effect
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: TEST_URL,
@@ -91,32 +91,32 @@ async def test_caldav_client_error(
             CONF_PASSWORD: TEST_PASSWORD,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("errors") == {"base": expected_error}
 
 
 async def test_reauth_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test reauthentication configuration flow."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PASSWORD: "password-2",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.ABORT
     assert result2.get("reason") == "reauth_successful"
@@ -132,41 +132,41 @@ async def test_reauth_success(
 
 
 async def test_reauth_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     config_entry: MockConfigEntry,
     dav_client: Mock,
 ) -> None:
     """Test a failure during reauthentication configuration flow."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     dav_client.return_value.principal.side_effect = DAVError
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PASSWORD: "password-2",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("errors") == {"base": "cannot_connect"}
 
     # Complete the form and it succeeds this time
     dav_client.return_value.principal.side_effect = None
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PASSWORD: "password-3",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.ABORT
     assert result2.get("reason") == "reauth_successful"
@@ -197,28 +197,28 @@ async def test_reauth_failure(
     ],
 )
 async def test_multiple_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     config_entry: MockConfigEntry,
     user_input: dict[str, str],
 ) -> None:
     """Test multiple configuration entries with unique settings."""
 
-    config_entry.add_to_hass(hass)
-    entries = hass.config_entries.async_entries(DOMAIN)
+    config_entry.add_to_menuai(menuai)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
     assert not result.get("errors")
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.CREATE_ENTRY
     assert result2.get("title") == user_input[CONF_USERNAME]
@@ -227,7 +227,7 @@ async def test_multiple_config_entries(
         CONF_VERIFY_SSL: True,
     }
     assert len(mock_setup_entry.mock_calls) == 2
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
 
 
@@ -247,26 +247,26 @@ async def test_multiple_config_entries(
     ],
 )
 async def test_duplicate_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     config_entry: MockConfigEntry,
     user_input: dict[str, str],
 ) -> None:
     """Test multiple configuration entries with the same settings."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
     assert not result.get("errors")
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.ABORT
     assert result2.get("reason") == "already_configured"

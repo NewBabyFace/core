@@ -11,7 +11,7 @@ from typing import Any, Self
 from bosch_alarm_mode2 import Panel
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_DHCP,
     SOURCE_RECONFIGURE,
     SOURCE_USER,
@@ -19,7 +19,7 @@ from homeassistant.config_entries import (
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_CODE,
     CONF_HOST,
     CONF_MAC,
@@ -27,9 +27,9 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_PORT,
 )
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+import menuai.helpers.config_validation as cv
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_INSTALLER_CODE, CONF_USER_CODE, DOMAIN
 
@@ -149,12 +149,12 @@ class BoschAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle DHCP discovery."""
         self.mac = format_mac(discovery_info.macaddress)
         self.host = discovery_info.ip
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
 
-        for entry in self.hass.config_entries.async_entries(DOMAIN):
+        for entry in self.menuai.config_entries.async_entries(DOMAIN):
             if entry.data.get(CONF_MAC) == self.mac:
-                result = self.hass.config_entries.async_update_entry(
+                result = self.menuai.config_entries.async_update_entry(
                     entry,
                     data={
                         **entry.data,
@@ -162,14 +162,14 @@ class BoschAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
                     },
                 )
                 if result:
-                    self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                    self.menuai.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
             if entry.data[CONF_HOST] == discovery_info.ip:
                 if (
                     not entry.data.get(CONF_MAC)
                     and entry.state is ConfigEntryState.LOADED
                 ):
-                    result = self.hass.config_entries.async_update_entry(
+                    result = self.menuai.config_entries.async_update_entry(
                         entry,
                         data={
                             **entry.data,
@@ -177,7 +177,7 @@ class BoschAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
                         },
                     )
                     if result:
-                        self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                        self.menuai.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
         try:
             # Use load_selector = 0 to fetch the panel model without authentication.

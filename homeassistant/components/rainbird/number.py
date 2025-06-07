@@ -6,12 +6,12 @@ import logging
 
 from pyrainbird.exceptions import RainbirdApiException, RainbirdDeviceBusyException
 
-from homeassistant.components.number import NumberEntity
-from homeassistant.const import UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.number import NumberEntity
+from menuai.const import UnitOfTime
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import RainbirdUpdateCoordinator
 from .types import RainbirdConfigEntry
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RainbirdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -66,8 +66,8 @@ class RainDelayNumber(CoordinatorEntity[RainbirdUpdateCoordinator], NumberEntity
         try:
             await self.coordinator.controller.set_rain_delay(value)
         except RainbirdDeviceBusyException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Rain Bird device is busy; Wait and try again"
             ) from err
         except RainbirdApiException as err:
-            raise HomeAssistantError("Rain Bird device failure") from err
+            raise menuaiError("Rain Bird device failure") from err

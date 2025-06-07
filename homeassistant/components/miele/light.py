@@ -9,15 +9,15 @@ from typing import Any, Final
 
 import aiohttp
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ColorMode,
     LightEntity,
     LightEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import AMBIENT_LIGHT, DOMAIN, LIGHT, LIGHT_OFF, LIGHT_ON, MieleAppliance
 from .coordinator import MieleConfigEntry
@@ -81,7 +81,7 @@ LIGHT_TYPES: Final[tuple[MieleLightDefinition, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MieleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -132,7 +132,7 @@ class MieleLight(MieleEntity, LightEntity):
                 self._device_id, {self.entity_description.light_type: mode}
             )
         except aiohttp.ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={

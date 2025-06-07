@@ -6,7 +6,7 @@ from datetime import timedelta
 import logging
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN: Final = "whois"
 PLATFORMS = [Platform.SENSOR]
@@ -20,7 +20,7 @@ ATTR_NAME_SERVERS = "name_servers"
 ATTR_REGISTRAR = "registrar"
 ATTR_UPDATED = "updated"
 
-# Mapping of ICANN status codes to Home Assistant status types.
+# Mapping of ICANN status codes to MenuAI status types.
 # From https://www.icann.org/resources/pages/epp-status-codes-2014-06-16-en
 STATUS_TYPES = {
     "addPeriod": "add_period",

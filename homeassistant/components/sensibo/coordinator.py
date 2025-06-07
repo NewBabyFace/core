@@ -9,13 +9,13 @@ from pysensibo import SensiboClient
 from pysensibo.exceptions import AuthenticationError, SensiboError
 from pysensibo.model import SensiboData
 
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER, TIMEOUT
 
@@ -30,10 +30,10 @@ class SensiboDataUpdateCoordinator(DataUpdateCoordinator[SensiboData]):
 
     config_entry: SensiboConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: SensiboConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: SensiboConfigEntry) -> None:
         """Initialize the Sensibo coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -41,12 +41,12 @@ class SensiboDataUpdateCoordinator(DataUpdateCoordinator[SensiboData]):
             # We don't want an immediate refresh since the device
             # takes a moment to reflect the state change
             request_refresh_debouncer=Debouncer(
-                hass, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+                menuai, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
         )
         self.client = SensiboClient(
             self.config_entry.data[CONF_API_KEY],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             timeout=TIMEOUT,
         )
         self.previous_devices: set[str] = set()
@@ -109,7 +109,7 @@ class SensiboDataUpdateCoordinator(DataUpdateCoordinator[SensiboData]):
 
         if stale_devices := self.previous_devices - current_devices:
             LOGGER.debug("Removing stale devices: %s", stale_devices)
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             for _id in stale_devices:
                 device = device_registry.async_get_device(identifiers={(DOMAIN, _id)})
                 if device:

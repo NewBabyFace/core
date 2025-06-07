@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock
 import pytest
 from vilfo.exceptions import AuthenticationException, VilfoException
 
-from homeassistant.components.vilfo.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.vilfo.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -41,7 +41,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vilfo_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_is_valid_host: AsyncMock,
@@ -54,18 +54,18 @@ async def test_full_flow(
     mock_vilfo_client.resolve_mac_address.return_value = mac
     mock_vilfo_client.mac = mac
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == user_input[CONF_HOST]
@@ -76,7 +76,7 @@ async def test_full_flow(
 
 
 async def test_form_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vilfo_client: AsyncMock,
     mock_is_valid_host: AsyncMock,
     mock_setup_entry: AsyncMock,
@@ -85,18 +85,18 @@ async def test_form_invalid_auth(
     mock_vilfo_client.get_board_information.side_effect = AuthenticationException
     mock_vilfo_client.resolve_mac_address.return_value = None
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "testadmin.vilfo.com", CONF_ACCESS_TOKEN: "test-token"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_auth"}
@@ -104,11 +104,11 @@ async def test_form_invalid_auth(
     mock_vilfo_client.get_board_information.side_effect = None
     mock_vilfo_client.resolve_mac_address.return_value = "FF-00-00-00-00-00"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "testadmin.vilfo.com", CONF_ACCESS_TOKEN: "test-token"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -118,7 +118,7 @@ async def test_form_invalid_auth(
     [(VilfoException, "cannot_connect"), (Exception, "unknown")],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vilfo_client: AsyncMock,
     mock_is_valid_host: AsyncMock,
     mock_setup_entry: AsyncMock,
@@ -127,11 +127,11 @@ async def test_form_exceptions(
 ) -> None:
     """Test we handle exceptions."""
     mock_vilfo_client.ping.side_effect = side_effect
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "testadmin.vilfo.com", CONF_ACCESS_TOKEN: "test-token"},
     )
@@ -141,22 +141,22 @@ async def test_form_exceptions(
 
     mock_vilfo_client.ping.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "testadmin.vilfo.com", CONF_ACCESS_TOKEN: "test-token"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
 async def test_form_wrong_host(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_is_valid_host: AsyncMock,
 ) -> None:
     """Test we handle wrong host errors."""
     mock_is_valid_host.return_value = False
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -169,23 +169,23 @@ async def test_form_wrong_host(
 
 
 async def test_form_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vilfo_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
     mock_is_valid_host: AsyncMock,
 ) -> None:
     """Test that we handle already configured exceptions appropriately."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "testadmin.vilfo.com", CONF_ACCESS_TOKEN: "test-token"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"

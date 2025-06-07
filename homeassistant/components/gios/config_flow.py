@@ -9,10 +9,10 @@ from aiohttp.client_exceptions import ClientConnectorError
 from gios import ApiError, Gios, InvalidSensorsDataError, NoStationError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_NAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -33,7 +33,7 @@ class GiosFlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user."""
         errors = {}
 
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
 
         if user_input is not None:
             station_id = user_input[CONF_STATION_ID]
@@ -80,7 +80,7 @@ class GiosFlowHandler(ConfigFlow, domain=DOMAIN):
                         mode=SelectSelectorMode.DROPDOWN,
                     ),
                 ),
-                vol.Optional(CONF_NAME, default=self.hass.config.location_name): str,
+                vol.Optional(CONF_NAME, default=self.menuai.config.location_name): str,
             }
         )
 

@@ -9,11 +9,11 @@ from synology_dsm.api.surveillance_station import SynoSurveillanceStation
 from synology_dsm.api.surveillance_station.camera import SynoCamera
 from synology_dsm.exceptions import SynologyDSMNotLoggedInException
 
-from homeassistant.const import CONF_MAC, CONF_SCAN_INTERVAL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_MAC, CONF_SCAN_INTERVAL, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
 
 from .common import SynoApi, raise_config_entry_auth_error
 from .const import (
@@ -42,19 +42,19 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Synology DSM component."""
 
-    await async_setup_services(hass)
+    await async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SynologyDSMConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SynologyDSMConfigEntry) -> bool:
     """Set up Synology DSM sensors."""
 
     # Migrate device identifiers
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     devices: list[dr.DeviceEntry] = dr.async_entries_for_config_entry(
         dev_reg, entry.entry_id
     )
@@ -71,21 +71,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: SynologyDSMConfigEntry) 
 
     # Migrate existing entry configuration
     if entry.data.get(CONF_VERIFY_SSL) is None:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_VERIFY_SSL: DEFAULT_VERIFY_SSL}
         )
     if CONF_BACKUP_SHARE not in entry.options:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             options={**entry.options, CONF_BACKUP_SHARE: None, CONF_BACKUP_PATH: None},
         )
     if CONF_SCAN_INTERVAL in entry.options:
         current_options = {**entry.options}
         current_options.pop(CONF_SCAN_INTERVAL)
-        hass.config_entries.async_update_entry(entry, options=current_options)
+        menuai.config_entries.async_update_entry(entry, options=current_options)
 
     # Continue setup
-    api = SynoApi(hass, entry)
+    api = SynoApi(menuai, entry)
     try:
         await api.async_setup()
     except SYNOLOGY_AUTH_FAILED_EXCEPTIONS as err:
@@ -102,17 +102,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: SynologyDSMConfigEntry) 
 
     # For SSDP compat
     if not entry.data.get(CONF_MAC):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_MAC: api.dsm.network.macs}
         )
 
-    coordinator_central = SynologyDSMCentralUpdateCoordinator(hass, entry, api)
+    coordinator_central = SynologyDSMCentralUpdateCoordinator(menuai, entry, api)
 
     available_apis = api.dsm.apis
 
     coordinator_cameras: SynologyDSMCameraUpdateCoordinator | None = None
     if api.surveillance_station is not None:
-        coordinator_cameras = SynologyDSMCameraUpdateCoordinator(hass, entry, api)
+        coordinator_cameras = SynologyDSMCameraUpdateCoordinator(menuai, entry, api)
         await coordinator_cameras.async_config_entry_first_refresh()
 
     coordinator_switches: SynologyDSMSwitchUpdateCoordinator | None = None
@@ -121,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SynologyDSMConfigEntry) 
         and SynoSurveillanceStation.HOME_MODE_API_KEY in available_apis
         and api.surveillance_station is not None
     ):
-        coordinator_switches = SynologyDSMSwitchUpdateCoordinator(hass, entry, api)
+        coordinator_switches = SynologyDSMSwitchUpdateCoordinator(menuai, entry, api)
         await coordinator_switches.async_config_entry_first_refresh()
         try:
             await coordinator_switches.async_setup()
@@ -135,13 +135,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: SynologyDSMConfigEntry) 
         coordinator_cameras=coordinator_cameras,
         coordinator_switches=coordinator_switches,
     )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     if entry.options[CONF_BACKUP_SHARE]:
 
         def async_notify_backup_listeners() -> None:
-            for listener in hass.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
+            for listener in menuai.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
                 listener()
 
         entry.async_on_unload(
@@ -163,24 +163,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: SynologyDSMConfigEntry) 
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: SynologyDSMConfigEntry
+    menuai: menuai, entry: SynologyDSMConfigEntry
 ) -> bool:
     """Unload Synology DSM sensors."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         entry_data = entry.runtime_data
         await entry_data.api.async_unload()
     return unload_ok
 
 
 async def _async_update_listener(
-    hass: HomeAssistant, entry: SynologyDSMConfigEntry
+    menuai: menuai, entry: SynologyDSMConfigEntry
 ) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: SynologyDSMConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, entry: SynologyDSMConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove synology_dsm config entry from a device."""
     data = entry.runtime_data

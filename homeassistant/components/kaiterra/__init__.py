@@ -2,7 +2,7 @@
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_DEVICE_ID,
     CONF_DEVICES,
@@ -10,12 +10,12 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 from .api_data import KaiterraApiData
 from .const import (
@@ -56,14 +56,14 @@ KAITERRA_SCHEMA = vol.Schema(
 CONFIG_SCHEMA = vol.Schema({DOMAIN: KAITERRA_SCHEMA}, extra=vol.ALLOW_EXTRA)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Kaiterra integration."""
 
     conf = config[DOMAIN]
     scan_interval = conf[CONF_SCAN_INTERVAL]
     devices = conf[CONF_DEVICES]
-    session = async_get_clientsession(hass)
-    api = hass.data[DOMAIN] = KaiterraApiData(hass, conf, session)
+    session = async_get_clientsession(menuai)
+    api = menuai.data[DOMAIN] = KaiterraApiData(menuai, conf, session)
 
     await api.async_update()
 
@@ -71,7 +71,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Periodic update."""
         await api.async_update()
 
-    async_track_time_interval(hass, _update, scan_interval)
+    async_track_time_interval(menuai, _update, scan_interval)
 
     # Load platforms for each device
     for device in devices:
@@ -80,9 +80,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             device[CONF_DEVICE_ID],
         )
         for platform in PLATFORMS:
-            hass.async_create_task(
+            menuai.async_create_task(
                 async_load_platform(
-                    hass,
+                    menuai,
                     platform,
                     DOMAIN,
                     {CONF_NAME: device_name, CONF_DEVICE_ID: device_id},

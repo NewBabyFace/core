@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import aiopulse
 
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr, entity, entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from menuai.core import callback
+from menuai.helpers import device_registry as dr, entity, entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
 
 from .const import ACMEDA_ENTITY_REMOVE, DOMAIN, LOGGER
 
@@ -25,11 +25,11 @@ class AcmedaEntity(entity.Entity):
         """Unregister from registries and call entity remove function."""
         LOGGER.error("Removing %s %s", self.__class__.__name__, self.unique_id)
 
-        ent_registry = er.async_get(self.hass)
+        ent_registry = er.async_get(self.menuai)
         if self.entity_id in ent_registry.entities:
             ent_registry.async_remove(self.entity_id)
 
-        dev_registry = dr.async_get(self.hass)
+        dev_registry = dr.async_get(self.menuai)
         device = dev_registry.async_get_device(identifiers={(DOMAIN, self.unique_id)})
         if (
             device is not None
@@ -42,20 +42,20 @@ class AcmedaEntity(entity.Entity):
 
         await self.async_remove(force_remove=True)
 
-    async def async_added_to_hass(self) -> None:
-        """Entity has been added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Entity has been added to menuai."""
         self.roller.callback_subscribe(self.notify_update)
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 ACMEDA_ENTITY_REMOVE.format(self.roller.id),
                 self.async_remove_and_unregister,
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Entity being removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Entity being removed from menuai."""
         self.roller.callback_unsubscribe(self.notify_update)
 
     @callback

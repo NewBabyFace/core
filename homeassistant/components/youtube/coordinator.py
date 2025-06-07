@@ -8,11 +8,11 @@ from typing import Any
 from youtubeaio.helper import first
 from youtubeaio.types import UnauthorizedError, YouTubeBackendError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ICON, ATTR_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ICON, ATTR_ID
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from . import AsyncConfigEntryAuth
 from .const import (
@@ -36,12 +36,12 @@ class YouTubeDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, auth: AsyncConfigEntryAuth
+        self, menuai: menuai, config_entry: ConfigEntry, auth: AsyncConfigEntryAuth
     ) -> None:
         """Initialize the YouTube data coordinator."""
         self._auth = auth
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

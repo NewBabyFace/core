@@ -15,14 +15,14 @@ from solarlog_cli.solarlog_exceptions import (
 )
 from solarlog_cli.solarlog_models import SolarlogData
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import slugify
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import slugify
 
 from .const import DOMAIN
 
@@ -36,10 +36,10 @@ class SolarLogCoordinator(DataUpdateCoordinator[SolarlogData]):
 
     config_entry: SolarlogConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: SolarlogConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: SolarlogConfigEntry) -> None:
         """Initialize the data object."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="SolarLog",
@@ -61,9 +61,9 @@ class SolarLogCoordinator(DataUpdateCoordinator[SolarlogData]):
 
         self.solarlog = SolarLogConnector(
             self.host,
-            tz=hass.config.time_zone,
+            tz=menuai.config.time_zone,
             password=password,
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
 
     async def _async_setup(self) -> None:
@@ -129,7 +129,7 @@ class SolarLogCoordinator(DataUpdateCoordinator[SolarlogData]):
         # remove old devices
         if removed_devices := self._devices_last_update - current_devices:
             _LOGGER.debug("Removed device(s): %s", ", ".join(map(str, removed_devices)))
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
 
             for removed_device in removed_devices:
                 device_name = ""

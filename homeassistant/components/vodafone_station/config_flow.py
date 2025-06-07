@@ -8,13 +8,13 @@ from typing import Any
 from aiovodafone import VodafoneStationSercommApi, exceptions as aiovodafone_exceptions
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     DEFAULT_CONSIDER_HOME,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai, callback
 
 from .const import _LOGGER, DEFAULT_HOST, DEFAULT_USERNAME, DOMAIN
 from .coordinator import VodafoneConfigEntry
@@ -36,10 +36,10 @@ def user_form_schema(user_input: dict[str, Any] | None) -> vol.Schema:
 STEP_REAUTH_DATA_SCHEMA = vol.Schema({vol.Required(CONF_PASSWORD): str})
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect."""
 
-    session = await async_client_session(hass)
+    session = await async_client_session(menuai)
     api = VodafoneStationSercommApi(
         data[CONF_HOST], data[CONF_USERNAME], data[CONF_PASSWORD], session
     )
@@ -81,7 +81,7 @@ class VodafoneStationConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except aiovodafone_exceptions.AlreadyLogged:
             errors["base"] = "already_logged"
         except aiovodafone_exceptions.CannotConnect:
@@ -116,7 +116,7 @@ class VodafoneStationConfigFlow(ConfigFlow, domain=DOMAIN):
         reauth_entry = self._get_reauth_entry()
         if user_input is not None:
             try:
-                await validate_input(self.hass, {**reauth_entry.data, **user_input})
+                await validate_input(self.menuai, {**reauth_entry.data, **user_input})
             except aiovodafone_exceptions.AlreadyLogged:
                 errors["base"] = "already_logged"
             except aiovodafone_exceptions.CannotConnect:
@@ -159,7 +159,7 @@ class VodafoneStationConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         try:
-            await validate_input(self.hass, user_input)
+            await validate_input(self.menuai, user_input)
         except aiovodafone_exceptions.AlreadyLogged:
             errors["base"] = "already_logged"
         except aiovodafone_exceptions.CannotConnect:

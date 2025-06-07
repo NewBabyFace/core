@@ -15,13 +15,13 @@ from urllib.parse import urlparse
 from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.utils import CaseInsensitiveDict
 
-from homeassistant import config_entries
-from homeassistant.components import network
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import discovery_flow
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-from homeassistant.util.async_ import create_eager_task
+from menuai import config_entries
+from menuai.components import network
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import discovery_flow
+from menuai.helpers.event import async_call_later, async_track_time_interval
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.util.async_ import create_eager_task
 
 from .const import (
     DISCOVERY_ATTEMPTS,
@@ -49,15 +49,15 @@ class YeelightScanner:
 
     @classmethod
     @callback
-    def async_get(cls, hass: HomeAssistant) -> Self:
+    def async_get(cls, menuai: menuai) -> Self:
         """Get scanner instance."""
         if cls._scanner is None:
-            cls._scanner = cls(hass)
+            cls._scanner = cls(menuai)
         return cls._scanner
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize class."""
-        self._hass = hass
+        self._menuai = menuai
         self._host_discovered_events: dict[str, list[asyncio.Event]] = {}
         self._unique_id_capabilities: dict[str, CaseInsensitiveDict] = {}
         self._host_capabilities: dict[str, CaseInsensitiveDict] = {}
@@ -71,10 +71,10 @@ class YeelightScanner:
             await self._setup_future
             return
 
-        self._setup_future = self._hass.loop.create_future()
+        self._setup_future = self._menuai.loop.create_future()
         connected_futures: list[asyncio.Future[None]] = []
         for source_ip in await self._async_build_source_set():
-            future = self._hass.loop.create_future()
+            future = self._menuai.loop.create_future()
             connected_futures.append(future)
             source = (str(source_ip), 0)
             self._listeners.append(
@@ -111,14 +111,14 @@ class YeelightScanner:
 
         await asyncio.wait(connected_futures)
         self._track_interval = async_track_time_interval(
-            self._hass, self.async_scan, DISCOVERY_INTERVAL, cancel_on_shutdown=True
+            self._menuai, self.async_scan, DISCOVERY_INTERVAL, cancel_on_shutdown=True
         )
         self.async_scan()
         _set_future_if_not_done(self._setup_future)
 
     async def _async_build_source_set(self) -> set[IPv4Address]:
         """Build the list of ssdp sources."""
-        adapters = await network.async_get_adapters(self._hass)
+        adapters = await network.async_get_adapters(self._menuai)
         sources: set[IPv4Address] = set()
         if network.async_only_default_interface_enabled(adapters):
             sources.add(IPv4Address("0.0.0.0"))
@@ -126,7 +126,7 @@ class YeelightScanner:
 
         return {
             source_ip
-            for source_ip in await network.async_get_enabled_source_ips(self._hass)
+            for source_ip in await network.async_get_enabled_source_ips(self._menuai)
             if isinstance(source_ip, IPv4Address) and not source_ip.is_loopback
         }
 
@@ -169,7 +169,7 @@ class YeelightScanner:
         @callback
         def _async_start_flow(*_) -> None:
             discovery_flow.async_create_flow(
-                self._hass,
+                self._menuai,
                 DOMAIN,
                 context={"source": config_entries.SOURCE_SSDP},
                 data=SsdpServiceInfo(
@@ -183,7 +183,7 @@ class YeelightScanner:
         # Delay starting the flow in case the discovery is the result
         # of another discovery
         async_call_later(
-            self._hass, 1, HassJob(_async_start_flow, cancel_on_shutdown=True)
+            self._menuai, 1, menuaiJob(_async_start_flow, cancel_on_shutdown=True)
         )
 
     @callback

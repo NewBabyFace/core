@@ -6,8 +6,8 @@ import threading
 from tellcore.constants import TELLSTICK_DIM, TELLSTICK_TURNOFF, TELLSTICK_TURNON
 from tellcore.library import TelldusError
 
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import SIGNAL_TELLCORE_CALLBACK
 
@@ -40,11 +40,11 @@ class TellstickDevice(Entity):
         self._attr_name = tellcore_device.name
         self._attr_unique_id = tellcore_device.id
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_TELLCORE_CALLBACK, self.update_from_callback
+                self.menuai, SIGNAL_TELLCORE_CALLBACK, self.update_from_callback
             )
         )
 

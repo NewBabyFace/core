@@ -16,8 +16,8 @@ from pyipp import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
@@ -25,21 +25,21 @@ from homeassistant.const import (
     CONF_UUID,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_BASE_PATH, CONF_SERIAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     ipp = IPP(
         host=data[CONF_HOST],
         port=data[CONF_PORT],
@@ -71,7 +71,7 @@ class IPPFlowHandler(ConfigFlow, domain=DOMAIN):
             return self._show_setup_form()
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except IPPConnectionUpgradeRequired:
             return self._show_setup_form({"base": "connection_upgrade"})
         except (IPPConnectionError, IPPResponseError):
@@ -139,7 +139,7 @@ class IPPFlowHandler(ConfigFlow, domain=DOMAIN):
         self.context.update({"title_placeholders": {"name": name}})
 
         try:
-            info = await validate_input(self.hass, self.discovery_info)
+            info = await validate_input(self.menuai, self.discovery_info)
         except IPPConnectionUpgradeRequired:
             return self.async_abort(reason="connection_upgrade")
         except (IPPConnectionError, IPPResponseError):

@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.sabnzbd.const import DOMAIN
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.sabnzbd.const import DOMAIN
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.sabnzbd.async_setup_entry", return_value=True
+        "menuai.components.sabnzbd.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -26,7 +26,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_sabnzbd() -> Generator[AsyncMock]:
     """Mock the Sabnzbd API."""
     with patch(
-        "homeassistant.components.sabnzbd.helpers.SabnzbdApi", autospec=True
+        "menuai.components.sabnzbd.helpers.SabnzbdApi", autospec=True
     ) as mock_sabnzbd:
         mock = mock_sabnzbd.return_value
         mock.return_value.check_available = True
@@ -35,7 +35,7 @@ def mock_sabnzbd() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="config_entry")
-async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+async def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return a MockConfigEntry for testing."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -46,15 +46,15 @@ async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
             CONF_URL: "http://localhost:8080",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     return config_entry
 
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Fixture for setting up the component."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()

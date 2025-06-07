@@ -4,9 +4,9 @@ from pyHomee.const import AttributeState, AttributeType, NodeProfile, NodeState
 from pyHomee.model import HomeeAttribute, HomeeNode
 from websockets.exceptions import ConnectionClosed
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from . import HomeeConfigEntry
 from .const import DOMAIN
@@ -44,8 +44,8 @@ class HomeeEntity(Entity):
 
         self._host_connected = entry.runtime_data.connected
 
-    async def async_added_to_hass(self) -> None:
-        """Add the homee attribute entity to home assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """Add the homee attribute entity to MenuAI."""
         self.async_on_remove(
             self._attribute.add_on_changed_listener(self._on_node_updated)
         )
@@ -66,7 +66,7 @@ class HomeeEntity(Entity):
         try:
             await homee.set_value(self._attribute.node_id, self._attribute.id, value)
         except ConnectionClosed as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_closed",
             ) from exception
@@ -112,8 +112,8 @@ class HomeeNodeEntity(Entity):
 
         self._host_connected = entry.runtime_data.connected
 
-    async def async_added_to_hass(self) -> None:
-        """Add the homee binary sensor device to home assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """Add the homee binary sensor device to MenuAI."""
         self.async_on_remove(self._node.add_on_changed_listener(self._on_node_updated))
         self.async_on_remove(
             self._entry.runtime_data.add_connection_listener(
@@ -158,7 +158,7 @@ class HomeeNodeEntity(Entity):
         try:
             await homee.set_value(attribute.node_id, attribute.id, value)
         except ConnectionClosed as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_closed",
             ) from exception

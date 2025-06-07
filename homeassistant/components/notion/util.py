@@ -6,26 +6,26 @@ from aionotion import (
 )
 from aionotion.client import Client
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.instance_id import async_get
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.instance_id import async_get
 
 
 async def async_get_client_with_credentials(
-    hass: HomeAssistant, email: str, password: str
+    menuai: menuai, email: str, password: str
 ) -> Client:
     """Get a Notion client with credentials."""
-    session = aiohttp_client.async_get_clientsession(hass)
-    instance_id = await async_get(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
+    instance_id = await async_get(menuai)
     return await cwc(email, password, session=session, session_name=instance_id)
 
 
 async def async_get_client_with_refresh_token(
-    hass: HomeAssistant, user_uuid: str, refresh_token: str
+    menuai: menuai, user_uuid: str, refresh_token: str
 ) -> Client:
     """Get a Notion client with credentials."""
-    session = aiohttp_client.async_get_clientsession(hass)
-    instance_id = await async_get(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
+    instance_id = await async_get(menuai)
     return await cwrt(
         user_uuid, refresh_token, session=session, session_name=instance_id
     )

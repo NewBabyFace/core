@@ -11,19 +11,19 @@ import pathlib
 import string
 from typing import Any
 
-from homeassistant.const import (
+from menuai.const import (
     EVENT_CORE_CONFIG_UPDATE,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, HomeAssistant, async_get_hass, callback
-from homeassistant.loader import (
+from menuai.core import Event, menuai, async_get_menuai, callback
+from menuai.loader import (
     Integration,
     async_get_config_flows,
     async_get_integrations,
-    bind_hass,
+    bind_menuai,
 )
-from homeassistant.util.json import load_json
+from menuai.util.json import load_json
 
 from . import singleton
 
@@ -87,7 +87,7 @@ def build_resources(
 
 
 async def _async_get_component_strings(
-    hass: HomeAssistant,
+    menuai: menuai,
     languages: Iterable[str],
     components: set[str],
     integrations: dict[str, Integration],
@@ -112,7 +112,7 @@ async def _async_get_component_strings(
         has_files_to_load |= bool(files_to_load)
 
     if has_files_to_load:
-        loaded_translations_by_language = await hass.async_add_executor_job(
+        loaded_translations_by_language = await menuai.async_add_executor_job(
             _load_translations_files_by_language, files_to_load_by_language
         )
 
@@ -147,11 +147,11 @@ class _TranslationsCacheData:
 class _TranslationCache:
     """Cache for flattened translations."""
 
-    __slots__ = ("cache_data", "hass", "lock")
+    __slots__ = ("cache_data", "menuai", "lock")
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the cache."""
-        self.hass = hass
+        self.menuai = menuai
         self.cache_data = _TranslationsCacheData({}, {})
         self.lock = asyncio.Lock()
 
@@ -220,7 +220,7 @@ class _TranslationCache:
         languages = [LOCALE_EN] if language == LOCALE_EN else [LOCALE_EN, language]
 
         integrations: dict[str, Integration] = {}
-        ints_or_excs = await async_get_integrations(self.hass, components)
+        ints_or_excs = await async_get_integrations(self.menuai, components)
         for domain, int_or_exc in ints_or_excs.items():
             if isinstance(int_or_exc, Exception):
                 _LOGGER.warning(
@@ -230,7 +230,7 @@ class _TranslationCache:
             integrations[domain] = int_or_exc
 
         translation_by_language_strings = await _async_get_component_strings(
-            self.hass, languages, components, integrations
+            self.menuai, languages, components, integrations
         )
 
         # English is always the fallback language so we load them first
@@ -332,9 +332,9 @@ class _TranslationCache:
                 component_cache.update(flat)
 
 
-@bind_hass
+@bind_menuai
 async def async_get_translations(
-    hass: HomeAssistant,
+    menuai: menuai,
     language: str,
     category: str,
     integrations: Iterable[str] | None = None,
@@ -347,20 +347,20 @@ async def async_get_translations(
     integrations if config_flow is true.
     """
     if integrations is None and config_flow:
-        components = (await async_get_config_flows(hass)) - hass.config.components
+        components = (await async_get_config_flows(menuai)) - menuai.config.components
     elif integrations is not None:
         components = set(integrations)
     else:
-        components = hass.config.top_level_components
+        components = menuai.config.top_level_components
 
-    return await _async_get_translations_cache(hass).async_fetch(
+    return await _async_get_translations_cache(menuai).async_fetch(
         language, category, components
     )
 
 
 @callback
 def async_get_cached_translations(
-    hass: HomeAssistant,
+    menuai: menuai,
     language: str,
     category: str,
     integration: str | None = None,
@@ -370,27 +370,27 @@ def async_get_cached_translations(
     If integration is specified, return translations for it.
     Otherwise, default to all loaded integrations.
     """
-    components = {integration} if integration else hass.config.top_level_components
-    return _async_get_translations_cache(hass).get_cached(
+    components = {integration} if integration else menuai.config.top_level_components
+    return _async_get_translations_cache(menuai).get_cached(
         language, category, components
     )
 
 
 @singleton.singleton(TRANSLATION_FLATTEN_CACHE)
-def _async_get_translations_cache(hass: HomeAssistant) -> _TranslationCache:
+def _async_get_translations_cache(menuai: menuai) -> _TranslationCache:
     """Return the translation cache."""
-    return _TranslationCache(hass)
+    return _TranslationCache(menuai)
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Create translation cache and register listeners for translation loaders.
 
     Listeners load translations for every loaded component and after config change.
     """
-    cache = _TranslationCache(hass)
-    current_language = hass.config.language
-    _async_get_translations_cache(hass)
+    cache = _TranslationCache(menuai)
+    current_language = menuai.config.language
+    _async_get_translations_cache(menuai)
 
     @callback
     def _async_load_translations_filter(event_data: Mapping[str, Any]) -> bool:
@@ -406,27 +406,27 @@ def async_setup(hass: HomeAssistant) -> None:
     async def _async_load_translations(event: Event) -> None:
         new_language = event.data["language"]
         _LOGGER.debug("Loading translations for language: %s", new_language)
-        await cache.async_load(new_language, hass.config.components)
+        await cache.async_load(new_language, menuai.config.components)
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         EVENT_CORE_CONFIG_UPDATE,
         _async_load_translations,
         event_filter=_async_load_translations_filter,
     )
 
 
-async def async_load_integrations(hass: HomeAssistant, integrations: set[str]) -> None:
+async def async_load_integrations(menuai: menuai, integrations: set[str]) -> None:
     """Load translations for integrations."""
-    await _async_get_translations_cache(hass).async_load(
-        hass.config.language, integrations
+    await _async_get_translations_cache(menuai).async_load(
+        menuai.config.language, integrations
     )
 
 
 @callback
-def async_translations_loaded(hass: HomeAssistant, components: set[str]) -> bool:
+def async_translations_loaded(menuai: menuai, components: set[str]) -> bool:
     """Return if the given components are loaded for the language."""
-    return _async_get_translations_cache(hass).async_is_loaded(
-        hass.config.language, components
+    return _async_get_translations_cache(menuai).async_is_loaded(
+        menuai.config.language, components
     )
 
 
@@ -441,11 +441,11 @@ def async_get_exception_message(
     Defaults to English, requires translations to already be cached.
     """
     language = "en"
-    hass = async_get_hass()
+    menuai = async_get_menuai()
     localize_key = (
         f"component.{translation_domain}.exceptions.{translation_key}.message"
     )
-    translations = async_get_cached_translations(hass, language, "exceptions")
+    translations = async_get_cached_translations(menuai, language, "exceptions")
     if localize_key in translations:
         if message := translations[localize_key]:
             message = message.rstrip(".")
@@ -461,7 +461,7 @@ def async_get_exception_message(
 
 @callback
 def async_translate_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: str,
     domain: str,
     platform: str | None,
@@ -471,16 +471,16 @@ def async_translate_state(
     """Translate provided state using cached translations for currently selected language."""
     if state in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
         return state
-    language = hass.config.language
+    language = menuai.config.language
     if platform is not None and translation_key is not None:
         localize_key = (
             f"component.{platform}.entity.{domain}.{translation_key}.state.{state}"
         )
-        translations = async_get_cached_translations(hass, language, "entity")
+        translations = async_get_cached_translations(menuai, language, "entity")
         if localize_key in translations:
             return translations[localize_key]
 
-    translations = async_get_cached_translations(hass, language, "entity_component")
+    translations = async_get_cached_translations(menuai, language, "entity_component")
     if device_class is not None:
         localize_key = (
             f"component.{domain}.entity_component.{device_class}.state.{state}"

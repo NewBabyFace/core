@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from homeassistant.components.qbus.const import CONF_SERIAL_NUMBER, DOMAIN
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonObjectType
+from menuai.components.qbus.const import CONF_SERIAL_NUMBER, DOMAIN
+from menuai.const import CONF_ID
+from menuai.core import menuai
+from menuai.util.json import JsonObjectType
 
 from .const import FIXTURE_PAYLOAD_CONFIG, TOPIC_CONFIG
 
@@ -19,7 +19,7 @@ from tests.common import (
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return the default mocked config entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -29,7 +29,7 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
             CONF_SERIAL_NUMBER: "000001",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
@@ -41,14 +41,14 @@ def payload_config() -> JsonObjectType:
 
 @pytest.fixture
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     payload_config: JsonObjectType,
 ) -> None:
     """Set up the integration."""
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, TOPIC_CONFIG, json.dumps(payload_config))
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, TOPIC_CONFIG, json.dumps(payload_config))
+    await menuai.async_block_till_done()

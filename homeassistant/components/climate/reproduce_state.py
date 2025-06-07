@@ -6,8 +6,8 @@ import asyncio
 from collections.abc import Iterable
 from typing import Any
 
-from homeassistant.const import ATTR_TEMPERATURE
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.const import ATTR_TEMPERATURE
+from menuai.core import Context, menuai, State
 
 from .const import (
     ATTR_FAN_MODE,
@@ -31,7 +31,7 @@ from .const import (
 
 
 async def _async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: State,
     *,
     context: Context | None = None,
@@ -49,7 +49,7 @@ async def _async_reproduce_states(
             if (value := state.attributes.get(key)) is not None:
                 data[key] = value
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, service, data, blocking=True, context=context
         )
 
@@ -97,7 +97,7 @@ async def _async_reproduce_states(
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -107,7 +107,7 @@ async def async_reproduce_states(
     await asyncio.gather(
         *(
             _async_reproduce_states(
-                hass, state, context=context, reproduce_options=reproduce_options
+                menuai, state, context=context, reproduce_options=reproduce_options
             )
             for state in states
         )

@@ -6,9 +6,9 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import ServicesTypes
 
-from homeassistant.components.alarm_control_panel import ATTR_CODE_ARM_REQUIRED
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.alarm_control_panel import ATTR_CODE_ARM_REQUIRED
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -32,14 +32,14 @@ def create_security_system_service(accessory: Accessory) -> None:
 
 
 async def test_switch_change_alarm_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit alarm on and off again."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_security_system_service
+        menuai, get_next_aid(), create_security_system_service
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "alarm_control_panel",
         "alarm_arm_home",
         {"entity_id": "alarm_control_panel.testdevice", "code": "1234"},
@@ -52,7 +52,7 @@ async def test_switch_change_alarm_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "alarm_control_panel",
         "alarm_arm_away",
         {"entity_id": "alarm_control_panel.testdevice", "code": "1234"},
@@ -65,7 +65,7 @@ async def test_switch_change_alarm_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "alarm_control_panel",
         "alarm_arm_night",
         {"entity_id": "alarm_control_panel.testdevice", "code": "1234"},
@@ -78,7 +78,7 @@ async def test_switch_change_alarm_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "alarm_control_panel",
         "alarm_disarm",
         {"entity_id": "alarm_control_panel.testdevice", "code": "1234"},
@@ -93,11 +93,11 @@ async def test_switch_change_alarm_state(
 
 
 async def test_switch_read_alarm_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit alarm accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_security_system_service
+        menuai, get_next_aid(), create_security_system_service
     )
 
     await helper.async_update(
@@ -139,7 +139,7 @@ async def test_switch_read_alarm_state(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -150,7 +150,7 @@ async def test_migrate_unique_id(
         "homekit_controller",
         f"homekit-00:00:00:00:00:00-{aid}-8",
     )
-    await setup_test_component(hass, aid, create_security_system_service)
+    await setup_test_component(menuai, aid, create_security_system_service)
 
     assert (
         entity_registry.async_get(alarm_control_panel_entry.entity_id).unique_id

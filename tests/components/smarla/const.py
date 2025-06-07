@@ -3,7 +3,7 @@
 import base64
 import json
 
-from homeassistant.const import CONF_ACCESS_TOKEN
+from menuai.const import CONF_ACCESS_TOKEN
 
 MOCK_ACCESS_TOKEN_JSON = {
     "refreshToken": "test",

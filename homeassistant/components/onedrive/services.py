@@ -10,15 +10,15 @@ from typing import cast
 from onedrive_personal_sdk.exceptions import OneDriveException
 import voluptuous as vol
 
-from homeassistant.const import CONF_FILENAME
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.const import CONF_FILENAME
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN
 from .coordinator import OneDriveConfigEntry
@@ -38,26 +38,26 @@ CONTENT_SIZE_LIMIT = 250 * 1024 * 1024
 
 
 def _read_file_contents(
-    hass: HomeAssistant, filenames: list[str]
+    menuai: menuai, filenames: list[str]
 ) -> list[tuple[str, bytes]]:
     """Return the mime types and file contents for each file."""
     results = []
     for filename in filenames:
-        if not hass.config.is_allowed_path(filename):
-            raise HomeAssistantError(
+        if not menuai.config.is_allowed_path(filename):
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="no_access_to_path",
                 translation_placeholders={"filename": filename},
             )
         filename_path = Path(filename)
         if not filename_path.exists():
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="filename_does_not_exist",
                 translation_placeholders={"filename": filename},
             )
         if filename_path.stat().st_size > CONTENT_SIZE_LIMIT:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="file_too_large",
                 translation_placeholders={
@@ -70,12 +70,12 @@ def _read_file_contents(
     return results
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register OneDrive services."""
 
     async def async_handle_upload(call: ServiceCall) -> ServiceResponse:
         """Generate content from text and optionally images."""
-        config_entry: OneDriveConfigEntry | None = hass.config_entries.async_get_entry(
+        config_entry: OneDriveConfigEntry | None = menuai.config_entries.async_get_entry(
             call.data[CONF_CONFIG_ENTRY_ID]
         )
         if not config_entry:
@@ -86,8 +86,8 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
         client = config_entry.runtime_data.client
         upload_tasks = []
-        file_results = await hass.async_add_executor_job(
-            _read_file_contents, hass, call.data[CONF_FILENAME]
+        file_results = await menuai.async_add_executor_job(
+            _read_file_contents, menuai, call.data[CONF_FILENAME]
         )
 
         # make sure the destination folder exists
@@ -98,7 +98,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             ):
                 folder_id = (await client.create_folder(folder_id, folder)).id
         except OneDriveException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="create_folder_error",
                 translation_placeholders={"message": str(err)},
@@ -111,7 +111,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         try:
             upload_results = await asyncio.gather(*upload_tasks)
         except OneDriveException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="upload_error",
                 translation_placeholders={"message": str(err)},
@@ -121,7 +121,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             return {"files": [asdict(item_result) for item_result in upload_results]}
         return None
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         UPLOAD_SERVICE,
         async_handle_upload,

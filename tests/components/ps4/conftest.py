@@ -11,7 +11,7 @@ import pytest
 def patch_load_json_object() -> Generator[MagicMock]:
     """Prevent load JSON being used."""
     with patch(
-        "homeassistant.components.ps4.load_json_object", return_value={}
+        "menuai.components.ps4.load_json_object", return_value={}
     ) as mock_load:
         yield mock_load
 
@@ -19,7 +19,7 @@ def patch_load_json_object() -> Generator[MagicMock]:
 @pytest.fixture
 def patch_save_json() -> Generator[MagicMock]:
     """Prevent save JSON being used."""
-    with patch("homeassistant.components.ps4.save_json") as mock_save:
+    with patch("menuai.components.ps4.save_json") as mock_save:
         yield mock_save
 
 
@@ -37,7 +37,7 @@ def mock_ddp_endpoint() -> Generator[None]:
     protocol._local_port = DEFAULT_UDP_PORT
     protocol._transport = MagicMock()
     with patch(
-        "homeassistant.components.ps4.async_create_ddp_endpoint",
+        "menuai.components.ps4.async_create_ddp_endpoint",
         return_value=(None, protocol),
     ):
         yield

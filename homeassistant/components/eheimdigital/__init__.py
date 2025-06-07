@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import DOMAIN
 from .coordinator import EheimDigitalConfigEntry, EheimDigitalUpdateCoordinator
@@ -21,29 +21,29 @@ PLATFORMS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: EheimDigitalConfigEntry
+    menuai: menuai, entry: EheimDigitalConfigEntry
 ) -> bool:
     """Set up EHEIM Digital from a config entry."""
 
-    coordinator = EheimDigitalUpdateCoordinator(hass, entry)
+    coordinator = EheimDigitalUpdateCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: EheimDigitalConfigEntry
+    menuai: menuai, entry: EheimDigitalConfigEntry
 ) -> bool:
     """Unload a config entry."""
     await entry.runtime_data.hub.close()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EheimDigitalConfigEntry,
     device_entry: DeviceEntry,
 ) -> bool:

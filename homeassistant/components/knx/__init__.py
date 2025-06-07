@@ -19,21 +19,21 @@ from xknx.telegram import AddressFilter, Telegram
 from xknx.telegram.address import DeviceGroupAddress, GroupAddress, InternalGroupAddress
 from xknx.telegram.apci import GroupValueResponse, GroupValueWrite
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_EVENT,
     CONF_HOST,
     CONF_PORT,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.reload import async_integration_yaml_config
-from homeassistant.helpers.storage import STORAGE_DIR
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.reload import async_integration_yaml_config
+from menuai.helpers.storage import STORAGE_DIR
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_KNX_CONNECTION_TYPE,
@@ -59,7 +59,7 @@ from .const import (
     CONF_KNX_TUNNELING,
     CONF_KNX_TUNNELING_TCP,
     CONF_KNX_TUNNELING_TCP_SECURE,
-    DATA_HASS_CONFIG,
+    DATA_menuai_CONFIG,
     DOMAIN,
     KNX_ADDRESS,
     KNX_MODULE_KEY,
@@ -132,45 +132,45 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Start the KNX integration."""
-    hass.data[DATA_HASS_CONFIG] = config
+    menuai.data[DATA_menuai_CONFIG] = config
     if (conf := config.get(DOMAIN)) is not None:
-        hass.data[_KNX_YAML_CONFIG] = dict(conf)
+        menuai.data[_KNX_YAML_CONFIG] = dict(conf)
 
-    register_knx_services(hass)
+    register_knx_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Load a config entry."""
     # `_KNX_YAML_CONFIG` is only set in async_setup.
     # It's None when reloading the integration or no `knx` key in configuration.yaml
-    config = hass.data.pop(_KNX_YAML_CONFIG, None)
+    config = menuai.data.pop(_KNX_YAML_CONFIG, None)
     if config is None:
-        _conf = await async_integration_yaml_config(hass, DOMAIN)
+        _conf = await async_integration_yaml_config(menuai, DOMAIN)
         if not _conf or DOMAIN not in _conf:
             # generate defaults
             config = CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
         else:
             config = _conf[DOMAIN]
     try:
-        knx_module = KNXModule(hass, config, entry)
+        knx_module = KNXModule(menuai, config, entry)
         await knx_module.start()
     except XKNXException as ex:
         raise ConfigEntryNotReady from ex
 
-    hass.data[KNX_MODULE_KEY] = knx_module
+    menuai.data[KNX_MODULE_KEY] = knx_module
 
     if CONF_KNX_EXPOSE in config:
         for expose_config in config[CONF_KNX_EXPOSE]:
             knx_module.exposures.append(
-                create_knx_exposure(hass, knx_module.xknx, expose_config)
+                create_knx_exposure(menuai, knx_module.xknx, expose_config)
             )
     configured_platforms_yaml = {
         platform for platform in SUPPORTED_PLATFORMS_YAML if platform in config
     }
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry,
         {
             Platform.SENSOR,  # always forward sensor for system entities (telegram counter, etc.)
@@ -179,14 +179,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         },
     )
 
-    await register_panel(hass)
+    await register_panel(menuai)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unloading the KNX platforms."""
-    knx_module = hass.data.get(KNX_MODULE_KEY)
+    knx_module = menuai.data.get(KNX_MODULE_KEY)
     if not knx_module:
         #  if not loaded directly return
         return True
@@ -199,7 +199,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for platform in SUPPORTED_PLATFORMS_YAML
         if platform in knx_module.config_yaml
     }
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         entry,
         {
             Platform.SENSOR,  # always unload system entities (telegram counter, etc.)
@@ -209,17 +209,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     if unload_ok:
         await knx_module.stop()
-        hass.data.pop(DOMAIN)
+        menuai.data.pop(DOMAIN)
 
     return unload_ok
 
 
-async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_update_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Update a given config entry."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Remove a config entry."""
 
     def remove_files(storage_dir: Path, knxkeys_filename: str | None) -> None:
@@ -236,16 +236,16 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         with contextlib.suppress(FileNotFoundError, OSError):
             (storage_dir / DOMAIN).rmdir()
 
-    storage_dir = Path(hass.config.path(STORAGE_DIR))
+    storage_dir = Path(menuai.config.path(STORAGE_DIR))
     knxkeys_filename = entry.data.get(CONF_KNX_KNXKEY_FILENAME)
-    await hass.async_add_executor_job(remove_files, storage_dir, knxkeys_filename)
+    await menuai.async_add_executor_job(remove_files, storage_dir, knxkeys_filename)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     if not device_entry.identifiers.isdisjoint(
         knx_module.interface_device.device_info["identifiers"]
     ):
@@ -261,18 +261,18 @@ class KNXModule:
     """Representation of KNX Object."""
 
     def __init__(
-        self, hass: HomeAssistant, config: ConfigType, entry: ConfigEntry
+        self, menuai: menuai, config: ConfigType, entry: ConfigEntry
     ) -> None:
         """Initialize KNX module."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_yaml = config
         self.connected = False
         self.exposures: list[KNXExposeSensor | KNXExposeTime] = []
         self.service_exposures: dict[str, KNXExposeSensor | KNXExposeTime] = {}
         self.entry = entry
 
-        self.project = KNXProject(hass=hass, entry=entry)
-        self.config_store = KNXConfigStore(hass=hass, config_entry=entry)
+        self.project = KNXProject(menuai=menuai, entry=entry)
+        self.config_store = KNXConfigStore(menuai=menuai, config_entry=entry)
 
         default_state_updater = (
             TrackerOptions(tracker_type=StateTrackerType.EXPIRE, update_interval_min=60)
@@ -291,13 +291,13 @@ class KNXModule:
             self.connection_state_changed_cb
         )
         self.telegrams = Telegrams(
-            hass=hass,
+            menuai=menuai,
             xknx=self.xknx,
             project=self.project,
             log_size=entry.data.get(CONF_KNX_TELEGRAM_LOG_SIZE, TELEGRAM_LOG_DEFAULT),
         )
         self.interface_device = KNXInterfaceDevice(
-            hass=hass, entry=entry, xknx=self.xknx
+            menuai=menuai, entry=entry, xknx=self.xknx
         )
 
         self._address_filter_transcoder: dict[AddressFilter, type[DPTBase]] = {}
@@ -305,7 +305,7 @@ class KNXModule:
         self.knx_event_callback: TelegramQueue.Callback = self.register_event_callback()
 
         self.entry.async_on_unload(
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.stop)
+            self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self.stop)
         )
         self.entry.async_on_unload(self.entry.add_update_listener(async_update_entry))
 
@@ -325,7 +325,7 @@ class KNXModule:
         """Return the connection_config."""
         _conn_type: str = self.entry.data[CONF_KNX_CONNECTION_TYPE]
         _knxkeys_file: str | None = (
-            self.hass.config.path(
+            self.menuai.config.path(
                 STORAGE_DIR,
                 self.entry.data[CONF_KNX_KNXKEY_FILENAME],
             )
@@ -464,7 +464,7 @@ class KNXModule:
                         err,
                     )
 
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             "knx_event",
             {
                 "data": data,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.helpers.device_registry import DeviceInfo
 
 
 @dataclass

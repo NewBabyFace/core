@@ -6,14 +6,14 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from velbusaio.exceptions import VelbusConnectionFailed
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.velbus import VelbusConfigEntry
-from homeassistant.components.velbus.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, CONF_NAME, CONF_PORT, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.velbus import VelbusConfigEntry
+from menuai.components.velbus.const import DOMAIN
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, CONF_NAME, CONF_PORT, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import init_integration
 from .const import PORT_TCP
@@ -22,25 +22,25 @@ from tests.common import MockConfigEntry
 
 
 async def test_setup_connection_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: VelbusConfigEntry,
     controller: MagicMock,
 ) -> None:
     """Test the setup that fails during velbus connect."""
     controller.return_value.connect.side_effect = VelbusConnectionFailed()
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_start_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: VelbusConfigEntry,
     controller: MagicMock,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the setup that fails during velbus start task, should result in no entries."""
     controller.return_value.start.side_effect = ConnectionError()
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     assert config_entry.state is ConfigEntryState.LOADED
     assert (
         er.async_entries_for_config_entry(entity_registry, config_entry.entry_id) == []
@@ -48,25 +48,25 @@ async def test_setup_start_failed(
 
 
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
 ) -> None:
     """Test being able to unload an entry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
 
 
 async def test_device_identifier_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
@@ -87,8 +87,8 @@ async def test_device_identifier_migration(
     )
     assert not device_registry.async_get_device(identifiers=target_identifiers)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert not device_registry.async_get_device(
         identifiers=original_identifiers  # type: ignore[arg-type]
@@ -102,7 +102,7 @@ async def test_device_identifier_migration(
 
 
 async def test_migrate_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     controller: MagicMock,
 ) -> None:
     """Test successful migration of entry data."""
@@ -111,11 +111,11 @@ async def test_migrate_config_entry(
     assert entry.version == 1
     assert entry.minor_version == 1
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # test in case we do not have a cache
     with patch("os.path.isdir", return_value=True), patch("shutil.rmtree"):
-        await hass.config_entries.async_setup(entry.entry_id)
+        await menuai.config_entries.async_setup(entry.entry_id)
         assert dict(entry.data) == legacy_config
         assert entry.version == 2
         assert entry.minor_version == 2
@@ -126,7 +126,7 @@ async def test_migrate_config_entry(
     [("vid:pid_serial_manufacturer_decription", "serial"), (None, None)],
 )
 async def test_migrate_config_entry_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     controller: AsyncMock,
     unique_id: str,
     expected: str,
@@ -137,25 +137,25 @@ async def test_migrate_config_entry_unique_id(
         data={CONF_PORT: PORT_TCP, CONF_NAME: "velbus home"},
         unique_id=unique_id,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.unique_id == expected
     assert entry.version == 2
     assert entry.minor_version == 2
 
 
 async def test_api_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_relay: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the api call decorator action."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
     mock_relay.turn_on.side_effect = OSError()
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: "switch.living_room_relayname"},
@@ -164,13 +164,13 @@ async def test_api_call(
 
 
 async def test_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the velbus device registry."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
     # Ensure devices are correctly registered
     device_entries = dr.async_entries_for_config_entry(

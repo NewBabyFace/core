@@ -8,13 +8,13 @@ from unittest.mock import call, patch
 import aiohttp
 import pytest
 
-from homeassistant.components import conversation
-from homeassistant.components.google_assistant_sdk import DOMAIN
-from homeassistant.components.google_assistant_sdk.const import SUPPORTED_LANGUAGE_CODES
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components import conversation
+from menuai.components.google_assistant_sdk import DOMAIN
+from menuai.components.google_assistant_sdk.const import SUPPORTED_LANGUAGE_CODES
+from menuai.config_entries import ConfigEntryState
+from menuai.core import Context, menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .conftest import ComponentSetup, ExpectedCredentials
 
@@ -23,36 +23,36 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 from tests.typing import ClientSessionGenerator
 
 
-async def fetch_api_url(hass_client, url):
+async def fetch_api_url(menuai_client, url):
     """Fetch an API URL and return HTTP status and contents."""
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(url)
     contents = await response.read()
     return response.status, contents
 
 
 async def test_setup_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test successful setup and unload."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entries[0].entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entries[0].entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
     assert entries[0].state is ConfigEntryState.NOT_LOADED
-    assert not hass.services.async_services().get(DOMAIN, {})
+    assert not menuai.services.async_services().get(DOMAIN, {})
 
 
 @pytest.mark.parametrize("expires_at", [time.time() - 3600], ids=["expired"])
 async def test_expired_token_refresh_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -70,7 +70,7 @@ async def test_expired_token_refresh_success(
 
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert entries[0].data["token"]["access_token"] == "updated-access-token"
@@ -94,7 +94,7 @@ async def test_expired_token_refresh_success(
     ids=["failure_requires_reauth", "transient_failure"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
@@ -110,7 +110,7 @@ async def test_expired_token_refresh_failure(
     await setup_integration()
 
     # Verify a transient failure has occurred
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].state is expected_state
 
 
@@ -120,7 +120,7 @@ async def test_expired_token_refresh_failure(
     ids=["default", "english", "spanish"],
 )
 async def test_send_text_command(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     configured_language_code: str,
     expected_language_code: str,
@@ -128,19 +128,19 @@ async def test_send_text_command(
     """Test service call send_text_command calls TextAssistant."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     if configured_language_code:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entries[0], options={"language_code": configured_language_code}
         )
 
-    command = "turn on home assistant unsupported device"
+    command = "turn on MenuAI unsupported device"
     with patch(
-        "homeassistant.components.google_assistant_sdk.helpers.TextAssistant"
+        "menuai.components.google_assistant_sdk.helpers.TextAssistant"
     ) as mock_text_assistant:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "send_text_command",
             {"command": command},
@@ -154,13 +154,13 @@ async def test_send_text_command(
 
 
 async def test_send_text_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test service call send_text_command calls TextAssistant."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
@@ -169,13 +169,13 @@ async def test_send_text_commands(
     command1_response = "what's the PIN?"
     command2_response = "opened the garage door"
     with patch(
-        "homeassistant.components.google_assistant_sdk.helpers.TextAssistant.assist",
+        "menuai.components.google_assistant_sdk.helpers.TextAssistant.assist",
         side_effect=[
             (command1_response, None, None),
             (command2_response, None, None),
         ],
     ) as mock_assist_call:
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             DOMAIN,
             "send_text_command",
             {"command": [command1, command2]},
@@ -203,17 +203,17 @@ async def test_send_text_commands(
     ids=["failure_requires_reauth", "transient_failure"],
 )
 async def test_send_text_command_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
     requires_reauth: ConfigEntryState,
 ) -> None:
     """Test failure refreshing token in send_text_command."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
@@ -225,40 +225,40 @@ async def test_send_text_command_expired_token_refresh_failure(
     )
 
     with pytest.raises(aiohttp.ClientResponseError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "send_text_command",
             {"command": "turn on tv"},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert any(entry.async_get_active_flows(hass, {"reauth"})) == requires_reauth
+    assert any(entry.async_get_active_flows(menuai, {"reauth"})) == requires_reauth
 
 
 async def test_send_text_command_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test send_text_command with media_player."""
     await setup_integration()
 
-    play_media_calls = async_mock_service(hass, "media_player", "play_media")
+    play_media_calls = async_mock_service(menuai, "media_player", "play_media")
 
     command = "tell me a joke"
     media_player = "media_player.office_speaker"
     audio_response1 = b"joke1 audio response bytes"
     audio_response2 = b"joke2 audio response bytes"
     with patch(
-        "homeassistant.components.google_assistant_sdk.helpers.TextAssistant.assist",
+        "menuai.components.google_assistant_sdk.helpers.TextAssistant.assist",
         side_effect=[
             ("joke1 text", None, audio_response1),
             ("joke2 text", None, audio_response2),
         ],
     ) as mock_assist_call:
         # Run the same command twice, getting different audio response each time.
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "send_text_command",
             {
@@ -267,7 +267,7 @@ async def test_send_text_command_media_player(
             },
             blocking=True,
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "send_text_command",
             {
@@ -290,65 +290,65 @@ async def test_send_text_command_media_player(
     assert audio_url1 != audio_url2
 
     # Assert that both audio responses can be served
-    status, response = await fetch_api_url(hass_client, audio_url1)
+    status, response = await fetch_api_url(menuai_client, audio_url1)
     assert status == http.HTTPStatus.OK
     assert response == audio_response1
-    status, response = await fetch_api_url(hass_client, audio_url2)
+    status, response = await fetch_api_url(menuai_client, audio_url2)
     assert status == http.HTTPStatus.OK
     assert response == audio_response2
 
     # Assert a nonexistent URL returns 404
     status, _ = await fetch_api_url(
-        hass_client, "/api/google_assistant_sdk/audio/nonexistent"
+        menuai_client, "/api/google_assistant_sdk/audio/nonexistent"
     )
     assert status == http.HTTPStatus.NOT_FOUND
 
     # Assert that both audio responses can still be served before the 5 minutes expiration
-    async_fire_time_changed(hass, utcnow() + timedelta(minutes=4))
-    status, response = await fetch_api_url(hass_client, audio_url1)
+    async_fire_time_changed(menuai, utcnow() + timedelta(minutes=4))
+    status, response = await fetch_api_url(menuai_client, audio_url1)
     assert status == http.HTTPStatus.OK
     assert response == audio_response1
-    status, response = await fetch_api_url(hass_client, audio_url2)
+    status, response = await fetch_api_url(menuai_client, audio_url2)
     assert status == http.HTTPStatus.OK
     assert response == audio_response2
 
     # Assert that they cannot be served after the 5 minutes expiration
-    async_fire_time_changed(hass, utcnow() + timedelta(minutes=6))
-    status, response = await fetch_api_url(hass_client, audio_url1)
+    async_fire_time_changed(menuai, utcnow() + timedelta(minutes=6))
+    status, response = await fetch_api_url(menuai_client, audio_url1)
     assert status == http.HTTPStatus.NOT_FOUND
-    status, response = await fetch_api_url(hass_client, audio_url2)
+    status, response = await fetch_api_url(menuai_client, audio_url2)
     assert status == http.HTTPStatus.NOT_FOUND
 
 
 async def test_conversation_agent(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test GoogleAssistantConversationAgent."""
     await setup_integration()
 
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "conversation", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "conversation", {})
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
 
-    agent = conversation.get_agent_manager(hass).async_get_agent(entry.entry_id)
+    agent = conversation.get_agent_manager(menuai).async_get_agent(entry.entry_id)
     assert agent.supported_languages == SUPPORTED_LANGUAGE_CODES
 
     text1 = "tell me a joke"
     text2 = "tell me another one"
     with patch(
-        "homeassistant.components.google_assistant_sdk.TextAssistant"
+        "menuai.components.google_assistant_sdk.TextAssistant"
     ) as mock_text_assistant:
         await conversation.async_converse(
-            hass, text1, None, Context(), "en-US", config_entry.entry_id
+            menuai, text1, None, Context(), "en-US", config_entry.entry_id
         )
         await conversation.async_converse(
-            hass, text2, None, Context(), "en-US", config_entry.entry_id
+            menuai, text2, None, Context(), "en-US", config_entry.entry_id
         )
 
     # Assert constructor is called only once since it's reused across requests
@@ -359,7 +359,7 @@ async def test_conversation_agent(
 
 
 async def test_conversation_agent_refresh_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
@@ -367,10 +367,10 @@ async def test_conversation_agent_refresh_token(
     """Test GoogleAssistantConversationAgent when token is expired."""
     await setup_integration()
 
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "conversation", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "conversation", {})
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
@@ -378,10 +378,10 @@ async def test_conversation_agent_refresh_token(
     text1 = "tell me a joke"
     text2 = "tell me another one"
     with patch(
-        "homeassistant.components.google_assistant_sdk.TextAssistant"
+        "menuai.components.google_assistant_sdk.TextAssistant"
     ) as mock_text_assistant:
         await conversation.async_converse(
-            hass, text1, None, Context(), "en-US", config_entry.entry_id
+            menuai, text1, None, Context(), "en-US", config_entry.entry_id
         )
 
         # Expire the token between requests
@@ -398,7 +398,7 @@ async def test_conversation_agent_refresh_token(
         )
 
         await conversation.async_converse(
-            hass, text2, None, Context(), "en-US", config_entry.entry_id
+            menuai, text2, None, Context(), "en-US", config_entry.entry_id
         )
 
     # Assert constructor is called twice since the token was expired
@@ -412,17 +412,17 @@ async def test_conversation_agent_refresh_token(
 
 
 async def test_conversation_agent_language_changed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test GoogleAssistantConversationAgent when language is changed."""
     await setup_integration()
 
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "conversation", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "conversation", {})
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
@@ -430,13 +430,13 @@ async def test_conversation_agent_language_changed(
     text1 = "tell me a joke"
     text2 = "cuéntame un chiste"
     with patch(
-        "homeassistant.components.google_assistant_sdk.TextAssistant"
+        "menuai.components.google_assistant_sdk.TextAssistant"
     ) as mock_text_assistant:
         await conversation.async_converse(
-            hass, text1, None, Context(), "en-US", config_entry.entry_id
+            menuai, text1, None, Context(), "en-US", config_entry.entry_id
         )
         await conversation.async_converse(
-            hass, text2, None, Context(), "es-ES", config_entry.entry_id
+            menuai, text2, None, Context(), "es-ES", config_entry.entry_id
         )
 
     # Assert constructor is called twice since the language was changed

@@ -11,8 +11,8 @@ from typing import Any
 
 from packaging.requirements import Requirement
 
-from .core import HomeAssistant, callback
-from .exceptions import HomeAssistantError
+from .core import menuai, callback
+from .exceptions import menuaiError
 from .helpers import singleton
 from .loader import Integration, IntegrationNotFound, async_get_integration
 from .util import package as pkg_util
@@ -31,7 +31,7 @@ DISCOVERY_INTEGRATIONS: dict[str, Iterable[str]] = {
 _LOGGER = logging.getLogger(__name__)
 
 
-class RequirementsNotFound(HomeAssistantError):
+class RequirementsNotFound(menuaiError):
     """Raised when a component is not found."""
 
     def __init__(self, domain: str, requirements: list[str]) -> None:
@@ -42,7 +42,7 @@ class RequirementsNotFound(HomeAssistantError):
 
 
 async def async_get_integration_with_requirements(
-    hass: HomeAssistant, domain: str
+    menuai: menuai, domain: str
 ) -> Integration:
     """Get an integration with all requirements installed, including the dependencies.
 
@@ -50,39 +50,39 @@ async def async_get_integration_with_requirements(
     is invalid, RequirementNotFound if there was some type of
     failure to install requirements.
     """
-    manager = _async_get_manager(hass)
+    manager = _async_get_manager(menuai)
     return await manager.async_get_integration_with_requirements(domain)
 
 
 async def async_process_requirements(
-    hass: HomeAssistant, name: str, requirements: list[str]
+    menuai: menuai, name: str, requirements: list[str]
 ) -> None:
     """Install the requirements for a component or platform.
 
     This method is a coroutine. It will raise RequirementsNotFound
     if an requirement can't be satisfied.
     """
-    await _async_get_manager(hass).async_process_requirements(name, requirements)
+    await _async_get_manager(menuai).async_process_requirements(name, requirements)
 
 
 async def async_load_installed_versions(
-    hass: HomeAssistant, requirements: set[str]
+    menuai: menuai, requirements: set[str]
 ) -> None:
     """Load the installed version of requirements."""
-    await _async_get_manager(hass).async_load_installed_versions(requirements)
+    await _async_get_manager(menuai).async_load_installed_versions(requirements)
 
 
 @callback
 @singleton.singleton(DATA_REQUIREMENTS_MANAGER)
-def _async_get_manager(hass: HomeAssistant) -> RequirementsManager:
+def _async_get_manager(menuai: menuai) -> RequirementsManager:
     """Get the requirements manager."""
-    return RequirementsManager(hass)
+    return RequirementsManager(menuai)
 
 
 @callback
-def async_clear_install_history(hass: HomeAssistant) -> None:
+def async_clear_install_history(menuai: menuai) -> None:
     """Forget the install history."""
-    _async_get_manager(hass).install_failure_history.clear()
+    _async_get_manager(menuai).install_failure_history.clear()
 
 
 def pip_kwargs(config_dir: str | None) -> dict[str, Any]:
@@ -122,9 +122,9 @@ def _install_requirements_if_missing(
 class RequirementsManager:
     """Manage requirements."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Init the requirements manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.pip_lock = asyncio.Lock()
         self.integrations_with_reqs: dict[
             str, Integration | asyncio.Future[Integration]
@@ -152,10 +152,10 @@ class RequirementsManager:
                 return int_or_fut
             return await int_or_fut
 
-        future = cache[domain] = self.hass.loop.create_future()
+        future = cache[domain] = self.menuai.loop.create_future()
         try:
-            integration = await async_get_integration(self.hass, domain)
-            if not self.hass.config.skip_pip:
+            integration = await async_get_integration(self.menuai, domain)
+            if not self.menuai.config.skip_pip:
                 await self._async_process_integration(integration, done)
         except BaseException as ex:
             # We do not cache failures as we want to retry, or
@@ -247,11 +247,11 @@ class RequirementsManager:
         This method is a coroutine. It will raise RequirementsNotFound
         if an requirement can't be satisfied.
         """
-        if self.hass.config.skip_pip_packages:
+        if self.menuai.config.skip_pip_packages:
             skipped_requirements = {
                 req
                 for req in requirements
-                if Requirement(req).name in self.hass.config.skip_pip_packages
+                if Requirement(req).name in self.menuai.config.skip_pip_packages
             }
 
             for req in skipped_requirements:
@@ -297,8 +297,8 @@ class RequirementsManager:
         requirements: list[str],
     ) -> None:
         """Install a requirement and save failures."""
-        kwargs = pip_kwargs(self.hass.config.config_dir)
-        installed, failures = await self.hass.async_add_executor_job(
+        kwargs = pip_kwargs(self.menuai.config.config_dir)
+        installed, failures = await self.menuai.async_add_executor_job(
             _install_requirements_if_missing, requirements, kwargs
         )
         self.is_installed_cache |= installed
@@ -314,6 +314,6 @@ class RequirementsManager:
         if not (requirements_to_check := requirements - self.is_installed_cache):
             return
 
-        self.is_installed_cache |= await self.hass.async_add_executor_job(
+        self.is_installed_cache |= await self.menuai.async_add_executor_job(
             pkg_util.get_installed_versions, requirements_to_check
         )

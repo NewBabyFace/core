@@ -8,8 +8,8 @@ from music_assistant_models.enums import EventType
 from music_assistant_models.event import MassEvent
 from music_assistant_models.player import Player
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -38,7 +38,7 @@ class MusicAssistantEntity(Entity):
             configuration_url=f"{mass.server_url}/#/settings/editplayer/{player_id}",
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         await self.async_on_update()
         self.async_on_remove(

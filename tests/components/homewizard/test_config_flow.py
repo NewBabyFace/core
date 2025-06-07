@@ -12,40 +12,40 @@ from homewizard_energy.errors import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant import config_entries
-from homeassistant.components.homewizard.const import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.homewizard.const import DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_manual_flow_works(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_setup_entry: AsyncMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config flow accepts user configuration."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_IP_ADDRESS: "2.2.2.2"}
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result == snapshot
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_homewizardenergy.close.mock_calls) == 1
     assert len(mock_homewizardenergy.device.mock_calls) == 1
     assert len(mock_setup_entry.mock_calls) == 1
@@ -53,11 +53,11 @@ async def test_manual_flow_works(
 
 @pytest.mark.usefixtures("mock_homewizardenergy", "mock_setup_entry")
 async def test_discovery_flow_works(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test discovery setup flow works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -80,14 +80,14 @@ async def test_discovery_flow_works(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=None
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"ip_address": "127.0.0.1"}
     )
 
@@ -97,13 +97,13 @@ async def test_discovery_flow_works(
 
 @pytest.mark.usefixtures("mock_homewizardenergy")
 async def test_discovery_flow_during_onboarding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_onboarding: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test discovery setup flow during onboarding."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -131,7 +131,7 @@ async def test_discovery_flow_during_onboarding(
 
 
 async def test_discovery_flow_during_onboarding_disabled_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_setup_entry: AsyncMock,
     mock_onboarding: MagicMock,
@@ -140,7 +140,7 @@ async def test_discovery_flow_during_onboarding_disabled_api(
     """Test discovery setup flow during onboarding with a disabled API."""
     mock_homewizardenergy.device.side_effect = DisabledError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -168,7 +168,7 @@ async def test_discovery_flow_during_onboarding_disabled_api(
     mock_homewizardenergy.device.side_effect = None
     mock_onboarding.return_value = True
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"ip_address": "127.0.0.1"}
     )
 
@@ -180,11 +180,11 @@ async def test_discovery_flow_during_onboarding_disabled_api(
 
 
 async def test_discovery_disabled_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
 ) -> None:
     """Test discovery detecting disabled api."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -209,7 +209,7 @@ async def test_discovery_disabled_api(
 
     mock_homewizardenergy.device.side_effect = DisabledError
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"ip_address": "127.0.0.1"}
     )
 
@@ -217,9 +217,9 @@ async def test_discovery_disabled_api(
     assert result["errors"] == {"base": "api_not_enabled"}
 
 
-async def test_discovery_missing_data_in_service_info(hass: HomeAssistant) -> None:
+async def test_discovery_missing_data_in_service_info(menuai: menuai) -> None:
     """Test discovery detecting missing discovery info."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -244,14 +244,14 @@ async def test_discovery_missing_data_in_service_info(hass: HomeAssistant) -> No
 
 
 async def test_dhcp_discovery_updates_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test DHCP discovery updates config entries."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -272,16 +272,16 @@ async def test_dhcp_discovery_updates_entry(
     [(DisabledError), (RequestError)],
 )
 async def test_dhcp_discovery_updates_entry_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
     exception: Exception,
 ) -> None:
     """Test DHCP discovery updates config entries, but fails to connect."""
     mock_homewizardenergy.device.side_effect = exception
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -296,14 +296,14 @@ async def test_dhcp_discovery_updates_entry_fails(
 
 
 async def test_dhcp_discovery_ignores_unknown(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
 ) -> None:
     """Test DHCP discovery is only used for updates.
 
     Anything else will just abort the flow.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -318,7 +318,7 @@ async def test_dhcp_discovery_ignores_unknown(
 
 
 async def test_dhcp_discovery_aborts_for_v2_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -327,9 +327,9 @@ async def test_dhcp_discovery_aborts_for_v2_api(
     DHCP discovery requires authorization which is not yet implemented
     """
     mock_homewizardenergy.device.side_effect = UnauthorizedError
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -344,16 +344,16 @@ async def test_dhcp_discovery_aborts_for_v2_api(
 
 
 async def test_discovery_flow_updates_new_ip(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test discovery setup updates new config data."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     # preflight check, see if the ip address is already in use
     assert mock_config_entry.data[CONF_IP_ADDRESS] == "127.0.0.1"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -385,7 +385,7 @@ async def test_discovery_flow_updates_new_ip(
     [(DisabledError, "api_not_enabled"), (RequestError, "network_error")],
 )
 async def test_error_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     exception: Exception,
     reason: str,
@@ -393,14 +393,14 @@ async def test_error_flow(
     """Test check detecting disabled api."""
     mock_homewizardenergy.device.side_effect = exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_IP_ADDRESS: "127.0.0.1"}
     )
 
@@ -411,7 +411,7 @@ async def test_error_flow(
     # Recover from error
     mock_homewizardenergy.device.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_IP_ADDRESS: "127.0.0.1"}
     )
 
@@ -426,7 +426,7 @@ async def test_error_flow(
     ],
 )
 async def test_abort_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     exception: Exception,
     reason: str,
@@ -434,14 +434,14 @@ async def test_abort_flow(
     """Test check detecting error with api."""
     mock_homewizardenergy.device.side_effect = exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_IP_ADDRESS: "2.2.2.2"}
     )
 
@@ -451,64 +451,64 @@ async def test_abort_flow(
 
 @pytest.mark.usefixtures("mock_homewizardenergy", "mock_setup_entry")
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow while API is enabled."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_enable_api"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_enable_api_successful"
 
 
 async def test_reauth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow while API is still disabled."""
     mock_homewizardenergy.device.side_effect = DisabledError
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_enable_api"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "api_not_enabled"}
 
 
 async def test_reconfigure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfiguration."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
 
     # original entry
     assert mock_config_entry.data[CONF_IP_ADDRESS] == "127.0.0.1"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_IP_ADDRESS: "1.0.0.127",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
@@ -517,26 +517,26 @@ async def test_reconfigure(
 
 
 async def test_reconfigure_nochange(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfiguration without changing values."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
 
     # original entry
     assert mock_config_entry.data[CONF_IP_ADDRESS] == "127.0.0.1"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_IP_ADDRESS: "127.0.0.1",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
@@ -545,20 +545,20 @@ async def test_reconfigure_nochange(
 
 
 async def test_reconfigure_wrongdevice(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test entering ip of other device and prevent changing it based on serial."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
 
     # simulate different serial number, as if user entered wrong IP
     mock_homewizardenergy.device.return_value.serial = "not_5c2fafabcdef"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_IP_ADDRESS: "1.0.0.127",
@@ -576,21 +576,21 @@ async def test_reconfigure_wrongdevice(
     [(DisabledError, "api_not_enabled"), (RequestError, "network_error")],
 )
 async def test_reconfigure_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     mock_config_entry: MockConfigEntry,
     exception: Exception,
     reason: str,
 ) -> None:
     """Test reconfiguration fails when not able to connect."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
 
     mock_homewizardenergy.device.side_effect = exception
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_IP_ADDRESS: "1.0.0.127",
@@ -602,13 +602,13 @@ async def test_reconfigure_cannot_connect(
 
     # attempt with valid IP should work
     mock_homewizardenergy.device.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_IP_ADDRESS: "1.0.0.127",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
@@ -621,12 +621,12 @@ async def test_reconfigure_cannot_connect(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_manual_flow_works_with_v2_api_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy_v2: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test config flow accepts user configuration and triggers authorization when detected v2 support."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -638,9 +638,9 @@ async def test_manual_flow_works_with_v2_api_support(
     mock_homewizardenergy_v2.get_token.side_effect = DisabledError
 
     with patch(
-        "homeassistant.components.homewizard.config_flow.has_v2_api", return_value=True
+        "menuai.components.homewizard.config_flow.has_v2_api", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_IP_ADDRESS: "2.2.2.2"}
         )
 
@@ -651,21 +651,21 @@ async def test_manual_flow_works_with_v2_api_support(
     mock_homewizardenergy_v2.device.side_effect = None
     mock_homewizardenergy_v2.get_token.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_manual_flow_detects_failed_user_authorization(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy_v2: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test config flow accepts user configuration and detects failed button press by user."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -677,16 +677,16 @@ async def test_manual_flow_detects_failed_user_authorization(
     mock_homewizardenergy_v2.get_token.side_effect = DisabledError
 
     with patch(
-        "homeassistant.components.homewizard.config_flow.has_v2_api", return_value=True
+        "menuai.components.homewizard.config_flow.has_v2_api", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_IP_ADDRESS: "2.2.2.2"}
         )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authorize"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authorize"
@@ -696,43 +696,43 @@ async def test_manual_flow_detects_failed_user_authorization(
     mock_homewizardenergy_v2.device.side_effect = None
     mock_homewizardenergy_v2.get_token.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_reauth_flow_updates_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_config_entry_v2: MockConfigEntry,
     mock_homewizardenergy_v2: MagicMock,
 ) -> None:
     """Test reauth flow token is updated."""
 
-    mock_config_entry_v2.add_to_hass(hass)
+    mock_config_entry_v2.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry_v2.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry_v2.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await mock_config_entry_v2.start_reauth_flow(hass)
+    result = await mock_config_entry_v2.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm_update_token"
 
     # Simulate user pressing the button and getting a new token
     mock_homewizardenergy_v2.get_token.return_value = "cool_new_token"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
     # Verify that the token was updated
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
-        hass.config_entries.async_entries(DOMAIN)[0].data.get(CONF_TOKEN)
+        menuai.config_entries.async_entries(DOMAIN)[0].data.get(CONF_TOKEN)
         == "cool_new_token"
     )
     assert len(mock_setup_entry.mock_calls) == 2
@@ -740,19 +740,19 @@ async def test_reauth_flow_updates_token(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_reauth_flow_handles_user_not_pressing_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_config_entry_v2: MockConfigEntry,
     mock_homewizardenergy_v2: MagicMock,
 ) -> None:
     """Test reauth flow token is updated."""
 
-    mock_config_entry_v2.add_to_hass(hass)
+    mock_config_entry_v2.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry_v2.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry_v2.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await mock_config_entry_v2.start_reauth_flow(hass)
+    result = await mock_config_entry_v2.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm_update_token"
     assert result["errors"] is None
@@ -760,7 +760,7 @@ async def test_reauth_flow_handles_user_not_pressing_button(
     # Simulate button not being pressed
     mock_homewizardenergy_v2.get_token.side_effect = DisabledError
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "authorization_failed"}
@@ -770,15 +770,15 @@ async def test_reauth_flow_handles_user_not_pressing_button(
     mock_homewizardenergy_v2.get_token.return_value = "cool_new_token"
 
     # Successful reauth
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
     # Verify that the token was updated
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
-        hass.config_entries.async_entries(DOMAIN)[0].data.get(CONF_TOKEN)
+        menuai.config_entries.async_entries(DOMAIN)[0].data.get(CONF_TOKEN)
         == "cool_new_token"
     )
     assert len(mock_setup_entry.mock_calls) == 2
@@ -786,13 +786,13 @@ async def test_reauth_flow_handles_user_not_pressing_button(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_discovery_with_v2_api_ask_authorization(
-    hass: HomeAssistant,
+    menuai: menuai,
     # mock_setup_entry: AsyncMock,
     mock_homewizardenergy_v2: MagicMock,
 ) -> None:
     """Test discovery detecting missing discovery info."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -819,9 +819,9 @@ async def test_discovery_with_v2_api_ask_authorization(
     mock_homewizardenergy_v2.get_token.side_effect = DisabledError
 
     with patch(
-        "homeassistant.components.homewizard.config_flow.has_v2_api", return_value=True
+        "menuai.components.homewizard.config_flow.has_v2_api", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authorize"
@@ -829,7 +829,7 @@ async def test_discovery_with_v2_api_ask_authorization(
     mock_homewizardenergy_v2.get_token.side_effect = None
     mock_homewizardenergy_v2.get_token.return_value = "cool_token"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_TOKEN] == "cool_token"

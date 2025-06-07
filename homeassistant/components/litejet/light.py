@@ -6,18 +6,18 @@ from typing import Any
 
 from pylitejet import LiteJet, LiteJetError
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_TRANSITION,
     ColorMode,
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_DEFAULT_TRANSITION, DOMAIN
 
@@ -25,13 +25,13 @@ ATTR_NUMBER = "number"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up entry."""
 
-    system: LiteJet = hass.data[DOMAIN]
+    system: LiteJet = menuai.data[DOMAIN]
 
     entities = []
     for index in system.loads():
@@ -68,14 +68,14 @@ class LiteJetLight(LightEntity):
             via_device=(DOMAIN, f"{config_entry.entry_id}_mcp"),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when this Entity has been added to HA."""
         self._lj.on_load_activated(self._index, self._on_load_changed)
         self._lj.on_load_deactivated(self._index, self._on_load_changed)
         self._lj.on_connected_changed(self._on_connected_changed)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Entity being removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Entity being removed from menuai."""
         self._lj.unsubscribe(self._on_load_changed)
         self._lj.unsubscribe(self._on_connected_changed)
 
@@ -97,10 +97,10 @@ class LiteJetLight(LightEntity):
             try:
                 await self._lj.activate_load(self._index)
             except LiteJetError as exc:
-                raise HomeAssistantError from exc
+                raise menuaiError from exc
             return
 
-        # If either attribute is specified then Home Assistant must
+        # If either attribute is specified then MenuAI must
         # control both values.
         default_transition = self._config_entry.options.get(CONF_DEFAULT_TRANSITION, 0)
         transition = kwargs.get(ATTR_TRANSITION, default_transition)
@@ -109,7 +109,7 @@ class LiteJetLight(LightEntity):
         try:
             await self._lj.activate_load_at(self._index, brightness, int(transition))
         except LiteJetError as exc:
-            raise HomeAssistantError from exc
+            raise menuaiError from exc
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
@@ -117,7 +117,7 @@ class LiteJetLight(LightEntity):
             try:
                 await self._lj.activate_load_at(self._index, 0, kwargs[ATTR_TRANSITION])
             except LiteJetError as exc:
-                raise HomeAssistantError from exc
+                raise menuaiError from exc
             return
 
         # If transition attribute is not specified then the simple
@@ -126,7 +126,7 @@ class LiteJetLight(LightEntity):
         try:
             await self._lj.deactivate_load(self._index)
         except LiteJetError as exc:
-            raise HomeAssistantError from exc
+            raise menuaiError from exc
 
     async def async_update(self) -> None:
         """Retrieve the light's brightness from the LiteJet system."""

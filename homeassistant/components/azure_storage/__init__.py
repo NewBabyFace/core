@@ -11,14 +11,14 @@ from azure.core.pipeline.transport._aiohttp import (
 )  # need to import from private file, as it is not properly imported in the init
 from azure.storage.blob.aio import ContainerClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
 )
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.aiohttp_client import async_create_clientsession
 
 from .const import (
     CONF_ACCOUNT_NAME,
@@ -32,12 +32,12 @@ type AzureStorageConfigEntry = ConfigEntry[ContainerClient]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AzureStorageConfigEntry
+    menuai: menuai, entry: AzureStorageConfigEntry
 ) -> bool:
     """Set up Azure Storage integration."""
     # set increase aiohttp timeout for long running operations (up/download)
     session = async_create_clientsession(
-        hass, timeout=ClientTimeout(connect=10, total=12 * 60 * 60)
+        menuai, timeout=ClientTimeout(connect=10, total=12 * 60 * 60)
     )
 
     def create_container_client() -> ContainerClient:
@@ -51,7 +51,7 @@ async def async_setup_entry(
         )
 
     # has a blocking call to open in cpython
-    container_client: ContainerClient = await hass.async_add_executor_job(
+    container_client: ContainerClient = await menuai.async_add_executor_job(
         create_container_client
     )
 
@@ -80,7 +80,7 @@ async def async_setup_entry(
     entry.runtime_data = container_client
 
     def _async_notify_backup_listeners() -> None:
-        for listener in hass.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
+        for listener in menuai.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
             listener()
 
     entry.async_on_unload(entry.async_on_state_change(_async_notify_backup_listeners))
@@ -89,7 +89,7 @@ async def async_setup_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AzureStorageConfigEntry
+    menuai: menuai, entry: AzureStorageConfigEntry
 ) -> bool:
     """Unload an Azure Storage config entry."""
     return True

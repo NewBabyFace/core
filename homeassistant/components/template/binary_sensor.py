@@ -10,15 +10,15 @@ from typing import Any, Self
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     DOMAIN as BINARY_SENSOR_DOMAIN,
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     CONF_DEVICE_CLASS,
@@ -38,19 +38,19 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv, selector, template
-from homeassistant.helpers.device import async_device_info_to_link_from_device_id
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv, selector, template
+from menuai.helpers.device import async_device_info_to_link_from_device_id
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_call_later, async_track_point_in_utc_time
-from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.event import async_call_later, async_track_point_in_utc_time
+from menuai.helpers.restore_state import ExtraStoredData, RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from . import TriggerUpdateCoordinator
 from .const import (
@@ -122,7 +122,7 @@ LEGACY_BINARY_SENSOR_SCHEMA = vol.All(
 
 
 def rewrite_legacy_to_modern_conf(
-    hass: HomeAssistant, cfg: dict[str, dict]
+    menuai: menuai, cfg: dict[str, dict]
 ) -> list[dict]:
     """Rewrite legacy binary sensor definitions to modern ones."""
     sensors = []
@@ -131,11 +131,11 @@ def rewrite_legacy_to_modern_conf(
         entity_cfg = {**entity_cfg, CONF_OBJECT_ID: object_id}
 
         entity_cfg = rewrite_common_legacy_to_modern_conf(
-            hass, entity_cfg, LEGACY_FIELDS
+            menuai, entity_cfg, LEGACY_FIELDS
         )
 
         if CONF_NAME not in entity_cfg:
-            entity_cfg[CONF_NAME] = template.Template(object_id, hass)
+            entity_cfg[CONF_NAME] = template.Template(object_id, menuai)
 
         sensors.append(entity_cfg)
 
@@ -154,7 +154,7 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 @callback
 def _async_create_template_tracking_entities(
     async_add_entities: AddEntitiesCallback | AddConfigEntryEntitiesCallback,
-    hass: HomeAssistant,
+    menuai: menuai,
     definitions: list[dict],
     unique_id_prefix: str | None,
 ) -> None:
@@ -169,7 +169,7 @@ def _async_create_template_tracking_entities(
 
         sensors.append(
             BinarySensorTemplate(
-                hass,
+                menuai,
                 entity_conf,
                 unique_id,
             )
@@ -179,7 +179,7 @@ def _async_create_template_tracking_entities(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -188,29 +188,29 @@ async def async_setup_platform(
     if discovery_info is None:
         _async_create_template_tracking_entities(
             async_add_entities,
-            hass,
-            rewrite_legacy_to_modern_conf(hass, config[CONF_SENSORS]),
+            menuai,
+            rewrite_legacy_to_modern_conf(menuai, config[CONF_SENSORS]),
             None,
         )
         return
 
     if "coordinator" in discovery_info:
         async_add_entities(
-            TriggerBinarySensorEntity(hass, discovery_info["coordinator"], config)
+            TriggerBinarySensorEntity(menuai, discovery_info["coordinator"], config)
             for config in discovery_info["entities"]
         )
         return
 
     _async_create_template_tracking_entities(
         async_add_entities,
-        hass,
+        menuai,
         discovery_info["entities"],
         discovery_info["unique_id"],
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -219,17 +219,17 @@ async def async_setup_entry(
     _options.pop("template_type")
     validated_config = BINARY_SENSOR_CONFIG_SCHEMA(_options)
     async_add_entities(
-        [BinarySensorTemplate(hass, validated_config, config_entry.entry_id)]
+        [BinarySensorTemplate(menuai, validated_config, config_entry.entry_id)]
     )
 
 
 @callback
 def async_create_preview_binary_sensor(
-    hass: HomeAssistant, name: str, config: dict[str, Any]
+    menuai: menuai, name: str, config: dict[str, Any]
 ) -> BinarySensorTemplate:
     """Create a preview sensor."""
     validated_config = BINARY_SENSOR_CONFIG_SCHEMA(config | {CONF_NAME: name})
-    return BinarySensorTemplate(hass, validated_config, None)
+    return BinarySensorTemplate(menuai, validated_config, None)
 
 
 class BinarySensorTemplate(TemplateEntity, BinarySensorEntity, RestoreEntity):
@@ -239,15 +239,15 @@ class BinarySensorTemplate(TemplateEntity, BinarySensorEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: dict[str, Any],
         unique_id: str | None,
     ) -> None:
         """Initialize the Template binary sensor."""
-        super().__init__(hass, config=config, unique_id=unique_id)
+        super().__init__(menuai, config=config, unique_id=unique_id)
         if (object_id := config.get(CONF_OBJECT_ID)) is not None:
             self.entity_id = async_generate_entity_id(
-                ENTITY_ID_FORMAT, object_id, hass=hass
+                ENTITY_ID_FORMAT, object_id, menuai=menuai
             )
 
         self._attr_device_class = config.get(CONF_DEVICE_CLASS)
@@ -258,11 +258,11 @@ class BinarySensorTemplate(TemplateEntity, BinarySensorEntity, RestoreEntity):
         self._delay_off = None
         self._delay_off_raw = config.get(CONF_DELAY_OFF)
         self._attr_device_info = async_device_info_to_link_from_device_id(
-            hass,
+            menuai,
             config.get(CONF_DEVICE_ID),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore state."""
         if (
             (self._delay_on_raw is not None or self._delay_off_raw is not None)
@@ -270,7 +270,7 @@ class BinarySensorTemplate(TemplateEntity, BinarySensorEntity, RestoreEntity):
             and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
         ):
             self._attr_is_on = last_state.state == STATE_ON
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def _async_setup_templates(self) -> None:
@@ -329,7 +329,7 @@ class BinarySensorTemplate(TemplateEntity, BinarySensorEntity, RestoreEntity):
 
         delay = (self._delay_on if state else self._delay_off).total_seconds()
         # state with delay. Cancelled if template result changes.
-        self._delay_cancel = async_call_later(self.hass, delay, _set_state)
+        self._delay_cancel = async_call_later(self.menuai, delay, _set_state)
 
 
 class TriggerBinarySensorEntity(TriggerEntity, BinarySensorEntity, RestoreEntity):
@@ -340,12 +340,12 @@ class TriggerBinarySensorEntity(TriggerEntity, BinarySensorEntity, RestoreEntity
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: TriggerUpdateCoordinator,
         config: dict,
     ) -> None:
         """Initialize the entity."""
-        super().__init__(hass, coordinator, config)
+        super().__init__(menuai, coordinator, config)
 
         for key in (CONF_DELAY_ON, CONF_DELAY_OFF, CONF_AUTO_OFF):
             if isinstance(config.get(key), template.Template):
@@ -356,9 +356,9 @@ class TriggerBinarySensorEntity(TriggerEntity, BinarySensorEntity, RestoreEntity
         self._auto_off_cancel: CALLBACK_TYPE | None = None
         self._auto_off_time: datetime | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (
             (last_state := await self.async_get_last_state()) is not None
             and (extra_data := await self.async_get_last_binary_sensor_data())
@@ -423,7 +423,7 @@ class TriggerBinarySensorEntity(TriggerEntity, BinarySensorEntity, RestoreEntity
 
         # state with delay. Cancelled if new trigger received
         self._delay_cancel = async_call_later(
-            self.hass, delay.total_seconds(), partial(self._set_state, state)
+            self.menuai, delay.total_seconds(), partial(self._set_state, state)
         )
 
     @callback
@@ -464,7 +464,7 @@ class TriggerBinarySensorEntity(TriggerEntity, BinarySensorEntity, RestoreEntity
 
         self._auto_off_time = auto_off_time
         self._auto_off_cancel = async_track_point_in_utc_time(
-            self.hass, _auto_off, self._auto_off_time
+            self.menuai, _auto_off, self._auto_off_time
         )
 
     @property

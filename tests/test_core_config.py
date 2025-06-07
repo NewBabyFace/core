@@ -13,7 +13,7 @@ import pytest
 from voluptuous import Invalid, MultipleInvalid
 from webrtc_models import RTCConfiguration, RTCIceServer
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_FRIENDLY_NAME,
     CONF_AUTH_MFA_MODULES,
@@ -26,8 +26,8 @@ from homeassistant.const import (
     EVENT_CORE_CONFIG_UPDATE,
     __version__,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.core_config import (
+from menuai.core import menuai, State
+from menuai.core_config import (
     _CUSTOMIZE_DICT_SCHEMA,
     CORE_CONFIG_SCHEMA,
     CORE_STORAGE_KEY,
@@ -37,9 +37,9 @@ from homeassistant.core_config import (
     _validate_stun_or_turn_url,
     async_process_ha_core_config,
 )
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.entity import Entity
-from homeassistant.util.unit_system import (
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.entity import Entity
+from menuai.util.unit_system import (
     METRIC_SYSTEM,
     US_CUSTOMARY_SYSTEM,
     UnitSystem,
@@ -215,21 +215,21 @@ def test_customize_glob_is_ordered() -> None:
     assert isinstance(conf["customize_glob"], OrderedDict)
 
 
-async def _compute_state(hass: HomeAssistant, config: dict[str, Any]) -> State | None:
-    await async_process_ha_core_config(hass, config)
+async def _compute_state(menuai: menuai, config: dict[str, Any]) -> State | None:
+    await async_process_ha_core_config(menuai, config)
 
     entity = Entity()
     entity.entity_id = "test.test"
-    entity.hass = hass
-    entity.platform = MockEntityPlatform(hass)
+    entity.menuai = menuai
+    entity.platform = MockEntityPlatform(menuai)
     entity.schedule_update_ha_state()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    return hass.states.get("test.test")
+    return menuai.states.get("test.test")
 
 
-async def test_entity_customization(hass: HomeAssistant) -> None:
+async def test_entity_customization(menuai: menuai) -> None:
     """Test entity customization through configuration."""
     config = {
         CONF_LATITUDE: 50,
@@ -238,16 +238,16 @@ async def test_entity_customization(hass: HomeAssistant) -> None:
         CONF_CUSTOMIZE: {"test.test": {"hidden": True}},
     }
 
-    state = await _compute_state(hass, config)
+    state = await _compute_state(menuai, config)
 
     assert state.attributes["hidden"]
 
 
 async def test_loading_configuration_from_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
-    """Test loading core config onto hass object."""
-    hass_storage["core.config"] = {
+    """Test loading core config onto menuai object."""
+    menuai_storage["core.config"] = {
         "data": {
             "elevation": 10,
             "latitude": 55,
@@ -266,30 +266,30 @@ async def test_loading_configuration_from_storage(
         "version": 1,
         "minor_version": 4,
     }
-    await async_process_ha_core_config(hass, {"allowlist_external_dirs": "/etc"})
+    await async_process_ha_core_config(menuai, {"allowlist_external_dirs": "/etc"})
 
-    assert hass.config.latitude == 55
-    assert hass.config.longitude == 13
-    assert hass.config.elevation == 10
-    assert hass.config.location_name == "Home"
-    assert hass.config.units is METRIC_SYSTEM
-    assert hass.config.time_zone == "Europe/Copenhagen"
-    assert hass.config.external_url == "https://www.example.com"
-    assert hass.config.internal_url == "http://example.local"
-    assert hass.config.currency == "EUR"
-    assert hass.config.country == "SE"
-    assert hass.config.language == "sv"
-    assert hass.config.radius == 150
-    assert len(hass.config.allowlist_external_dirs) == 3
-    assert "/etc" in hass.config.allowlist_external_dirs
-    assert hass.config.config_source is ConfigSource.STORAGE
+    assert menuai.config.latitude == 55
+    assert menuai.config.longitude == 13
+    assert menuai.config.elevation == 10
+    assert menuai.config.location_name == "Home"
+    assert menuai.config.units is METRIC_SYSTEM
+    assert menuai.config.time_zone == "Europe/Copenhagen"
+    assert menuai.config.external_url == "https://www.example.com"
+    assert menuai.config.internal_url == "http://example.local"
+    assert menuai.config.currency == "EUR"
+    assert menuai.config.country == "SE"
+    assert menuai.config.language == "sv"
+    assert menuai.config.radius == 150
+    assert len(menuai.config.allowlist_external_dirs) == 3
+    assert "/etc" in menuai.config.allowlist_external_dirs
+    assert menuai.config.config_source is ConfigSource.STORAGE
 
 
 async def test_loading_configuration_from_storage_with_yaml_only(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
-    """Test loading core and YAML config onto hass object."""
-    hass_storage["core.config"] = {
+    """Test loading core and YAML config onto menuai object."""
+    menuai_storage["core.config"] = {
         "data": {
             "elevation": 10,
             "latitude": 55,
@@ -302,23 +302,23 @@ async def test_loading_configuration_from_storage_with_yaml_only(
         "version": 1,
     }
     await async_process_ha_core_config(
-        hass, {"media_dirs": {"mymedia": "/usr"}, "allowlist_external_dirs": "/etc"}
+        menuai, {"media_dirs": {"mymedia": "/usr"}, "allowlist_external_dirs": "/etc"}
     )
 
-    assert hass.config.latitude == 55
-    assert hass.config.longitude == 13
-    assert hass.config.elevation == 10
-    assert hass.config.location_name == "Home"
-    assert hass.config.units is METRIC_SYSTEM
-    assert hass.config.time_zone == "Europe/Copenhagen"
-    assert len(hass.config.allowlist_external_dirs) == 3
-    assert "/etc" in hass.config.allowlist_external_dirs
-    assert hass.config.media_dirs == {"mymedia": "/usr"}
-    assert hass.config.config_source is ConfigSource.STORAGE
+    assert menuai.config.latitude == 55
+    assert menuai.config.longitude == 13
+    assert menuai.config.elevation == 10
+    assert menuai.config.location_name == "Home"
+    assert menuai.config.units is METRIC_SYSTEM
+    assert menuai.config.time_zone == "Europe/Copenhagen"
+    assert len(menuai.config.allowlist_external_dirs) == 3
+    assert "/etc" in menuai.config.allowlist_external_dirs
+    assert menuai.config.media_dirs == {"mymedia": "/usr"}
+    assert menuai.config.config_source is ConfigSource.STORAGE
 
 
 async def test_migration_and_updating_configuration(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test updating configuration stores the new configuration."""
     core_data = {
@@ -337,9 +337,9 @@ async def test_migration_and_updating_configuration(
         "version": 1,
         "minor_version": 1,
     }
-    hass_storage["core.config"] = dict(core_data)
-    await async_process_ha_core_config(hass, {"allowlist_external_dirs": "/etc"})
-    await hass.config.async_update(latitude=50, currency="USD")
+    menuai_storage["core.config"] = dict(core_data)
+    await async_process_ha_core_config(menuai, {"allowlist_external_dirs": "/etc"})
+    await menuai.config.async_update(latitude=50, currency="USD")
 
     expected_new_core_data = copy.deepcopy(core_data)
     # From async_update above
@@ -354,19 +354,19 @@ async def test_migration_and_updating_configuration(
     expected_new_core_data["data"]["radius"] = 100
     # Bumped minor version
     expected_new_core_data["minor_version"] = 4
-    assert hass_storage["core.config"] == expected_new_core_data
-    assert hass.config.latitude == 50
-    assert hass.config.currency == "USD"
-    assert hass.config.country is None
-    assert hass.config.language == "en"
-    assert hass.config.radius == 100
+    assert menuai_storage["core.config"] == expected_new_core_data
+    assert menuai.config.latitude == 50
+    assert menuai.config.currency == "USD"
+    assert menuai.config.country is None
+    assert menuai.config.language == "en"
+    assert menuai.config.radius == 100
 
 
 async def test_override_stored_configuration(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
-    """Test loading core and YAML config onto hass object."""
-    hass_storage["core.config"] = {
+    """Test loading core and YAML config onto menuai object."""
+    menuai_storage["core.config"] = {
         "data": {
             "elevation": 10,
             "latitude": 55,
@@ -379,24 +379,24 @@ async def test_override_stored_configuration(
         "version": 1,
     }
     await async_process_ha_core_config(
-        hass, {"latitude": 60, "allowlist_external_dirs": "/etc"}
+        menuai, {"latitude": 60, "allowlist_external_dirs": "/etc"}
     )
 
-    assert hass.config.latitude == 60
-    assert hass.config.longitude == 13
-    assert hass.config.elevation == 10
-    assert hass.config.location_name == "Home"
-    assert hass.config.units is METRIC_SYSTEM
-    assert hass.config.time_zone == "Europe/Copenhagen"
-    assert len(hass.config.allowlist_external_dirs) == 3
-    assert "/etc" in hass.config.allowlist_external_dirs
-    assert hass.config.config_source is ConfigSource.YAML
+    assert menuai.config.latitude == 60
+    assert menuai.config.longitude == 13
+    assert menuai.config.elevation == 10
+    assert menuai.config.location_name == "Home"
+    assert menuai.config.units is METRIC_SYSTEM
+    assert menuai.config.time_zone == "Europe/Copenhagen"
+    assert len(menuai.config.allowlist_external_dirs) == 3
+    assert "/etc" in menuai.config.allowlist_external_dirs
+    assert menuai.config.config_source is ConfigSource.YAML
 
 
-async def test_loading_configuration(hass: HomeAssistant) -> None:
-    """Test loading core config onto hass object."""
+async def test_loading_configuration(menuai: menuai) -> None:
+    """Test loading core config onto menuai object."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {
             "latitude": 60,
             "longitude": 50,
@@ -417,25 +417,25 @@ async def test_loading_configuration(hass: HomeAssistant) -> None:
         },
     )
 
-    assert hass.config.latitude == 60
-    assert hass.config.longitude == 50
-    assert hass.config.elevation == 25
-    assert hass.config.location_name == "Huis"
-    assert hass.config.units is US_CUSTOMARY_SYSTEM
-    assert hass.config.time_zone == "America/New_York"
-    assert hass.config.external_url == "https://www.example.com"
-    assert hass.config.internal_url == "http://example.local"
-    assert len(hass.config.allowlist_external_dirs) == 3
-    assert "/etc" in hass.config.allowlist_external_dirs
-    assert "/usr" in hass.config.allowlist_external_dirs
-    assert hass.config.media_dirs == {"mymedia": "/usr"}
-    assert hass.config.config_source is ConfigSource.YAML
-    assert hass.config.debug is True
-    assert hass.config.currency == "EUR"
-    assert hass.config.country == "SE"
-    assert hass.config.language == "sv"
-    assert hass.config.radius == 150
-    assert hass.config.webrtc == RTCConfiguration(
+    assert menuai.config.latitude == 60
+    assert menuai.config.longitude == 50
+    assert menuai.config.elevation == 25
+    assert menuai.config.location_name == "Huis"
+    assert menuai.config.units is US_CUSTOMARY_SYSTEM
+    assert menuai.config.time_zone == "America/New_York"
+    assert menuai.config.external_url == "https://www.example.com"
+    assert menuai.config.internal_url == "http://example.local"
+    assert len(menuai.config.allowlist_external_dirs) == 3
+    assert "/etc" in menuai.config.allowlist_external_dirs
+    assert "/usr" in menuai.config.allowlist_external_dirs
+    assert menuai.config.media_dirs == {"mymedia": "/usr"}
+    assert menuai.config.config_source is ConfigSource.YAML
+    assert menuai.config.debug is True
+    assert menuai.config.currency == "EUR"
+    assert menuai.config.country == "SE"
+    assert menuai.config.language == "sv"
+    assert menuai.config.radius == 150
+    assert menuai.config.webrtc == RTCConfiguration(
         [RTCIceServer(urls=["stun:custom_stun_server:3478"])]
     )
 
@@ -474,8 +474,8 @@ async def test_loading_configuration(hass: HomeAssistant) -> None:
     ],
 )
 async def test_language_default(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     minor_version,
     users,
     user_data,
@@ -491,48 +491,48 @@ async def test_language_default(
         "version": 1,
         "minor_version": minor_version,
     }
-    hass_storage["core.config"] = dict(core_data)
+    menuai_storage["core.config"] = dict(core_data)
 
     for user_config in users:
-        user = MockUser(**user_config).add_to_hass(hass)
+        user = MockUser(**user_config).add_to_menuai(menuai)
         if user.id not in user_data:
             continue
         storage_key = f"frontend.user_data_{user.id}"
-        hass_storage[storage_key] = {
+        menuai_storage[storage_key] = {
             "key": storage_key,
             "version": 1,
             "data": user_data[user.id],
         }
 
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {},
     )
-    assert hass.config.language == default_language
+    assert menuai.config.language == default_language
 
 
 async def test_loading_configuration_default_media_dirs_docker(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
-    """Test loading core config onto hass object."""
-    with patch("homeassistant.core_config.is_docker_env", return_value=True):
+    """Test loading core config onto menuai object."""
+    with patch("menuai.core_config.is_docker_env", return_value=True):
         await async_process_ha_core_config(
-            hass,
+            menuai,
             {
                 "name": "Huis",
             },
         )
 
-    assert hass.config.location_name == "Huis"
-    assert len(hass.config.allowlist_external_dirs) == 2
-    assert "/media" in hass.config.allowlist_external_dirs
-    assert hass.config.media_dirs == {"local": "/media"}
+    assert menuai.config.location_name == "Huis"
+    assert len(menuai.config.allowlist_external_dirs) == 2
+    assert "/media" in menuai.config.allowlist_external_dirs
+    assert menuai.config.media_dirs == {"local": "/media"}
 
 
-async def test_loading_configuration_from_packages(hass: HomeAssistant) -> None:
-    """Test loading packages config onto hass object config."""
+async def test_loading_configuration_from_packages(menuai: menuai) -> None:
+    """Test loading packages config onto menuai object config."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {
             "latitude": 39,
             "longitude": -1,
@@ -556,7 +556,7 @@ async def test_loading_configuration_from_packages(hass: HomeAssistant) -> None:
     # Empty packages not allowed
     with pytest.raises(MultipleInvalid):
         await async_process_ha_core_config(
-            hass,
+            menuai,
             {
                 "latitude": 39,
                 "longitude": -1,
@@ -578,11 +578,11 @@ async def test_loading_configuration_from_packages(hass: HomeAssistant) -> None:
     ],
 )
 async def test_loading_configuration_unit_system(
-    hass: HomeAssistant, unit_system_name: str, expected_unit_system: UnitSystem
+    menuai: menuai, unit_system_name: str, expected_unit_system: UnitSystem
 ) -> None:
     """Test backward compatibility when loading core config."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {
             "latitude": 60,
             "longitude": 50,
@@ -595,11 +595,11 @@ async def test_loading_configuration_unit_system(
         },
     )
 
-    assert hass.config.units is expected_unit_system
+    assert menuai.config.units is expected_unit_system
 
 
-async def test_merge_customize(hass: HomeAssistant) -> None:
-    """Test loading core config onto hass object."""
+async def test_merge_customize(menuai: menuai) -> None:
+    """Test loading core config onto menuai object."""
     core_config = {
         "latitude": 60,
         "longitude": 50,
@@ -609,16 +609,16 @@ async def test_merge_customize(hass: HomeAssistant) -> None:
         "time_zone": "GMT",
         "customize": {"a.a": {"friendly_name": "A"}},
         "packages": {
-            "pkg1": {"homeassistant": {"customize": {"b.b": {"friendly_name": "BB"}}}}
+            "pkg1": {"menuai": {"customize": {"b.b": {"friendly_name": "BB"}}}}
         },
     }
-    await async_process_ha_core_config(hass, core_config)
+    await async_process_ha_core_config(menuai, core_config)
 
-    assert hass.data[DATA_CUSTOMIZE].get("b.b") == {"friendly_name": "BB"}
+    assert menuai.data[DATA_CUSTOMIZE].get("b.b") == {"friendly_name": "BB"}
 
 
-async def test_auth_provider_config(hass: HomeAssistant) -> None:
-    """Test loading auth provider config onto hass object."""
+async def test_auth_provider_config(menuai: menuai) -> None:
+    """Test loading auth provider config onto menuai object."""
     core_config = {
         "latitude": 60,
         "longitude": 50,
@@ -627,22 +627,22 @@ async def test_auth_provider_config(hass: HomeAssistant) -> None:
         "unit_system": "imperial",
         "time_zone": "GMT",
         CONF_AUTH_PROVIDERS: [
-            {"type": "homeassistant"},
+            {"type": "menuai"},
         ],
         CONF_AUTH_MFA_MODULES: [{"type": "totp"}, {"type": "totp", "id": "second"}],
     }
-    if hasattr(hass, "auth"):
-        del hass.auth
-    await async_process_ha_core_config(hass, core_config)
+    if hasattr(menuai, "auth"):
+        del menuai.auth
+    await async_process_ha_core_config(menuai, core_config)
 
-    assert len(hass.auth.auth_providers) == 1
-    assert hass.auth.auth_providers[0].type == "homeassistant"
-    assert len(hass.auth.auth_mfa_modules) == 2
-    assert hass.auth.auth_mfa_modules[0].id == "totp"
-    assert hass.auth.auth_mfa_modules[1].id == "second"
+    assert len(menuai.auth.auth_providers) == 1
+    assert menuai.auth.auth_providers[0].type == "menuai"
+    assert len(menuai.auth.auth_mfa_modules) == 2
+    assert menuai.auth.auth_mfa_modules[0].id == "totp"
+    assert menuai.auth.auth_mfa_modules[1].id == "second"
 
 
-async def test_auth_provider_config_default(hass: HomeAssistant) -> None:
+async def test_auth_provider_config_default(menuai: menuai) -> None:
     """Test loading default auth provider config."""
     core_config = {
         "latitude": 60,
@@ -652,17 +652,17 @@ async def test_auth_provider_config_default(hass: HomeAssistant) -> None:
         "unit_system": "imperial",
         "time_zone": "GMT",
     }
-    if hasattr(hass, "auth"):
-        del hass.auth
-    await async_process_ha_core_config(hass, core_config)
+    if hasattr(menuai, "auth"):
+        del menuai.auth
+    await async_process_ha_core_config(menuai, core_config)
 
-    assert len(hass.auth.auth_providers) == 1
-    assert hass.auth.auth_providers[0].type == "homeassistant"
-    assert len(hass.auth.auth_mfa_modules) == 1
-    assert hass.auth.auth_mfa_modules[0].id == "totp"
+    assert len(menuai.auth.auth_providers) == 1
+    assert menuai.auth.auth_providers[0].type == "menuai"
+    assert len(menuai.auth.auth_mfa_modules) == 1
+    assert menuai.auth.auth_mfa_modules[0].id == "totp"
 
 
-async def test_disallowed_auth_provider_config(hass: HomeAssistant) -> None:
+async def test_disallowed_auth_provider_config(menuai: menuai) -> None:
     """Test loading insecure example auth provider is disallowed."""
     core_config = {
         "latitude": 60,
@@ -685,10 +685,10 @@ async def test_disallowed_auth_provider_config(hass: HomeAssistant) -> None:
         ],
     }
     with pytest.raises(Invalid):
-        await async_process_ha_core_config(hass, core_config)
+        await async_process_ha_core_config(menuai, core_config)
 
 
-async def test_disallowed_duplicated_auth_provider_config(hass: HomeAssistant) -> None:
+async def test_disallowed_duplicated_auth_provider_config(menuai: menuai) -> None:
     """Test loading insecure example auth provider is disallowed."""
     core_config = {
         "latitude": 60,
@@ -697,13 +697,13 @@ async def test_disallowed_duplicated_auth_provider_config(hass: HomeAssistant) -
         "name": "Huis",
         "unit_system": "imperial",
         "time_zone": "GMT",
-        CONF_AUTH_PROVIDERS: [{"type": "homeassistant"}, {"type": "homeassistant"}],
+        CONF_AUTH_PROVIDERS: [{"type": "menuai"}, {"type": "menuai"}],
     }
     with pytest.raises(Invalid):
-        await async_process_ha_core_config(hass, core_config)
+        await async_process_ha_core_config(menuai, core_config)
 
 
-async def test_disallowed_auth_mfa_module_config(hass: HomeAssistant) -> None:
+async def test_disallowed_auth_mfa_module_config(menuai: menuai) -> None:
     """Test loading insecure example auth mfa module is disallowed."""
     core_config = {
         "latitude": 60,
@@ -720,11 +720,11 @@ async def test_disallowed_auth_mfa_module_config(hass: HomeAssistant) -> None:
         ],
     }
     with pytest.raises(Invalid):
-        await async_process_ha_core_config(hass, core_config)
+        await async_process_ha_core_config(menuai, core_config)
 
 
 async def test_disallowed_duplicated_auth_mfa_module_config(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test loading insecure example auth mfa module is disallowed."""
     core_config = {
@@ -737,22 +737,22 @@ async def test_disallowed_duplicated_auth_mfa_module_config(
         CONF_AUTH_MFA_MODULES: [{"type": "totp"}, {"type": "totp"}],
     }
     with pytest.raises(Invalid):
-        await async_process_ha_core_config(hass, core_config)
+        await async_process_ha_core_config(menuai, core_config)
 
 
 async def test_core_config_schema_historic_currency(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test core config schema."""
-    await async_process_ha_core_config(hass, {"currency": "LTT"})
+    await async_process_ha_core_config(menuai, {"currency": "LTT"})
 
-    issue = issue_registry.async_get_issue("homeassistant", "historic_currency")
+    issue = issue_registry.async_get_issue("menuai", "historic_currency")
     assert issue
     assert issue.translation_placeholders == {"currency": "LTT"}
 
 
 async def test_core_store_historic_currency(
-    hass: HomeAssistant, hass_storage: dict[str, Any], issue_registry: ir.IssueRegistry
+    menuai: menuai, menuai_storage: dict[str, Any], issue_registry: ir.IssueRegistry
 ) -> None:
     """Test core config store."""
     core_data = {
@@ -763,31 +763,31 @@ async def test_core_store_historic_currency(
         "version": 1,
         "minor_version": 1,
     }
-    hass_storage["core.config"] = dict(core_data)
-    await async_process_ha_core_config(hass, {})
+    menuai_storage["core.config"] = dict(core_data)
+    await async_process_ha_core_config(menuai, {})
 
     issue_id = "historic_currency"
-    issue = issue_registry.async_get_issue("homeassistant", issue_id)
+    issue = issue_registry.async_get_issue("menuai", issue_id)
     assert issue
     assert issue.translation_placeholders == {"currency": "LTT"}
 
-    await hass.config.async_update(currency="EUR")
-    issue = issue_registry.async_get_issue("homeassistant", issue_id)
+    await menuai.config.async_update(currency="EUR")
+    issue = issue_registry.async_get_issue("menuai", issue_id)
     assert not issue
 
 
 async def test_core_config_schema_no_country(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test core config schema."""
-    await async_process_ha_core_config(hass, {})
+    await async_process_ha_core_config(menuai, {})
 
-    issue = issue_registry.async_get_issue("homeassistant", "country_not_configured")
+    issue = issue_registry.async_get_issue("menuai", "country_not_configured")
     assert issue
 
 
 async def test_core_store_no_country(
-    hass: HomeAssistant, hass_storage: dict[str, Any], issue_registry: ir.IssueRegistry
+    menuai: menuai, menuai_storage: dict[str, Any], issue_registry: ir.IssueRegistry
 ) -> None:
     """Test core config store."""
     core_data = {
@@ -796,22 +796,22 @@ async def test_core_store_no_country(
         "version": 1,
         "minor_version": 1,
     }
-    hass_storage["core.config"] = dict(core_data)
-    await async_process_ha_core_config(hass, {})
+    menuai_storage["core.config"] = dict(core_data)
+    await async_process_ha_core_config(menuai, {})
 
     issue_id = "country_not_configured"
-    issue = issue_registry.async_get_issue("homeassistant", issue_id)
+    issue = issue_registry.async_get_issue("menuai", issue_id)
     assert issue
 
-    await hass.config.async_update(country="SE")
-    issue = issue_registry.async_get_issue("homeassistant", issue_id)
+    await menuai.config.async_update(country="SE")
+    issue = issue_registry.async_get_issue("menuai", issue_id)
     assert not issue
 
 
-async def test_configuration_legacy_template_is_removed(hass: HomeAssistant) -> None:
-    """Test loading core config onto hass object."""
+async def test_configuration_legacy_template_is_removed(menuai: menuai) -> None:
+    """Test loading core config onto menuai object."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {
             "latitude": 60,
             "longitude": 50,
@@ -832,15 +832,15 @@ async def test_configuration_legacy_template_is_removed(hass: HomeAssistant) -> 
         },
     )
 
-    assert not hass.config.legacy_templates
+    assert not menuai.config.legacy_templates
 
 
 async def test_config_defaults() -> None:
     """Test config defaults."""
-    hass = Mock()
-    hass.data = {}
-    config = Config(hass, "/test/ha-config")
-    assert config.hass is hass
+    menuai = Mock()
+    menuai.data = {}
+    config = Config(menuai, "/test/ha-config")
+    assert config.menuai is menuai
     assert config.latitude == 0
     assert config.longitude == 0
     assert config.elevation == 0
@@ -867,26 +867,26 @@ async def test_config_defaults() -> None:
 
 async def test_config_path_with_file() -> None:
     """Test get_config_path method."""
-    hass = Mock()
-    hass.data = {}
-    config = Config(hass, "/test/ha-config")
+    menuai = Mock()
+    menuai.data = {}
+    config = Config(menuai, "/test/ha-config")
     assert config.path("test.conf") == "/test/ha-config/test.conf"
 
 
 async def test_config_path_with_dir_and_file() -> None:
     """Test get_config_path method."""
-    hass = Mock()
-    hass.data = {}
-    config = Config(hass, "/test/ha-config")
+    menuai = Mock()
+    menuai.data = {}
+    config = Config(menuai, "/test/ha-config")
     assert config.path("dir", "test.conf") == "/test/ha-config/dir/test.conf"
 
 
 async def test_config_as_dict() -> None:
     """Test as dict."""
-    hass = Mock()
-    hass.data = {}
-    config = Config(hass, "/test/ha-config")
-    type(config.hass.state).value = PropertyMock(return_value="RUNNING")
+    menuai = Mock()
+    menuai.data = {}
+    config = Config(menuai, "/test/ha-config")
+    type(config.menuai.state).value = PropertyMock(return_value="RUNNING")
     expected = {
         "latitude": 0,
         "longitude": 0,
@@ -918,9 +918,9 @@ async def test_config_as_dict() -> None:
 
 async def test_config_is_allowed_path() -> None:
     """Test is_allowed_path method."""
-    hass = Mock()
-    hass.data = {}
-    config = Config(hass, "/test/ha-config")
+    menuai = Mock()
+    menuai.data = {}
+    config = Config(menuai, "/test/ha-config")
     with TemporaryDirectory() as tmp_dir:
         # The created dir is in /tmp. This is a symlink on OS X
         # causing this test to fail unless we resolve path first.
@@ -938,7 +938,7 @@ async def test_config_is_allowed_path() -> None:
         config.allowlist_external_dirs = {"/home", "/var"}
 
         invalid = [
-            "/hass/config/secure",
+            "/menuai/config/secure",
             "/etc/passwd",
             "/root/secure_file",
             "/var/../etc/passwd",
@@ -953,9 +953,9 @@ async def test_config_is_allowed_path() -> None:
 
 async def test_config_is_allowed_external_url() -> None:
     """Test is_allowed_external_url method."""
-    hass = Mock()
-    hass.data = {}
-    config = Config(hass, "/test/ha-config")
+    menuai = Mock()
+    menuai.data = {}
+    config = Config(menuai, "/test/ha-config")
     config.allowlist_external_urls = [
         "http://x.com/",
         "https://y.com/bla/",
@@ -982,33 +982,33 @@ async def test_config_is_allowed_external_url() -> None:
         assert not config.is_allowed_external_url(url)
 
 
-async def test_event_on_update(hass: HomeAssistant) -> None:
+async def test_event_on_update(menuai: menuai) -> None:
     """Test that event is fired on update."""
-    events = async_capture_events(hass, EVENT_CORE_CONFIG_UPDATE)
+    events = async_capture_events(menuai, EVENT_CORE_CONFIG_UPDATE)
 
-    assert hass.config.latitude != 12
+    assert menuai.config.latitude != 12
 
-    await hass.config.async_update(latitude=12)
-    await hass.async_block_till_done()
+    await menuai.config.async_update(latitude=12)
+    await menuai.async_block_till_done()
 
-    assert hass.config.latitude == 12
+    assert menuai.config.latitude == 12
     assert len(events) == 1
     assert events[0].data == {"latitude": 12}
 
 
-async def test_bad_timezone_raises_value_error(hass: HomeAssistant) -> None:
+async def test_bad_timezone_raises_value_error(menuai: menuai) -> None:
     """Test bad timezone raises ValueError."""
     with pytest.raises(ValueError):
-        await hass.config.async_update(time_zone="not_a_timezone")
+        await menuai.config.async_update(time_zone="not_a_timezone")
 
 
 async def test_additional_data_in_core_config(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test that we can handle additional data in core configuration."""
-    config = Config(hass, "/test/ha-config")
+    config = Config(menuai, "/test/ha-config")
     config.async_initialize()
-    hass_storage[CORE_STORAGE_KEY] = {
+    menuai_storage[CORE_STORAGE_KEY] = {
         "version": 1,
         "data": {"location_name": "Test Name", "additional_valid_key": "value"},
     }
@@ -1017,13 +1017,13 @@ async def test_additional_data_in_core_config(
 
 
 async def test_incorrect_internal_external_url(
-    hass: HomeAssistant, hass_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
+    menuai: menuai, menuai_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that we warn when detecting invalid internal/external url."""
-    config = Config(hass, "/test/ha-config")
+    config = Config(menuai, "/test/ha-config")
     config.async_initialize()
 
-    hass_storage[CORE_STORAGE_KEY] = {
+    menuai_storage[CORE_STORAGE_KEY] = {
         "version": 1,
         "data": {
             "internal_url": None,
@@ -1034,10 +1034,10 @@ async def test_incorrect_internal_external_url(
     assert "Invalid external_url set" not in caplog.text
     assert "Invalid internal_url set" not in caplog.text
 
-    config = Config(hass, "/test/ha-config")
+    config = Config(menuai, "/test/ha-config")
     config.async_initialize()
 
-    hass_storage[CORE_STORAGE_KEY] = {
+    menuai_storage[CORE_STORAGE_KEY] = {
         "version": 1,
         "data": {
             "internal_url": "https://community.home-assistant.io/profile",
@@ -1049,34 +1049,34 @@ async def test_incorrect_internal_external_url(
     assert "Invalid internal_url set" in caplog.text
 
 
-async def test_top_level_components(hass: HomeAssistant) -> None:
+async def test_top_level_components(menuai: menuai) -> None:
     """Test top level components are updated when components change."""
-    hass.config.components.add("homeassistant")
-    assert hass.config.components == {"homeassistant"}
-    assert hass.config.top_level_components == {"homeassistant"}
-    hass.config.components.add("homeassistant.scene")
-    assert hass.config.components == {"homeassistant", "homeassistant.scene"}
-    assert hass.config.top_level_components == {"homeassistant"}
-    hass.config.components.remove("homeassistant")
-    assert hass.config.components == {"homeassistant.scene"}
-    assert hass.config.top_level_components == set()
+    menuai.config.components.add("menuai")
+    assert menuai.config.components == {"menuai"}
+    assert menuai.config.top_level_components == {"menuai"}
+    menuai.config.components.add("menuai.scene")
+    assert menuai.config.components == {"menuai", "menuai.scene"}
+    assert menuai.config.top_level_components == {"menuai"}
+    menuai.config.components.remove("menuai")
+    assert menuai.config.components == {"menuai.scene"}
+    assert menuai.config.top_level_components == set()
     with pytest.raises(ValueError):
-        hass.config.components.remove("homeassistant.scene")
+        menuai.config.components.remove("menuai.scene")
     with pytest.raises(NotImplementedError):
-        hass.config.components.discard("homeassistant")
+        menuai.config.components.discard("menuai")
 
 
-async def test_debug_mode_defaults_to_off(hass: HomeAssistant) -> None:
+async def test_debug_mode_defaults_to_off(menuai: menuai) -> None:
     """Test debug mode defaults to off."""
-    assert not hass.config.debug
+    assert not menuai.config.debug
 
 
 async def test_core_config_schema_imperial_unit(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test core config schema."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {
             "latitude": 60,
             "longitude": 50,
@@ -1091,5 +1091,5 @@ async def test_core_config_schema_imperial_unit(
         },
     )
 
-    issue = issue_registry.async_get_issue("homeassistant", "imperial_unit_system")
+    issue = issue_registry.async_get_issue("menuai", "imperial_unit_system")
     assert issue

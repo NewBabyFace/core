@@ -3,8 +3,8 @@
 import datetime
 from unittest.mock import patch
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 VALID_CONFIG_MINIMAL = {
     "sensor": {"platform": "rmvtransport", "next_departure": [{"station": "3000010"}]}
@@ -188,16 +188,16 @@ def get_no_departures_mock():
     }
 
 
-async def test_rmvtransport_min_config(hass: HomeAssistant) -> None:
+async def test_rmvtransport_min_config(menuai: menuai) -> None:
     """Test minimal rmvtransport configuration."""
     with patch(
         "RMVtransport.RMVtransport.get_departures",
         return_value=get_departures_mock(),
     ):
-        assert await async_setup_component(hass, "sensor", VALID_CONFIG_MINIMAL) is True
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", VALID_CONFIG_MINIMAL) is True
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.frankfurt_main_hauptbahnhof")
+    state = menuai.states.get("sensor.frankfurt_main_hauptbahnhof")
     assert state.state == "7"
     assert state.attributes["departure_time"] == datetime.datetime(2018, 8, 6, 14, 21)
     assert (
@@ -209,43 +209,43 @@ async def test_rmvtransport_min_config(hass: HomeAssistant) -> None:
     assert state.attributes["friendly_name"] == "Frankfurt (Main) Hauptbahnhof"
 
 
-async def test_rmvtransport_name_config(hass: HomeAssistant) -> None:
+async def test_rmvtransport_name_config(menuai: menuai) -> None:
     """Test custom name configuration."""
     with patch(
         "RMVtransport.RMVtransport.get_departures",
         return_value=get_departures_mock(),
     ):
-        assert await async_setup_component(hass, "sensor", VALID_CONFIG_NAME)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", VALID_CONFIG_NAME)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.my_station")
+    state = menuai.states.get("sensor.my_station")
     assert state.attributes["friendly_name"] == "My Station"
 
 
-async def test_rmvtransport_misc_config(hass: HomeAssistant) -> None:
+async def test_rmvtransport_misc_config(menuai: menuai) -> None:
     """Test misc configuration."""
     with patch(
         "RMVtransport.RMVtransport.get_departures",
         return_value=get_departures_mock(),
     ):
-        assert await async_setup_component(hass, "sensor", VALID_CONFIG_MISC)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", VALID_CONFIG_MISC)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.frankfurt_main_hauptbahnhof")
+    state = menuai.states.get("sensor.frankfurt_main_hauptbahnhof")
     assert state.attributes["friendly_name"] == "Frankfurt (Main) Hauptbahnhof"
     assert state.attributes["line"] == 21
 
 
-async def test_rmvtransport_dest_config(hass: HomeAssistant) -> None:
+async def test_rmvtransport_dest_config(menuai: menuai) -> None:
     """Test destination configuration."""
     with patch(
         "RMVtransport.RMVtransport.get_departures",
         return_value=get_departures_mock(),
     ):
-        assert await async_setup_component(hass, "sensor", VALID_CONFIG_DEST)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", VALID_CONFIG_DEST)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.frankfurt_main_hauptbahnhof")
+    state = menuai.states.get("sensor.frankfurt_main_hauptbahnhof")
     assert state is not None
     assert state.state == "16"
     assert (
@@ -256,16 +256,16 @@ async def test_rmvtransport_dest_config(hass: HomeAssistant) -> None:
     assert state.attributes["departure_time"] == datetime.datetime(2018, 8, 6, 14, 30)
 
 
-async def test_rmvtransport_dest_only_config(hass: HomeAssistant) -> None:
+async def test_rmvtransport_dest_only_config(menuai: menuai) -> None:
     """Test destination configuration."""
     with patch(
         "RMVtransport.RMVtransport.get_departures",
         return_value=get_departures_mock(),
     ):
-        assert await async_setup_component(hass, "sensor", VALID_CONFIG_DEST_ONLY)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", VALID_CONFIG_DEST_ONLY)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.frankfurt_main_hauptbahnhof")
+    state = menuai.states.get("sensor.frankfurt_main_hauptbahnhof")
     assert state.state == "11"
     assert (
         state.attributes["direction"] == "Frankfurt (Main) Hugo-Junkers-Straße/Schleife"
@@ -275,14 +275,14 @@ async def test_rmvtransport_dest_only_config(hass: HomeAssistant) -> None:
     assert state.attributes["departure_time"] == datetime.datetime(2018, 8, 6, 14, 25)
 
 
-async def test_rmvtransport_no_departures(hass: HomeAssistant) -> None:
+async def test_rmvtransport_no_departures(menuai: menuai) -> None:
     """Test for no departures."""
     with patch(
         "RMVtransport.RMVtransport.get_departures",
         return_value=get_no_departures_mock(),
     ):
-        assert await async_setup_component(hass, "sensor", VALID_CONFIG_MINIMAL)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", VALID_CONFIG_MINIMAL)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.frankfurt_main_hauptbahnhof")
+    state = menuai.states.get("sensor.frankfurt_main_hauptbahnhof")
     assert state.state == "unavailable"

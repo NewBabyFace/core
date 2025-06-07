@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from homeassistant.components.workday.const import CONF_REMOVE_HOLIDAYS, DOMAIN
-from homeassistant.const import CONF_COUNTRY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components.workday.const import CONF_REMOVE_HOLIDAYS, DOMAIN
+from menuai.const import CONF_COUNTRY
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from . import (
     TEST_CONFIG_INCORRECT_COUNTRY,
@@ -24,19 +24,19 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 async def test_bad_country(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test fixing bad country."""
-    assert await async_setup_component(hass, "repairs", {})
-    entry = await init_integration(hass, TEST_CONFIG_INCORRECT_COUNTRY)
+    assert await async_setup_component(menuai, "repairs", {})
+    entry = await init_integration(menuai, TEST_CONFIG_INCORRECT_COUNTRY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert not state
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -60,9 +60,9 @@ async def test_bad_country(
     data = await process_repair_fix_flow(client, flow_id, json={"province": "HB"})
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -77,19 +77,19 @@ async def test_bad_country(
 
 
 async def test_bad_country_none(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test fixing bad country with no province."""
-    assert await async_setup_component(hass, "repairs", {})
-    entry = await init_integration(hass, TEST_CONFIG_INCORRECT_COUNTRY)
+    assert await async_setup_component(menuai, "repairs", {})
+    entry = await init_integration(menuai, TEST_CONFIG_INCORRECT_COUNTRY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert not state
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -113,9 +113,9 @@ async def test_bad_country_none(
     data = await process_repair_fix_flow(client, flow_id, json={})
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -130,19 +130,19 @@ async def test_bad_country_none(
 
 
 async def test_bad_country_no_province(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test fixing bad country."""
-    assert await async_setup_component(hass, "repairs", {})
-    entry = await init_integration(hass, TEST_CONFIG_INCORRECT_COUNTRY)
+    assert await async_setup_component(menuai, "repairs", {})
+    entry = await init_integration(menuai, TEST_CONFIG_INCORRECT_COUNTRY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert not state
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -164,9 +164,9 @@ async def test_bad_country_no_province(
     data = await process_repair_fix_flow(client, flow_id, json={"country": "SE"})
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -181,19 +181,19 @@ async def test_bad_country_no_province(
 
 
 async def test_bad_province(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test fixing bad province."""
-    assert await async_setup_component(hass, "repairs", {})
-    entry = await init_integration(hass, TEST_CONFIG_INCORRECT_PROVINCE)
+    assert await async_setup_component(menuai, "repairs", {})
+    entry = await init_integration(menuai, TEST_CONFIG_INCORRECT_PROVINCE)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert not state
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -218,9 +218,9 @@ async def test_bad_province(
     data = await process_repair_fix_flow(client, flow_id, json={"province": "BW"})
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -235,19 +235,19 @@ async def test_bad_province(
 
 
 async def test_bad_province_none(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test fixing bad province selecting none."""
-    assert await async_setup_component(hass, "repairs", {})
-    entry = await init_integration(hass, TEST_CONFIG_INCORRECT_PROVINCE)
+    assert await async_setup_component(menuai, "repairs", {})
+    entry = await init_integration(menuai, TEST_CONFIG_INCORRECT_PROVINCE)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert not state
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -272,9 +272,9 @@ async def test_bad_province_none(
     data = await process_repair_fix_flow(client, flow_id, json={})
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -289,16 +289,16 @@ async def test_bad_province_none(
 
 
 async def test_bad_named_holiday(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fixing bad province selecting none."""
-    assert await async_setup_component(hass, "repairs", {})
-    entry = await init_integration(hass, TEST_CONFIG_REMOVE_NAMED)
+    assert await async_setup_component(menuai, "repairs", {})
+    entry = await init_integration(menuai, TEST_CONFIG_REMOVE_NAMED)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     issues = issue_registry.issues.keys()
@@ -306,8 +306,8 @@ async def test_bad_named_holiday(
         if issue[0] == DOMAIN:
             assert issue[1].startswith("bad_named")
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -345,9 +345,9 @@ async def test_bad_named_holiday(
     )
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -362,16 +362,16 @@ async def test_bad_named_holiday(
 
 
 async def test_bad_date_holiday(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fixing bad province selecting none."""
-    assert await async_setup_component(hass, "repairs", {})
-    entry = await init_integration(hass, TEST_CONFIG_REMOVE_DATE)
+    assert await async_setup_component(menuai, "repairs", {})
+    entry = await init_integration(menuai, TEST_CONFIG_REMOVE_DATE)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     issues = issue_registry.issues.keys()
@@ -379,8 +379,8 @@ async def test_bad_date_holiday(
         if issue[0] == DOMAIN:
             assert issue[1].startswith("bad_date")
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -408,9 +408,9 @@ async def test_bad_date_holiday(
     )
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state
 
     await ws_client.send_json({"id": 2, "type": "repairs/list_issues"})
@@ -434,16 +434,16 @@ async def test_bad_date_holiday(
     ["component.workday.issues.issue_1.title"],
 )
 async def test_other_fixable_issues(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test fixing bad province selecting none."""
-    assert await async_setup_component(hass, "repairs", {})
-    await init_integration(hass, TEST_CONFIG_INCORRECT_PROVINCE)
+    assert await async_setup_component(menuai, "repairs", {})
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_PROVINCE)
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -460,7 +460,7 @@ async def test_other_fixable_issues(
         "translation_key": "issue_1",
     }
     ir.async_create_issue(
-        hass,
+        menuai,
         issue["domain"],
         issue["issue_id"],
         breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -499,4 +499,4 @@ async def test_other_fixable_issues(
     data = await process_repair_fix_flow(client, flow_id)
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

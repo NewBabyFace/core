@@ -2,13 +2,13 @@
 
 import pytest
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     ATTR_ACTION,
     ATTR_CURRENT_HUMIDITY,
     ATTR_HUMIDITY,
     ATTR_MODE,
 )
-from homeassistant.components.humidifier.significant_change import (
+from menuai.components.humidifier.significant_change import (
     async_check_significant_change,
 )
 

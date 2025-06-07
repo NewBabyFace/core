@@ -8,23 +8,23 @@ from typing import Any
 from kiwiki import KiwiClient, KiwiException
 import voluptuous as vol
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     PLATFORM_SCHEMA as LOCK_PLATFORM_SCHEMA,
     LockEntity,
     LockState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ID,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ PLATFORM_SCHEMA = LOCK_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -117,9 +117,9 @@ class KiwiLock(LockEntity):
             _LOGGER.error("Failed to open door")
         else:
             self._state = LockState.UNLOCKED
-            self.hass.add_job(
+            self.menuai.add_job(
                 async_call_later,
-                self.hass,
+                self.menuai,
                 UNLOCK_MAINTAIN_TIME,
                 self.clear_unlock_state,
             )

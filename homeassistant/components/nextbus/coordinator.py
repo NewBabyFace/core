@@ -7,8 +7,8 @@ from typing import Any
 from py_nextbus import NextBusClient
 from py_nextbus.client import NextBusFormatError, NextBusHTTPError
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 from .util import RouteStop
@@ -19,10 +19,10 @@ _LOGGER = logging.getLogger(__name__)
 class NextBusDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching NextBus data."""
 
-    def __init__(self, hass: HomeAssistant, agency: str) -> None:
+    def __init__(self, menuai: menuai, agency: str) -> None:
         """Initialize a global coordinator for fetching data for a given agency."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=None,  # It is shared between multiple entries
             name=DOMAIN,
@@ -103,4 +103,4 @@ class NextBusDataUpdateCoordinator(DataUpdateCoordinator):
 
             return predictions
 
-        return await self.hass.async_add_executor_job(_update_data)
+        return await self.menuai.async_add_executor_job(_update_data)

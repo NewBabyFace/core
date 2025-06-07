@@ -7,12 +7,12 @@ from typing import Any
 
 import aiohttp
 
-from homeassistant.components.light import ColorMode, LightEntity
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.light import ColorMode, LightEntity
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_SISYPHUS
 
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -30,7 +30,7 @@ async def async_setup_platform(
         return
     host = discovery_info[CONF_HOST]
     try:
-        table_holder = hass.data[DATA_SISYPHUS][host]
+        table_holder = menuai.data[DATA_SISYPHUS][host]
         table = await table_holder.get_table()
     except aiohttp.ClientError as err:
         raise PlatformNotReady from err
@@ -49,7 +49,7 @@ class SisyphusLight(LightEntity):
         self._name = name
         self._table = table
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add listeners after this object has been initialized."""
         self._table.add_listener(self.async_write_ha_state)
 

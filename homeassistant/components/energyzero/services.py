@@ -10,17 +10,17 @@ from typing import Final
 from energyzero import Electricity, Gas, VatOption
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntryState
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import selector
-from homeassistant.util import dt as dt_util
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import selector
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import EnergyZeroConfigEntry, EnergyZeroDataUpdateCoordinator
@@ -86,7 +86,7 @@ def __serialize_prices(prices: Electricity | Gas) -> ServiceResponse:
 def __get_coordinator(call: ServiceCall) -> EnergyZeroDataUpdateCoordinator:
     """Get the coordinator from the entry."""
     entry_id: str = call.data[ATTR_CONFIG_ENTRY]
-    entry: EnergyZeroConfigEntry | None = call.hass.config_entries.async_get_entry(
+    entry: EnergyZeroConfigEntry | None = call.menuai.config_entries.async_get_entry(
         entry_id
     )
 
@@ -144,17 +144,17 @@ async def __get_prices(
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up EnergyZero services."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         GAS_SERVICE_NAME,
         partial(__get_prices, price_type=PriceType.GAS),
         schema=SERVICE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         ENERGY_SERVICE_NAME,
         partial(__get_prices, price_type=PriceType.ENERGY),

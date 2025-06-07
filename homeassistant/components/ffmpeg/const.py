@@ -1,6 +1,6 @@
 """Support for FFmpeg."""
 
-from homeassistant.util.signal_type import SignalType
+from menuai.util.signal_type import SignalType
 
 DOMAIN = "ffmpeg"
 

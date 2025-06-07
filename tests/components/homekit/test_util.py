@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.homekit.const import (
+from menuai.components.homekit.const import (
     BRIDGE_NAME,
     CONF_AUDIO_CODEC,
     CONF_AUDIO_MAP,
@@ -51,8 +51,8 @@ from homeassistant.components.homekit.const import (
     TYPE_SWITCH,
     TYPE_VALVE,
 )
-from homeassistant.components.homekit.models import HomeKitEntryData
-from homeassistant.components.homekit.util import (
+from menuai.components.homekit.models import HomeKitEntryData
+from menuai.components.homekit.util import (
     accessory_friendly_name,
     async_dismiss_setup_message,
     async_find_next_available_port,
@@ -69,8 +69,8 @@ from homeassistant.components.homekit.util import (
     validate_entity_config as vec,
     validate_media_player_features,
 )
-from homeassistant.components.persistent_notification import async_create, async_dismiss
-from homeassistant.const import (
+from menuai.components.persistent_notification import async_create, async_dismiss
+from menuai.const import (
     ATTR_CODE,
     ATTR_SUPPORTED_FEATURES,
     CONF_NAME,
@@ -79,7 +79,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, State
+from menuai.core import menuai, State
 
 from .util import async_init_integration
 
@@ -311,25 +311,25 @@ def test_density_to_air_quality() -> None:
     assert density_to_air_quality(200) == 5
 
 
-async def test_async_show_setup_msg(hass: HomeAssistant, hk_driver) -> None:
+async def test_async_show_setup_msg(menuai: menuai, hk_driver) -> None:
     """Test show setup message as persistence notification."""
     pincode = b"123-45-678"
 
-    entry = await async_init_integration(hass)
+    entry = await async_init_integration(menuai)
     assert entry
 
     with patch(
-        "homeassistant.components.persistent_notification.async_create",
+        "menuai.components.persistent_notification.async_create",
         side_effect=async_create,
     ) as mock_create:
         async_show_setup_message(
-            hass, entry.entry_id, "bridge_name", pincode, "X-HM://0"
+            menuai, entry.entry_id, "bridge_name", pincode, "X-HM://0"
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # New tests should not access runtime data.
     # Do not use this pattern for new tests.
-    entry_data: HomeKitEntryData = hass.config_entries.async_get_entry(
+    entry_data: HomeKitEntryData = menuai.config_entries.async_get_entry(
         entry.entry_id
     ).runtime_data
     assert entry_data.pairing_qr_secret
@@ -340,84 +340,84 @@ async def test_async_show_setup_msg(hass: HomeAssistant, hk_driver) -> None:
     assert pincode.decode() in mock_create.mock_calls[0][1][1]
 
 
-async def test_async_dismiss_setup_msg(hass: HomeAssistant) -> None:
+async def test_async_dismiss_setup_msg(menuai: menuai) -> None:
     """Test dismiss setup message."""
     with patch(
-        "homeassistant.components.persistent_notification.async_dismiss",
+        "menuai.components.persistent_notification.async_dismiss",
         side_effect=async_dismiss,
     ) as mock_dismiss:
-        async_dismiss_setup_message(hass, "entry_id")
-        await hass.async_block_till_done()
+        async_dismiss_setup_message(menuai, "entry_id")
+        await menuai.async_block_till_done()
 
     assert len(mock_dismiss.mock_calls) == 1
     assert mock_dismiss.mock_calls[0][1][1] == "entry_id"
 
 
-async def test_port_is_available(hass: HomeAssistant) -> None:
+async def test_port_is_available(menuai: menuai) -> None:
     """Test we can get an available port and it is actually available."""
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(0),
     ):
-        next_port = async_find_next_available_port(hass, DEFAULT_CONFIG_FLOW_PORT)
+        next_port = async_find_next_available_port(menuai, DEFAULT_CONFIG_FLOW_PORT)
     assert next_port
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(0),
     ):
         assert async_port_is_available(next_port)
 
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(5),
     ):
-        next_port = async_find_next_available_port(hass, DEFAULT_CONFIG_FLOW_PORT)
+        next_port = async_find_next_available_port(menuai, DEFAULT_CONFIG_FLOW_PORT)
     assert next_port == DEFAULT_CONFIG_FLOW_PORT + 5
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(0),
     ):
         assert async_port_is_available(next_port)
 
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(1),
     ):
         assert not async_port_is_available(next_port)
 
 
-async def test_port_is_available_skips_existing_entries(hass: HomeAssistant) -> None:
+async def test_port_is_available_skips_existing_entries(menuai: menuai) -> None:
     """Test we can get an available port and it is actually available."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_NAME: BRIDGE_NAME, CONF_PORT: DEFAULT_CONFIG_FLOW_PORT},
         options={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(),
     ):
-        next_port = async_find_next_available_port(hass, DEFAULT_CONFIG_FLOW_PORT)
+        next_port = async_find_next_available_port(menuai, DEFAULT_CONFIG_FLOW_PORT)
 
     assert next_port == DEFAULT_CONFIG_FLOW_PORT + 1
 
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(),
     ):
         assert async_port_is_available(next_port)
 
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(4),
     ):
-        next_port = async_find_next_available_port(hass, DEFAULT_CONFIG_FLOW_PORT)
+        next_port = async_find_next_available_port(menuai, DEFAULT_CONFIG_FLOW_PORT)
 
     assert next_port == DEFAULT_CONFIG_FLOW_PORT + 5
     with patch(
-        "homeassistant.components.homekit.util.socket.socket",
+        "menuai.components.homekit.util.socket.socket",
         return_value=_mock_socket(),
     ):
         assert async_port_is_available(next_port)
@@ -425,11 +425,11 @@ async def test_port_is_available_skips_existing_entries(hass: HomeAssistant) -> 
     with (
         pytest.raises(OSError),
         patch(
-            "homeassistant.components.homekit.util.socket.socket",
+            "menuai.components.homekit.util.socket.socket",
             return_value=_mock_socket(10),
         ),
     ):
-        async_find_next_available_port(hass, 65530)
+        async_find_next_available_port(menuai, 65530)
 
 
 async def test_format_version() -> None:
@@ -461,12 +461,12 @@ async def test_accessory_friendly_name() -> None:
     accessory = Mock()
     accessory.display_name = "same"
     assert accessory_friendly_name("Same", accessory) == "Same"
-    assert accessory_friendly_name("hass title", accessory) == "hass title (same)"
-    accessory.display_name = "Hass title 123"
-    assert accessory_friendly_name("hass title", accessory) == "Hass title 123"
+    assert accessory_friendly_name("menuai title", accessory) == "menuai title (same)"
+    accessory.display_name = "menuai title 123"
+    assert accessory_friendly_name("menuai title", accessory) == "menuai title 123"
 
 
-async def test_lock_state_needs_accessory_mode(hass: HomeAssistant) -> None:
+async def test_lock_state_needs_accessory_mode(menuai: menuai) -> None:
     """Test that locks are setup as accessories."""
-    hass.states.async_set("lock.mine", "locked")
-    assert state_needs_accessory_mode(hass.states.get("lock.mine")) is True
+    menuai.states.async_set("lock.mine", "locked")
+    assert state_needs_accessory_mode(menuai.states.get("lock.mine")) is True

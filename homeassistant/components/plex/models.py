@@ -2,9 +2,9 @@
 
 import logging
 
-from homeassistant.components.media_player import MediaType
-from homeassistant.helpers.template import result_as_boolean
-from homeassistant.util import dt as dt_util
+from menuai.components.media_player import MediaType
+from menuai.helpers.template import result_as_boolean
+from menuai.util import dt as dt_util
 
 LIVE_TV_SECTION = "Live TV"
 TRANSIENT_SECTION = "Preroll"

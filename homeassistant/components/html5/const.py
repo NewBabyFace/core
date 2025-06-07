@@ -1,7 +1,7 @@
 """Constants for the HTML5 component."""
 
 DOMAIN = "html5"
-DATA_HASS_CONFIG = "html5_hass_config"
+DATA_menuai_CONFIG = "html5_menuai_config"
 SERVICE_DISMISS = "dismiss"
 
 ATTR_VAPID_PUB_KEY = "vapid_pub_key"

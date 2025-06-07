@@ -8,9 +8,9 @@ from datetime import datetime, timedelta
 import aiohttp
 import aiounifi
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
 
 from ..const import LOGGER
 
@@ -22,10 +22,10 @@ class UnifiWebsocket:
     """Manages a single UniFi Network instance."""
 
     def __init__(
-        self, hass: HomeAssistant, api: aiounifi.Controller, signal: str
+        self, menuai: menuai, api: aiounifi.Controller, signal: str
     ) -> None:
         """Initialize the system."""
-        self.hass = hass
+        self.menuai = menuai
         self.api = api
         self.signal = signal
 
@@ -38,7 +38,7 @@ class UnifiWebsocket:
     def start(self) -> None:
         """Start websocket handler."""
         self._cancel_websocket_check = async_track_time_interval(
-            self.hass, self._async_watch_websocket, CHECK_WEBSOCKET_INTERVAL
+            self.menuai, self._async_watch_websocket, CHECK_WEBSOCKET_INTERVAL
         )
         self.start_websocket()
 
@@ -84,14 +84,14 @@ class UnifiWebsocket:
                 LOGGER.error("Websocket disconnected")
 
             self.available = False
-            async_dispatcher_send(self.hass, self.signal)
-            self.hass.loop.call_later(RETRY_TIMER, self.reconnect, True)
+            async_dispatcher_send(self.menuai, self.signal)
+            self.menuai.loop.call_later(RETRY_TIMER, self.reconnect, True)
 
         if not self.available:
             self.available = True
-            async_dispatcher_send(self.hass, self.signal)
+            async_dispatcher_send(self.menuai, self.signal)
 
-        self.ws_task = self.hass.loop.create_task(_websocket_runner())
+        self.ws_task = self.menuai.loop.create_task(_websocket_runner())
 
     @callback
     def reconnect(self, log: bool = False) -> None:
@@ -110,7 +110,7 @@ class UnifiWebsocket:
                 aiounifi.AiounifiException,
             ) as exc:
                 LOGGER.debug("Schedule reconnect to UniFi Network '%s'", exc)
-                self.hass.loop.call_later(RETRY_TIMER, self.reconnect)
+                self.menuai.loop.call_later(RETRY_TIMER, self.reconnect)
 
             else:
                 self.start_websocket()
@@ -118,7 +118,7 @@ class UnifiWebsocket:
         if log:
             LOGGER.info("Will try to reconnect to UniFi Network")
 
-        self.hass.loop.create_task(_reconnect())
+        self.menuai.loop.create_task(_reconnect())
 
     @callback
     def _async_watch_websocket(self, now: datetime) -> None:

@@ -1,9 +1,9 @@
-"""API for Monzo bound to Home Assistant OAuth."""
+"""API for Monzo bound to MenuAI OAuth."""
 
 from aiohttp import ClientSession
 from monzopy import AbstractMonzoApi
 
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class AuthenticatedMonzoAPI(AbstractMonzoApi):

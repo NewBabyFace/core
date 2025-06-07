@@ -15,8 +15,8 @@ from transmission_rpc.error import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_HOST,
     CONF_ID,
     CONF_NAME,
@@ -27,18 +27,18 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import (
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     config_validation as cv,
     entity_registry as er,
     selector,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_DELETE_DATA,
@@ -118,14 +118,14 @@ SERVICE_STOP_TORRENT_SCHEMA = vol.All(
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Transmission component."""
-    setup_hass_services(hass)
+    setup_menuai_services(menuai)
     return True
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: TransmissionConfigEntry
+    menuai: menuai, config_entry: TransmissionConfigEntry
 ) -> bool:
     """Set up the Transmission Component."""
 
@@ -145,35 +145,35 @@ async def async_setup_entry(
             return {"new_unique_id": f"{config_entry.entry_id}-{key}"}
         return None
 
-    await er.async_migrate_entries(hass, config_entry.entry_id, update_unique_id)
+    await er.async_migrate_entries(menuai, config_entry.entry_id, update_unique_id)
 
     try:
-        api = await get_api(hass, dict(config_entry.data))
+        api = await get_api(menuai, dict(config_entry.data))
     except CannotConnect as error:
         raise ConfigEntryNotReady from error
     except (AuthenticationError, UnknownError) as error:
         raise ConfigEntryAuthFailed from error
 
-    coordinator = TransmissionDataUpdateCoordinator(hass, config_entry, api)
-    await hass.async_add_executor_job(coordinator.init_torrent_list)
+    coordinator = TransmissionDataUpdateCoordinator(menuai, config_entry, api)
+    await menuai.async_add_executor_job(coordinator.init_torrent_list)
 
     await coordinator.async_config_entry_first_refresh()
     config_entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: TransmissionConfigEntry
+    menuai: menuai, config_entry: TransmissionConfigEntry
 ) -> bool:
     """Unload Transmission Entry from config_entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: TransmissionConfigEntry
+    menuai: menuai, config_entry: TransmissionConfigEntry
 ) -> bool:
     """Migrate an old config entry."""
     _LOGGER.debug(
@@ -190,7 +190,7 @@ async def async_migrate_entry(
             new[CONF_PATH] = DEFAULT_PATH
             new[CONF_SSL] = DEFAULT_SSL
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, data=new, version=1, minor_version=2
         )
 
@@ -204,37 +204,37 @@ async def async_migrate_entry(
 
 
 def _get_coordinator_from_service_data(
-    hass: HomeAssistant, entry_id: str
+    menuai: menuai, entry_id: str
 ) -> TransmissionDataUpdateCoordinator:
     """Return coordinator for entry id."""
-    entry: TransmissionConfigEntry | None = hass.config_entries.async_get_entry(
+    entry: TransmissionConfigEntry | None = menuai.config_entries.async_get_entry(
         entry_id
     )
     if entry is None or entry.state is not ConfigEntryState.LOADED:
-        raise HomeAssistantError(f"Config entry {entry_id} is not found or not loaded")
+        raise menuaiError(f"Config entry {entry_id} is not found or not loaded")
     return entry.runtime_data
 
 
-def setup_hass_services(hass: HomeAssistant) -> None:
-    """Home Assistant services."""
+def setup_menuai_services(menuai: menuai) -> None:
+    """MenuAI services."""
 
     async def add_torrent(service: ServiceCall) -> None:
         """Add new torrent to download."""
         entry_id: str = service.data[CONF_ENTRY_ID]
-        coordinator = _get_coordinator_from_service_data(hass, entry_id)
+        coordinator = _get_coordinator_from_service_data(menuai, entry_id)
         torrent: str = service.data[ATTR_TORRENT]
         download_path: str | None = service.data.get(ATTR_DOWNLOAD_PATH)
         if torrent.startswith(
             ("http", "ftp:", "magnet:")
-        ) or hass.config.is_allowed_path(torrent):
+        ) or menuai.config.is_allowed_path(torrent):
             if download_path:
-                await hass.async_add_executor_job(
+                await menuai.async_add_executor_job(
                     partial(
                         coordinator.api.add_torrent, torrent, download_dir=download_path
                     )
                 )
             else:
-                await hass.async_add_executor_job(coordinator.api.add_torrent, torrent)
+                await menuai.async_add_executor_job(coordinator.api.add_torrent, torrent)
             await coordinator.async_request_refresh()
         else:
             _LOGGER.warning("Could not add torrent: unsupported type or no permission")
@@ -242,49 +242,49 @@ def setup_hass_services(hass: HomeAssistant) -> None:
     async def start_torrent(service: ServiceCall) -> None:
         """Start torrent."""
         entry_id: str = service.data[CONF_ENTRY_ID]
-        coordinator = _get_coordinator_from_service_data(hass, entry_id)
+        coordinator = _get_coordinator_from_service_data(menuai, entry_id)
         torrent_id = service.data[CONF_ID]
-        await hass.async_add_executor_job(coordinator.api.start_torrent, torrent_id)
+        await menuai.async_add_executor_job(coordinator.api.start_torrent, torrent_id)
         await coordinator.async_request_refresh()
 
     async def stop_torrent(service: ServiceCall) -> None:
         """Stop torrent."""
         entry_id: str = service.data[CONF_ENTRY_ID]
-        coordinator = _get_coordinator_from_service_data(hass, entry_id)
+        coordinator = _get_coordinator_from_service_data(menuai, entry_id)
         torrent_id = service.data[CONF_ID]
-        await hass.async_add_executor_job(coordinator.api.stop_torrent, torrent_id)
+        await menuai.async_add_executor_job(coordinator.api.stop_torrent, torrent_id)
         await coordinator.async_request_refresh()
 
     async def remove_torrent(service: ServiceCall) -> None:
         """Remove torrent."""
         entry_id: str = service.data[CONF_ENTRY_ID]
-        coordinator = _get_coordinator_from_service_data(hass, entry_id)
+        coordinator = _get_coordinator_from_service_data(menuai, entry_id)
         torrent_id = service.data[CONF_ID]
         delete_data = service.data[ATTR_DELETE_DATA]
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(coordinator.api.remove_torrent, torrent_id, delete_data=delete_data)
         )
         await coordinator.async_request_refresh()
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ADD_TORRENT, add_torrent, schema=SERVICE_ADD_TORRENT_SCHEMA
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_REMOVE_TORRENT,
         remove_torrent,
         schema=SERVICE_REMOVE_TORRENT_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_START_TORRENT,
         start_torrent,
         schema=SERVICE_START_TORRENT_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_STOP_TORRENT,
         stop_torrent,
@@ -293,7 +293,7 @@ def setup_hass_services(hass: HomeAssistant) -> None:
 
 
 async def get_api(
-    hass: HomeAssistant, entry: dict[str, Any]
+    menuai: menuai, entry: dict[str, Any]
 ) -> transmission_rpc.Client:
     """Get Transmission client."""
     protocol: Final = "https" if entry[CONF_SSL] else "http"
@@ -304,7 +304,7 @@ async def get_api(
     password = entry.get(CONF_PASSWORD)
 
     try:
-        api = await hass.async_add_executor_job(
+        api = await menuai.async_add_executor_job(
             partial(
                 transmission_rpc.Client,
                 username=username,

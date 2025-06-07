@@ -7,18 +7,18 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import CONF_NAME, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.components import websocket_api
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import CONF_NAME, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
@@ -26,7 +26,7 @@ from homeassistant.helpers.selector import (
     NumberSelectorMode,
     TextSelector,
 )
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import (
     CONF_CALIBRATION_FACTOR,
@@ -106,9 +106,9 @@ class MoldIndicatorConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
         return cast(str, options[CONF_NAME])
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
 @websocket_api.websocket_command(
@@ -121,28 +121,28 @@ class MoldIndicatorConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
 )
 @callback
 def ws_start_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Generate a preview."""
 
     if msg["flow_type"] == "config_flow":
-        flow_status = hass.config_entries.flow.async_get(msg["flow_id"])
-        flow_sets = hass.config_entries.flow._handler_progress_index.get(  # noqa: SLF001
+        flow_status = menuai.config_entries.flow.async_get(msg["flow_id"])
+        flow_sets = menuai.config_entries.flow._handler_progress_index.get(  # noqa: SLF001
             flow_status["handler"]
         )
         assert flow_sets
-        config_entry = hass.config_entries.async_get_entry(flow_status["handler"])
+        config_entry = menuai.config_entries.async_get_entry(flow_status["handler"])
         indoor_temp = msg["user_input"].get(CONF_INDOOR_TEMP)
         outdoor_temp = msg["user_input"].get(CONF_OUTDOOR_TEMP)
         indoor_hum = msg["user_input"].get(CONF_INDOOR_HUMIDITY)
         name = msg["user_input"].get(CONF_NAME)
     else:
-        flow_status = hass.config_entries.options.async_get(msg["flow_id"])
-        config_entry = hass.config_entries.async_get_entry(flow_status["handler"])
+        flow_status = menuai.config_entries.options.async_get(msg["flow_id"])
+        config_entry = menuai.config_entries.async_get_entry(flow_status["handler"])
         if not config_entry:
-            raise HomeAssistantError("Config entry not found")
+            raise menuaiError("Config entry not found")
         indoor_temp = config_entry.options[CONF_INDOOR_TEMP]
         outdoor_temp = config_entry.options[CONF_OUTDOOR_TEMP]
         indoor_hum = config_entry.options[CONF_INDOOR_HUMIDITY]
@@ -158,16 +158,16 @@ def ws_start_preview(
         )
 
     preview_entity = MoldIndicator(
-        hass,
+        menuai,
         name,
-        hass.config.units is METRIC_SYSTEM,
+        menuai.config.units is METRIC_SYSTEM,
         indoor_temp,
         outdoor_temp,
         indoor_hum,
         msg["user_input"].get(CONF_CALIBRATION_FACTOR),
         None,
     )
-    preview_entity.hass = hass
+    preview_entity.menuai = menuai
 
     connection.send_result(msg["id"])
     connection.subscriptions[msg["id"]] = preview_entity.async_start_preview(

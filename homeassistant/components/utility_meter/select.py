@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.select import SelectEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_UNIQUE_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.components.select import SelectEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_UNIQUE_ID
+from menuai.core import menuai
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_METER, CONF_SOURCE_SENSOR, CONF_TARIFFS, DATA_UTILITY
 
@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -34,7 +34,7 @@ async def async_setup_entry(
     unique_id = config_entry.entry_id
 
     device_info = async_device_info_to_link_from_entity(
-        hass,
+        menuai,
         config_entry.options[CONF_SOURCE_SENSOR],
     )
 
@@ -48,7 +48,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     conf: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -62,10 +62,10 @@ async def async_setup_platform(
         return
 
     meter: str = discovery_info[CONF_METER]
-    conf_meter_unique_id: str | None = hass.data[DATA_UTILITY][meter].get(
+    conf_meter_unique_id: str | None = menuai.data[DATA_UTILITY][meter].get(
         CONF_UNIQUE_ID
     )
-    conf_meter_name = hass.data[DATA_UTILITY][meter].get(CONF_NAME, meter)
+    conf_meter_name = menuai.data[DATA_UTILITY][meter].get(CONF_NAME, meter)
 
     async_add_entities(
         [
@@ -113,9 +113,9 @@ class TariffSelect(SelectEntity, RestoreEntity):
         """Return current tariff."""
         return self._current_tariff
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity about to be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         state = await self.async_get_last_state()
         if not state or state.state not in self._tariffs:

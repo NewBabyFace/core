@@ -7,8 +7,8 @@ from unittest.mock import patch
 import pytest
 from voluptuous.error import MultipleInvalid
 
-from homeassistant.components import fan, mqtt
-from homeassistant.components.fan import (
+from menuai.components import fan, mqtt
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -16,7 +16,7 @@ from homeassistant.components.fan import (
     ATTR_PRESET_MODES,
     NotValidPresetModeError,
 )
-from homeassistant.components.mqtt.fan import (
+from menuai.components.mqtt.fan import (
     CONF_DIRECTION_COMMAND_TOPIC,
     CONF_DIRECTION_STATE_TOPIC,
     CONF_OSCILLATION_COMMAND_TOPIC,
@@ -27,14 +27,14 @@ from homeassistant.components.mqtt.fan import (
     CONF_PRESET_MODE_STATE_TOPIC,
     MQTT_FAN_ATTRIBUTES_BLOCKED,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_SUPPORTED_FEATURES,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import (
     help_custom_config,
@@ -82,8 +82,8 @@ DEFAULT_CONFIG = {
 }
 
 
-@pytest.mark.parametrize("hass_config", [{mqtt.DOMAIN: {fan.DOMAIN: {"name": "test"}}}])
-@pytest.mark.usefixtures("hass")
+@pytest.mark.parametrize("menuai_config", [{mqtt.DOMAIN: {fan.DOMAIN: {"name": "test"}}}])
+@pytest.mark.usefixtures("menuai")
 async def test_fail_setup_if_no_command_topic(
     caplog: pytest.LogCaptureFixture, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
@@ -93,7 +93,7 @@ async def test_fail_setup_if_no_command_topic(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -131,103 +131,103 @@ async def test_fail_setup_if_no_command_topic(
     ],
 )
 async def test_controlling_state_via_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the controlling state via topic."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", "StAtE_On")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "state-topic", "StAtE_On")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
 
-    async_fire_mqtt_message(hass, "state-topic", "StAtE_OfF")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "state-topic", "StAtE_OfF")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get("oscillating") is False
 
-    async_fire_mqtt_message(hass, "direction-state-topic", "forward")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "direction-state-topic", "forward")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("direction") == "forward"
 
-    async_fire_mqtt_message(hass, "direction-state-topic", "reverse")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "direction-state-topic", "reverse")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("direction") == "reverse"
 
-    async_fire_mqtt_message(hass, "oscillation-state-topic", "OsC_On")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "oscillation-state-topic", "OsC_On")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("oscillating") is True
 
-    async_fire_mqtt_message(hass, "oscillation-state-topic", "OsC_OfF")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "oscillation-state-topic", "OsC_OfF")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("oscillating") is False
 
     assert state.attributes.get("percentage_step") == 1.0
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", "0")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", "0")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", "50")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", "50")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 25
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", "100")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", "100")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 50
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", "200")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", "200")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", "202")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", "202")
     assert "not a valid speed within the speed range" in caplog.text
     caplog.clear()
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", "invalid")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", "invalid")
     assert "not a valid speed within the speed range" in caplog.text
     caplog.clear()
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "low")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "low")
     assert "not a valid preset mode" in caplog.text
     caplog.clear()
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "auto")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "auto")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "auto"
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "eco")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "eco")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "eco"
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "silent")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "silent")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "silent"
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "rEset_preset_mode")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "rEset_preset_mode")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") is None
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "ModeUnknown")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "ModeUnknown")
     assert "not a valid preset mode" in caplog.text
     caplog.clear()
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", "rEset_percentage")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", "rEset_percentage")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) is None
 
-    async_fire_mqtt_message(hass, "state-topic", "None")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "state-topic", "None")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             fan.DOMAIN,
@@ -263,36 +263,36 @@ async def test_controlling_state_via_topic(
     ],
 )
 async def test_controlling_state_via_topic_with_different_speed_range(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the controlling state via topic using an alternate speed range."""
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "percentage-state-topic1", "100")
-    state = hass.states.get("fan.test1")
+    async_fire_mqtt_message(menuai, "percentage-state-topic1", "100")
+    state = menuai.states.get("fan.test1")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
 
-    async_fire_mqtt_message(hass, "percentage-state-topic2", "100")
-    state = hass.states.get("fan.test2")
+    async_fire_mqtt_message(menuai, "percentage-state-topic2", "100")
+    state = menuai.states.get("fan.test2")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 50
 
-    async_fire_mqtt_message(hass, "percentage-state-topic3", "1023")
-    state = hass.states.get("fan.test3")
+    async_fire_mqtt_message(menuai, "percentage-state-topic3", "1023")
+    state = menuai.states.get("fan.test3")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
-    async_fire_mqtt_message(hass, "percentage-state-topic3", "80")
-    state = hass.states.get("fan.test3")
+    async_fire_mqtt_message(menuai, "percentage-state-topic3", "80")
+    state = menuai.states.get("fan.test3")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
 
-    state = hass.states.get("fan.test3")
-    async_fire_mqtt_message(hass, "percentage-state-topic3", "79")
+    state = menuai.states.get("fan.test3")
+    async_fire_mqtt_message(menuai, "percentage-state-topic3", "79")
     assert "not a valid speed within the speed range" in caplog.text
     caplog.clear()
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -315,43 +315,43 @@ async def test_controlling_state_via_topic_with_different_speed_range(
     ],
 )
 async def test_controlling_state_via_topic_no_percentage_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the controlling state via topic without percentage topics."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "smart")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "smart")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "smart"
     assert state.attributes.get(fan.ATTR_PERCENTAGE) is None
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "auto")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "auto")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "auto"
     assert state.attributes.get(fan.ATTR_PERCENTAGE) is None
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "whoosh")
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "whoosh")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "whoosh"
     assert state.attributes.get(fan.ATTR_PERCENTAGE) is None
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "medium")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "medium")
     assert "not a valid preset mode" in caplog.text
     caplog.clear()
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", "low")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", "low")
     assert "not a valid preset mode" in caplog.text
     caplog.clear()
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -388,88 +388,88 @@ async def test_controlling_state_via_topic_no_percentage_topics(
     ],
 )
 async def test_controlling_state_via_topic_and_json_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the controlling state via topic and JSON message (percentage mode)."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", '{"val":"ON"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "state-topic", '{"val":"ON"}')
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
 
-    async_fire_mqtt_message(hass, "state-topic", '{"val": null}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "state-topic", '{"val": null}')
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
 
-    async_fire_mqtt_message(hass, "state-topic", '{"val":"OFF"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "state-topic", '{"val":"OFF"}')
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get("oscillating") is False
 
-    async_fire_mqtt_message(hass, "direction-state-topic", '{"val":"forward"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "direction-state-topic", '{"val":"forward"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("direction") == "forward"
 
-    async_fire_mqtt_message(hass, "direction-state-topic", '{"val":"reverse"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "direction-state-topic", '{"val":"reverse"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("direction") == "reverse"
 
-    async_fire_mqtt_message(hass, "oscillation-state-topic", '{"val":"oscillate_on"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "oscillation-state-topic", '{"val":"oscillate_on"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("oscillating") is True
 
-    async_fire_mqtt_message(hass, "oscillation-state-topic", '{"val":"oscillate_off"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "oscillation-state-topic", '{"val":"oscillate_off"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("oscillating") is False
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", '{"val": 1}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", '{"val": 1}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 1
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", '{"val": 100}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", '{"val": 100}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", '{"val": "None"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "percentage-state-topic", '{"val": "None"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) is None
 
-    async_fire_mqtt_message(hass, "percentage-state-topic", '{"otherval": 100}')
+    async_fire_mqtt_message(menuai, "percentage-state-topic", '{"otherval": 100}')
     assert state.attributes.get(fan.ATTR_PERCENTAGE) is None
     caplog.clear()
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", '{"val": "low"}')
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", '{"val": "low"}')
     assert "not a valid preset mode" in caplog.text
     caplog.clear()
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", '{"val": "auto"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", '{"val": "auto"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "auto"
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", '{"val": "breeze"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", '{"val": "breeze"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "breeze"
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", '{"val": "silent"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", '{"val": "silent"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") == "silent"
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", '{"val": "None"}')
-    state = hass.states.get("fan.test")
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", '{"val": "None"}')
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("preset_mode") is None
 
-    async_fire_mqtt_message(hass, "preset-mode-state-topic", '{"otherval": 100}')
+    async_fire_mqtt_message(menuai, "preset-mode-state-topic", '{"otherval": 100}')
     assert state.attributes.get("preset_mode") is None
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -506,20 +506,20 @@ async def test_controlling_state_via_topic_and_json_message(
     ],
 )
 async def test_controlling_state_via_topic_and_json_message_shared_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the controlling state via topic and JSON message using a shared topic."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("direction") is None
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "shared-state-topic",
         """{
         "state":"ON",
@@ -529,7 +529,7 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
         "direction": "forward"
         }""",
     )
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get("direction") == "forward"
     assert state.attributes.get("oscillating") is True
@@ -537,7 +537,7 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
     assert state.attributes.get("preset_mode") == "eco"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "shared-state-topic",
         """{
        "state":"ON",
@@ -547,7 +547,7 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
        "direction": "forward"
        }""",
     )
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get("direction") == "forward"
     assert state.attributes.get("oscillating") is False
@@ -555,7 +555,7 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
     assert state.attributes.get("preset_mode") == "auto"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "shared-state-topic",
         """{
         "state":"OFF",
@@ -565,7 +565,7 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
         "direction": "reverse"
         }""",
     )
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get("direction") == "reverse"
     assert state.attributes.get("oscillating") is False
@@ -573,18 +573,18 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
     assert state.attributes.get("preset_mode") == "auto"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "shared-state-topic",
         '{"percentage": 100}',
     )
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
     assert state.attributes.get("preset_mode") == "auto"
     caplog.clear()
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -610,126 +610,126 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test optimistic mode without state topic."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test")
+    await common.async_turn_on(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", "StAtE_On", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", "StAtE_OfF", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_direction(hass, "fan.test", "forward")
+    await common.async_set_direction(menuai, "fan.test", "forward")
     mqtt_mock.async_publish.assert_called_once_with(
         "direction-command-topic", "forward", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_direction(hass, "fan.test", "reverse")
+    await common.async_set_direction(menuai, "fan.test", "reverse")
     mqtt_mock.async_publish.assert_called_once_with(
         "direction-command-topic", "reverse", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_oscillate(hass, "fan.test", True)
+    await common.async_oscillate(menuai, "fan.test", True)
     mqtt_mock.async_publish.assert_called_once_with(
         "oscillation-command-topic", "OsC_On", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_oscillate(hass, "fan.test", False)
+    await common.async_oscillate(menuai, "fan.test", False)
     mqtt_mock.async_publish.assert_called_once_with(
         "oscillation-command-topic", "OsC_OfF", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
     with pytest.raises(MultipleInvalid):
-        await common.async_set_percentage(hass, "fan.test", -1)
+        await common.async_set_percentage(menuai, "fan.test", -1)
 
     with pytest.raises(MultipleInvalid):
-        await common.async_set_percentage(hass, "fan.test", 101)
+        await common.async_set_percentage(menuai, "fan.test", 101)
 
-    await common.async_set_percentage(hass, "fan.test", 100)
+    await common.async_set_percentage(menuai, "fan.test", 100)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "100", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test", 0)
+    await common.async_set_percentage(menuai, "fan.test", 0)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "low")
+        await common.async_set_preset_mode(menuai, "fan.test", "low")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
-    await common.async_set_preset_mode(hass, "fan.test", "whoosh")
+    await common.async_set_preset_mode(menuai, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "whoosh"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "breeze")
+    await common.async_set_preset_mode(menuai, "fan.test", "breeze")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "breeze", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "breeze"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "silent")
+    await common.async_set_preset_mode(menuai, "fan.test", "silent")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "silent", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "silent"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             fan.DOMAIN,
@@ -768,78 +768,78 @@ async def test_sending_mqtt_commands_and_optimistic(
     ],
 )
 async def test_sending_mqtt_commands_with_alternate_speed_range(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the controlling state via topic using an alternate speed range."""
     mqtt_mock = await mqtt_mock_entry()
 
-    await common.async_set_percentage(hass, "fan.test1", 0)
+    await common.async_set_percentage(menuai, "fan.test1", 0)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic1", "0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test1")
+    state = menuai.states.get("fan.test1")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test1", 33)
+    await common.async_set_percentage(menuai, "fan.test1", 33)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic1", "1", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test1")
+    state = menuai.states.get("fan.test1")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test1", 66)
+    await common.async_set_percentage(menuai, "fan.test1", 66)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic1", "2", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test1")
+    state = menuai.states.get("fan.test1")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test1", 100)
+    await common.async_set_percentage(menuai, "fan.test1", 100)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic1", "3", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test1")
+    state = menuai.states.get("fan.test1")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test2", 0)
+    await common.async_set_percentage(menuai, "fan.test2", 0)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic2", "0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test2")
+    state = menuai.states.get("fan.test2")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test2", 100)
+    await common.async_set_percentage(menuai, "fan.test2", 100)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic2", "200", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test2")
+    state = menuai.states.get("fan.test2")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test3", 0)
+    await common.async_set_percentage(menuai, "fan.test3", 0)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic3", "80", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test3")
+    state = menuai.states.get("fan.test3")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test3", 100)
+    await common.async_set_percentage(menuai, "fan.test3", 100)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic3", "1023", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test3")
+    state = menuai.states.get("fan.test3")
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -859,122 +859,122 @@ async def test_sending_mqtt_commands_with_alternate_speed_range(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic_no_legacy(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test optimistic mode without state topic without legacy speed command topic."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test")
+    await common.async_turn_on(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(MultipleInvalid):
-        await common.async_set_percentage(hass, "fan.test", -1)
+        await common.async_set_percentage(menuai, "fan.test", -1)
 
     with pytest.raises(MultipleInvalid):
-        await common.async_set_percentage(hass, "fan.test", 101)
+        await common.async_set_percentage(menuai, "fan.test", 101)
 
-    await common.async_set_percentage(hass, "fan.test", 100)
+    await common.async_set_percentage(menuai, "fan.test", 100)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "100", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test", 0)
+    await common.async_set_percentage(menuai, "fan.test", 0)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "low")
+        await common.async_set_preset_mode(menuai, "fan.test", "low")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "auto")
+        await common.async_set_preset_mode(menuai, "fan.test", "auto")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
-    await common.async_set_preset_mode(hass, "fan.test", "whoosh")
+    await common.async_set_preset_mode(menuai, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "whoosh"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "breeze")
+    await common.async_set_preset_mode(menuai, "fan.test", "breeze")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "breeze", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "breeze"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "silent")
+    await common.async_set_preset_mode(menuai, "fan.test", "silent")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "silent", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "silent"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", percentage=25)
+    await common.async_turn_on(menuai, "fan.test", percentage=25)
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call("percentage-command-topic", "25", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_any_call("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", preset_mode="whoosh")
+    await common.async_turn_on(menuai, "fan.test", preset_mode="whoosh")
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call(
         "preset-mode-command-topic", "whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_turn_on(hass, "fan.test", preset_mode="freaking-high")
+        await common.async_turn_on(menuai, "fan.test", preset_mode="freaking-high")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1001,146 +1001,146 @@ async def test_sending_mqtt_commands_and_optimistic_no_legacy(
     ],
 )
 async def test_sending_mqtt_command_templates_(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test optimistic mode without state topic without legacy speed command topic."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test")
+    await common.async_turn_on(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", "state: ON", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", "state: OFF", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_direction(hass, "fan.test", "forward")
+    await common.async_set_direction(menuai, "fan.test", "forward")
     mqtt_mock.async_publish.assert_called_once_with(
         "direction-command-topic", "direction: forward", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("direction") == "forward"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_direction(hass, "fan.test", "reverse")
+    await common.async_set_direction(menuai, "fan.test", "reverse")
     mqtt_mock.async_publish.assert_called_once_with(
         "direction-command-topic", "direction: reverse", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("direction") == "reverse"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(MultipleInvalid):
-        await common.async_set_percentage(hass, "fan.test", -1)
+        await common.async_set_percentage(menuai, "fan.test", -1)
 
     with pytest.raises(MultipleInvalid):
-        await common.async_set_percentage(hass, "fan.test", 101)
+        await common.async_set_percentage(menuai, "fan.test", 101)
 
-    await common.async_set_percentage(hass, "fan.test", 100)
+    await common.async_set_percentage(menuai, "fan.test", 100)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "percentage: 100", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 100
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test", 0)
+    await common.async_set_percentage(menuai, "fan.test", 0)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "percentage: 0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "low")
+        await common.async_set_preset_mode(menuai, "fan.test", "low")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "medium")
+        await common.async_set_preset_mode(menuai, "fan.test", "medium")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
-    await common.async_set_preset_mode(hass, "fan.test", "whoosh")
+    await common.async_set_preset_mode(menuai, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "preset_mode: whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "whoosh"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "breeze")
+    await common.async_set_preset_mode(menuai, "fan.test", "breeze")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "preset_mode: breeze", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "breeze"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "silent")
+    await common.async_set_preset_mode(menuai, "fan.test", "silent")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "preset_mode: silent", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) == "silent"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", percentage=25)
+    await common.async_turn_on(menuai, "fan.test", percentage=25)
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "state: ON", 0, False)
     mqtt_mock.async_publish.assert_any_call(
         "percentage-command-topic", "percentage: 25", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_any_call("command-topic", "state: OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", preset_mode="whoosh")
+    await common.async_turn_on(menuai, "fan.test", preset_mode="whoosh")
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "state: ON", 0, False)
     mqtt_mock.async_publish.assert_any_call(
         "preset-mode-command-topic", "preset_mode: whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_turn_on(hass, "fan.test", preset_mode="low")
+        await common.async_turn_on(menuai, "fan.test", preset_mode="low")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1161,49 +1161,49 @@ async def test_sending_mqtt_command_templates_(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic_no_percentage_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test optimistic mode without state topic without percentage command topic."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "medium")
+        await common.async_set_preset_mode(menuai, "fan.test", "medium")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
-    await common.async_set_preset_mode(hass, "fan.test", "whoosh")
+    await common.async_set_preset_mode(menuai, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) is None
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "breeze")
+    await common.async_set_preset_mode(menuai, "fan.test", "breeze")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "breeze", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) is None
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "silent")
+    await common.async_set_preset_mode(menuai, "fan.test", "silent")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "silent", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get(fan.ATTR_PRESET_MODE) is None
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1231,228 +1231,228 @@ async def test_sending_mqtt_commands_and_optimistic_no_percentage_topic(
     ],
 )
 async def test_sending_mqtt_commands_and_explicit_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test optimistic mode with state topic and turn on attributes."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test")
+    await common.async_turn_on(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", percentage=25)
+    await common.async_turn_on(menuai, "fan.test", percentage=25)
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call("percentage-command-topic", "25", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_any_call("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_turn_on(hass, "fan.test", preset_mode="auto")
+        await common.async_turn_on(menuai, "fan.test", preset_mode="auto")
     assert exc.value.translation_key == "not_valid_preset_mode"
     assert mqtt_mock.async_publish.call_count == 0
     mqtt_mock.async_publish.reset_mock()
 
-    await common.async_turn_on(hass, "fan.test", preset_mode="whoosh")
+    await common.async_turn_on(menuai, "fan.test", preset_mode="whoosh")
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call(
         "preset-mode-command-topic", "whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_any_call("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", preset_mode="silent")
+    await common.async_turn_on(menuai, "fan.test", preset_mode="silent")
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call(
         "preset-mode-command-topic", "silent", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", preset_mode="silent")
+    await common.async_turn_on(menuai, "fan.test", preset_mode="silent")
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call(
         "preset-mode-command-topic", "silent", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_called_once_with("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_direction(hass, "fan.test", "forward")
+    await common.async_set_direction(menuai, "fan.test", "forward")
     mqtt_mock.async_publish.assert_called_once_with(
         "direction-command-topic", "forward", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_oscillate(hass, "fan.test", True)
+    await common.async_oscillate(menuai, "fan.test", True)
     mqtt_mock.async_publish.assert_called_once_with(
         "oscillation-command-topic", "oscillate_on", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_on(hass, "fan.test", percentage=50)
+    await common.async_turn_on(menuai, "fan.test", percentage=50)
     assert mqtt_mock.async_publish.call_count == 2
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call("percentage-command-topic", "50", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_turn_off(hass, "fan.test")
+    await common.async_turn_off(menuai, "fan.test")
     mqtt_mock.async_publish.assert_any_call("command-topic", "OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_direction(hass, "fan.test", "reverse")
+    await common.async_set_direction(menuai, "fan.test", "reverse")
     mqtt_mock.async_publish.assert_called_once_with(
         "direction-command-topic", "reverse", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_oscillate(hass, "fan.test", False)
+    await common.async_oscillate(menuai, "fan.test", False)
     mqtt_mock.async_publish.assert_called_once_with(
         "oscillation-command-topic", "oscillate_off", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test", 33)
+    await common.async_set_percentage(menuai, "fan.test", 33)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "33", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test", 50)
+    await common.async_set_percentage(menuai, "fan.test", 50)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "50", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test", 100)
+    await common.async_set_percentage(menuai, "fan.test", 100)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "100", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_percentage(hass, "fan.test", 0)
+    await common.async_set_percentage(menuai, "fan.test", 0)
     mqtt_mock.async_publish.assert_called_once_with(
         "percentage-command-topic", "0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(MultipleInvalid):
-        await common.async_set_percentage(hass, "fan.test", 101)
+        await common.async_set_percentage(menuai, "fan.test", 101)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "low")
+        await common.async_set_preset_mode(menuai, "fan.test", "low")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "medium")
+        await common.async_set_preset_mode(menuai, "fan.test", "medium")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
-    await common.async_set_preset_mode(hass, "fan.test", "whoosh")
+    await common.async_set_preset_mode(menuai, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "whoosh", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await common.async_set_preset_mode(hass, "fan.test", "silent")
+    await common.async_set_preset_mode(menuai, "fan.test", "silent")
     mqtt_mock.async_publish.assert_called_once_with(
         "preset-mode-command-topic", "silent", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await common.async_set_preset_mode(hass, "fan.test", "freaking-high")
+        await common.async_set_preset_mode(menuai, "fan.test", "freaking-high")
     assert exc.value.translation_key == "not_valid_preset_mode"
 
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
@@ -1478,7 +1478,7 @@ async def test_sending_mqtt_commands_and_explicit_optimistic(
     ],
 )
 async def test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     value: str,
@@ -1493,7 +1493,7 @@ async def test_encoding_subscribable_topics(
     config[CONF_DIRECTION_COMMAND_TOPIC] = "fan/some_direction_command_topic"
     config[CONF_OSCILLATION_COMMAND_TOPIC] = "fan/some_oscillation_command_topic"
     await help_test_encoding_subscribable_topics(
-        hass,
+        menuai,
         mqtt_mock_entry,
         fan.DOMAIN,
         config,
@@ -1505,7 +1505,7 @@ async def test_encoding_subscribable_topics(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1526,50 +1526,50 @@ async def test_encoding_subscribable_topics(
     ],
 )
 async def test_attributes(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test attributes."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_UNKNOWN
 
-    await common.async_turn_on(hass, "fan.test")
-    state = hass.states.get("fan.test")
+    await common.async_turn_on(menuai, "fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
     assert state.attributes.get(fan.ATTR_OSCILLATING) is None
     assert state.attributes.get(fan.ATTR_DIRECTION) is None
 
-    await common.async_turn_off(hass, "fan.test")
-    state = hass.states.get("fan.test")
+    await common.async_turn_off(menuai, "fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
     assert state.attributes.get(fan.ATTR_OSCILLATING) is None
     assert state.attributes.get(fan.ATTR_DIRECTION) is None
 
-    await common.async_oscillate(hass, "fan.test", True)
-    state = hass.states.get("fan.test")
+    await common.async_oscillate(menuai, "fan.test", True)
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
     assert state.attributes.get(fan.ATTR_OSCILLATING) is True
     assert state.attributes.get(fan.ATTR_DIRECTION) is None
 
-    await common.async_set_direction(hass, "fan.test", "reverse")
-    state = hass.states.get("fan.test")
+    await common.async_set_direction(menuai, "fan.test", "reverse")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
     assert state.attributes.get(fan.ATTR_OSCILLATING) is True
     assert state.attributes.get(fan.ATTR_DIRECTION) == "reverse"
 
-    await common.async_oscillate(hass, "fan.test", False)
-    state = hass.states.get("fan.test")
+    await common.async_oscillate(menuai, "fan.test", False)
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
     assert state.attributes.get(fan.ATTR_OSCILLATING) is False
 
-    await common.async_set_direction(hass, "fan.test", "forward")
-    state = hass.states.get("fan.test")
+    await common.async_set_direction(menuai, "fan.test", "forward")
+    state = menuai.states.get("fan.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
     assert state.attributes.get(fan.ATTR_OSCILLATING) is False
@@ -1577,7 +1577,7 @@ async def test_attributes(
 
 
 @pytest.mark.parametrize(
-    ("name", "hass_config", "success", "features", "error_message"),
+    ("name", "menuai_config", "success", "features", "error_message"),
     [
         (
             "test1",
@@ -1878,7 +1878,7 @@ async def test_attributes(
     ],
 )
 async def test_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     name: str,
@@ -1888,7 +1888,7 @@ async def test_supported_features(
 ) -> None:
     """Test optimistic mode without state topic."""
     await mqtt_mock_entry()
-    state = hass.states.get(f"fan.{name}")
+    state = menuai.states.get(f"fan.{name}")
     assert (state is not None) == success
     if success:
         assert state.attributes.get(ATTR_SUPPORTED_FEATURES) == features
@@ -1896,30 +1896,30 @@ async def test_supported_features(
     assert error_message in caplog.text
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
-    await help_test_availability_when_connection_lost(hass, mqtt_mock_entry, fan.DOMAIN)
+    await help_test_availability_when_connection_lost(menuai, mqtt_mock_entry, fan.DOMAIN)
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     await help_test_default_availability_payload(
-        hass,
+        menuai,
         mqtt_mock_entry,
         fan.DOMAIN,
         DEFAULT_CONFIG,
@@ -1930,11 +1930,11 @@ async def test_default_availability_payload(
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     await help_test_custom_availability_payload(
-        hass,
+        menuai,
         mqtt_mock_entry,
         fan.DOMAIN,
         DEFAULT_CONFIG,
@@ -1945,65 +1945,65 @@ async def test_custom_availability_payload(
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG, MQTT_FAN_ATTRIBUTES_BLOCKED
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG, MQTT_FAN_ATTRIBUTES_BLOCKED
     )
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -2026,115 +2026,115 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique_id option only creates one fan per id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, fan.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, fan.DOMAIN)
 
 
 async def test_discovery_removal_fan(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered fan."""
     data = '{ "name": "test", "command_topic": "test_topic" }'
-    await help_test_discovery_removal(hass, mqtt_mock_entry, fan.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, fan.DOMAIN, data)
 
 
 async def test_discovery_update_fan(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered fan."""
     config1 = {"name": "Beer", "command_topic": "test_topic"}
     config2 = {"name": "Milk", "command_topic": "test_topic"}
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, fan.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, fan.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_fan(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered fan."""
     data1 = '{ "name": "Beer", "command_topic": "test_topic" }'
     with patch(
-        "homeassistant.components.mqtt.fan.MqttFan.discovery_update"
+        "menuai.components.mqtt.fan.MqttFan.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, fan.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, fan.DOMAIN, data1, discovery_update
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer" }'
     data2 = '{ "name": "Milk", "command_topic": "test_topic" }'
 
-    await help_test_discovery_broken(hass, mqtt_mock_entry, fan.DOMAIN, data1, data2)
+    await help_test_discovery_broken(menuai, mqtt_mock_entry, fan.DOMAIN, data1, data2)
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT fan device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT fan device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_debug_info_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT debug info."""
     await help_test_entity_debug_info_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         fan.DOMAIN,
         DEFAULT_CONFIG,
@@ -2190,7 +2190,7 @@ async def test_entity_debug_info_message(
     ],
 )
 async def test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -2206,7 +2206,7 @@ async def test_publishing_with_custom_encoding(
         config[mqtt.DOMAIN][domain]["preset_modes"] = ["auto", "eco"]
 
     await help_test_publishing_with_custom_encoding(
-        hass,
+        menuai,
         mqtt_mock_entry,
         caplog,
         domain,
@@ -2220,41 +2220,41 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    menuai: menuai, mqtt_client_mock: MqttMockPahoClient
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = fan.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = fan.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unloading the config entry."""
     domain = fan.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_unload_config_entry_with_platform(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             fan.DOMAIN,
@@ -2287,7 +2287,7 @@ async def test_unload_entry(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -2295,7 +2295,7 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)
 
 
 VALUE_TEMPLATES = {
@@ -2308,7 +2308,7 @@ VALUE_TEMPLATES = {
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             fan.DOMAIN,
@@ -2332,13 +2332,13 @@ VALUE_TEMPLATES = {
     ids=VALUE_TEMPLATES,
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text

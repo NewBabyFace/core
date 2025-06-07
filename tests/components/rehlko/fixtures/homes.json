@@ -74,7 +74,7 @@
         "lastMaintenanceTimestamp": "2025-04-10T09:12:59",
         "nextMaintenanceTimestamp": "2026-04-10T09:12:59",
         "maintenancePeriodDays": 365,
-        "hasServiceAgreement": null,
+        "menuaierviceAgreement": null,
         "totalRuntimeHours": 120.2
       }
     ]

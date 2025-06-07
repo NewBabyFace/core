@@ -5,10 +5,10 @@ from ipaddress import ip_address
 from aiohttp import ClientError as ServerTimeoutError
 from devialet.const import UrlSuffix
 
-from homeassistant.components.devialet.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_NAME, CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.devialet.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_NAME, CONTENT_TYPE_JSON
+from menuai.core import menuai
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -54,14 +54,14 @@ MOCK_ZEROCONF_DATA = ZeroconfServiceInfo(
 
 
 def mock_unavailable(aioclient_mock: AiohttpClientMocker) -> None:
-    """Mock the Devialet connection for Home Assistant."""
+    """Mock the Devialet connection for MenuAI."""
     aioclient_mock.get(
         f"http://{HOST}{UrlSuffix.GET_GENERAL_INFO}", exc=ServerTimeoutError
     )
 
 
 def mock_idle(aioclient_mock: AiohttpClientMocker) -> None:
-    """Mock the Devialet connection for Home Assistant."""
+    """Mock the Devialet connection for MenuAI."""
     aioclient_mock.get(
         f"http://{HOST}{UrlSuffix.GET_GENERAL_INFO}",
         text=load_fixture("general_info.json", DOMAIN),
@@ -75,7 +75,7 @@ def mock_idle(aioclient_mock: AiohttpClientMocker) -> None:
 
 
 def mock_playing(aioclient_mock: AiohttpClientMocker) -> None:
-    """Mock the Devialet connection for Home Assistant."""
+    """Mock the Devialet connection for MenuAI."""
     aioclient_mock.get(
         f"http://{HOST}{UrlSuffix.GET_GENERAL_INFO}",
         text=load_fixture("general_info.json", DOMAIN),
@@ -120,13 +120,13 @@ def mock_playing(aioclient_mock: AiohttpClientMocker) -> None:
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     skip_entry_setup: bool = False,
     state: str = "playing",
     serial: str = SERIAL,
 ) -> MockConfigEntry:
-    """Set up the Devialet integration in Home Assistant."""
+    """Set up the Devialet integration in MenuAI."""
 
     if state == "playing":
         mock_playing(aioclient_mock)
@@ -141,10 +141,10 @@ async def setup_integration(
         data=CONF_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     if not skip_entry_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

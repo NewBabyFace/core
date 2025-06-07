@@ -10,12 +10,12 @@ from tesla_fleet_api.exceptions import (
     TeslaFleetError,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.teslemetry.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.teslemetry.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import CONFIG, METADATA
 
@@ -25,25 +25,25 @@ BAD_CONFIG = {CONF_ACCESS_TOKEN: "bad_access_token"}
 
 
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we get the form."""
 
-    result1 = await hass.config_entries.flow.async_init(
+    result1 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result1["type"] is FlowResultType.FORM
     assert not result1["errors"]
 
     with patch(
-        "homeassistant.components.teslemetry.async_setup_entry",
+        "menuai.components.teslemetry.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result1["flow_id"],
             CONFIG,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_setup_entry.mock_calls) == 1
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
@@ -60,19 +60,19 @@ async def test_form(
     ],
 )
 async def test_form_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     side_effect: TeslaFleetError,
     error: dict[str, str],
     mock_metadata: AsyncMock,
 ) -> None:
     """Test errors are handled."""
 
-    result1 = await hass.config_entries.flow.async_init(
+    result1 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_metadata.side_effect = side_effect
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         CONFIG,
     )
@@ -82,36 +82,36 @@ async def test_form_errors(
 
     # Complete the flow
     mock_metadata.side_effect = None
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         CONFIG,
     )
     assert result3["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_reauth(hass: HomeAssistant, mock_metadata: AsyncMock) -> None:
+async def test_reauth(menuai: menuai, mock_metadata: AsyncMock) -> None:
     """Test reauth flow."""
 
     mock_entry = MockConfigEntry(
         domain=DOMAIN, data=BAD_CONFIG, minor_version=2, unique_id="abc-123"
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result1 = await mock_entry.start_reauth_flow(hass)
+    result1 = await mock_entry.start_reauth_flow(menuai)
 
     assert result1["type"] is FlowResultType.FORM
     assert result1["step_id"] == "reauth_confirm"
     assert not result1["errors"]
 
     with patch(
-        "homeassistant.components.teslemetry.async_setup_entry",
+        "menuai.components.teslemetry.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result1["flow_id"],
             CONFIG,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_setup_entry.mock_calls) == 1
         assert len(mock_metadata.mock_calls) == 1
 
@@ -130,7 +130,7 @@ async def test_reauth(hass: HomeAssistant, mock_metadata: AsyncMock) -> None:
     ],
 )
 async def test_reauth_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_metadata: AsyncMock,
     side_effect: TeslaFleetError,
     error: dict[str, str],
@@ -141,23 +141,23 @@ async def test_reauth_errors(
     mock_entry = MockConfigEntry(
         domain=DOMAIN, data=BAD_CONFIG, minor_version=2, unique_id="abc-123"
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     mock_metadata.side_effect = side_effect
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         BAD_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == error
 
     # Complete the flow
     mock_metadata.side_effect = None
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         CONFIG,
     )
@@ -168,23 +168,23 @@ async def test_reauth_errors(
 
 
 async def test_unique_id_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test duplicate unique ID in config."""
 
-    result1 = await hass.config_entries.flow.async_init(
+    result1 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=CONFIG
     )
     assert result1["type"] is FlowResultType.CREATE_ENTRY
 
     # Setup a duplicate
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=CONFIG
     )
     assert result2["type"] is FlowResultType.ABORT
 
 
-async def test_migrate_from_1_1(hass: HomeAssistant, mock_metadata: AsyncMock) -> None:
+async def test_migrate_from_1_1(menuai: menuai, mock_metadata: AsyncMock) -> None:
     """Test config migration."""
 
     mock_entry = MockConfigEntry(
@@ -195,18 +195,18 @@ async def test_migrate_from_1_1(hass: HomeAssistant, mock_metadata: AsyncMock) -
         data=CONFIG,
     )
 
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
     assert entry.version == 1
     assert entry.minor_version == 2
     assert entry.unique_id == METADATA["uid"]
 
 
 async def test_migrate_error_from_1_1(
-    hass: HomeAssistant, mock_metadata: AsyncMock
+    menuai: menuai, mock_metadata: AsyncMock
 ) -> None:
     """Test config migration handles errors."""
 
@@ -220,16 +220,16 @@ async def test_migrate_error_from_1_1(
         data=CONFIG,
     )
 
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
 
 
 async def test_migrate_error_from_future(
-    hass: HomeAssistant, mock_metadata: AsyncMock
+    menuai: menuai, mock_metadata: AsyncMock
 ) -> None:
     """Test a future version isn't migrated."""
 
@@ -243,9 +243,9 @@ async def test_migrate_error_from_future(
         data=CONFIG,
     )
 
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
     assert entry.state is ConfigEntryState.MIGRATION_ERROR

@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
@@ -24,16 +24,16 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.deconz.climate import (
+from menuai.components.deconz.climate import (
     DECONZ_FAN_SMART,
     DECONZ_PRESET_AUTO,
     DECONZ_PRESET_MANUAL,
 )
-from homeassistant.components.deconz.const import CONF_ALLOW_CLIP_SENSOR
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, STATE_OFF, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.deconz.const import CONF_ALLOW_CLIP_SENSOR
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, STATE_OFF, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -77,7 +77,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
     ],
 )
 async def test_simple_climate_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
@@ -88,25 +88,25 @@ async def test_simple_climate_device(
 
     This is a simple water heater that only supports setting temperature and on and off.
     """
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.CLIMATE]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Event signals thermostat configured off
 
     await sensor_ws_data({"state": {"on": False}})
-    assert hass.states.get("climate.thermostat").state == STATE_OFF
+    assert menuai.states.get("climate.thermostat").state == STATE_OFF
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.IDLE
     )
 
     # Event signals thermostat state on
 
     await sensor_ws_data({"state": {"on": True}})
-    assert hass.states.get("climate.thermostat").state == HVACMode.HEAT
+    assert menuai.states.get("climate.thermostat").state == HVACMode.HEAT
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.HEATING
     )
 
@@ -116,7 +116,7 @@ async def test_simple_climate_device(
 
     # Service turn on thermostat
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: "climate.thermostat", ATTR_HVAC_MODE: HVACMode.HEAT},
@@ -126,7 +126,7 @@ async def test_simple_climate_device(
 
     # Service turn on thermostat
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: "climate.thermostat", ATTR_HVAC_MODE: HVACMode.OFF},
@@ -137,7 +137,7 @@ async def test_simple_climate_device(
     # Service set HVAC mode to unsupported value
 
     with pytest.raises(ValueError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: "climate.thermostat", ATTR_HVAC_MODE: HVACMode.AUTO},
@@ -164,7 +164,7 @@ async def test_simple_climate_device(
     ],
 )
 async def test_climate_device_without_cooling_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
@@ -172,34 +172,34 @@ async def test_climate_device_without_cooling_support(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of sensor entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.CLIMATE]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Event signals thermostat configured off
 
     await sensor_ws_data({"config": {"mode": "off"}})
-    assert hass.states.get("climate.thermostat").state == STATE_OFF
+    assert menuai.states.get("climate.thermostat").state == STATE_OFF
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.OFF
     )
 
     # Event signals thermostat state on
 
     await sensor_ws_data({"config": {"mode": "other"}, "state": {"on": True}})
-    assert hass.states.get("climate.thermostat").state == HVACMode.HEAT
+    assert menuai.states.get("climate.thermostat").state == HVACMode.HEAT
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.HEATING
     )
 
     # Event signals thermostat state off
 
     await sensor_ws_data({"state": {"on": False}})
-    assert hass.states.get("climate.thermostat").state == STATE_OFF
+    assert menuai.states.get("climate.thermostat").state == STATE_OFF
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.IDLE
     )
 
@@ -209,7 +209,7 @@ async def test_climate_device_without_cooling_support(
 
     # Service set HVAC mode to auto
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: "climate.thermostat", ATTR_HVAC_MODE: HVACMode.AUTO},
@@ -219,7 +219,7 @@ async def test_climate_device_without_cooling_support(
 
     # Service set HVAC mode to heat
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: "climate.thermostat", ATTR_HVAC_MODE: HVACMode.HEAT},
@@ -229,7 +229,7 @@ async def test_climate_device_without_cooling_support(
 
     # Service set HVAC mode to off
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: "climate.thermostat", ATTR_HVAC_MODE: HVACMode.OFF},
@@ -240,7 +240,7 @@ async def test_climate_device_without_cooling_support(
     # Service set HVAC mode to unsupported value
 
     with pytest.raises(ValueError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: "climate.thermostat", ATTR_HVAC_MODE: HVACMode.COOL},
@@ -249,7 +249,7 @@ async def test_climate_device_without_cooling_support(
 
     # Service set temperature to 20
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: "climate.thermostat", ATTR_TEMPERATURE: 20},
@@ -260,7 +260,7 @@ async def test_climate_device_without_cooling_support(
     # Service set temperature without providing temperature attribute
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -303,7 +303,7 @@ async def test_climate_device_without_cooling_support(
     ],
 )
 async def test_climate_device_with_cooling_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
@@ -311,25 +311,25 @@ async def test_climate_device_with_cooling_support(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of sensor entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.CLIMATE]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Event signals thermostat mode cool
 
     await sensor_ws_data({"config": {"mode": "cool"}})
-    assert hass.states.get("climate.zen_01").state == HVACMode.COOL
-    assert hass.states.get("climate.zen_01").attributes["temperature"] == 11.1
+    assert menuai.states.get("climate.zen_01").state == HVACMode.COOL
+    assert menuai.states.get("climate.zen_01").attributes["temperature"] == 11.1
     assert (
-        hass.states.get("climate.zen_01").attributes["hvac_action"] == HVACAction.IDLE
+        menuai.states.get("climate.zen_01").attributes["hvac_action"] == HVACAction.IDLE
     )
 
     # Event signals thermostat state on
 
     await sensor_ws_data({"state": {"on": True}})
-    assert hass.states.get("climate.zen_01").state == HVACMode.COOL
+    assert menuai.states.get("climate.zen_01").state == HVACMode.COOL
     assert (
-        hass.states.get("climate.zen_01").attributes["hvac_action"]
+        menuai.states.get("climate.zen_01").attributes["hvac_action"]
         == HVACAction.COOLING
     )
 
@@ -339,7 +339,7 @@ async def test_climate_device_with_cooling_support(
 
     # Service set temperature to 20
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: "climate.zen_01", ATTR_TEMPERATURE: 20},
@@ -379,7 +379,7 @@ async def test_climate_device_with_cooling_support(
     ],
 )
 async def test_climate_device_with_fan_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
@@ -387,33 +387,33 @@ async def test_climate_device_with_fan_support(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of sensor entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.CLIMATE]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Event signals fan mode defaults to off
 
     await sensor_ws_data({"config": {"fanmode": "unsupported"}})
-    assert hass.states.get("climate.zen_01").attributes["fan_mode"] == FAN_OFF
+    assert menuai.states.get("climate.zen_01").attributes["fan_mode"] == FAN_OFF
     assert (
-        hass.states.get("climate.zen_01").attributes["hvac_action"] == HVACAction.IDLE
+        menuai.states.get("climate.zen_01").attributes["hvac_action"] == HVACAction.IDLE
     )
 
     # Event signals unsupported fan mode
 
     await sensor_ws_data({"config": {"fanmode": "unsupported"}, "state": {"on": True}})
-    assert hass.states.get("climate.zen_01").attributes["fan_mode"] == FAN_ON
+    assert menuai.states.get("climate.zen_01").attributes["fan_mode"] == FAN_ON
     assert (
-        hass.states.get("climate.zen_01").attributes["hvac_action"]
+        menuai.states.get("climate.zen_01").attributes["hvac_action"]
         == HVACAction.HEATING
     )
 
     # Event signals unsupported fan mode
 
     await sensor_ws_data({"config": {"fanmode": "unsupported"}})
-    assert hass.states.get("climate.zen_01").attributes["fan_mode"] == FAN_ON
+    assert menuai.states.get("climate.zen_01").attributes["fan_mode"] == FAN_ON
     assert (
-        hass.states.get("climate.zen_01").attributes["hvac_action"]
+        menuai.states.get("climate.zen_01").attributes["hvac_action"]
         == HVACAction.HEATING
     )
 
@@ -423,7 +423,7 @@ async def test_climate_device_with_fan_support(
 
     # Service set fan mode to off
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: "climate.zen_01", ATTR_FAN_MODE: FAN_OFF},
@@ -433,7 +433,7 @@ async def test_climate_device_with_fan_support(
 
     # Service set fan mode to custom deCONZ mode smart
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: "climate.zen_01", ATTR_FAN_MODE: DECONZ_FAN_SMART},
@@ -444,7 +444,7 @@ async def test_climate_device_with_fan_support(
     # Service set fan mode to unsupported value
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {ATTR_ENTITY_ID: "climate.zen_01", ATTR_FAN_MODE: "unsupported"},
@@ -484,7 +484,7 @@ async def test_climate_device_with_fan_support(
     ],
 )
 async def test_climate_device_with_preset(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
     sensor_ws_data: WebsocketDataType,
@@ -492,30 +492,30 @@ async def test_climate_device_with_preset(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of sensor entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.CLIMATE]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Event signals deCONZ preset
 
     await sensor_ws_data({"config": {"preset": "manual"}})
     assert (
-        hass.states.get("climate.zen_01").attributes["preset_mode"]
+        menuai.states.get("climate.zen_01").attributes["preset_mode"]
         == DECONZ_PRESET_MANUAL
     )
 
     # Event signals unknown preset
 
     await sensor_ws_data({"config": {"preset": "unsupported"}})
-    assert hass.states.get("climate.zen_01").attributes["preset_mode"] is None
+    assert menuai.states.get("climate.zen_01").attributes["preset_mode"] is None
 
     # Verify service calls
 
     aioclient_mock = mock_put_request("/sensors/0/config")
 
-    # Service set preset to HASS preset
+    # Service set preset to menuai preset
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: "climate.zen_01", ATTR_PRESET_MODE: PRESET_COMFORT},
@@ -525,7 +525,7 @@ async def test_climate_device_with_preset(
 
     # Service set preset to custom deCONZ preset
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: "climate.zen_01", ATTR_PRESET_MODE: DECONZ_PRESET_MANUAL},
@@ -536,7 +536,7 @@ async def test_climate_device_with_preset(
     # Service set preset to unsupported value
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_PRESET_MODE,
             {ATTR_ENTITY_ID: "climate.zen_01", ATTR_PRESET_MODE: "unsupported"},
@@ -573,37 +573,37 @@ async def test_climate_device_with_preset(
 )
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: True}])
 async def test_clip_climate_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of sensor entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.CLIMATE]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Disallow clip sensors
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry, options={CONF_ALLOW_CLIP_SENSOR: False}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    assert not hass.states.get("climate.clip_thermostat")
+    assert len(menuai.states.async_all()) == 1
+    assert not menuai.states.get("climate.clip_thermostat")
 
     # Allow clip sensors
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry, options={CONF_ALLOW_CLIP_SENSOR: True}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 2
-    assert hass.states.get("climate.clip_thermostat").state == HVACMode.HEAT
+    assert len(menuai.states.async_all()) == 2
+    assert menuai.states.get("climate.clip_thermostat").state == HVACMode.HEAT
     assert (
-        hass.states.get("climate.clip_thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.clip_thermostat").attributes["hvac_action"]
         == HVACAction.HEATING
     )
 
@@ -628,27 +628,27 @@ async def test_clip_climate_device(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_verify_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     sensor_ws_data: WebsocketDataType,
 ) -> None:
     """Test that state update properly."""
-    assert hass.states.get("climate.thermostat").state == HVACMode.AUTO
+    assert menuai.states.get("climate.thermostat").state == HVACMode.AUTO
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.HEATING
     )
 
     await sensor_ws_data({"state": {"on": False}})
-    assert hass.states.get("climate.thermostat").state == HVACMode.AUTO
+    assert menuai.states.get("climate.thermostat").state == HVACMode.AUTO
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.IDLE
     )
 
 
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_add_new_climate_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     sensor_ws_data: WebsocketDataType,
 ) -> None:
     """Test that adding a new climate device works."""
@@ -670,15 +670,15 @@ async def test_add_new_climate_device(
         },
     }
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     await sensor_ws_data(event_added_sensor)
 
-    assert len(hass.states.async_all()) == 2
-    assert hass.states.get("climate.thermostat").state == HVACMode.AUTO
-    assert hass.states.get("sensor.thermostat_battery").state == "100"
+    assert len(menuai.states.async_all()) == 2
+    assert menuai.states.get("climate.thermostat").state == HVACMode.AUTO
+    assert menuai.states.get("sensor.thermostat_battery").state == "100"
     assert (
-        hass.states.get("climate.thermostat").attributes["hvac_action"]
+        menuai.states.get("climate.thermostat").attributes["hvac_action"]
         == HVACAction.HEATING
     )
 
@@ -697,9 +697,9 @@ async def test_add_new_climate_device(
 )
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: False}])
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_not_allow_clip_thermostat(hass: HomeAssistant) -> None:
+async def test_not_allow_clip_thermostat(menuai: menuai) -> None:
     """Test that CLIP thermostats are not allowed."""
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 @pytest.mark.parametrize(
@@ -728,11 +728,11 @@ async def test_not_allow_clip_thermostat(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_no_mode_no_state(hass: HomeAssistant) -> None:
+async def test_no_mode_no_state(menuai: menuai) -> None:
     """Test that a climate device without mode and state works."""
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
-    climate_thermostat = hass.states.get("climate.zen_01")
+    climate_thermostat = menuai.states.get("climate.zen_01")
     assert climate_thermostat.state is STATE_OFF
     assert climate_thermostat.attributes["preset_mode"] is DECONZ_PRESET_AUTO
     assert climate_thermostat.attributes["hvac_action"] is HVACAction.IDLE
@@ -777,13 +777,13 @@ async def test_no_mode_no_state(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_boost_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     sensor_ws_data: WebsocketDataType,
 ) -> None:
     """Test that a climate device with boost mode and different state works."""
-    assert len(hass.states.async_all()) == 3
+    assert len(menuai.states.async_all()) == 3
 
-    climate_thermostat = hass.states.get("climate.thermostat")
+    climate_thermostat = menuai.states.get("climate.thermostat")
     assert climate_thermostat.state == HVACMode.HEAT
     assert climate_thermostat.attributes["preset_mode"] is DECONZ_PRESET_MANUAL
     assert climate_thermostat.attributes["hvac_action"] is HVACAction.IDLE
@@ -792,6 +792,6 @@ async def test_boost_mode(
 
     await sensor_ws_data({"config": {"preset": "boost"}, "state": {"valve": 100}})
 
-    climate_thermostat = hass.states.get("climate.thermostat")
+    climate_thermostat = menuai.states.get("climate.thermostat")
     assert climate_thermostat.attributes["preset_mode"] is PRESET_BOOST
     assert climate_thermostat.attributes["hvac_action"] is HVACAction.HEATING

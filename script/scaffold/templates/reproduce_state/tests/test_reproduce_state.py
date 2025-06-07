@@ -2,25 +2,25 @@
 
 import pytest
 
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing NEW_NAME states."""
-    hass.states.async_set("NEW_DOMAIN.entity_off", "off", {})
-    hass.states.async_set("NEW_DOMAIN.entity_on", "on", {"color": "red"})
+    menuai.states.async_set("NEW_DOMAIN.entity_off", "off", {})
+    menuai.states.async_set("NEW_DOMAIN.entity_on", "on", {"color": "red"})
 
-    turn_on_calls = async_mock_service(hass, "NEW_DOMAIN", "turn_on")
-    turn_off_calls = async_mock_service(hass, "NEW_DOMAIN", "turn_off")
+    turn_on_calls = async_mock_service(menuai, "NEW_DOMAIN", "turn_on")
+    turn_off_calls = async_mock_service(menuai, "NEW_DOMAIN", "turn_off")
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("NEW_DOMAIN.entity_off", "off"),
             State("NEW_DOMAIN.entity_on", "on", {"color": "red"}),
@@ -33,7 +33,7 @@ async def test_reproducing_states(
 
     # Test invalid state is handled
     await async_reproduce_state(
-        hass, [State("NEW_DOMAIN.entity_off", "not_supported")], blocking=True
+        menuai, [State("NEW_DOMAIN.entity_off", "not_supported")], blocking=True
     )
 
     assert "not_supported" in caplog.text
@@ -42,7 +42,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("NEW_DOMAIN.entity_on", "off"),
             State("NEW_DOMAIN.entity_off", "on", {"color": "red"}),

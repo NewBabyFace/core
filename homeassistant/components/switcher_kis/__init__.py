@@ -7,10 +7,10 @@ import logging
 from aioswitcher.bridge import SwitcherBridge
 from aioswitcher.device import SwitcherBase
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_TOKEN, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_TOKEN, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .coordinator import SwitcherDataUpdateCoordinator
@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 type SwitcherConfigEntry = ConfigEntry[dict[str, SwitcherDataUpdateCoordinator]]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SwitcherConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SwitcherConfigEntry) -> bool:
     """Set up Switcher from a config entry."""
 
     token = entry.data.get(CONF_TOKEN)
@@ -58,15 +58,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitcherConfigEntry) -> 
         )
 
         if device.token_needed and not token:
-            entry.async_start_reauth(hass)
+            entry.async_start_reauth(menuai)
             return
 
-        coordinator = SwitcherDataUpdateCoordinator(hass, entry, device)
+        coordinator = SwitcherDataUpdateCoordinator(menuai, entry, device)
         coordinator.async_setup()
         coordinators[device.device_id] = coordinator
 
     # Must be ready before dispatcher is called
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.runtime_data = {}
     bridge = SwitcherBridge(on_device_data_callback)
@@ -78,19 +78,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitcherConfigEntry) -> 
     entry.async_on_unload(stop_bridge)
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_bridge)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_bridge)
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SwitcherConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SwitcherConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: SwitcherConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: SwitcherConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
     return not device_entry.identifiers.intersection(

@@ -7,12 +7,12 @@ import logging
 from math import cos, pi, radians, sin
 import random
 
-from homeassistant.components.geo_location import GeolocationEvent
-from homeassistant.const import UnitOfLength
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.geo_location import GeolocationEvent
+from menuai.const import UnitOfLength
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,21 +43,21 @@ SOURCE = "demo"
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Demo geolocations."""
-    DemoManager(hass, add_entities)
+    DemoManager(menuai, add_entities)
 
 
 class DemoManager:
     """Device manager for demo geolocation events."""
 
-    def __init__(self, hass: HomeAssistant, add_entities: AddEntitiesCallback) -> None:
+    def __init__(self, menuai: menuai, add_entities: AddEntitiesCallback) -> None:
         """Initialise the demo geolocation event manager."""
-        self._hass = hass
+        self._menuai = menuai
         self._add_entities = add_entities
         self._managed_devices: list[DemoGeolocationEvent] = []
         self._update(count=NUMBER_OF_DEMO_DEVICES)
@@ -65,8 +65,8 @@ class DemoManager:
 
     def _generate_random_event(self) -> DemoGeolocationEvent:
         """Generate a random event in vicinity of this HA instance."""
-        home_latitude = self._hass.config.latitude
-        home_longitude = self._hass.config.longitude
+        home_latitude = self._menuai.config.latitude
+        home_longitude = self._menuai.config.longitude
 
         # Approx. 111km per degree (north-south).
         radius_in_degrees = random.random() * MAX_RADIUS_IN_KM / AVG_KM_PER_DEGREE
@@ -87,7 +87,7 @@ class DemoManager:
     def _init_regular_updates(self) -> None:
         """Schedule regular updates based on configured time interval."""
         track_time_interval(
-            self._hass,
+            self._menuai,
             lambda now: self._update(),
             DEFAULT_UPDATE_INTERVAL,
             cancel_on_shutdown=True,
@@ -102,7 +102,7 @@ class DemoManager:
                 if device:
                     _LOGGER.debug("Removing %s", device)
                     self._managed_devices.remove(device)
-                    self._hass.add_job(device.async_remove())
+                    self._menuai.add_job(device.async_remove())
         # Generate new devices from events.
         new_devices = []
         for _ in range(1, count + 1):

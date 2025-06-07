@@ -8,13 +8,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ENTITY_ID,
     CONF_NAME,
     CONF_STATE,
@@ -23,18 +23,18 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import HistoryStatsConfigEntry
 from .const import (
@@ -89,13 +89,13 @@ PLATFORM_SCHEMA = vol.All(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the History Stats sensor."""
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    await async_setup_reload_service(menuai, DOMAIN, PLATFORMS)
 
     entity_id: str = config[CONF_ENTITY_ID]
     entity_states: list[str] = config[CONF_STATE]
@@ -106,18 +106,18 @@ async def async_setup_platform(
     name: str = config[CONF_NAME]
     unique_id: str | None = config.get(CONF_UNIQUE_ID)
 
-    history_stats = HistoryStats(hass, entity_id, entity_states, start, end, duration)
-    coordinator = HistoryStatsUpdateCoordinator(hass, history_stats, None, name)
+    history_stats = HistoryStats(menuai, entity_id, entity_states, start, end, duration)
+    coordinator = HistoryStatsUpdateCoordinator(menuai, history_stats, None, name)
     await coordinator.async_refresh()
     if not coordinator.last_update_success:
         raise PlatformNotReady from coordinator.last_exception
     async_add_entities(
-        [HistoryStatsSensor(hass, coordinator, sensor_type, name, unique_id, entity_id)]
+        [HistoryStatsSensor(menuai, coordinator, sensor_type, name, unique_id, entity_id)]
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HistoryStatsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -129,7 +129,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             HistoryStatsSensor(
-                hass, coordinator, sensor_type, entry.title, entry.entry_id, entity_id
+                menuai, coordinator, sensor_type, entry.title, entry.entry_id, entity_id
             )
         ]
     )
@@ -151,9 +151,9 @@ class HistoryStatsSensorBase(
         super().__init__(coordinator)
         self._attr_name = name
 
-    async def async_added_to_hass(self) -> None:
-        """Entity has been added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Entity has been added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(self.coordinator.async_setup_state_listener())
 
     def _handle_coordinator_update(self) -> None:
@@ -174,7 +174,7 @@ class HistoryStatsSensor(HistoryStatsSensorBase):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: HistoryStatsUpdateCoordinator,
         sensor_type: str,
         name: str,
@@ -187,7 +187,7 @@ class HistoryStatsSensor(HistoryStatsSensorBase):
         self._type = sensor_type
         self._attr_unique_id = unique_id
         self._attr_device_info = async_device_info_to_link_from_entity(
-            hass,
+            menuai,
             source_entity_id,
         )
         self._process_update()

@@ -6,7 +6,7 @@ from unittest.mock import Mock
 from motionblindsble.const import MotionBlindType, MotionRunningType
 import pytest
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     DOMAIN as COVER_DOMAIN,
@@ -20,8 +20,8 @@ from homeassistant.components.cover import (
     SERVICE_STOP_COVER_TILT,
     CoverState,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -44,7 +44,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_cover_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motion_device: Mock,
     name: str,
@@ -54,9 +54,9 @@ async def test_cover_service(
 ) -> None:
     """Test cover service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         service,
         {ATTR_ENTITY_ID: f"cover.{name}", **kwargs},
@@ -76,7 +76,7 @@ async def test_cover_service(
     ],
 )
 async def test_cover_update_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motion_device: Mock,
     name: str,
@@ -85,12 +85,12 @@ async def test_cover_update_running(
 ) -> None:
     """Test updating running status."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     async_update_running = mock_motion_device.register_running_callback.call_args[0][0]
 
     async_update_running(running_type)
-    assert hass.states.get(f"cover.{name}").state == state
+    assert menuai.states.get(f"cover.{name}").state == state
 
 
 @pytest.mark.usefixtures("motionblinds_ble_connect")
@@ -104,7 +104,7 @@ async def test_cover_update_running(
     ],
 )
 async def test_cover_update_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motion_device: Mock,
     name: str,
@@ -114,11 +114,11 @@ async def test_cover_update_position(
 ) -> None:
     """Test updating cover position and tilt."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     async_update_position = mock_motion_device.register_position_callback.call_args[0][
         0
     ]
 
     async_update_position(position, tilt)
-    assert hass.states.get(f"cover.{name}").state == state
+    assert menuai.states.get(f"cover.{name}").state == state

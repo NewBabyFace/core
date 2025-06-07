@@ -7,10 +7,10 @@ from dataclasses import dataclass
 
 from reolink_aio.api import DUAL_LENS_MODELS, Chime, Host
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -52,7 +52,7 @@ class ReolinkChimeEntityDescription(ReolinkEntityDescription):
 class ReolinkHostCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinator[None]]):
     """Parent class for entities that control the Reolink NVR itself, without a channel.
 
-    A camera connected directly to HomeAssistant without using a NVR is in the reolink API
+    A camera connected directly to menuai without using a NVR is in the reolink API
     basically a NVR with a single channel that has the camera connected to that channel.
     """
 
@@ -113,9 +113,9 @@ class ReolinkHostCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinator[None]
             callback_id, self._push_callback, cmd_id
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         cmd_key = self.entity_description.cmd_key
         cmd_id = self.entity_description.cmd_id
         callback_id = f"{self.platform.domain}_{self._attr_unique_id}"
@@ -126,7 +126,7 @@ class ReolinkHostCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinator[None]
         # Privacy mode
         self.register_callback(f"{callback_id}_623", 623)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Entity removed."""
         cmd_key = self.entity_description.cmd_key
         cmd_id = self.entity_description.cmd_id
@@ -138,7 +138,7 @@ class ReolinkHostCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinator[None]
         # Privacy mode
         self._host.api.baichuan.unregister_callback(f"{callback_id}_623")
 
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     async def async_update(self) -> None:
         """Force full update from the generic entity update service."""
@@ -213,20 +213,20 @@ class ReolinkChannelCoordinatorEntity(ReolinkHostCoordinatorEntity):
             callback_id, self._push_callback, cmd_id, self._channel
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         cmd_key = self.entity_description.cmd_key
         if cmd_key is not None:
             self._host.async_register_update_cmd(cmd_key, self._channel)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Entity removed."""
         cmd_key = self.entity_description.cmd_key
         if cmd_key is not None:
             self._host.async_unregister_update_cmd(cmd_key, self._channel)
 
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
 
 class ReolinkChimeCoordinatorEntity(ReolinkChannelCoordinatorEntity):

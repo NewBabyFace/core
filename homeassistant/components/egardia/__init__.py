@@ -6,18 +6,18 @@ from pythonegardia import egardiadevice, egardiaserver
 import requests
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Egardia platform."""
 
     conf = config[DOMAIN]
@@ -92,7 +92,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     rs_enabled = conf.get(CONF_REPORT_SERVER_ENABLED)
     rs_port = conf.get(CONF_REPORT_SERVER_PORT)
     try:
-        device = hass.data[EGARDIA_DEVICE] = egardiadevice.EgardiaDevice(
+        device = menuai.data[EGARDIA_DEVICE] = egardiadevice.EgardiaDevice(
             host, port, username, password, "", version
         )
     except requests.exceptions.RequestException:
@@ -108,35 +108,35 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if rs_enabled:
         _LOGGER.debug("Setting up EgardiaServer")
         try:
-            if EGARDIA_SERVER not in hass.data:
+            if EGARDIA_SERVER not in menuai.data:
                 server = egardiaserver.EgardiaServer("", rs_port)
                 bound = server.bind()
                 if not bound:
                     raise OSError(  # noqa: TRY301
                         "Binding error occurred while starting EgardiaServer."
                     )
-                hass.data[EGARDIA_SERVER] = server
+                menuai.data[EGARDIA_SERVER] = server
                 server.start()
 
             def handle_stop_event(event):
-                """Handle Home Assistant stop event."""
+                """Handle MenuAI stop event."""
                 server.stop()
 
-            # listen to Home Assistant stop event
-            hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, handle_stop_event)
+            # listen to MenuAI stop event
+            menuai.bus.listen_once(EVENT_menuai_STOP, handle_stop_event)
 
         except OSError:
             _LOGGER.error("Binding error occurred while starting EgardiaServer")
             return False
 
     discovery.load_platform(
-        hass, Platform.ALARM_CONTROL_PANEL, DOMAIN, discovered=conf, hass_config=config
+        menuai, Platform.ALARM_CONTROL_PANEL, DOMAIN, discovered=conf, menuai_config=config
     )
 
     # Get the sensors from the device and add those
     sensors = device.getsensors()
     discovery.load_platform(
-        hass, Platform.BINARY_SENSOR, DOMAIN, {ATTR_DISCOVER_DEVICES: sensors}, config
+        menuai, Platform.BINARY_SENSOR, DOMAIN, {ATTR_DISCOVER_DEVICES: sensors}, config
     )
 
     return True

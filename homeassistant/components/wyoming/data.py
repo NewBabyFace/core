@@ -7,7 +7,7 @@ import asyncio
 from wyoming.client import AsyncTcpClient
 from wyoming.info import Describe, Info
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 from .error import WyomingError
 
@@ -43,7 +43,7 @@ class WyomingService:
             self.platforms.append(Platform.CONVERSATION)
 
     def has_services(self) -> bool:
-        """Return True if services are installed that Home Assistant can use."""
+        """Return True if services are installed that MenuAI can use."""
         return (
             any(asr for asr in self.info.asr if asr.installed)
             or any(tts for tts in self.info.tts if tts.installed)

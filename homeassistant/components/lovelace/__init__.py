@@ -6,21 +6,21 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import frontend, onboarding, websocket_api
-from homeassistant.config import (
-    async_hass_config_yaml,
+from menuai.components import frontend, onboarding, websocket_api
+from menuai.config import (
+    async_menuai_config_yaml,
     async_process_component_and_handle_errors,
 )
-from homeassistant.const import CONF_FILENAME, CONF_MODE, CONF_RESOURCES
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.frame import report_usage
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.translation import async_get_translations
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration
-from homeassistant.util import slugify
+from menuai.const import CONF_FILENAME, CONF_MODE, CONF_RESOURCES
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.frame import report_usage
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.translation import async_get_translations
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_get_integration
+from menuai.util import slugify
 
 from . import dashboard, resources, websocket
 from .const import (  # noqa: F401
@@ -94,7 +94,7 @@ CONFIG_SCHEMA = vol.Schema(
 
 @dataclass
 class LovelaceData:
-    """Dataclass to store information in hass.data."""
+    """Dataclass to store information in menuai.data."""
 
     mode: str
     dashboards: dict[str | None, dashboard.LovelaceConfig]
@@ -130,55 +130,55 @@ class LovelaceData:
         return default
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Lovelace commands."""
     mode = config[DOMAIN][CONF_MODE]
     yaml_resources = config[DOMAIN].get(CONF_RESOURCES)
 
-    frontend.async_register_built_in_panel(hass, DOMAIN, config={"mode": mode})
+    frontend.async_register_built_in_panel(menuai, DOMAIN, config={"mode": mode})
 
     async def reload_resources_service_handler(service_call: ServiceCall) -> None:
         """Reload yaml resources."""
         try:
-            conf = await async_hass_config_yaml(hass)
-        except HomeAssistantError as err:
+            conf = await async_menuai_config_yaml(menuai)
+        except menuaiError as err:
             _LOGGER.error(err)
             return
 
-        integration = await async_get_integration(hass, DOMAIN)
+        integration = await async_get_integration(menuai, DOMAIN)
 
         config = await async_process_component_and_handle_errors(
-            hass, conf, integration
+            menuai, conf, integration
         )
 
         if config is None:
-            raise HomeAssistantError("Config validation failed")
+            raise menuaiError("Config validation failed")
 
         resource_collection = await create_yaml_resource_col(
-            hass, config[DOMAIN].get(CONF_RESOURCES)
+            menuai, config[DOMAIN].get(CONF_RESOURCES)
         )
-        hass.data[LOVELACE_DATA].resources = resource_collection
+        menuai.data[LOVELACE_DATA].resources = resource_collection
 
     default_config: dashboard.LovelaceConfig
     resource_collection: (
         resources.ResourceYAMLCollection | resources.ResourceStorageCollection
     )
     if mode == MODE_YAML:
-        default_config = dashboard.LovelaceYAML(hass, None, None)
-        resource_collection = await create_yaml_resource_col(hass, yaml_resources)
+        default_config = dashboard.LovelaceYAML(menuai, None, None)
+        resource_collection = await create_yaml_resource_col(menuai, yaml_resources)
 
         async_register_admin_service(
-            hass,
+            menuai,
             DOMAIN,
             SERVICE_RELOAD_RESOURCES,
             reload_resources_service_handler,
             schema=RESOURCE_RELOAD_SERVICE_SCHEMA,
         )
         # Register lovelace/resources for backwards compatibility, remove in
-        # Home Assistant Core 2025.1
+        # MenuAI Core 2025.1
         for command in ("lovelace/resources", "lovelace/resources/list"):
             websocket_api.async_register_command(
-                hass,
+                menuai,
                 command,
                 websocket.websocket_lovelace_resources,
                 websocket_api.BASE_COMMAND_MESSAGE_SCHEMA.extend(
@@ -187,7 +187,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
 
     else:
-        default_config = dashboard.LovelaceStorage(hass, None)
+        default_config = dashboard.LovelaceStorage(menuai, None)
 
         if yaml_resources is not None:
             _LOGGER.warning(
@@ -195,7 +195,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 " interface"
             )
 
-        resource_collection = resources.ResourceStorageCollection(hass, default_config)
+        resource_collection = resources.ResourceStorageCollection(menuai, default_config)
 
         resources.ResourceStorageCollectionWebsocket(
             resource_collection,
@@ -203,15 +203,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             "resource",
             RESOURCE_CREATE_FIELDS,
             RESOURCE_UPDATE_FIELDS,
-        ).async_setup(hass)
+        ).async_setup(menuai)
 
-    websocket_api.async_register_command(hass, websocket.websocket_lovelace_config)
-    websocket_api.async_register_command(hass, websocket.websocket_lovelace_save_config)
+    websocket_api.async_register_command(menuai, websocket.websocket_lovelace_config)
+    websocket_api.async_register_command(menuai, websocket.websocket_lovelace_save_config)
     websocket_api.async_register_command(
-        hass, websocket.websocket_lovelace_delete_config
+        menuai, websocket.websocket_lovelace_delete_config
     )
 
-    hass.data[LOVELACE_DATA] = LovelaceData(
+    menuai.data[LOVELACE_DATA] = LovelaceData(
         mode=mode,
         # We store a dictionary mapping url_path: config. None is the default.
         dashboards={None: default_config},
@@ -219,7 +219,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         yaml_dashboards=config[DOMAIN].get(CONF_DASHBOARDS, {}),
     )
 
-    if hass.config.recovery_mode:
+    if menuai.config.recovery_mode:
         return True
 
     async def storage_dashboard_changed(
@@ -229,12 +229,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         url_path = item[CONF_URL_PATH]
 
         if change_type == collection.CHANGE_REMOVED:
-            frontend.async_remove_panel(hass, url_path)
-            await hass.data[LOVELACE_DATA].dashboards.pop(url_path).async_delete()
+            frontend.async_remove_panel(menuai, url_path)
+            await menuai.data[LOVELACE_DATA].dashboards.pop(url_path).async_delete()
             return
 
         if change_type == collection.CHANGE_ADDED:
-            existing = hass.data[LOVELACE_DATA].dashboards.get(url_path)
+            existing = menuai.data[LOVELACE_DATA].dashboards.get(url_path)
 
             if existing:
                 _LOGGER.warning(
@@ -244,33 +244,33 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 )
                 return
 
-            hass.data[LOVELACE_DATA].dashboards[url_path] = dashboard.LovelaceStorage(
-                hass, item
+            menuai.data[LOVELACE_DATA].dashboards[url_path] = dashboard.LovelaceStorage(
+                menuai, item
             )
 
             update = False
         else:
-            hass.data[LOVELACE_DATA].dashboards[url_path].config = item
+            menuai.data[LOVELACE_DATA].dashboards[url_path].config = item
             update = True
 
         try:
-            _register_panel(hass, url_path, MODE_STORAGE, item, update)
+            _register_panel(menuai, url_path, MODE_STORAGE, item, update)
         except ValueError:
             _LOGGER.warning("Failed to %s panel %s from storage", change_type, url_path)
 
     # Process YAML dashboards
-    for url_path, dashboard_conf in hass.data[LOVELACE_DATA].yaml_dashboards.items():
+    for url_path, dashboard_conf in menuai.data[LOVELACE_DATA].yaml_dashboards.items():
         # For now always mode=yaml
-        lovelace_config = dashboard.LovelaceYAML(hass, url_path, dashboard_conf)
-        hass.data[LOVELACE_DATA].dashboards[url_path] = lovelace_config
+        lovelace_config = dashboard.LovelaceYAML(menuai, url_path, dashboard_conf)
+        menuai.data[LOVELACE_DATA].dashboards[url_path] = lovelace_config
 
         try:
-            _register_panel(hass, url_path, MODE_YAML, dashboard_conf, False)
+            _register_panel(menuai, url_path, MODE_YAML, dashboard_conf, False)
         except ValueError:
             _LOGGER.warning("Panel url path %s is not unique", url_path)
 
     # Process storage dashboards
-    dashboards_collection = dashboard.DashboardsCollection(hass)
+    dashboards_collection = dashboard.DashboardsCollection(menuai)
 
     dashboards_collection.async_add_listener(storage_dashboard_changed)
     await dashboards_collection.async_load()
@@ -281,27 +281,27 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         "dashboard",
         STORAGE_DASHBOARD_CREATE_FIELDS,
         STORAGE_DASHBOARD_UPDATE_FIELDS,
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     def create_map_dashboard() -> None:
         """Create a map dashboard."""
-        hass.async_create_task(_create_map_dashboard(hass, dashboards_collection))
+        menuai.async_create_task(_create_map_dashboard(menuai, dashboards_collection))
 
-    if not onboarding.async_is_onboarded(hass):
-        onboarding.async_add_listener(hass, create_map_dashboard)
+    if not onboarding.async_is_onboarded(menuai):
+        onboarding.async_add_listener(menuai, create_map_dashboard)
 
     return True
 
 
 async def create_yaml_resource_col(
-    hass: HomeAssistant, yaml_resources: list[ConfigType] | None
+    menuai: menuai, yaml_resources: list[ConfigType] | None
 ) -> resources.ResourceYAMLCollection:
     """Create yaml resources collection."""
     if yaml_resources is None:
-        default_config = dashboard.LovelaceYAML(hass, None, None)
+        default_config = dashboard.LovelaceYAML(menuai, None, None)
         try:
             ll_conf = await default_config.async_load(False)
-        except HomeAssistantError:
+        except menuaiError:
             pass
         else:
             if CONF_RESOURCES in ll_conf:
@@ -316,7 +316,7 @@ async def create_yaml_resource_col(
 
 @callback
 def _register_panel(
-    hass: HomeAssistant, url_path: str | None, mode: str, config: dict, update: bool
+    menuai: menuai, url_path: str | None, mode: str, config: dict, update: bool
 ) -> None:
     """Register a panel."""
     kwargs = {
@@ -330,15 +330,15 @@ def _register_panel(
         kwargs["sidebar_title"] = config[CONF_TITLE]
         kwargs["sidebar_icon"] = config.get(CONF_ICON, DEFAULT_ICON)
 
-    frontend.async_register_built_in_panel(hass, DOMAIN, **kwargs)
+    frontend.async_register_built_in_panel(menuai, DOMAIN, **kwargs)
 
 
 async def _create_map_dashboard(
-    hass: HomeAssistant, dashboards_collection: dashboard.DashboardsCollection
+    menuai: menuai, dashboards_collection: dashboard.DashboardsCollection
 ) -> None:
     """Create a map dashboard."""
     translations = await async_get_translations(
-        hass, hass.config.language, "dashboard", {onboarding.DOMAIN}
+        menuai, menuai.config.language, "dashboard", {onboarding.DOMAIN}
     )
     title = translations["component.onboarding.dashboard.map.title"]
 
@@ -351,5 +351,5 @@ async def _create_map_dashboard(
         }
     )
 
-    map_store = hass.data[LOVELACE_DATA].dashboards["map"]
+    map_store = menuai.data[LOVELACE_DATA].dashboards["map"]
     await map_store.async_save({"strategy": {"type": "map"}})

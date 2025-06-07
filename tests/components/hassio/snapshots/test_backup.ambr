@@ -48,7 +48,7 @@
         'create_backup': dict({
           'agent_ids': list([
             'test-agent1',
-            'hassio.local',
+            'menuaiio.local',
             'test-agent2',
           ]),
           'include_addons': list([
@@ -95,7 +95,7 @@
         'create_backup': dict({
           'agent_ids': list([
             'test-agent1',
-            'hassio.local',
+            'menuaiio.local',
             'test-agent2',
           ]),
           'include_addons': list([

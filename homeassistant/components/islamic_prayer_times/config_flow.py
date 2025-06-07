@@ -6,15 +6,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, CONF_NAME
+from menuai.core import callback
+from menuai.helpers.selector import (
     LocationSelector,
     SelectSelector,
     SelectSelectorConfig,
@@ -74,8 +74,8 @@ class IslamicPrayerFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         home_location = {
-            CONF_LATITUDE: self.hass.config.latitude,
-            CONF_LONGITUDE: self.hass.config.longitude,
+            CONF_LATITUDE: self.menuai.config.latitude,
+            CONF_LONGITUDE: self.menuai.config.longitude,
         }
         return self.async_show_form(
             step_id="user",

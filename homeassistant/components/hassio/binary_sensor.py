@@ -1,31 +1,31 @@
-"""Binary sensor platform for Hass.io addons."""
+"""Binary sensor platform for menuai.io addons."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ADDONS_COORDINATOR, ATTR_STARTED, ATTR_STATE, DATA_KEY_ADDONS
-from .entity import HassioAddonEntity
+from .entity import menuaiioAddonEntity
 
 
 @dataclass(frozen=True)
-class HassioBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Hassio binary sensor entity description."""
+class menuaiioBinarySensorEntityDescription(BinarySensorEntityDescription):
+    """menuaiio binary sensor entity description."""
 
     target: str | None = None
 
 
 ADDON_ENTITY_DESCRIPTIONS = (
-    HassioBinarySensorEntityDescription(
+    menuaiioBinarySensorEntityDescription(
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_registry_enabled_default=False,
         key=ATTR_STATE,
@@ -36,15 +36,15 @@ ADDON_ENTITY_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Binary sensor set up for Hass.io config entry."""
-    coordinator = hass.data[ADDONS_COORDINATOR]
+    """Binary sensor set up for menuai.io config entry."""
+    coordinator = menuai.data[ADDONS_COORDINATOR]
 
     async_add_entities(
-        HassioAddonBinarySensor(
+        menuaiioAddonBinarySensor(
             addon=addon,
             coordinator=coordinator,
             entity_description=entity_description,
@@ -54,10 +54,10 @@ async def async_setup_entry(
     )
 
 
-class HassioAddonBinarySensor(HassioAddonEntity, BinarySensorEntity):
-    """Binary sensor for Hass.io add-ons."""
+class menuaiioAddonBinarySensor(menuaiioAddonEntity, BinarySensorEntity):
+    """Binary sensor for menuai.io add-ons."""
 
-    entity_description: HassioBinarySensorEntityDescription
+    entity_description: menuaiioBinarySensorEntityDescription
 
     @property
     def is_on(self) -> bool:

@@ -7,15 +7,15 @@ import io
 from PIL import Image
 from pyzbar import pyzbar
 
-from homeassistant.components.image_processing import ImageProcessingEntity
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.image_processing import ImageProcessingEntity
+from menuai.const import CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
+from menuai.core import menuai, split_entity_id
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,

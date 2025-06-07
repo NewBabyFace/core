@@ -13,9 +13,9 @@ from homewizard_energy.models import (
 )
 import pytest
 
-from homeassistant.components.homewizard.const import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.homewizard.const import DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_TOKEN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, get_fixture_path, load_json_object_fixture
 
@@ -33,11 +33,11 @@ def mock_homewizardenergy(
     """Return a mock bridge."""
     with (
         patch(
-            "homeassistant.components.homewizard.HomeWizardEnergyV1",
+            "menuai.components.homewizard.HomeWizardEnergyV1",
             autospec=True,
         ) as homewizard,
         patch(
-            "homeassistant.components.homewizard.config_flow.HomeWizardEnergyV1",
+            "menuai.components.homewizard.config_flow.HomeWizardEnergyV1",
             new=homewizard,
         ),
     ):
@@ -79,11 +79,11 @@ def mock_homewizardenergy_v2(
     """Return a mock bridge."""
     with (
         patch(
-            "homeassistant.components.homewizard.HomeWizardEnergyV2",
+            "menuai.components.homewizard.HomeWizardEnergyV2",
             autospec=True,
         ) as homewizard,
         patch(
-            "homeassistant.components.homewizard.config_flow.HomeWizardEnergyV2",
+            "menuai.components.homewizard.config_flow.HomeWizardEnergyV2",
             new=homewizard,
         ),
     ):
@@ -129,7 +129,7 @@ def mock_homewizardenergy_v2(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.homewizard.async_setup_entry", return_value=True
+        "menuai.components.homewizard.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -166,24 +166,24 @@ def mock_config_entry_v2() -> MockConfigEntry:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homewizardenergy: AsyncMock,
 ) -> MockConfigEntry:
     """Set up the HomeWizard integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry
 
 
 @pytest.fixture
 def mock_onboarding() -> Generator[MagicMock]:
-    """Mock that Home Assistant is currently onboarding."""
+    """Mock that MenuAI is currently onboarding."""
     with patch(
-        "homeassistant.components.onboarding.async_is_onboarded",
+        "menuai.components.onboarding.async_is_onboarded",
         return_value=False,
     ) as mock_onboarding:
         yield mock_onboarding

@@ -5,24 +5,24 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.smartthings import OLD_DATA
-from homeassistant.components.smartthings.const import (
+from menuai.components.smartthings import OLD_DATA
+from menuai.components.smartthings.const import (
     CONF_INSTALLED_APP_ID,
     CONF_LOCATION_ID,
     CONF_REFRESH_TOKEN,
     CONF_SUBSCRIPTION_ID,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_TOKEN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -30,26 +30,26 @@ from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture
-def use_cloud(hass: HomeAssistant) -> None:
+def use_cloud(menuai: menuai) -> None:
     """Set up the cloud component."""
-    hass.config.components.add("cloud")
+    menuai.config.components.add("cloud")
 
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Check a full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -68,7 +68,7 @@ async def test_full_flow(
         "w:installedapps"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -89,7 +89,7 @@ async def test_full_flow(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     result["data"]["token"].pop("expires_at")
@@ -109,19 +109,19 @@ async def test_full_flow(
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_not_enough_scopes(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we abort if we don't have enough scopes."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -140,7 +140,7 @@ async def test_not_enough_scopes(
         "w:installedapps"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -162,7 +162,7 @@ async def test_not_enough_scopes(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "missing_scopes"
@@ -170,21 +170,21 @@ async def test_not_enough_scopes(
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_duplicate_entry(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test duplicate entry is not able to set up."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -203,7 +203,7 @@ async def test_duplicate_entry(
         "w:installedapps"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -224,7 +224,7 @@ async def test_duplicate_entry(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -232,14 +232,14 @@ async def test_duplicate_entry(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_no_cloud(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Check we abort when cloud is not enabled."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -249,31 +249,31 @@ async def test_no_cloud(
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_reauthentication(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test SmartThings reauthentication."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -291,7 +291,7 @@ async def test_reauthentication(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -311,31 +311,31 @@ async def test_reauthentication(
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_reauthentication_wrong_scopes(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test SmartThings reauthentication with wrong scopes."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -354,7 +354,7 @@ async def test_reauthentication_wrong_scopes(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "missing_scopes"
@@ -362,32 +362,32 @@ async def test_reauthentication_wrong_scopes(
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_reauth_account_mismatch(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test SmartThings reauthentication with different account."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     mock_smartthings.get_locations.return_value[
         0
     ].location_id = "123123123-2be1-4e40-b257-e4ef59083324"
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -405,7 +405,7 @@ async def test_reauth_account_mismatch(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_account_mismatch"
@@ -413,22 +413,22 @@ async def test_reauth_account_mismatch(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauthentication_no_cloud(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test SmartThings reauthentication without cloud."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cloud_not_enabled"
@@ -436,32 +436,32 @@ async def test_reauthentication_no_cloud(
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_migration(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_old_config_entry: MockConfigEntry,
 ) -> None:
     """Test SmartThings reauthentication with different account."""
-    mock_old_config_entry.add_to_hass(hass)
+    mock_old_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_old_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_old_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_old_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    result = hass.config_entries.flow.async_progress()[0]
+    result = menuai.config_entries.flow.async_progress()[0]
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -479,13 +479,13 @@ async def test_migration(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert mock_old_config_entry.state is ConfigEntryState.LOADED
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
     mock_old_config_entry.data[CONF_TOKEN].pop("expires_at")
     assert mock_old_config_entry.data == {
         "auth_implementation": DOMAIN,
@@ -518,17 +518,17 @@ async def test_migration(
 
 @pytest.mark.usefixtures("current_request_with_host", "use_cloud")
 async def test_migration_wrong_location(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_old_config_entry: MockConfigEntry,
 ) -> None:
     """Test SmartThings reauthentication with wrong location."""
-    mock_old_config_entry.add_to_hass(hass)
+    mock_old_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_old_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_old_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_old_config_entry.state is ConfigEntryState.SETUP_ERROR
 
@@ -536,18 +536,18 @@ async def test_migration_wrong_location(
         0
     ].location_id = "123123123-2be1-4e40-b257-e4ef59083324"
 
-    result = hass.config_entries.flow.async_progress()[0]
+    result = menuai.config_entries.flow.async_progress()[0]
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -565,8 +565,8 @@ async def test_migration_wrong_location(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_location_mismatch"
@@ -591,23 +591,23 @@ async def test_migration_wrong_location(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_migration_no_cloud(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_smartthings: AsyncMock,
     mock_old_config_entry: MockConfigEntry,
 ) -> None:
     """Test SmartThings reauthentication with different account."""
-    mock_old_config_entry.add_to_hass(hass)
+    mock_old_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_old_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_old_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_old_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    result = hass.config_entries.flow.async_progress()[0]
+    result = menuai.config_entries.flow.async_progress()[0]
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cloud_not_enabled"

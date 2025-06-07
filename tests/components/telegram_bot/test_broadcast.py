@@ -1,13 +1,13 @@
 """Test Telegram broadcast."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_setup(hass: HomeAssistant, mock_external_calls: None) -> None:
+async def test_setup(menuai: menuai, mock_external_calls: None) -> None:
     """Test setting up Telegram broadcast."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "telegram_bot",
         {
             "telegram_bot": {
@@ -17,6 +17,6 @@ async def test_setup(hass: HomeAssistant, mock_external_calls: None) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.services.has_service("telegram_bot", "send_message") is True
+    assert menuai.services.has_service("telegram_bot", "send_message") is True

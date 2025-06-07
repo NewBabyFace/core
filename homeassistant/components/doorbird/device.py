@@ -17,10 +17,10 @@ from doorbirdpy import (
 )
 from propcache.api import cached_property
 
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.network import get_url
-from homeassistant.util import dt as dt_util, slugify
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers.network import get_url
+from menuai.util import dt as dt_util, slugify
 
 from .const import (
     API_URL,
@@ -55,7 +55,7 @@ class ConfiguredDoorBird:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: DoorBird,
         name: str | None,
         custom_url: str | None,
@@ -63,7 +63,7 @@ class ConfiguredDoorBird:
         event_entity_ids: dict[str, str],
     ) -> None:
         """Initialize configured device."""
-        self._hass = hass
+        self._menuai = menuai
         self._name = name
         self._device = device
         self._custom_url = custom_url
@@ -148,17 +148,17 @@ class ConfiguredDoorBird:
         """Register events on device."""
         # Override url if another is specified in the configuration
         if custom_url := self.custom_url:
-            hass_url = custom_url
+            menuai_url = custom_url
         else:
             # Get the URL of this server
-            hass_url = get_url(self._hass, prefer_external=False)
+            menuai_url = get_url(self._menuai, prefer_external=False)
 
         http_fav = await self._async_get_http_favorites()
         if any(
             # Note that a list comp is used here to ensure all
             # events are registered and the any does not short circuit
             [
-                await self._async_register_event(hass_url, event, http_fav)
+                await self._async_register_event(menuai_url, event, http_fav)
                 for event in self.door_station_events
             ]
         ):
@@ -193,7 +193,7 @@ class ConfiguredDoorBird:
         }
         for identifier, data in http_fav.items():
             title: str | None = data.get("title")
-            if not title or not title.startswith("Home Assistant"):
+            if not title or not title.startswith("MenuAI"):
                 continue
             event = title.partition("(")[2].strip(")")
             if input_type := favorite_input_type.get(identifier):
@@ -216,14 +216,14 @@ class ConfiguredDoorBird:
         return (await self.device.favorites()).get(HTTP_EVENT_TYPE) or {}
 
     async def _async_register_event(
-        self, hass_url: str, event: str, http_fav: dict[str, dict[str, Any]]
+        self, menuai_url: str, event: str, http_fav: dict[str, dict[str, Any]]
     ) -> bool:
         """Register an event.
 
         Returns True if the event was registered, False if
         the event was already registered or registration failed.
         """
-        url = f"{hass_url}{API_URL}/{event}?token={self._token}"
+        url = f"{menuai_url}{API_URL}/{event}?token={self._token}"
         _LOGGER.debug("Registering URL %s for event %s", url, event)
         # If its already registered, don't register it again
         if any(fav["value"] == url for fav in http_fav.values()):
@@ -231,7 +231,7 @@ class ConfiguredDoorBird:
             return False
 
         if not await self.device.change_favorite(
-            HTTP_EVENT_TYPE, f"Home Assistant ({event})", url
+            HTTP_EVENT_TYPE, f"MenuAI ({event})", url
         ):
             _LOGGER.warning(
                 'Unable to set favorite URL "%s". Event "%s" will not fire',

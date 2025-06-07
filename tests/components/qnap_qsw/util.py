@@ -47,9 +47,9 @@ from aioqsw.const import (
     API_VERSION,
 )
 
-from homeassistant.components.qnap_qsw import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.qnap_qsw import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -492,73 +492,73 @@ USERS_VERIFICATION_MOCK = {
 
 
 def init_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> MockConfigEntry:
-    """Set up the QNAP QSW entry in Home Assistant."""
+    """Set up the QNAP QSW entry in MenuAI."""
     config_entry = MockConfigEntry(
         data=CONFIG,
         domain=DOMAIN,
         unique_id="qsw_unique_id",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     return config_entry
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry | None = None,
 ) -> None:
-    """Set up the QNAP QSW integration in Home Assistant."""
+    """Set up the QNAP QSW integration in MenuAI."""
 
     if config_entry is None:
-        config_entry = init_config_entry(hass)
+        config_entry = init_config_entry(menuai)
 
     with (
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_firmware_condition",
+            "menuai.components.qnap_qsw.QnapQswApi.get_firmware_condition",
             return_value=FIRMWARE_CONDITION_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_firmware_info",
+            "menuai.components.qnap_qsw.QnapQswApi.get_firmware_info",
             return_value=FIRMWARE_INFO_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_firmware_update_check",
+            "menuai.components.qnap_qsw.QnapQswApi.get_firmware_update_check",
             return_value=FIRMWARE_UPDATE_CHECK_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_lacp_info",
+            "menuai.components.qnap_qsw.QnapQswApi.get_lacp_info",
             return_value=LACP_INFO_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_ports_statistics",
+            "menuai.components.qnap_qsw.QnapQswApi.get_ports_statistics",
             return_value=PORTS_STATISTICS_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_ports_status",
+            "menuai.components.qnap_qsw.QnapQswApi.get_ports_status",
             return_value=PORTS_STATUS_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_system_board",
+            "menuai.components.qnap_qsw.QnapQswApi.get_system_board",
             return_value=SYSTEM_BOARD_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_system_sensor",
+            "menuai.components.qnap_qsw.QnapQswApi.get_system_sensor",
             return_value=SYSTEM_SENSOR_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_system_time",
+            "menuai.components.qnap_qsw.QnapQswApi.get_system_time",
             return_value=SYSTEM_TIME_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_users_verification",
+            "menuai.components.qnap_qsw.QnapQswApi.get_users_verification",
             return_value=USERS_VERIFICATION_MOCK,
         ),
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.post_users_login",
+            "menuai.components.qnap_qsw.QnapQswApi.post_users_login",
             return_value=USERS_LOGIN_MOCK,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()

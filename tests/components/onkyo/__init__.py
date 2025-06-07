@@ -2,9 +2,9 @@
 
 from unittest.mock import AsyncMock, Mock, patch
 
-from homeassistant.components.onkyo.receiver import Receiver, ReceiverInfo
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.onkyo.receiver import Receiver, ReceiverInfo
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -68,11 +68,11 @@ def create_empty_config_entry() -> MockConfigEntry:
 
 
 async def setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, receiver_info: ReceiverInfo
+    menuai: menuai, config_entry: MockConfigEntry, receiver_info: ReceiverInfo
 ) -> None:
     """Fixture for setting up the component."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_receiver = AsyncMock()
     mock_receiver.conn.close = Mock()
@@ -81,10 +81,10 @@ async def setup_integration(
 
     with (
         patch(
-            "homeassistant.components.onkyo.async_interview",
+            "menuai.components.onkyo.async_interview",
             return_value=receiver_info,
         ),
         patch.object(Receiver, "async_create", return_value=mock_receiver),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()

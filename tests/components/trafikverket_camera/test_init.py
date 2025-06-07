@@ -8,11 +8,11 @@ from unittest.mock import patch
 import pytest
 from pytrafikverket import CameraInfoModel, UnknownError
 
-from homeassistant.components.trafikverket_camera import async_migrate_entry
-from homeassistant.components.trafikverket_camera.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.trafikverket_camera import async_migrate_entry
+from menuai.components.trafikverket_camera.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import ENTRY_CONFIG, ENTRY_CONFIG_OLD_CONFIG
 
@@ -21,7 +21,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_camera: CameraInfoModel,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -39,21 +39,21 @@ async def test_setup_entry(
         unique_id="trafikverket_camera-1234",
         title="Test Camera",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         return_value=get_camera,
     ) as mock_tvt_camera:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert len(mock_tvt_camera.mock_calls) == 1
 
 
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_camera: CameraInfoModel,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -71,23 +71,23 @@ async def test_unload_entry(
         unique_id="trafikverket_camera-1234",
         title="Test Camera",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         return_value=get_camera,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_migrate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_camera: CameraInfoModel,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -104,14 +104,14 @@ async def test_migrate_entry(
         unique_id="trafikverket_camera-Test location",
         title="Test location",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         return_value=get_camera,
     ) as mock_tvt_camera:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert entry.version == 3
@@ -134,7 +134,7 @@ async def test_migrate_entry(
     ],
 )
 async def test_migrate_entry_fails_with_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_camera: CameraInfoModel,
     aioclient_mock: AiohttpClientMocker,
     version: int,
@@ -154,14 +154,14 @@ async def test_migrate_entry_fails_with_error(
         unique_id=unique_id,
         title="Test location",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         side_effect=UnknownError,
     ) as mock_tvt_camera:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
     assert entry.version == version
@@ -183,7 +183,7 @@ async def test_migrate_entry_fails_with_error(
     ],
 )
 async def test_migrate_entry_fails_no_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     version: int,
     unique_id: str,
@@ -202,7 +202,7 @@ async def test_migrate_entry_fails_no_id(
         unique_id=unique_id,
         title="Test location",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     _camera = CameraInfoModel(
         camera_name="Test_camera",
@@ -221,11 +221,11 @@ async def test_migrate_entry_fails_no_id(
     )
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         return_value=_camera,
     ) as mock_tvt_camera:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
     assert entry.version == version
@@ -234,7 +234,7 @@ async def test_migrate_entry_fails_no_id(
 
 
 async def test_no_migration_needed(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_camera: CameraInfoModel,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -252,10 +252,10 @@ async def test_no_migration_needed(
         unique_id="trafikverket_camera-1234",
         title="Test location",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         return_value=get_camera,
     ):
-        assert await async_migrate_entry(hass, entry) is True
+        assert await async_migrate_entry(menuai, entry) is True

@@ -14,24 +14,24 @@ from typing import Any, Final, Self, cast, final, override
 
 from propcache.api import cached_property
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (  # noqa: F401
+from menuai.config_entries import ConfigEntry
+from menuai.const import (  # noqa: F401
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_UNIT_OF_MEASUREMENT,
     EntityCategory,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_platform import EntityPlatform
-from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
-from homeassistant.helpers.typing import UNDEFINED, ConfigType, StateType, UndefinedType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.enum import try_parse_enum
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, State, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.entity_platform import EntityPlatform
+from menuai.helpers.restore_state import ExtraStoredData, RestoreEntity
+from menuai.helpers.typing import UNDEFINED, ConfigType, StateType, UndefinedType
+from menuai.util import dt as dt_util
+from menuai.util.enum import try_parse_enum
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (  # noqa: F401
     ATTR_LAST_RESET,
@@ -57,7 +57,7 @@ from .websocket_api import async_setup as async_setup_ws_api
 
 _LOGGER: Final = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[SensorEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[SensorEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT: Final = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -83,25 +83,25 @@ __all__ = [
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for sensors."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[SensorEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[SensorEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
-    async_setup_ws_api(hass)
+    async_setup_ws_api(menuai)
     await component.async_setup(config)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class SensorEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -204,7 +204,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     @callback
     def add_to_platform_start(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         platform: EntityPlatform,
         parallel_updates: asyncio.Semaphore | None,
     ) -> None:
@@ -217,12 +217,12 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         This can be removed once core integrations have dropped unneeded custom unit
         conversion.
         """
-        super().add_to_platform_start(hass, platform, parallel_updates)
+        super().add_to_platform_start(menuai, platform, parallel_updates)
 
         # Bail out if the sensor doesn't have a unique_id or a device class
         if self.unique_id is None or self.device_class is None:
             return
-        registry = er.async_get(self.hass)
+        registry = er.async_get(self.menuai)
 
         # Bail out if the entity is not yet registered
         if not (
@@ -277,11 +277,11 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         # is stored in the entity registry.
         self._async_read_entity_options()
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the sensor entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the sensor entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         if self.entity_category == EntityCategory.CONFIG:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Entity {self.entity_id} cannot be added as the entity category is set to config"
             )
 
@@ -386,7 +386,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
         if suggested_unit_of_measurement is None:
             # Fallback to unit suggested by the unit conversion rules from device class
-            suggested_unit_of_measurement = self.hass.config.units.get_converted_unit(
+            suggested_unit_of_measurement = self.menuai.config.units.get_converted_unit(
                 self.device_class, self.native_unit_of_measurement
             )
 
@@ -395,7 +395,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         ):
             # If the device class is not known by the unit system but has a unit converter,
             # fall back to the unit suggested by the unit converter's unit class.
-            suggested_unit_of_measurement = self.hass.config.units.get_converted_unit(
+            suggested_unit_of_measurement = self.menuai.config.units.get_converted_unit(
                 unit_converter.UNIT_CLASS, self.native_unit_of_measurement
             )
 
@@ -518,7 +518,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             native_unit_of_measurement in TEMPERATURE_UNITS
             and self.device_class is SensorDeviceClass.TEMPERATURE
         ):
-            return self.hass.config.units.temperature_unit
+            return self.menuai.config.units.temperature_unit
 
         # Fourth priority: Unit translation
         if (translation_key := self._unit_of_measurement_translation_key) and (
@@ -569,7 +569,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             self._invalid_state_class_reported = True
             report_issue = self._suggest_report_issue()
 
-            # This should raise in Home Assistant Core 2023.6
+            # This should raise in MenuAI Core 2023.6
             _LOGGER.warning(
                 "Entity %s (%s) is using state class '%s' which "
                 "is impossible considering device class ('%s') it is using; "
@@ -702,7 +702,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             self._invalid_unit_of_measurement_reported = True
             report_issue = self._suggest_report_issue()
 
-            # This should raise in Home Assistant Core 2023.6
+            # This should raise in MenuAI Core 2023.6
             _LOGGER.warning(
                 (
                     "Entity %s (%s) is using native unit of measurement '%s' which "
@@ -823,7 +823,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         elif sensor_options["suggested_display_precision"] == display_precision:
             return
 
-        registry = er.async_get(self.hass)
+        registry = er.async_get(self.menuai)
         sensor_options = dict(sensor_options)
         sensor_options.pop("suggested_display_precision", None)
         if display_precision is not None:
@@ -867,7 +867,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         if (
             sensor_options := self.registry_entry.options.get(f"{DOMAIN}.private")
         ) and "refresh_initial_entity_options" in sensor_options:
-            registry = er.async_get(self.hass)
+            registry = er.async_get(self.menuai)
             initial_options = self.get_initial_entity_options() or {}
             registry.async_update_entity_options(
                 self.registry_entry.entity_id,
@@ -955,9 +955,9 @@ class RestoreSensor(SensorEntity, RestoreEntity):
 
 
 @callback
-def async_update_suggested_units(hass: HomeAssistant) -> None:
+def async_update_suggested_units(menuai: menuai) -> None:
     """Update the suggested_unit_of_measurement according to the unit system."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
 
     for entry in registry.entities.values():
         if entry.domain != DOMAIN:
@@ -972,9 +972,9 @@ def async_update_suggested_units(hass: HomeAssistant) -> None:
         )
 
 
-def _display_precision(hass: HomeAssistant, entity_id: str) -> int | None:
+def _display_precision(menuai: menuai, entity_id: str) -> int | None:
     """Return the display precision."""
-    if not (entry := er.async_get(hass).async_get(entity_id)) or not (
+    if not (entry := er.async_get(menuai).async_get(entity_id)) or not (
         sensor_options := entry.options.get(DOMAIN)
     ):
         return None
@@ -984,10 +984,10 @@ def _display_precision(hass: HomeAssistant, entity_id: str) -> int | None:
 
 
 @callback
-def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> str:
+def async_rounded_state(menuai: menuai, entity_id: str, state: State) -> str:
     """Return the state rounded for presentation."""
     value = state.state
-    if (precision := _display_precision(hass, entity_id)) is None:
+    if (precision := _display_precision(menuai, entity_id)) is None:
         return value
 
     with suppress(TypeError, ValueError):

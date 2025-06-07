@@ -6,7 +6,7 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.knx.const import (
+from menuai.components.knx.const import (
     CONF_CONTEXT_TIMEOUT,
     CONF_IGNORE_INTERNAL_STATE,
     CONF_INVERT,
@@ -14,8 +14,8 @@ from homeassistant.components.knx.const import (
     CONF_STATE_ADDRESS,
     CONF_SYNC_STATE,
 )
-from homeassistant.components.knx.schema import BinarySensorSchema
-from homeassistant.const import (
+from menuai.components.knx.schema import BinarySensorSchema
+from menuai.const import (
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
     STATE_OFF,
@@ -23,8 +23,8 @@ from homeassistant.const import (
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er
 
 from . import KnxEntityGenerator
 from .conftest import KNXTestKit
@@ -37,7 +37,7 @@ from tests.common import (
 
 
 async def test_binary_sensor_entity_category(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, knx: KNXTestKit
+    menuai: menuai, entity_registry: er.EntityRegistry, knx: KNXTestKit
 ) -> None:
     """Test KNX binary sensor entity category."""
     await knx.setup_integration(
@@ -59,7 +59,7 @@ async def test_binary_sensor_entity_category(
     assert entity.entity_category is EntityCategory.DIAGNOSTIC
 
 
-async def test_binary_sensor(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_binary_sensor(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX binary sensor and inverted binary_sensor."""
     await knx.setup_integration(
         {
@@ -82,24 +82,24 @@ async def test_binary_sensor(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.assert_read("2/2/2")
     await knx.receive_response("1/1/1", True)
     await knx.receive_response("2/2/2", False)
-    state_normal = hass.states.get("binary_sensor.test_normal")
-    state_invert = hass.states.get("binary_sensor.test_invert")
+    state_normal = menuai.states.get("binary_sensor.test_normal")
+    state_invert = menuai.states.get("binary_sensor.test_invert")
     assert state_normal.state is STATE_ON
     assert state_invert.state is STATE_ON
 
     # receive OFF telegram
     await knx.receive_write("1/1/1", False)
     await knx.receive_write("2/2/2", True)
-    state_normal = hass.states.get("binary_sensor.test_normal")
-    state_invert = hass.states.get("binary_sensor.test_invert")
+    state_normal = menuai.states.get("binary_sensor.test_normal")
+    state_invert = menuai.states.get("binary_sensor.test_invert")
     assert state_normal.state is STATE_OFF
     assert state_invert.state is STATE_OFF
 
     # receive ON telegram
     await knx.receive_write("1/1/1", True)
     await knx.receive_write("2/2/2", False)
-    state_normal = hass.states.get("binary_sensor.test_normal")
-    state_invert = hass.states.get("binary_sensor.test_invert")
+    state_normal = menuai.states.get("binary_sensor.test_normal")
+    state_invert = menuai.states.get("binary_sensor.test_invert")
     assert state_normal.state is STATE_ON
     assert state_invert.state is STATE_ON
 
@@ -110,7 +110,7 @@ async def test_binary_sensor(hass: HomeAssistant, knx: KNXTestKit) -> None:
 
 
 async def test_binary_sensor_ignore_internal_state(
-    hass: HomeAssistant, knx: KNXTestKit
+    menuai: menuai, knx: KNXTestKit
 ) -> None:
     """Test KNX binary_sensor with ignore_internal_state."""
     await knx.setup_integration(
@@ -130,7 +130,7 @@ async def test_binary_sensor_ignore_internal_state(
             ]
         }
     )
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
 
     # receive initial ON telegram
     await knx.receive_write("1/1/1", True)
@@ -154,7 +154,7 @@ async def test_binary_sensor_ignore_internal_state(
 
 
 async def test_binary_sensor_counter(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -173,20 +173,20 @@ async def test_binary_sensor_counter(
             ]
         }
     )
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
 
     # receive initial ON telegram
     await knx.receive_write("2/2/2", True)
     # no change yet - still in 1 sec context (additional async_block_till_done needed for time change)
     assert len(events) == 0
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_OFF
     assert state.attributes.get("counter") == 0
     freezer.tick(timedelta(seconds=context_timeout))
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     await knx.xknx.task_registry.block_till_done()
     # state changed twice after context timeout - once to ON with counter 1 and once to counter 0
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_ON
     assert state.attributes.get("counter") == 0
     assert len(events) == 2
@@ -201,13 +201,13 @@ async def test_binary_sensor_counter(
     await knx.receive_write("2/2/2", True)
     await knx.receive_write("2/2/2", True)
     assert len(events) == 0
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_ON
     assert state.attributes.get("counter") == 0
     freezer.tick(timedelta(seconds=context_timeout))
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     await knx.xknx.task_registry.block_till_done()
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_ON
     assert state.attributes.get("counter") == 0
     assert len(events) == 2
@@ -220,7 +220,7 @@ async def test_binary_sensor_counter(
 
 
 async def test_binary_sensor_reset(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -240,21 +240,21 @@ async def test_binary_sensor_reset(
 
     # receive ON telegram
     await knx.receive_write("2/2/2", True)
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_ON
     freezer.tick(timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     # state reset after after timeout
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_OFF
 
 
-async def test_binary_sensor_restore_and_respond(hass: HomeAssistant, knx) -> None:
+async def test_binary_sensor_restore_and_respond(menuai: menuai, knx) -> None:
     """Test restoring KNX binary sensor state and respond to read."""
     _ADDRESS = "2/2/2"
     fake_state = State("binary_sensor.test", STATE_ON)
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     await knx.setup_integration(
         {
@@ -269,20 +269,20 @@ async def test_binary_sensor_restore_and_respond(hass: HomeAssistant, knx) -> No
     )
 
     # restored state - doesn't send telegram
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state == STATE_ON
     await knx.assert_telegram_count(0)
 
     await knx.receive_write(_ADDRESS, False)
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_OFF
 
 
-async def test_binary_sensor_restore_invert(hass: HomeAssistant, knx) -> None:
+async def test_binary_sensor_restore_invert(menuai: menuai, knx) -> None:
     """Test restoring KNX binary sensor state with invert."""
     _ADDRESS = "2/2/2"
     fake_state = State("binary_sensor.test", STATE_ON)
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     await knx.setup_integration(
         {
@@ -298,13 +298,13 @@ async def test_binary_sensor_restore_invert(hass: HomeAssistant, knx) -> None:
     )
 
     # restored state - doesn't send telegram
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state == STATE_ON
     await knx.assert_telegram_count(0)
 
     # inverted is on, make sure the state is off after it
     await knx.receive_write(_ADDRESS, True)
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_OFF
 
 
@@ -323,7 +323,7 @@ async def test_binary_sensor_restore_invert(hass: HomeAssistant, knx) -> None:
     ],
 )
 async def test_binary_sensor_ui_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     create_ui_entity: KnxEntityGenerator,
     knx_data: dict[str, Any],
@@ -338,7 +338,7 @@ async def test_binary_sensor_ui_create(
     # created entity sends read-request to KNX bus
     await knx.assert_read("2/2/2")
     await knx.receive_response("2/2/2", not knx_data.get("invert"))
-    state = hass.states.get("binary_sensor.test")
+    state = menuai.states.get("binary_sensor.test")
     assert state.state is STATE_ON
 
 

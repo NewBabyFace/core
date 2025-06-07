@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
-from homeassistant.components.broadlink.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.broadlink.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -140,21 +140,21 @@ class BroadlinkDevice:
 
     async def setup_entry(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         mock_api: MagicMock | None = None,
         mock_entry: MockConfigEntry | None = None,
     ) -> MockSetup:
         """Set up the device."""
         mock_api = mock_api or self.get_mock_api()
         mock_entry = mock_entry or self.get_mock_entry()
-        mock_entry.add_to_hass(hass)
+        mock_entry.add_to_menuai(menuai)
 
         with patch(
-            "homeassistant.components.broadlink.device.blk.gendevice",
+            "menuai.components.broadlink.device.blk.gendevice",
             return_value=mock_api,
         ) as mock_factory:
-            await hass.config_entries.async_setup(mock_entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(mock_entry.entry_id)
+            await menuai.async_block_till_done()
 
         return MockSetup(mock_api, mock_entry, mock_factory)
 

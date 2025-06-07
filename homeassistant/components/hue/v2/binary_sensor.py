@@ -22,14 +22,14 @@ from aiohue.v2.models.entertainment_configuration import EntertainmentStatus
 from aiohue.v2.models.motion import Motion
 from aiohue.v2.models.tamper import Tamper, TamperState
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from ..bridge import HueConfigEntry
 from .entity import HueBaseEntity
@@ -45,7 +45,7 @@ type ControllerType = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HueConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -80,7 +80,7 @@ async def async_setup_entry(
     register_items(api.sensors.tamper, HueTamperSensor)
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueMotionSensor(HueBaseEntity, BinarySensorEntity):
     """Representation of a Hue Motion sensor."""
 
@@ -102,7 +102,7 @@ class HueMotionSensor(HueBaseEntity, BinarySensorEntity):
         return self.resource.motion.value
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueEntertainmentActiveSensor(HueBaseEntity, BinarySensorEntity):
     """Representation of a Hue Entertainment Configuration as binary sensor."""
 
@@ -126,7 +126,7 @@ class HueEntertainmentActiveSensor(HueBaseEntity, BinarySensorEntity):
         return self.resource.metadata.name
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueContactSensor(HueBaseEntity, BinarySensorEntity):
     """Representation of a Hue Contact sensor."""
 
@@ -148,7 +148,7 @@ class HueContactSensor(HueBaseEntity, BinarySensorEntity):
         return self.resource.contact_report.state != ContactState.CONTACT
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueTamperSensor(HueBaseEntity, BinarySensorEntity):
     """Representation of a Hue Tamper sensor."""
 

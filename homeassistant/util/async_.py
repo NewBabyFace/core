@@ -37,7 +37,7 @@ def create_eager_task[_T](
             # the wrong thread.
             # Late import to avoid circular dependencies
             # pylint: disable-next=import-outside-toplevel
-            from homeassistant.helpers import frame
+            from menuai.helpers import frame
 
             frame.report_usage("attempted to create an asyncio task from a thread")
             raise
@@ -76,8 +76,8 @@ def run_callback_threadsafe[_T, *_Ts](
 
     if hasattr(loop, _SHUTDOWN_RUN_CALLBACK_THREADSAFE):
         #
-        # If the final `HomeAssistant.async_block_till_done` in
-        # `HomeAssistant.async_stop` has already been called, the callback
+        # If the final `menuai.async_block_till_done` in
+        # `menuai.async_stop` has already been called, the callback
         # will never run and, `future.result()` will block forever which
         # will prevent the thread running this code from shutting down which
         # will result in a deadlock when the main thread attempts to shutdown
@@ -87,7 +87,7 @@ def run_callback_threadsafe[_T, *_Ts](
         #
         # 1. Set the _SHUTDOWN_RUN_CALLBACK_THREADSAFE attr on this function
         #    by calling `shutdown_run_callback_threadsafe`
-        # 2. Call `hass.async_block_till_done` at least once after shutdown
+        # 2. Call `menuai.async_block_till_done` at least once after shutdown
         #    to ensure all callbacks have run
         # 3. Raise an exception here to ensure `future.result()` can never be
         #    called and hit the deadlock since once `shutdown_run_callback_threadsafe`
@@ -128,7 +128,7 @@ def shutdown_run_callback_threadsafe(loop: AbstractEventLoop) -> None:
     executor thread.
 
     This function is considered irreversible and should only ever
-    be called when Home Assistant is going to shutdown and
+    be called when MenuAI is going to shutdown and
     python is going to exit.
     """
     setattr(loop, _SHUTDOWN_RUN_CALLBACK_THREADSAFE, True)

@@ -16,14 +16,14 @@ from amberelectric.models.spike_status import SpikeStatus
 from dateutil import parser
 import pytest
 
-from homeassistant.components.amberelectric.const import CONF_SITE_ID, CONF_SITE_NAME
-from homeassistant.components.amberelectric.coordinator import (
+from menuai.components.amberelectric.const import CONF_SITE_ID, CONF_SITE_NAME
+from menuai.components.amberelectric.coordinator import (
     AmberUpdateCoordinator,
     normalize_descriptor,
 )
-from homeassistant.const import CONF_API_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.const import CONF_API_TOKEN
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .helpers import (
     CONTROLLED_LOAD_CHANNEL,
@@ -110,12 +110,12 @@ def test_normalize_descriptor() -> None:
     assert normalize_descriptor(PriceDescriptor.SPIKE) == "spike"
 
 
-async def test_fetch_general_site(hass: HomeAssistant, current_price_api: Mock) -> None:
+async def test_fetch_general_site(menuai: menuai, current_price_api: Mock) -> None:
     """Test fetching a site with only a general channel."""
 
     current_price_api.get_current_prices.return_value = GENERAL_CHANNEL
     data_service = AmberUpdateCoordinator(
-        hass, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
+        menuai, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
     )
     result = await data_service._async_update_data()
 
@@ -140,13 +140,13 @@ async def test_fetch_general_site(hass: HomeAssistant, current_price_api: Mock) 
 
 
 async def test_fetch_no_general_site(
-    hass: HomeAssistant, current_price_api: Mock
+    menuai: menuai, current_price_api: Mock
 ) -> None:
     """Test fetching a site with no general channel."""
 
     current_price_api.get_current_prices.return_value = CONTROLLED_LOAD_CHANNEL
     data_service = AmberUpdateCoordinator(
-        hass, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
+        menuai, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
     )
     with pytest.raises(UpdateFailed):
         await data_service._async_update_data()
@@ -156,12 +156,12 @@ async def test_fetch_no_general_site(
     )
 
 
-async def test_fetch_api_error(hass: HomeAssistant, current_price_api: Mock) -> None:
+async def test_fetch_api_error(menuai: menuai, current_price_api: Mock) -> None:
     """Test that the old values are maintained if a second call fails."""
 
     current_price_api.get_current_prices.return_value = GENERAL_CHANNEL
     data_service = AmberUpdateCoordinator(
-        hass, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
+        menuai, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
     )
     result = await data_service._async_update_data()
 
@@ -204,7 +204,7 @@ async def test_fetch_api_error(hass: HomeAssistant, current_price_api: Mock) -> 
 
 
 async def test_fetch_general_and_controlled_load_site(
-    hass: HomeAssistant, current_price_api: Mock
+    menuai: menuai, current_price_api: Mock
 ) -> None:
     """Test fetching a site with a general and controlled load channel."""
 
@@ -212,7 +212,7 @@ async def test_fetch_general_and_controlled_load_site(
         GENERAL_CHANNEL + CONTROLLED_LOAD_CHANNEL
     )
     data_service = AmberUpdateCoordinator(
-        hass, MOCKED_ENTRY, current_price_api, GENERAL_AND_CONTROLLED_SITE_ID
+        menuai, MOCKED_ENTRY, current_price_api, GENERAL_AND_CONTROLLED_SITE_ID
     )
     result = await data_service._async_update_data()
 
@@ -244,7 +244,7 @@ async def test_fetch_general_and_controlled_load_site(
 
 
 async def test_fetch_general_and_feed_in_site(
-    hass: HomeAssistant, current_price_api: Mock
+    menuai: menuai, current_price_api: Mock
 ) -> None:
     """Test fetching a site with a general and feed_in channel."""
 
@@ -252,7 +252,7 @@ async def test_fetch_general_and_feed_in_site(
         GENERAL_CHANNEL + FEED_IN_CHANNEL
     )
     data_service = AmberUpdateCoordinator(
-        hass, MOCKED_ENTRY, current_price_api, GENERAL_AND_FEED_IN_SITE_ID
+        menuai, MOCKED_ENTRY, current_price_api, GENERAL_AND_FEED_IN_SITE_ID
     )
     result = await data_service._async_update_data()
 
@@ -281,7 +281,7 @@ async def test_fetch_general_and_feed_in_site(
 
 
 async def test_fetch_potential_spike(
-    hass: HomeAssistant, current_price_api: Mock
+    menuai: menuai, current_price_api: Mock
 ) -> None:
     """Test fetching a site with only a general channel."""
 
@@ -293,13 +293,13 @@ async def test_fetch_potential_spike(
     general_channel[0].actual_instance.spike_status = SpikeStatus.POTENTIAL
     current_price_api.get_current_prices.return_value = general_channel
     data_service = AmberUpdateCoordinator(
-        hass, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
+        menuai, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
     )
     result = await data_service._async_update_data()
     assert result["grid"]["price_spike"] == "potential"
 
 
-async def test_fetch_spike(hass: HomeAssistant, current_price_api: Mock) -> None:
+async def test_fetch_spike(menuai: menuai, current_price_api: Mock) -> None:
     """Test fetching a site with only a general channel."""
 
     general_channel: list[Interval] = [
@@ -310,7 +310,7 @@ async def test_fetch_spike(hass: HomeAssistant, current_price_api: Mock) -> None
     general_channel[0].actual_instance.spike_status = SpikeStatus.SPIKE
     current_price_api.get_current_prices.return_value = general_channel
     data_service = AmberUpdateCoordinator(
-        hass, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
+        menuai, MOCKED_ENTRY, current_price_api, GENERAL_ONLY_SITE_ID
     )
     result = await data_service._async_update_data()
     assert result["grid"]["price_spike"] == "spike"

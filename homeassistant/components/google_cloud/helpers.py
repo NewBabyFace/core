@@ -11,9 +11,9 @@ from google.cloud import texttospeech
 from google.oauth2.service_account import Credentials
 import voluptuous as vol
 
-from homeassistant.components.tts import CONF_LANG
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import (
+from menuai.components.tts import CONF_LANG
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     SelectSelector,

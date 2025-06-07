@@ -8,9 +8,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.core import Context, HomeAssistant, async_get_hass, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, intent, singleton
+from menuai.core import Context, menuai, async_get_menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, intent, singleton
 
 from .const import (
     DATA_COMPONENT,
@@ -36,31 +36,31 @@ _LOGGER = logging.getLogger(__name__)
 
 @singleton.singleton("conversation_agent")
 @callback
-def get_agent_manager(hass: HomeAssistant) -> AgentManager:
+def get_agent_manager(menuai: menuai) -> AgentManager:
     """Get the active agent."""
-    return AgentManager(hass)
+    return AgentManager(menuai)
 
 
 def agent_id_validator(value: Any) -> str:
     """Validate agent ID."""
-    hass = async_get_hass()
-    if async_get_agent(hass, cv.string(value)) is None:
+    menuai = async_get_menuai()
+    if async_get_agent(menuai, cv.string(value)) is None:
         raise vol.Invalid("invalid agent ID")
     return value
 
 
 @callback
 def async_get_agent(
-    hass: HomeAssistant, agent_id: str | None = None
+    menuai: menuai, agent_id: str | None = None
 ) -> AbstractConversationAgent | ConversationEntity | None:
     """Get specified agent."""
     if agent_id is None or agent_id in (HOME_ASSISTANT_AGENT, OLD_HOME_ASSISTANT_AGENT):
-        return hass.data[DATA_DEFAULT_ENTITY]
+        return menuai.data[DATA_DEFAULT_ENTITY]
 
     if "." in agent_id:
-        return hass.data[DATA_COMPONENT].get_entity(agent_id)
+        return menuai.data[DATA_COMPONENT].get_entity(agent_id)
 
-    manager = get_agent_manager(hass)
+    manager = get_agent_manager(menuai)
 
     if not manager.async_is_valid_agent_id(agent_id):
         return None
@@ -69,7 +69,7 @@ def async_get_agent(
 
 
 async def async_converse(
-    hass: HomeAssistant,
+    menuai: menuai,
     text: str,
     conversation_id: str | None,
     context: Context,
@@ -82,7 +82,7 @@ async def async_converse(
     if agent_id is None:
         agent_id = HOME_ASSISTANT_AGENT
 
-    agent = async_get_agent(hass, agent_id)
+    agent = async_get_agent(menuai, agent_id)
 
     if agent is None:
         raise ValueError(f"Agent {agent_id} not found")
@@ -94,7 +94,7 @@ async def async_converse(
         method = agent.async_process
 
     if language is None:
-        language = hass.config.language
+        language = menuai.config.language
 
     _LOGGER.debug("Processing in %s: %s", language, text)
     conversation_input = ConversationInput(
@@ -115,7 +115,7 @@ async def async_converse(
         )
         try:
             result = await method(conversation_input)
-        except HomeAssistantError as err:
+        except menuaiError as err:
             intent_response = intent.IntentResponse(language=language)
             intent_response.async_set_error(
                 intent.IntentResponseErrorCode.UNKNOWN,
@@ -133,9 +133,9 @@ async def async_converse(
 class AgentManager:
     """Class to manage conversation agents."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the conversation agents."""
-        self.hass = hass
+        self.menuai = menuai
         self._agents: dict[str, AbstractConversationAgent] = {}
 
     @callback
@@ -151,7 +151,7 @@ class AgentManager:
         """List all agents."""
         agents: list[AgentInfo] = []
         for agent_id, agent in self._agents.items():
-            config_entry = self.hass.config_entries.async_get_entry(agent_id)
+            config_entry = self.menuai.config_entries.async_get_entry(agent_id)
 
             # Guard against potential bugs in conversation agents where the agent is not
             # removed from the manager when the config entry is removed

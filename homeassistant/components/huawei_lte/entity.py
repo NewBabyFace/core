@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from . import Router
 from .const import UPDATE_SIGNAL
@@ -44,10 +44,10 @@ class HuaweiLteBaseEntity(Entity):
         """Update state."""
         raise NotImplementedError
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect to update signals."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, UPDATE_SIGNAL, self._async_maybe_update)
+            async_dispatcher_connect(self.menuai, UPDATE_SIGNAL, self._async_maybe_update)
         )
 
     async def _async_maybe_update(self, config_entry_unique_id: str) -> None:

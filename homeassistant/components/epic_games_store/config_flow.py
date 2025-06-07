@@ -8,11 +8,11 @@ from typing import Any
 from epicstore_api import EpicGamesStoreAPI
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_COUNTRY, CONF_LANGUAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.selector import (
+from menuai import config_entries
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import CONF_COUNTRY, CONF_LANGUAGE
+from menuai.core import menuai
+from menuai.helpers.selector import (
     CountrySelector,
     LanguageSelector,
     LanguageSelectorConfig,
@@ -32,20 +32,20 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-def get_default_language(hass: HomeAssistant) -> str | None:
-    """Get default language code based on Home Assistant config."""
-    language_code = f"{hass.config.language}-{hass.config.country}"
+def get_default_language(menuai: menuai) -> str | None:
+    """Get default language code based on MenuAI config."""
+    language_code = f"{menuai.config.language}-{menuai.config.country}"
     if language_code in SUPPORTED_LANGUAGES:
         return language_code
-    if hass.config.language in SUPPORTED_LANGUAGES:
-        return hass.config.language
+    if menuai.config.language in SUPPORTED_LANGUAGES:
+        return menuai.config.language
     return None
 
 
-async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> None:
+async def validate_input(menuai: menuai, user_input: dict[str, Any]) -> None:
     """Validate the user input allows us to connect."""
     api = EpicGamesStoreAPI(user_input[CONF_LANGUAGE], user_input[CONF_COUNTRY])
-    data = await hass.async_add_executor_job(api.get_free_games)
+    data = await menuai.async_add_executor_job(api.get_free_games)
 
     if data.get("errors"):
         _LOGGER.warning(data["errors"])
@@ -66,8 +66,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             STEP_USER_DATA_SCHEMA,
             user_input
             or {
-                CONF_LANGUAGE: get_default_language(self.hass),
-                CONF_COUNTRY: self.hass.config.country,
+                CONF_LANGUAGE: get_default_language(self.menuai),
+                CONF_COUNTRY: self.menuai.config.country,
             },
         )
         if user_input is None:
@@ -81,7 +81,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            await validate_input(self.hass, user_input)
+            await validate_input(self.menuai, user_input)
         except Exception:
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"

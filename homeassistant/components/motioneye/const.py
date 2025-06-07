@@ -98,4 +98,4 @@ TYPE_MOTIONEYE_MJPEG_CAMERA: Final = "motioneye_mjpeg_camera"
 TYPE_MOTIONEYE_SWITCH_BASE: Final = f"{DOMAIN}_switch"
 
 WEB_HOOK_SENTINEL_KEY: Final = "src"
-WEB_HOOK_SENTINEL_VALUE: Final = "hass-motioneye"
+WEB_HOOK_SENTINEL_VALUE: Final = "menuai-motioneye"

@@ -18,15 +18,15 @@ from async_upnp_client.ssdp import (
     is_ipv4_address,
 )
 
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.const import (
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     __version__ as current_version,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.instance_id import async_get as async_get_instance_id
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.system_info import async_get_system_info
+from menuai.core import Event, menuai
+from menuai.helpers.instance_id import async_get as async_get_instance_id
+from menuai.helpers.network import NoURLAvailableError, get_url
+from menuai.helpers.system_info import async_get_system_info
 
 from .common import async_build_source_set
 
@@ -36,13 +36,13 @@ UPNP_SERVER_MAX_PORT = 40100
 _LOGGER = logging.getLogger(__name__)
 
 
-class HassUpnpServiceDevice(UpnpServerDevice):
-    """Hass Device."""
+class menuaiUpnpServiceDevice(UpnpServerDevice):
+    """menuai Device."""
 
     DEVICE_DEFINITION = DeviceInfo(
-        device_type="urn:home-assistant.io:device:HomeAssistant:1",
+        device_type="urn:home-assistant.io:device:menuai:1",
         friendly_name="filled_later_on",
-        manufacturer="Home Assistant",
+        manufacturer="MenuAI",
         manufacturer_url="https://www.home-assistant.io",
         model_description=None,
         model_name="filled_later_on",
@@ -112,46 +112,46 @@ async def _async_find_next_available_port(source: AddressTupleVXType) -> int:
 class Server:
     """Class to be visible via SSDP searching and advertisements."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize class."""
-        self.hass = hass
+        self.menuai = menuai
         self._upnp_servers: list[UpnpServer] = []
 
     async def async_start(self) -> None:
         """Start the server."""
-        bus = self.hass.bus
-        bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.async_stop)
+        bus = self.menuai.bus
+        bus.async_listen_once(EVENT_menuai_STOP, self.async_stop)
         bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STARTED,
+            EVENT_menuai_STARTED,
             self._async_start_upnp_servers,
         )
 
     async def _async_get_instance_udn(self) -> str:
         """Get Unique Device Name for this instance."""
-        instance_id = await async_get_instance_id(self.hass)
+        instance_id = await async_get_instance_id(self.menuai)
         return f"uuid:{instance_id[0:8]}-{instance_id[8:12]}-{instance_id[12:16]}-{instance_id[16:20]}-{instance_id[20:32]}".upper()
 
     async def _async_start_upnp_servers(self, event: Event) -> None:
         """Start the UPnP/SSDP servers."""
         # Update UDN with our instance UDN.
         udn = await self._async_get_instance_udn()
-        system_info = await async_get_system_info(self.hass)
+        system_info = await async_get_system_info(self.menuai)
         model_name = system_info["installation_type"]
         try:
-            presentation_url = get_url(self.hass, allow_ip=True, prefer_external=False)
+            presentation_url = get_url(self.menuai, allow_ip=True, prefer_external=False)
         except NoURLAvailableError:
             _LOGGER.warning(
                 "Could not set up UPnP/SSDP server, as a presentation URL could"
                 " not be determined; Please configure your internal URL"
-                " in the Home Assistant general configuration"
+                " in the MenuAI general configuration"
             )
             return
 
-        serial_number = await async_get_instance_id(self.hass)
-        HassUpnpServiceDevice.DEVICE_DEFINITION = (
-            HassUpnpServiceDevice.DEVICE_DEFINITION._replace(
+        serial_number = await async_get_instance_id(self.menuai)
+        menuaiUpnpServiceDevice.DEVICE_DEFINITION = (
+            menuaiUpnpServiceDevice.DEVICE_DEFINITION._replace(
                 udn=udn,
-                friendly_name=f"{self.hass.config.location_name} (Home Assistant)",
+                friendly_name=f"{self.menuai.config.location_name} (MenuAI)",
                 model_name=model_name,
                 presentation_url=presentation_url,
                 serial_number=serial_number,
@@ -159,15 +159,15 @@ class Server:
         )
 
         # Update icon URLs.
-        for index, icon in enumerate(HassUpnpServiceDevice.DEVICE_DEFINITION.icons):
+        for index, icon in enumerate(menuaiUpnpServiceDevice.DEVICE_DEFINITION.icons):
             new_url = urljoin(presentation_url, icon.url)
-            HassUpnpServiceDevice.DEVICE_DEFINITION.icons[index] = icon._replace(
+            menuaiUpnpServiceDevice.DEVICE_DEFINITION.icons[index] = icon._replace(
                 url=new_url
             )
 
         # Start a server on all source IPs.
         boot_id = int(time())
-        for source_ip in await async_build_source_set(self.hass):
+        for source_ip in await async_build_source_set(self.menuai):
             source_ip_str = str(source_ip)
             if source_ip.version == 6:
                 assert source_ip.scope_id is not None
@@ -188,7 +188,7 @@ class Server:
                     source=source,
                     target=target,
                     http_port=http_port,
-                    server_device=HassUpnpServiceDevice,
+                    server_device=menuaiUpnpServiceDevice,
                     boot_id=boot_id,
                 )
             )

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from homeassistant.components.air_quality import AirQualityEntity
-from homeassistant.const import CONF_DEVICE_ID, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.air_quality import AirQualityEntity
+from menuai.const import CONF_DEVICE_ID, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_AQI_LEVEL,
@@ -19,7 +19,7 @@ from .const import (
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -28,7 +28,7 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    api = hass.data[DOMAIN]
+    api = menuai.data[DOMAIN]
     name = discovery_info[CONF_NAME]
     device_id = discovery_info[CONF_DEVICE_ID]
 
@@ -116,10 +116,10 @@ class KaiterraAirQuality(AirQualityEntity):
             if value is not None
         }
 
-    async def async_added_to_hass(self):
+    async def async_added_to_menuai(self):
         """Register callback."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCHER_KAITERRA, self.async_write_ha_state
+                self.menuai, DISPATCHER_KAITERRA, self.async_write_ha_state
             )
         )

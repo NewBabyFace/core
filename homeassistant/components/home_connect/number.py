@@ -6,15 +6,15 @@ from typing import cast
 from aiohomeconnect.model import GetSetting, OptionKey, SettingKey
 from aiohomeconnect.model.error import HomeConnectError
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
 )
-from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import setup_home_connect_entry
 from .const import DOMAIN, UNIT_MAP
@@ -146,7 +146,7 @@ def _get_option_entities_for_appliance(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -177,7 +177,7 @@ class HomeConnectNumberEntity(HomeConnectEntity, NumberEntity):
                 value=value,
             )
         except HomeConnectError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_setting_entity",
                 translation_placeholders={
@@ -223,9 +223,9 @@ class HomeConnectNumberEntity(HomeConnectEntity, NumberEntity):
         data = self.appliance.settings[cast(SettingKey, self.bsh_key)]
         self._attr_native_value = cast(float, data.value)
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         data = self.appliance.settings[cast(SettingKey, self.bsh_key)]
         self.set_constraints(data)
         if (

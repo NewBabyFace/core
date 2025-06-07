@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from simplipy.system.v3 import SystemV3
 
-from homeassistant.components.simplisafe.const import DOMAIN
-from homeassistant.const import CONF_CODE, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonObjectType
+from menuai.components.simplisafe.const import DOMAIN
+from menuai.const import CONF_CODE, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonObjectType
 
 from .common import REFRESH_TOKEN, USER_ID, USERNAME
 
@@ -37,13 +37,13 @@ def api_fixture(
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, str], unique_id: str
+    menuai: menuai, config: dict[str, str], unique_id: str
 ) -> MockConfigEntry:
     """Define a config entry."""
     entry = MockConfigEntry(
         domain=DOMAIN, unique_id=unique_id, data=config, options={CONF_CODE: "1234"}
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -100,32 +100,32 @@ def reauth_config_fixture() -> dict[str, str]:
 
 @pytest.fixture(name="setup_simplisafe")
 async def setup_simplisafe_fixture(
-    hass: HomeAssistant, api: Mock, config: dict[str, str]
+    menuai: menuai, api: Mock, config: dict[str, str]
 ) -> AsyncGenerator[None]:
     """Define a fixture to set up SimpliSafe."""
     with (
         patch(
-            "homeassistant.components.simplisafe.config_flow.API.async_from_auth",
+            "menuai.components.simplisafe.config_flow.API.async_from_auth",
             return_value=api,
         ),
         patch(
-            "homeassistant.components.simplisafe.API.async_from_auth",
+            "menuai.components.simplisafe.API.async_from_auth",
             return_value=api,
         ),
         patch(
-            "homeassistant.components.simplisafe.API.async_from_refresh_token",
+            "menuai.components.simplisafe.API.async_from_refresh_token",
             return_value=api,
         ),
         patch(
-            "homeassistant.components.simplisafe.SimpliSafe._async_start_websocket_loop"
+            "menuai.components.simplisafe.SimpliSafe._async_start_websocket_loop"
         ),
         patch(
-            "homeassistant.components.simplisafe.PLATFORMS",
+            "menuai.components.simplisafe.PLATFORMS",
             [],
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
         yield
 
 

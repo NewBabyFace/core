@@ -11,23 +11,23 @@ from PIL import Image, ImageDraw, UnidentifiedImageError
 import simplehound.core as hound
 import voluptuous as vol
 
-from homeassistant.components.image_processing import (
+from menuai.components.image_processing import (
     PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
     ImageProcessingEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_API_KEY,
     CONF_ENTITY_ID,
     CONF_NAME,
     CONF_SOURCE,
 )
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.pil import draw_box
+from menuai.core import menuai, split_entity_id
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
+from menuai.util.pil import draw_box
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -133,7 +133,7 @@ class SighthoundEntity(ImageProcessingEntity):
 
     def fire_person_detected_event(self, person: dict[str, Any]) -> None:
         """Send event with detected total_persons."""
-        self.hass.bus.fire(
+        self.menuai.bus.fire(
             EVENT_PERSON_DETECTED,
             {
                 ATTR_ENTITY_ID: self.entity_id,

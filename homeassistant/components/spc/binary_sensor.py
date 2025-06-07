@@ -6,14 +6,14 @@ from pyspcwebgw import SpcWebGateway
 from pyspcwebgw.const import ZoneInput, ZoneType
 from pyspcwebgw.zone import Zone
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_API, SIGNAL_UPDATE_SENSOR
 
@@ -28,7 +28,7 @@ def _get_device_class(zone_type: ZoneType) -> BinarySensorDeviceClass | None:
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -36,7 +36,7 @@ async def async_setup_platform(
     """Set up the SPC binary sensor."""
     if discovery_info is None:
         return
-    api: SpcWebGateway = hass.data[DATA_API]
+    api: SpcWebGateway = menuai.data[DATA_API]
     async_add_entities(
         [
             SpcBinarySensor(zone)
@@ -57,11 +57,11 @@ class SpcBinarySensor(BinarySensorEntity):
         self._attr_name = zone.name
         self._attr_device_class = _get_device_class(zone.type)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call for adding new entities."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_SENSOR.format(self._zone.id),
                 self._update_callback,
             )

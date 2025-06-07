@@ -4,7 +4,7 @@ from pypck.inputs import Input, ModSendKeysHost, ModStatusAccessControl
 from pypck.lcn_addr import LcnAddr
 from pypck.lcn_defs import AccessControlPeriphery, KeyAction, SendKeyCommand
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .conftest import MockConfigEntry, init_integration
 
@@ -17,11 +17,11 @@ LCN_SEND_KEYS = "lcn_send_keys"
 
 
 async def test_fire_transponder_event(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test the transponder event is fired."""
-    lcn_connection = await init_integration(hass, entry)
-    events = async_capture_events(hass, LCN_TRANSPONDER)
+    lcn_connection = await init_integration(menuai, entry)
+    events = async_capture_events(menuai, LCN_TRANSPONDER)
 
     inp = ModStatusAccessControl(
         LcnAddr(0, 7, False),
@@ -30,7 +30,7 @@ async def test_fire_transponder_event(
     )
 
     await lcn_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == LCN_TRANSPONDER
@@ -38,11 +38,11 @@ async def test_fire_transponder_event(
 
 
 async def test_fire_fingerprint_event(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test the fingerprint event is fired."""
-    lcn_connection = await init_integration(hass, entry)
-    events = async_capture_events(hass, LCN_FINGERPRINT)
+    lcn_connection = await init_integration(menuai, entry)
+    events = async_capture_events(menuai, LCN_FINGERPRINT)
 
     inp = ModStatusAccessControl(
         LcnAddr(0, 7, False),
@@ -51,17 +51,17 @@ async def test_fire_fingerprint_event(
     )
 
     await lcn_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == LCN_FINGERPRINT
     assert events[0].data["code"] == "aabbcc"
 
 
-async def test_fire_codelock_event(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def test_fire_codelock_event(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test the codelock event is fired."""
-    lcn_connection = await init_integration(hass, entry)
-    events = async_capture_events(hass, "lcn_codelock")
+    lcn_connection = await init_integration(menuai, entry)
+    events = async_capture_events(menuai, "lcn_codelock")
 
     inp = ModStatusAccessControl(
         LcnAddr(0, 7, False),
@@ -70,7 +70,7 @@ async def test_fire_codelock_event(hass: HomeAssistant, entry: MockConfigEntry) 
     )
 
     await lcn_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == "lcn_codelock"
@@ -78,11 +78,11 @@ async def test_fire_codelock_event(hass: HomeAssistant, entry: MockConfigEntry) 
 
 
 async def test_fire_transmitter_event(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test the transmitter event is fired."""
-    lcn_connection = await init_integration(hass, entry)
-    events = async_capture_events(hass, LCN_TRANSMITTER)
+    lcn_connection = await init_integration(menuai, entry)
+    events = async_capture_events(menuai, LCN_TRANSMITTER)
 
     inp = ModStatusAccessControl(
         LcnAddr(0, 7, False),
@@ -94,7 +94,7 @@ async def test_fire_transmitter_event(
     )
 
     await lcn_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == LCN_TRANSMITTER
@@ -104,10 +104,10 @@ async def test_fire_transmitter_event(
     assert events[0].data["action"] == "hit"
 
 
-async def test_fire_sendkeys_event(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def test_fire_sendkeys_event(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test the send_keys event is fired."""
-    lcn_connection = await init_integration(hass, entry)
-    events = async_capture_events(hass, LCN_SEND_KEYS)
+    lcn_connection = await init_integration(menuai, entry)
+    events = async_capture_events(menuai, LCN_SEND_KEYS)
 
     inp = ModSendKeysHost(
         LcnAddr(0, 7, False),
@@ -116,7 +116,7 @@ async def test_fire_sendkeys_event(hass: HomeAssistant, entry: MockConfigEntry) 
     )
 
     await lcn_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 4
     assert events[0].event_type == LCN_SEND_KEYS
@@ -134,10 +134,10 @@ async def test_fire_sendkeys_event(hass: HomeAssistant, entry: MockConfigEntry) 
 
 
 async def test_dont_fire_on_non_module_input(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test for no event is fired if a non-module input is received."""
-    lcn_connection = await init_integration(hass, entry)
+    lcn_connection = await init_integration(menuai, entry)
     inp = Input()
 
     for event_name in (
@@ -146,7 +146,7 @@ async def test_dont_fire_on_non_module_input(
         LCN_TRANSMITTER,
         LCN_SEND_KEYS,
     ):
-        events = async_capture_events(hass, event_name)
+        events = async_capture_events(menuai, event_name)
         await lcn_connection.async_process_input(inp)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(events) == 0

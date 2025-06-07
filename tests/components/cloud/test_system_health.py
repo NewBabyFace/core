@@ -6,18 +6,18 @@ from typing import Any
 from unittest.mock import MagicMock
 
 from aiohttp import ClientError
-from hass_nabucasa.remote import CertificateStatus
+from menuai_nabucasa.remote import CertificateStatus
 
-from homeassistant.components.cloud.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.cloud.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import get_system_health_info
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_cloud_system_health(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     cloud: MagicMock,
     set_cloud_prefs: Callable[[dict[str, Any]], Coroutine[Any, Any, None]],
@@ -29,9 +29,9 @@ async def test_cloud_system_health(
         "https://cognito-idp.us-east-1.amazonaws.com/AAAA/.well-known/jwks.json",
         exc=ClientError,
     )
-    assert await async_setup_component(hass, "system_health", {})
+    assert await async_setup_component(menuai, "system_health", {})
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -42,7 +42,7 @@ async def test_cloud_system_health(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     await cloud.login("test-user", "test-pass")
 
     cloud.remote.snitun_server = "us-west-1"
@@ -58,7 +58,7 @@ async def test_cloud_system_health(
         }
     )
 
-    info = await get_system_health_info(hass, "cloud")
+    info = await get_system_health_info(menuai, "cloud")
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):

@@ -1,4 +1,4 @@
-"""Config flow for Livisi Home Assistant."""
+"""Config flow for Livisi MenuAI."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from livisi import errors as livisi_errors
 from livisi.aiolivisi import AioLivisi
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN, LOGGER
 
@@ -60,7 +60,7 @@ class LivisiFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _login(self, user_input: dict[str, str]) -> None:
         """Login into Livisi Smart Home."""
-        web_session = aiohttp_client.async_get_clientsession(self.hass)
+        web_session = aiohttp_client.async_get_clientsession(self.menuai)
         self.aio_livisi = AioLivisi(web_session)
         livisi_connection_data = {
             "ip_address": user_input[CONF_HOST],

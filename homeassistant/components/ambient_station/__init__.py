@@ -7,18 +7,18 @@ from typing import Any
 from aioambient import Websocket
 from aioambient.errors import WebsocketError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LOCATION,
     ATTR_NAME,
     CONF_API_KEY,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     ATTR_LAST_DATA,
@@ -54,16 +54,16 @@ def async_hydrate_station_data(data: dict[str, Any]) -> dict[str, Any]:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AmbientStationConfigEntry
+    menuai: menuai, entry: AmbientStationConfigEntry
 ) -> bool:
     """Set up the Ambient PWS as config entry."""
     if not entry.unique_id:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=entry.data[CONF_APP_KEY]
         )
 
     ambient = AmbientStation(
-        hass,
+        menuai,
         entry,
         Websocket(entry.data[CONF_APP_KEY], entry.data[CONF_API_KEY]),
     )
@@ -80,8 +80,8 @@ async def async_setup_entry(
         await ambient.websocket.disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, _async_disconnect_websocket
+        menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, _async_disconnect_websocket
         )
     )
 
@@ -89,17 +89,17 @@ async def async_setup_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AmbientStationConfigEntry
+    menuai: menuai, entry: AmbientStationConfigEntry
 ) -> bool:
     """Unload an Ambient PWS config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.async_create_task(entry.runtime_data.ws_disconnect(), eager_start=True)
+        menuai.async_create_task(entry.runtime_data.ws_disconnect(), eager_start=True)
 
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     version = entry.version
 
@@ -107,14 +107,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # 1 -> 2: Unique ID format changed, so delete and re-import:
     if version == 1:
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         dev_reg.async_clear_config_entry(entry.entry_id)
 
-        en_reg = er.async_get(hass)
+        en_reg = er.async_get(menuai)
         en_reg.async_clear_config_entry(entry.entry_id)
 
         version = 2
-        hass.config_entries.async_update_entry(entry, version=version)
+        menuai.config_entries.async_update_entry(entry, version=version)
 
     LOGGER.info("Migration to version %s successful", version)
 
@@ -125,12 +125,12 @@ class AmbientStation:
     """Define a class to handle the Ambient websocket."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, websocket: Websocket
+        self, menuai: menuai, entry: ConfigEntry, websocket: Websocket
     ) -> None:
         """Initialize."""
         self._entry = entry
         self._entry_setup_complete = False
-        self._hass = hass
+        self._menuai = menuai
         self._ws_reconnect_delay = DEFAULT_SOCKET_MIN_RETRY
         self.stations: dict[str, dict] = {}
         self.websocket = websocket
@@ -152,7 +152,7 @@ class AmbientStation:
 
             LOGGER.debug("New data received: %s", data)
             self.stations[mac][ATTR_LAST_DATA] = async_hydrate_station_data(data)
-            async_dispatcher_send(self._hass, f"ambient_station_data_update_{mac}")
+            async_dispatcher_send(self._menuai, f"ambient_station_data_update_{mac}")
 
         def on_disconnect() -> None:
             """Define a handler to fire when the websocket is disconnected."""
@@ -177,8 +177,8 @@ class AmbientStation:
             # attempt forward setup of the config entry (because it will have
             # already been done):
             if not self._entry_setup_complete:
-                self._hass.async_create_task(
-                    self._hass.config_entries.async_forward_entry_setups(
+                self._menuai.async_create_task(
+                    self._menuai.config_entries.async_forward_entry_setups(
                         self._entry, PLATFORMS
                     ),
                     eager_start=True,

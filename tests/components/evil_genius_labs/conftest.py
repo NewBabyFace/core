@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonObjectType
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonObjectType
 
 from tests.common import (
     MockConfigEntry,
@@ -38,16 +38,16 @@ def product_fixture() -> dict[str, str]:
 
 
 @pytest.fixture
-def config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def config_entry(menuai: menuai) -> MockConfigEntry:
     """Evil genius labs config entry."""
     entry = MockConfigEntry(domain="evil_genius_labs", data={"host": "192.168.1.113"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 @pytest.fixture
 async def setup_evil_genius_labs(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     all_fixture: dict[str, Any],
     info_fixture: JsonObjectType,
@@ -69,10 +69,10 @@ async def setup_evil_genius_labs(
             return_value=product_fixture,
         ),
         patch(
-            "homeassistant.components.evil_genius_labs.PLATFORMS",
+            "menuai.components.evil_genius_labs.PLATFORMS",
             platforms,
         ),
     ):
-        assert await async_setup_component(hass, "evil_genius_labs", {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "evil_genius_labs", {})
+        await menuai.async_block_till_done()
         yield

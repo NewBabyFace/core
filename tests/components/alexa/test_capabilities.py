@@ -5,31 +5,31 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.components.alexa import smart_home
-from homeassistant.components.climate import (
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.components.alexa import smart_home
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.components.lock import LockState
-from homeassistant.components.media_player import MediaPlayerEntityFeature
-from homeassistant.components.valve import ValveEntityFeature
-from homeassistant.components.water_heater import (
+from menuai.components.lock import LockState
+from menuai.components.media_player import MediaPlayerEntityFeature
+from menuai.components.valve import ValveEntityFeature
+from menuai.components.water_heater import (
     ATTR_OPERATION_LIST,
     ATTR_OPERATION_MODE,
     STATE_ECO,
     STATE_GAS,
     STATE_HEAT_PUMP,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_OFF,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .test_common import (
     assert_request_calls_service,
@@ -53,12 +53,12 @@ from tests.common import async_mock_service
     ],
 )
 async def test_discovery_remote(
-    hass: HomeAssistant, current_activity: str, activity_list: list[str]
+    menuai: menuai, current_activity: str, activity_list: list[str]
 ) -> None:
     """Test discory for a remote entity."""
     request = get_new_request("Alexa.Discovery", "Discover")
     # setup test device
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.test",
         "off",
         {
@@ -67,7 +67,7 @@ async def test_discovery_remote(
             "supported_features": 4,
         },
     )
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
     assert "event" in msg
     msg = msg["event"]
     assert len(msg["payload"]["endpoints"]) == 1
@@ -79,7 +79,7 @@ async def test_discovery_remote(
 
 
 @pytest.mark.parametrize("adjust", ["-5", "5", "-80"])
-async def test_api_adjust_brightness(hass: HomeAssistant, adjust: str) -> None:
+async def test_api_adjust_brightness(menuai: menuai, adjust: str) -> None:
     """Test api adjust brightness process."""
     request = get_new_request(
         "Alexa.BrightnessController", "AdjustBrightness", "light#test"
@@ -89,14 +89,14 @@ async def test_api_adjust_brightness(hass: HomeAssistant, adjust: str) -> None:
     request["directive"]["payload"]["brightnessDelta"] = adjust
 
     # setup test devices
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test", "off", {"friendly_name": "Test light", "brightness": "77"}
     )
 
-    call_light = async_mock_service(hass, "light", "turn_on")
+    call_light = async_mock_service(menuai, "light", "turn_on")
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
-    await hass.async_block_till_done()
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
+    await menuai.async_block_till_done()
 
     assert "event" in msg
     msg = msg["event"]
@@ -107,7 +107,7 @@ async def test_api_adjust_brightness(hass: HomeAssistant, adjust: str) -> None:
     assert msg["header"]["name"] == "Response"
 
 
-async def test_api_set_color_rgb(hass: HomeAssistant) -> None:
+async def test_api_set_color_rgb(menuai: menuai) -> None:
     """Test api set color process."""
     request = get_new_request("Alexa.ColorController", "SetColor", "light#test")
 
@@ -119,14 +119,14 @@ async def test_api_set_color_rgb(hass: HomeAssistant) -> None:
     }
 
     # setup test devices
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test", "off", {"friendly_name": "Test light", "supported_features": 16}
     )
 
-    call_light = async_mock_service(hass, "light", "turn_on")
+    call_light = async_mock_service(menuai, "light", "turn_on")
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
-    await hass.async_block_till_done()
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
+    await menuai.async_block_till_done()
 
     assert "event" in msg
     msg = msg["event"]
@@ -137,7 +137,7 @@ async def test_api_set_color_rgb(hass: HomeAssistant) -> None:
     assert msg["header"]["name"] == "Response"
 
 
-async def test_api_set_color_temperature(hass: HomeAssistant) -> None:
+async def test_api_set_color_temperature(menuai: menuai) -> None:
     """Test api set color temperature process."""
     request = get_new_request(
         "Alexa.ColorTemperatureController", "SetColorTemperature", "light#test"
@@ -147,12 +147,12 @@ async def test_api_set_color_temperature(hass: HomeAssistant) -> None:
     request["directive"]["payload"]["colorTemperatureInKelvin"] = "7500"
 
     # setup test devices
-    hass.states.async_set("light.test", "off", {"friendly_name": "Test light"})
+    menuai.states.async_set("light.test", "off", {"friendly_name": "Test light"})
 
-    call_light = async_mock_service(hass, "light", "turn_on")
+    call_light = async_mock_service(menuai, "light", "turn_on")
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
-    await hass.async_block_till_done()
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
+    await menuai.async_block_till_done()
 
     assert "event" in msg
     msg = msg["event"]
@@ -165,7 +165,7 @@ async def test_api_set_color_temperature(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize(("result", "initial"), [(2500, "3000"), (2000, "2000")])
 async def test_api_decrease_color_temp(
-    hass: HomeAssistant, result: int, initial: str
+    menuai: menuai, result: int, initial: str
 ) -> None:
     """Test api decrease color temp process."""
     request = get_new_request(
@@ -173,7 +173,7 @@ async def test_api_decrease_color_temp(
     )
 
     # setup test devices
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test",
         "off",
         {
@@ -183,10 +183,10 @@ async def test_api_decrease_color_temp(
         },
     )
 
-    call_light = async_mock_service(hass, "light", "turn_on")
+    call_light = async_mock_service(menuai, "light", "turn_on")
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
-    await hass.async_block_till_done()
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
+    await menuai.async_block_till_done()
 
     assert "event" in msg
     msg = msg["event"]
@@ -199,7 +199,7 @@ async def test_api_decrease_color_temp(
 
 @pytest.mark.parametrize(("result", "initial"), [(3500, "3000"), (7000, "7000")])
 async def test_api_increase_color_temp(
-    hass: HomeAssistant, result: int, initial: str
+    menuai: menuai, result: int, initial: str
 ) -> None:
     """Test api increase color temp process."""
     request = get_new_request(
@@ -207,7 +207,7 @@ async def test_api_increase_color_temp(
     )
 
     # setup test devices
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test",
         "off",
         {
@@ -217,10 +217,10 @@ async def test_api_increase_color_temp(
         },
     )
 
-    call_light = async_mock_service(hass, "light", "turn_on")
+    call_light = async_mock_service(menuai, "light", "turn_on")
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
-    await hass.async_block_till_done()
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
+    await menuai.async_block_till_done()
 
     assert "event" in msg
     msg = msg["event"]
@@ -240,14 +240,14 @@ async def test_api_increase_color_temp(
     ],
 )
 async def test_api_select_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     payload: str,
     source_list: list[Any],
     idx: int | None,
 ) -> None:
     """Test api set input process."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "media_player.test",
         "off",
         {
@@ -262,7 +262,7 @@ async def test_api_select_input(
         "SelectInput",
         "media_player#test",
         "media_player.select_source",
-        hass,
+        menuai,
         payload={"input": payload},
     )
     assert call.data["source"] == source_list[idx]
@@ -273,11 +273,11 @@ async def test_api_select_input(
     [(["satellite_tv", "game console"]), ([])],
 )
 async def test_api_select_input_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     source_list: list[Any],
 ) -> None:
     """Test api set input process fails."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "media_player.test",
         "off",
         {
@@ -291,7 +291,7 @@ async def test_api_select_input_fails(
         "SelectInput",
         "media_player#test",
         "media_player.select_source",
-        hass,
+        menuai,
         payload={"input": "BAD DEVICE"},
     )
 
@@ -306,13 +306,13 @@ async def test_api_select_input_fails(
     ],
 )
 async def test_api_select_activity(
-    hass: HomeAssistant,
+    menuai: menuai,
     activity: str,
     activity_list: list[str],
     target_activity_index: int | None,
 ) -> None:
     """Test api set activity process."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.test",
         "off",
         {
@@ -325,7 +325,7 @@ async def test_api_select_activity(
         "SetMode",
         "remote#test",
         "remote.turn_on",
-        hass,
+        menuai,
         payload={"mode": f"activity.{activity}"},
         instance="remote.activity",
     )
@@ -334,10 +334,10 @@ async def test_api_select_activity(
 
 @pytest.mark.parametrize(("activity_list"), [(["TV", "MUSIC", "DVD"]), ([])])
 async def test_api_select_activity_fails(
-    hass: HomeAssistant, activity_list: list[str]
+    menuai: menuai, activity_list: list[str]
 ) -> None:
     """Test api set activity process fails."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.test",
         "off",
         {
@@ -350,7 +350,7 @@ async def test_api_select_activity_fails(
         "SetMode",
         "remote#test",
         "remote.turn_on",
-        hass,
+        menuai,
         payload={"mode": "activity.BAD"},
         instance="remote.activity",
     )
@@ -368,13 +368,13 @@ async def test_api_select_activity_fails(
     ],
 )
 async def test_api_remote_set_power_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     current_state: str,
     target_name: str,
     target_service: str,
 ) -> None:
     """Test api remote set power state process."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.test",
         current_state,
         {
@@ -388,35 +388,35 @@ async def test_api_remote_set_power_state(
         target_name,
         "remote#test",
         f"remote.{target_service}",
-        hass,
+        menuai,
     )
 
 
-async def test_report_lock_state(hass: HomeAssistant) -> None:
+async def test_report_lock_state(menuai: menuai) -> None:
     """Test LockController implements lockState property."""
-    hass.states.async_set("lock.locked", LockState.LOCKED, {})
-    hass.states.async_set("lock.unlocked", LockState.UNLOCKED, {})
-    hass.states.async_set("lock.unlocking", LockState.UNLOCKING, {})
-    hass.states.async_set("lock.locking", LockState.LOCKING, {})
-    hass.states.async_set("lock.jammed", LockState.JAMMED, {})
-    hass.states.async_set("lock.unknown", STATE_UNKNOWN, {})
+    menuai.states.async_set("lock.locked", LockState.LOCKED, {})
+    menuai.states.async_set("lock.unlocked", LockState.UNLOCKED, {})
+    menuai.states.async_set("lock.unlocking", LockState.UNLOCKING, {})
+    menuai.states.async_set("lock.locking", LockState.LOCKING, {})
+    menuai.states.async_set("lock.jammed", LockState.JAMMED, {})
+    menuai.states.async_set("lock.unknown", STATE_UNKNOWN, {})
 
-    properties = await reported_properties(hass, "lock.locked")
+    properties = await reported_properties(menuai, "lock.locked")
     properties.assert_equal("Alexa.LockController", "lockState", "LOCKED")
 
-    properties = await reported_properties(hass, "lock.unlocking")
+    properties = await reported_properties(menuai, "lock.unlocking")
     properties.assert_equal("Alexa.LockController", "lockState", "LOCKED")
 
-    properties = await reported_properties(hass, "lock.unlocked")
+    properties = await reported_properties(menuai, "lock.unlocked")
     properties.assert_equal("Alexa.LockController", "lockState", "UNLOCKED")
 
-    properties = await reported_properties(hass, "lock.locking")
+    properties = await reported_properties(menuai, "lock.locking")
     properties.assert_equal("Alexa.LockController", "lockState", "UNLOCKED")
 
-    properties = await reported_properties(hass, "lock.unknown")
+    properties = await reported_properties(menuai, "lock.unknown")
     properties.assert_equal("Alexa.LockController", "lockState", "JAMMED")
 
-    properties = await reported_properties(hass, "lock.jammed")
+    properties = await reported_properties(menuai, "lock.jammed")
     properties.assert_equal("Alexa.LockController", "lockState", "JAMMED")
 
 
@@ -424,10 +424,10 @@ async def test_report_lock_state(hass: HomeAssistant) -> None:
     "supported_color_modes", [["brightness"], ["hs"], ["color_temp"]]
 )
 async def test_report_dimmable_light_state(
-    hass: HomeAssistant, supported_color_modes: list[str]
+    menuai: menuai, supported_color_modes: list[str]
 ) -> None:
     """Test BrightnessController reports brightness correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test_on",
         "on",
         {
@@ -436,7 +436,7 @@ async def test_report_dimmable_light_state(
             "supported_color_modes": supported_color_modes,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test_off",
         "off",
         {
@@ -445,19 +445,19 @@ async def test_report_dimmable_light_state(
         },
     )
 
-    properties = await reported_properties(hass, "light.test_on")
+    properties = await reported_properties(menuai, "light.test_on")
     properties.assert_equal("Alexa.BrightnessController", "brightness", 50)
 
-    properties = await reported_properties(hass, "light.test_off")
+    properties = await reported_properties(menuai, "light.test_off")
     properties.assert_equal("Alexa.BrightnessController", "brightness", 0)
 
 
 @pytest.mark.parametrize("supported_color_modes", [["hs"], ["rgb"], ["xy"]])
 async def test_report_colored_light_state(
-    hass: HomeAssistant, supported_color_modes: list[str]
+    menuai: menuai, supported_color_modes: list[str]
 ) -> None:
     """Test ColorController reports color correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test_on",
         "on",
         {
@@ -467,7 +467,7 @@ async def test_report_colored_light_state(
             "supported_color_modes": supported_color_modes,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test_off",
         "off",
         {
@@ -476,22 +476,22 @@ async def test_report_colored_light_state(
         },
     )
 
-    properties = await reported_properties(hass, "light.test_on")
+    properties = await reported_properties(menuai, "light.test_on")
     properties.assert_equal(
         "Alexa.ColorController",
         "color",
         {"hue": 180, "saturation": 0.75, "brightness": 128 / 255.0},
     )
 
-    properties = await reported_properties(hass, "light.test_off")
+    properties = await reported_properties(menuai, "light.test_off")
     properties.assert_equal(
         "Alexa.ColorController", "color", {"hue": 0, "saturation": 0, "brightness": 0}
     )
 
 
-async def test_report_colored_temp_light_state(hass: HomeAssistant) -> None:
+async def test_report_colored_temp_light_state(menuai: menuai) -> None:
     """Test ColorTemperatureController reports color temp correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test_on",
         "on",
         {
@@ -500,26 +500,26 @@ async def test_report_colored_temp_light_state(hass: HomeAssistant) -> None:
             "supported_color_modes": ["color_temp"],
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test_off",
         "off",
         {"friendly_name": "Test light Off", "supported_color_modes": ["color_temp"]},
     )
 
-    properties = await reported_properties(hass, "light.test_on")
+    properties = await reported_properties(menuai, "light.test_on")
     properties.assert_equal(
         "Alexa.ColorTemperatureController", "colorTemperatureInKelvin", 4166
     )
 
-    properties = await reported_properties(hass, "light.test_off")
+    properties = await reported_properties(menuai, "light.test_off")
     properties.assert_not_has_property(
         "Alexa.ColorTemperatureController", "colorTemperatureInKelvin"
     )
 
 
-async def test_report_fan_speed_state(hass: HomeAssistant) -> None:
+async def test_report_fan_speed_state(menuai: menuai) -> None:
     """Test PercentageController, PowerLevelController reports fan speed correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.off",
         "off",
         {
@@ -528,7 +528,7 @@ async def test_report_fan_speed_state(hass: HomeAssistant) -> None:
             "percentage": 0,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.low_speed",
         "on",
         {
@@ -537,7 +537,7 @@ async def test_report_fan_speed_state(hass: HomeAssistant) -> None:
             "percentage": 33,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.medium_speed",
         "on",
         {
@@ -546,7 +546,7 @@ async def test_report_fan_speed_state(hass: HomeAssistant) -> None:
             "percentage": 66,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.high_speed",
         "on",
         {
@@ -555,7 +555,7 @@ async def test_report_fan_speed_state(hass: HomeAssistant) -> None:
             "percentage": 100,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.speed_less_on",
         "on",
         {
@@ -563,7 +563,7 @@ async def test_report_fan_speed_state(hass: HomeAssistant) -> None:
             "supported_features": 0,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.speed_less_off",
         "off",
         {
@@ -571,28 +571,28 @@ async def test_report_fan_speed_state(hass: HomeAssistant) -> None:
             "supported_features": 0,
         },
     )
-    properties = await reported_properties(hass, "fan.off")
+    properties = await reported_properties(menuai, "fan.off")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 0)
 
-    properties = await reported_properties(hass, "fan.low_speed")
+    properties = await reported_properties(menuai, "fan.low_speed")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 33)
 
-    properties = await reported_properties(hass, "fan.medium_speed")
+    properties = await reported_properties(menuai, "fan.medium_speed")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 66)
 
-    properties = await reported_properties(hass, "fan.high_speed")
+    properties = await reported_properties(menuai, "fan.high_speed")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 100)
 
-    properties = await reported_properties(hass, "fan.speed_less_on")
+    properties = await reported_properties(menuai, "fan.speed_less_on")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 100)
 
-    properties = await reported_properties(hass, "fan.speed_less_off")
+    properties = await reported_properties(menuai, "fan.speed_less_off")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 0)
 
 
-async def test_report_humidifier_humidity_state(hass: HomeAssistant) -> None:
+async def test_report_humidifier_humidity_state(menuai: menuai) -> None:
     """Test PercentageController, PowerLevelController humidifier humidity reporting."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "humidifier.dry",
         "on",
         {
@@ -603,7 +603,7 @@ async def test_report_humidifier_humidity_state(hass: HomeAssistant) -> None:
             "max_humidity": 90,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "humidifier.wet",
         "on",
         {
@@ -614,16 +614,16 @@ async def test_report_humidifier_humidity_state(hass: HomeAssistant) -> None:
             "max_humidity": 90,
         },
     )
-    properties = await reported_properties(hass, "humidifier.dry")
+    properties = await reported_properties(menuai, "humidifier.dry")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 25)
 
-    properties = await reported_properties(hass, "humidifier.wet")
+    properties = await reported_properties(menuai, "humidifier.wet")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 80)
 
 
-async def test_report_humidifier_mode(hass: HomeAssistant) -> None:
+async def test_report_humidifier_mode(menuai: menuai) -> None:
     """Test ModeController reports humidifier mode correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "humidifier.auto",
         "on",
         {
@@ -636,10 +636,10 @@ async def test_report_humidifier_mode(hass: HomeAssistant) -> None:
             "max_humidity": 90,
         },
     )
-    properties = await reported_properties(hass, "humidifier.auto")
+    properties = await reported_properties(menuai, "humidifier.auto")
     properties.assert_equal("Alexa.ModeController", "mode", "mode.Auto")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "humidifier.medium",
         "on",
         {
@@ -652,13 +652,13 @@ async def test_report_humidifier_mode(hass: HomeAssistant) -> None:
             "max_humidity": 90,
         },
     )
-    properties = await reported_properties(hass, "humidifier.medium")
+    properties = await reported_properties(menuai, "humidifier.medium")
     properties.assert_equal("Alexa.ModeController", "mode", "mode.Medium")
 
 
-async def test_report_fan_preset_mode(hass: HomeAssistant) -> None:
+async def test_report_fan_preset_mode(menuai: menuai) -> None:
     """Test ModeController reports fan preset_mode correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.preset_mode",
         "eco",
         {
@@ -668,10 +668,10 @@ async def test_report_fan_preset_mode(hass: HomeAssistant) -> None:
             "preset_modes": ["eco", "smart", "whoosh"],
         },
     )
-    properties = await reported_properties(hass, "fan.preset_mode")
+    properties = await reported_properties(menuai, "fan.preset_mode")
     properties.assert_equal("Alexa.ModeController", "mode", "preset_mode.eco")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.preset_mode",
         "smart",
         {
@@ -681,10 +681,10 @@ async def test_report_fan_preset_mode(hass: HomeAssistant) -> None:
             "preset_modes": ["eco", "smart", "whoosh"],
         },
     )
-    properties = await reported_properties(hass, "fan.preset_mode")
+    properties = await reported_properties(menuai, "fan.preset_mode")
     properties.assert_equal("Alexa.ModeController", "mode", "preset_mode.smart")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.preset_mode",
         "whoosh",
         {
@@ -694,10 +694,10 @@ async def test_report_fan_preset_mode(hass: HomeAssistant) -> None:
             "preset_modes": ["eco", "smart", "whoosh"],
         },
     )
-    properties = await reported_properties(hass, "fan.preset_mode")
+    properties = await reported_properties(menuai, "fan.preset_mode")
     properties.assert_equal("Alexa.ModeController", "mode", "preset_mode.whoosh")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.preset_mode",
         "whoosh",
         {
@@ -707,17 +707,17 @@ async def test_report_fan_preset_mode(hass: HomeAssistant) -> None:
             "preset_modes": ["auto"],
         },
     )
-    properties = await reported_properties(hass, "fan.preset_mode")
+    properties = await reported_properties(menuai, "fan.preset_mode")
 
 
-async def test_report_fan_oscillating(hass: HomeAssistant) -> None:
+async def test_report_fan_oscillating(menuai: menuai) -> None:
     """Test ToggleController reports fan oscillating correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.oscillating_off",
         "off",
         {"friendly_name": "fan oscillating off", "supported_features": 2},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.oscillating_on",
         "on",
         {
@@ -727,19 +727,19 @@ async def test_report_fan_oscillating(hass: HomeAssistant) -> None:
         },
     )
 
-    properties = await reported_properties(hass, "fan.oscillating_off")
+    properties = await reported_properties(menuai, "fan.oscillating_off")
     properties.assert_equal("Alexa.ToggleController", "toggleState", "OFF")
 
-    properties = await reported_properties(hass, "fan.oscillating_on")
+    properties = await reported_properties(menuai, "fan.oscillating_on")
     properties.assert_equal("Alexa.ToggleController", "toggleState", "ON")
 
 
-async def test_report_fan_direction(hass: HomeAssistant) -> None:
+async def test_report_fan_direction(menuai: menuai) -> None:
     """Test ModeController reports fan direction correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.off", "off", {"friendly_name": "Off fan", "supported_features": 4}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.reverse",
         "on",
         {
@@ -748,7 +748,7 @@ async def test_report_fan_direction(hass: HomeAssistant) -> None:
             "supported_features": 4,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.forward",
         "on",
         {
@@ -758,39 +758,39 @@ async def test_report_fan_direction(hass: HomeAssistant) -> None:
         },
     )
 
-    properties = await reported_properties(hass, "fan.off")
+    properties = await reported_properties(menuai, "fan.off")
     properties.assert_not_has_property("Alexa.ModeController", "mode")
 
-    properties = await reported_properties(hass, "fan.reverse")
+    properties = await reported_properties(menuai, "fan.reverse")
     properties.assert_equal("Alexa.ModeController", "mode", "direction.reverse")
 
-    properties = await reported_properties(hass, "fan.forward")
+    properties = await reported_properties(menuai, "fan.forward")
     properties.assert_equal("Alexa.ModeController", "mode", "direction.forward")
 
 
-async def test_report_remote_power(hass: HomeAssistant) -> None:
+async def test_report_remote_power(menuai: menuai) -> None:
     """Test ModeController reports remote power state correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.off",
         "off",
         {"current_activity": "TV", "activity_list": ["TV", "MUSIC", "DVD"]},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.on",
         "on",
         {"current_activity": "TV", "activity_list": ["TV", "MUSIC", "DVD"]},
     )
 
-    properties = await reported_properties(hass, "remote#off")
+    properties = await reported_properties(menuai, "remote#off")
     properties.assert_equal("Alexa.PowerController", "powerState", "OFF")
 
-    properties = await reported_properties(hass, "remote#on")
+    properties = await reported_properties(menuai, "remote#on")
     properties.assert_equal("Alexa.PowerController", "powerState", "ON")
 
 
-async def test_report_remote_activity(hass: HomeAssistant) -> None:
+async def test_report_remote_activity(menuai: menuai) -> None:
     """Test ModeController reports remote activity correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.unknown",
         "on",
         {
@@ -798,7 +798,7 @@ async def test_report_remote_activity(hass: HomeAssistant) -> None:
             "supported_features": 4,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.tv",
         "on",
         {
@@ -807,7 +807,7 @@ async def test_report_remote_activity(hass: HomeAssistant) -> None:
             "supported_features": 4,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.music",
         "on",
         {
@@ -816,7 +816,7 @@ async def test_report_remote_activity(hass: HomeAssistant) -> None:
             "supported_features": 4,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "remote.dvd",
         "on",
         {
@@ -826,22 +826,22 @@ async def test_report_remote_activity(hass: HomeAssistant) -> None:
         },
     )
 
-    properties = await reported_properties(hass, "remote#unknown")
+    properties = await reported_properties(menuai, "remote#unknown")
     properties.assert_not_has_property("Alexa.ModeController", "mode")
 
-    properties = await reported_properties(hass, "remote#tv")
+    properties = await reported_properties(menuai, "remote#tv")
     properties.assert_equal("Alexa.ModeController", "mode", "activity.TV")
 
-    properties = await reported_properties(hass, "remote#music")
+    properties = await reported_properties(menuai, "remote#music")
     properties.assert_equal("Alexa.ModeController", "mode", "activity.MUSIC")
 
-    properties = await reported_properties(hass, "remote#dvd")
+    properties = await reported_properties(menuai, "remote#dvd")
     properties.assert_equal("Alexa.ModeController", "mode", "activity.DVD")
 
 
-async def test_report_cover_range_value(hass: HomeAssistant) -> None:
+async def test_report_cover_range_value(menuai: menuai) -> None:
     """Test RangeController reports cover position correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.fully_open",
         "open",
         {
@@ -850,7 +850,7 @@ async def test_report_cover_range_value(hass: HomeAssistant) -> None:
             "supported_features": 15,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.half_open",
         "open",
         {
@@ -859,7 +859,7 @@ async def test_report_cover_range_value(hass: HomeAssistant) -> None:
             "supported_features": 15,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.closed",
         "closed",
         {
@@ -869,17 +869,17 @@ async def test_report_cover_range_value(hass: HomeAssistant) -> None:
         },
     )
 
-    properties = await reported_properties(hass, "cover.fully_open")
+    properties = await reported_properties(menuai, "cover.fully_open")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 100)
 
-    properties = await reported_properties(hass, "cover.half_open")
+    properties = await reported_properties(menuai, "cover.half_open")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 50)
 
-    properties = await reported_properties(hass, "cover.closed")
+    properties = await reported_properties(menuai, "cover.closed")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 0)
 
 
-async def test_report_valve_range_value(hass: HomeAssistant) -> None:
+async def test_report_valve_range_value(menuai: menuai) -> None:
     """Test RangeController reports valve position correctly."""
     all_valve_features = (
         ValveEntityFeature.OPEN
@@ -887,7 +887,7 @@ async def test_report_valve_range_value(hass: HomeAssistant) -> None:
         | ValveEntityFeature.STOP
         | ValveEntityFeature.SET_POSITION
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "valve.fully_open",
         "open",
         {
@@ -896,7 +896,7 @@ async def test_report_valve_range_value(hass: HomeAssistant) -> None:
             "supported_features": all_valve_features,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "valve.half_open",
         "open",
         {
@@ -905,7 +905,7 @@ async def test_report_valve_range_value(hass: HomeAssistant) -> None:
             "supported_features": all_valve_features,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "valve.closed",
         "closed",
         {
@@ -915,13 +915,13 @@ async def test_report_valve_range_value(hass: HomeAssistant) -> None:
         },
     )
 
-    properties = await reported_properties(hass, "valve.fully_open")
+    properties = await reported_properties(menuai, "valve.fully_open")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 100)
 
-    properties = await reported_properties(hass, "valve.half_open")
+    properties = await reported_properties(menuai, "valve.half_open")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 50)
 
-    properties = await reported_properties(hass, "valve.closed")
+    properties = await reported_properties(menuai, "valve.closed")
     properties.assert_equal("Alexa.RangeController", "rangeValue", 0)
 
 
@@ -983,14 +983,14 @@ async def test_report_valve_range_value(hass: HomeAssistant) -> None:
     ],
 )
 async def test_report_valve_controllers(
-    hass: HomeAssistant,
+    menuai: menuai,
     supported_features: ValveEntityFeature,
     has_mode_controller: bool,
     has_range_controller: bool,
     has_toggle_controller: bool,
 ) -> None:
     """Test valve controllers are reported correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "valve.custom",
         "opening",
         {
@@ -1000,7 +1000,7 @@ async def test_report_valve_controllers(
         },
     )
 
-    properties = await reported_properties(hass, "valve.custom")
+    properties = await reported_properties(menuai, "valve.custom")
 
     if has_mode_controller:
         properties.assert_equal("Alexa.ModeController", "mode", "state.opening")
@@ -1016,10 +1016,10 @@ async def test_report_valve_controllers(
         properties.assert_not_has_property("Alexa.ToggleController", "toggleState")
 
 
-async def test_report_climate_state(hass: HomeAssistant) -> None:
+async def test_report_climate_state(menuai: menuai) -> None:
     """Test ThermostatController reports state correctly."""
     for auto_modes in (HVACMode.AUTO, HVACMode.HEAT_COOL):
-        hass.states.async_set(
+        menuai.states.async_set(
             "climate.downstairs",
             auto_modes,
             {
@@ -1029,7 +1029,7 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
                 ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
             },
         )
-        properties = await reported_properties(hass, "climate.downstairs")
+        properties = await reported_properties(menuai, "climate.downstairs")
         properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "AUTO")
         properties.assert_equal(
             "Alexa.TemperatureSensor",
@@ -1038,7 +1038,7 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
         )
 
     for off_modes in (HVACMode.OFF,):
-        hass.states.async_set(
+        menuai.states.async_set(
             "climate.downstairs",
             off_modes,
             {
@@ -1048,7 +1048,7 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
                 ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
             },
         )
-        properties = await reported_properties(hass, "climate.downstairs")
+        properties = await reported_properties(menuai, "climate.downstairs")
         properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "OFF")
         properties.assert_equal(
             "Alexa.TemperatureSensor",
@@ -1057,7 +1057,7 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
         )
 
     # assert dry is reported as CUSTOM
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.downstairs",
         "dry",
         {
@@ -1067,14 +1067,14 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
             ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
         },
     )
-    properties = await reported_properties(hass, "climate.downstairs")
+    properties = await reported_properties(menuai, "climate.downstairs")
     properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "CUSTOM")
     properties.assert_equal(
         "Alexa.TemperatureSensor", "temperature", {"value": 34.0, "scale": "CELSIUS"}
     )
 
     # assert fan_only is reported as CUSTOM
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.downstairs",
         "fan_only",
         {
@@ -1084,13 +1084,13 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
             ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
         },
     )
-    properties = await reported_properties(hass, "climate.downstairs")
+    properties = await reported_properties(menuai, "climate.downstairs")
     properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "CUSTOM")
     properties.assert_equal(
         "Alexa.TemperatureSensor", "temperature", {"value": 31.0, "scale": "CELSIUS"}
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.heat",
         "heat",
         {
@@ -1100,13 +1100,13 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
             ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
         },
     )
-    properties = await reported_properties(hass, "climate.heat")
+    properties = await reported_properties(menuai, "climate.heat")
     properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "HEAT")
     properties.assert_equal(
         "Alexa.TemperatureSensor", "temperature", {"value": 34.0, "scale": "CELSIUS"}
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.cool",
         "cool",
         {
@@ -1116,24 +1116,24 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
             ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
         },
     )
-    properties = await reported_properties(hass, "climate.cool")
+    properties = await reported_properties(menuai, "climate.cool")
     properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "COOL")
     properties.assert_equal(
         "Alexa.TemperatureSensor", "temperature", {"value": 34.0, "scale": "CELSIUS"}
     )
 
     for state in "unavailable", "unknown":
-        hass.states.async_set(
+        menuai.states.async_set(
             f"climate.{state}",
             state,
             {"friendly_name": f"Climate {state}", "supported_features": 91},
         )
-        properties = await reported_properties(hass, f"climate.{state}")
+        properties = await reported_properties(menuai, f"climate.{state}")
         properties.assert_not_has_property(
             "Alexa.ThermostatController", "thermostatMode"
         )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.unsupported",
         "blablabla",
         {
@@ -1143,12 +1143,12 @@ async def test_report_climate_state(hass: HomeAssistant) -> None:
             ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
         },
     )
-    msg = await reported_properties(hass, "climate.unsupported", True)
+    msg = await reported_properties(menuai, "climate.unsupported", True)
     assert msg["event"]["header"]["name"] == "ErrorResponse"
     assert msg["event"]["payload"]["type"] == "INTERNAL_ERROR"
 
 
-async def test_report_on_off_climate_state(hass: HomeAssistant) -> None:
+async def test_report_on_off_climate_state(menuai: menuai) -> None:
     """Test ThermostatController with on/off features reports state correctly."""
     on_off_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
@@ -1156,7 +1156,7 @@ async def test_report_on_off_climate_state(hass: HomeAssistant) -> None:
         | ClimateEntityFeature.TURN_OFF
     )
     for auto_modes in (HVACMode.HEAT,):
-        hass.states.async_set(
+        menuai.states.async_set(
             "climate.onoff",
             auto_modes,
             {
@@ -1166,7 +1166,7 @@ async def test_report_on_off_climate_state(hass: HomeAssistant) -> None:
                 ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
             },
         )
-        properties = await reported_properties(hass, "climate.onoff")
+        properties = await reported_properties(menuai, "climate.onoff")
         properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "HEAT")
         properties.assert_equal(
             "Alexa.TemperatureSensor",
@@ -1175,7 +1175,7 @@ async def test_report_on_off_climate_state(hass: HomeAssistant) -> None:
         )
 
     for off_modes in (HVACMode.OFF,):
-        hass.states.async_set(
+        menuai.states.async_set(
             "climate.onoff",
             off_modes,
             {
@@ -1185,7 +1185,7 @@ async def test_report_on_off_climate_state(hass: HomeAssistant) -> None:
                 ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
             },
         )
-        properties = await reported_properties(hass, "climate.onoff")
+        properties = await reported_properties(menuai, "climate.onoff")
         properties.assert_equal("Alexa.ThermostatController", "thermostatMode", "OFF")
         properties.assert_equal(
             "Alexa.TemperatureSensor",
@@ -1194,10 +1194,10 @@ async def test_report_on_off_climate_state(hass: HomeAssistant) -> None:
         )
 
 
-async def test_report_water_heater_state(hass: HomeAssistant) -> None:
+async def test_report_water_heater_state(menuai: menuai) -> None:
     """Test ThermostatController also reports state correctly for water heaters."""
     for operation_mode in (STATE_ECO, STATE_GAS, STATE_HEAT_PUMP):
-        hass.states.async_set(
+        menuai.states.async_set(
             "water_heater.boyler",
             operation_mode,
             {
@@ -1209,7 +1209,7 @@ async def test_report_water_heater_state(hass: HomeAssistant) -> None:
                 ATTR_OPERATION_MODE: operation_mode,
             },
         )
-        properties = await reported_properties(hass, "water_heater.boyler")
+        properties = await reported_properties(menuai, "water_heater.boyler")
         properties.assert_not_has_property(
             "Alexa.ThermostatController", "thermostatMode"
         )
@@ -1223,7 +1223,7 @@ async def test_report_water_heater_state(hass: HomeAssistant) -> None:
         )
 
     for off_mode in (STATE_OFF,):
-        hass.states.async_set(
+        menuai.states.async_set(
             "water_heater.boyler",
             off_mode,
             {
@@ -1233,7 +1233,7 @@ async def test_report_water_heater_state(hass: HomeAssistant) -> None:
                 ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
             },
         )
-        properties = await reported_properties(hass, "water_heater.boyler")
+        properties = await reported_properties(menuai, "water_heater.boyler")
         properties.assert_not_has_property(
             "Alexa.ThermostatController", "thermostatMode"
         )
@@ -1245,22 +1245,22 @@ async def test_report_water_heater_state(hass: HomeAssistant) -> None:
         )
 
     for state in "unavailable", "unknown":
-        hass.states.async_set(
+        menuai.states.async_set(
             f"water_heater.{state}",
             state,
             {"friendly_name": f"Boyler {state}", "supported_features": 11},
         )
-        properties = await reported_properties(hass, f"water_heater.{state}")
+        properties = await reported_properties(menuai, f"water_heater.{state}")
         properties.assert_not_has_property(
             "Alexa.ThermostatController", "thermostatMode"
         )
         properties.assert_not_has_property("Alexa.ModeController", "mode")
 
 
-async def test_report_singe_mode_water_heater(hass: HomeAssistant) -> None:
+async def test_report_singe_mode_water_heater(menuai: menuai) -> None:
     """Test ThermostatController also reports state correctly for water heaters."""
     operation_mode = STATE_ECO
-    hass.states.async_set(
+    menuai.states.async_set(
         "water_heater.boyler",
         operation_mode,
         {
@@ -1272,7 +1272,7 @@ async def test_report_singe_mode_water_heater(hass: HomeAssistant) -> None:
             ATTR_OPERATION_MODE: operation_mode,
         },
     )
-    properties = await reported_properties(hass, "water_heater.boyler")
+    properties = await reported_properties(menuai, "water_heater.boyler")
     properties.assert_not_has_property("Alexa.ThermostatController", "thermostatMode")
     properties.assert_equal(
         "Alexa.ModeController", "mode", f"operation_mode.{operation_mode}"
@@ -1284,116 +1284,116 @@ async def test_report_singe_mode_water_heater(hass: HomeAssistant) -> None:
     )
 
 
-async def test_temperature_sensor_sensor(hass: HomeAssistant) -> None:
+async def test_temperature_sensor_sensor(menuai: menuai) -> None:
     """Test TemperatureSensor reports sensor temperature correctly."""
     for bad_value in (STATE_UNKNOWN, STATE_UNAVAILABLE, "not-number"):
-        hass.states.async_set(
+        menuai.states.async_set(
             "sensor.temp_living_room",
             bad_value,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
         )
 
-        properties = await reported_properties(hass, "sensor.temp_living_room")
+        properties = await reported_properties(menuai, "sensor.temp_living_room")
         properties.assert_not_has_property("Alexa.TemperatureSensor", "temperature")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.temp_living_room",
         "34",
         {ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
     )
-    properties = await reported_properties(hass, "sensor.temp_living_room")
+    properties = await reported_properties(menuai, "sensor.temp_living_room")
     properties.assert_equal(
         "Alexa.TemperatureSensor", "temperature", {"value": 34.0, "scale": "CELSIUS"}
     )
 
 
-async def test_temperature_sensor_climate(hass: HomeAssistant) -> None:
+async def test_temperature_sensor_climate(menuai: menuai) -> None:
     """Test TemperatureSensor reports climate temperature correctly."""
     for bad_value in (STATE_UNKNOWN, STATE_UNAVAILABLE, "not-number"):
-        hass.states.async_set(
+        menuai.states.async_set(
             "climate.downstairs",
             HVACMode.HEAT,
             {ATTR_CURRENT_TEMPERATURE: bad_value},
         )
 
-        properties = await reported_properties(hass, "climate.downstairs")
+        properties = await reported_properties(menuai, "climate.downstairs")
         properties.assert_not_has_property("Alexa.TemperatureSensor", "temperature")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.downstairs",
         HVACMode.HEAT,
         {ATTR_CURRENT_TEMPERATURE: 34},
     )
-    properties = await reported_properties(hass, "climate.downstairs")
+    properties = await reported_properties(menuai, "climate.downstairs")
     properties.assert_equal(
         "Alexa.TemperatureSensor", "temperature", {"value": 34.0, "scale": "CELSIUS"}
     )
 
 
-async def test_temperature_sensor_water_heater(hass: HomeAssistant) -> None:
+async def test_temperature_sensor_water_heater(menuai: menuai) -> None:
     """Test TemperatureSensor reports climate temperature correctly."""
     for bad_value in (STATE_UNKNOWN, STATE_UNAVAILABLE, "not-number"):
-        hass.states.async_set(
+        menuai.states.async_set(
             "water_heater.boyler",
             STATE_ECO,
             {"supported_features": 11, ATTR_CURRENT_TEMPERATURE: bad_value},
         )
 
-        properties = await reported_properties(hass, "water_heater.boyler")
+        properties = await reported_properties(menuai, "water_heater.boyler")
         properties.assert_not_has_property("Alexa.TemperatureSensor", "temperature")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "water_heater.boyler",
         STATE_ECO,
         {"supported_features": 11, ATTR_CURRENT_TEMPERATURE: 34},
     )
-    properties = await reported_properties(hass, "water_heater.boyler")
+    properties = await reported_properties(menuai, "water_heater.boyler")
     properties.assert_equal(
         "Alexa.TemperatureSensor", "temperature", {"value": 34.0, "scale": "CELSIUS"}
     )
 
 
-async def test_report_alarm_control_panel_state(hass: HomeAssistant) -> None:
+async def test_report_alarm_control_panel_state(menuai: menuai) -> None:
     """Test SecurityPanelController implements armState property."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.armed_away", AlarmControlPanelState.ARMED_AWAY, {}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.armed_custom_bypass",
         AlarmControlPanelState.ARMED_CUSTOM_BYPASS,
         {},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.armed_home", AlarmControlPanelState.ARMED_HOME, {}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.armed_night", AlarmControlPanelState.ARMED_NIGHT, {}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.disarmed", AlarmControlPanelState.DISARMED, {}
     )
 
-    properties = await reported_properties(hass, "alarm_control_panel.armed_away")
+    properties = await reported_properties(menuai, "alarm_control_panel.armed_away")
     properties.assert_equal("Alexa.SecurityPanelController", "armState", "ARMED_AWAY")
 
     properties = await reported_properties(
-        hass, "alarm_control_panel.armed_custom_bypass"
+        menuai, "alarm_control_panel.armed_custom_bypass"
     )
     properties.assert_equal("Alexa.SecurityPanelController", "armState", "ARMED_STAY")
 
-    properties = await reported_properties(hass, "alarm_control_panel.armed_home")
+    properties = await reported_properties(menuai, "alarm_control_panel.armed_home")
     properties.assert_equal("Alexa.SecurityPanelController", "armState", "ARMED_STAY")
 
-    properties = await reported_properties(hass, "alarm_control_panel.armed_night")
+    properties = await reported_properties(menuai, "alarm_control_panel.armed_night")
     properties.assert_equal("Alexa.SecurityPanelController", "armState", "ARMED_NIGHT")
 
-    properties = await reported_properties(hass, "alarm_control_panel.disarmed")
+    properties = await reported_properties(menuai, "alarm_control_panel.disarmed")
     properties.assert_equal("Alexa.SecurityPanelController", "armState", "DISARMED")
 
 
-async def test_report_playback_state(hass: HomeAssistant) -> None:
+async def test_report_playback_state(menuai: menuai) -> None:
     """Test PlaybackStateReporter implements playbackState property."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "media_player.test",
         "off",
         {
@@ -1406,16 +1406,16 @@ async def test_report_playback_state(hass: HomeAssistant) -> None:
         },
     )
 
-    properties = await reported_properties(hass, "media_player.test")
+    properties = await reported_properties(menuai, "media_player.test")
 
     properties.assert_equal(
         "Alexa.PlaybackStateReporter", "playbackState", {"state": "STOPPED"}
     )
 
 
-async def test_report_speaker_volume(hass: HomeAssistant) -> None:
+async def test_report_speaker_volume(menuai: menuai) -> None:
     """Test Speaker reports volume correctly."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "media_player.test_speaker",
         "on",
         {
@@ -1426,11 +1426,11 @@ async def test_report_speaker_volume(hass: HomeAssistant) -> None:
             "device_class": "speaker",
         },
     )
-    properties = await reported_properties(hass, "media_player.test_speaker")
+    properties = await reported_properties(menuai, "media_player.test_speaker")
     properties.assert_not_has_property("Alexa.Speaker", "volume")
 
     for good_value in range(101):
-        hass.states.async_set(
+        menuai.states.async_set(
             "media_player.test_speaker",
             "on",
             {
@@ -1441,13 +1441,13 @@ async def test_report_speaker_volume(hass: HomeAssistant) -> None:
                 "device_class": "speaker",
             },
         )
-        properties = await reported_properties(hass, "media_player.test_speaker")
+        properties = await reported_properties(menuai, "media_player.test_speaker")
         properties.assert_equal("Alexa.Speaker", "volume", good_value)
 
 
-async def test_report_image_processing(hass: HomeAssistant) -> None:
+async def test_report_image_processing(menuai: menuai) -> None:
     """Test EventDetectionSensor implements humanPresenceDetectionState property."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "image_processing.test_face",
         0,
         {
@@ -1458,14 +1458,14 @@ async def test_report_image_processing(hass: HomeAssistant) -> None:
         },
     )
 
-    properties = await reported_properties(hass, "image_processing#test_face")
+    properties = await reported_properties(menuai, "image_processing#test_face")
     properties.assert_equal(
         "Alexa.EventDetectionSensor",
         "humanPresenceDetectionState",
         {"value": "NOT_DETECTED"},
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "image_processing.test_classifier",
         3,
         {
@@ -1479,7 +1479,7 @@ async def test_report_image_processing(hass: HomeAssistant) -> None:
             "total_faces": 3,
         },
     )
-    properties = await reported_properties(hass, "image_processing#test_classifier")
+    properties = await reported_properties(menuai, "image_processing#test_classifier")
     properties.assert_equal(
         "Alexa.EventDetectionSensor",
         "humanPresenceDetectionState",
@@ -1488,16 +1488,16 @@ async def test_report_image_processing(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.parametrize("domain", ["button", "input_button"])
-async def test_report_button_pressed(hass: HomeAssistant, domain: str) -> None:
+async def test_report_button_pressed(menuai: menuai, domain: str) -> None:
     """Test button presses report human presence detection events.
 
     For use to trigger routines.
     """
-    hass.states.async_set(
+    menuai.states.async_set(
         f"{domain}.test_button", "now", {"friendly_name": "Test button"}
     )
 
-    properties = await reported_properties(hass, f"{domain}#test_button")
+    properties = await reported_properties(menuai, f"{domain}#test_button")
     properties.assert_equal(
         "Alexa.EventDetectionSensor",
         "humanPresenceDetectionState",
@@ -1507,14 +1507,14 @@ async def test_report_button_pressed(hass: HomeAssistant, domain: str) -> None:
 
 @pytest.mark.parametrize("domain", ["switch", "input_boolean"])
 async def test_toggle_entities_report_contact_events(
-    hass: HomeAssistant, domain: str
+    menuai: menuai, domain: str
 ) -> None:
     """Test toggles and switches report contact sensor events to trigger routines."""
-    hass.states.async_set(
+    menuai.states.async_set(
         f"{domain}.test_toggle", "on", {"friendly_name": "Test toggle"}
     )
 
-    properties = await reported_properties(hass, f"{domain}#test_toggle")
+    properties = await reported_properties(menuai, f"{domain}#test_toggle")
     properties.assert_equal(
         "Alexa.PowerController",
         "powerState",
@@ -1526,11 +1526,11 @@ async def test_toggle_entities_report_contact_events(
         "DETECTED",
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         f"{domain}.test_toggle", "off", {"friendly_name": "Test toggle"}
     )
 
-    properties = await reported_properties(hass, f"{domain}#test_toggle")
+    properties = await reported_properties(menuai, f"{domain}#test_toggle")
     properties.assert_equal(
         "Alexa.PowerController",
         "powerState",
@@ -1544,10 +1544,10 @@ async def test_toggle_entities_report_contact_events(
 
 
 async def test_get_property_blowup(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle a property blowing up."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.downstairs",
         HVACMode.AUTO,
         {
@@ -1558,10 +1558,10 @@ async def test_get_property_blowup(
         },
     )
     with patch(
-        "homeassistant.components.alexa.capabilities.float",
+        "menuai.components.alexa.capabilities.float",
         side_effect=Exception("Boom Fail"),
     ):
-        properties = await reported_properties(hass, "climate.downstairs")
+        properties = await reported_properties(menuai, "climate.downstairs")
         properties.assert_not_has_property("Alexa.ThermostatController", "temperature")
 
     assert "Boom Fail" in caplog.text

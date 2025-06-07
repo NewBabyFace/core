@@ -12,20 +12,20 @@ from pynuki import NukiBridge, NukiLock, NukiOpener
 from pynuki.bridge import InvalidCredentialsException
 from requests.exceptions import RequestException
 
-from homeassistant import exceptions
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai import exceptions
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_TOKEN,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.core import Event, menuai
+from menuai.helpers import device_registry as dr, issue_registry as ir
+from menuai.helpers.network import NoURLAvailableError, get_url
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .const import CONF_ENCRYPT_TOKEN, DEFAULT_TIMEOUT, DOMAIN
 from .coordinator import NukiCoordinator
@@ -51,11 +51,11 @@ def _get_bridge_devices(bridge: NukiBridge) -> tuple[list[NukiLock], list[NukiOp
 
 
 async def _create_webhook(
-    hass: HomeAssistant, entry: ConfigEntry, bridge: NukiBridge
+    menuai: menuai, entry: ConfigEntry, bridge: NukiBridge
 ) -> None:
-    # Create HomeAssistant webhook
+    # Create menuai webhook
     async def handle_webhook(
-        hass: HomeAssistant, webhook_id: str, request: web.Request
+        menuai: menuai, webhook_id: str, request: web.Request
     ) -> web.Response:
         """Handle webhook callback."""
         try:
@@ -63,7 +63,7 @@ async def _create_webhook(
         except ValueError:
             return web.Response(status=HTTPStatus.BAD_REQUEST)
 
-        entry_data: NukiEntryData = hass.data[DOMAIN][entry.entry_id]
+        entry_data: NukiEntryData = menuai.data[DOMAIN][entry.entry_id]
         locks = entry_data.locks
         openers = entry_data.openers
 
@@ -77,56 +77,56 @@ async def _create_webhook(
         return web.Response(status=HTTPStatus.OK)
 
     webhook.async_register(
-        hass, DOMAIN, entry.title, entry.entry_id, handle_webhook, local_only=True
+        menuai, DOMAIN, entry.title, entry.entry_id, handle_webhook, local_only=True
     )
 
     webhook_url = webhook.async_generate_path(entry.entry_id)
 
     try:
-        hass_url = get_url(
-            hass,
+        menuai_url = get_url(
+            menuai,
             allow_cloud=False,
             allow_external=False,
             allow_ip=True,
             require_ssl=False,
         )
     except NoURLAvailableError:
-        webhook.async_unregister(hass, entry.entry_id)
+        webhook.async_unregister(menuai, entry.entry_id)
         raise NukiWebhookException(
             f"Error registering URL for webhook {entry.entry_id}: "
-            "HomeAssistant URL is not available"
+            "menuai URL is not available"
         ) from None
 
-    url = f"{hass_url}{webhook_url}"
+    url = f"{menuai_url}{webhook_url}"
 
-    if hass_url.startswith("https"):
+    if menuai_url.startswith("https"):
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             "https_webhook",
             is_fixable=False,
             severity=ir.IssueSeverity.WARNING,
             translation_key="https_webhook",
             translation_placeholders={
-                "base_url": hass_url,
+                "base_url": menuai_url,
                 "network_link": "https://my.home-assistant.io/redirect/network/",
             },
         )
     else:
-        ir.async_delete_issue(hass, DOMAIN, "https_webhook")
+        ir.async_delete_issue(menuai, DOMAIN, "https_webhook")
 
         try:
             async with asyncio.timeout(10):
-                await hass.async_add_executor_job(
+                await menuai.async_add_executor_job(
                     _register_webhook, bridge, entry.entry_id, url
                 )
         except InvalidCredentialsException as err:
-            webhook.async_unregister(hass, entry.entry_id)
+            webhook.async_unregister(menuai, entry.entry_id)
             raise NukiWebhookException(
                 f"Invalid credentials for Bridge: {err}"
             ) from err
         except RequestException as err:
-            webhook.async_unregister(hass, entry.entry_id)
+            webhook.async_unregister(menuai, entry.entry_id)
             raise NukiWebhookException(
                 f"Error communicating with Bridge: {err}"
             ) from err
@@ -155,10 +155,10 @@ def _remove_webhook(bridge: NukiBridge, entry_id: str) -> None:
             bridge.callback_remove(item["id"])
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the Nuki entry."""
 
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     # Migration of entry unique_id
     if isinstance(entry.unique_id, int):
@@ -166,10 +166,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         params = {"unique_id": new_id}
         if entry.title == entry.unique_id:
             params["title"] = new_id
-        hass.config_entries.async_update_entry(entry, **params)
+        menuai.config_entries.async_update_entry(entry, **params)
 
     try:
-        bridge = await hass.async_add_executor_job(
+        bridge = await menuai.async_add_executor_job(
             NukiBridge,
             entry.data[CONF_HOST],
             entry.data[CONF_TOKEN],
@@ -178,7 +178,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             DEFAULT_TIMEOUT,
         )
 
-        locks, openers = await hass.async_add_executor_job(_get_bridge_devices, bridge)
+        locks, openers = await menuai.async_add_executor_job(_get_bridge_devices, bridge)
     except InvalidCredentialsException as err:
         raise exceptions.ConfigEntryAuthFailed from err
     except RequestException as err:
@@ -187,7 +187,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Device registration for the bridge
     info = bridge.info()
     bridge_id = parse_id(info["ids"]["hardwareId"])
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     dev_reg.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge_id)},
@@ -199,16 +199,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     try:
-        await _create_webhook(hass, entry, bridge)
+        await _create_webhook(menuai, entry, bridge)
     except NukiWebhookException as err:
-        _LOGGER.warning("Error registering HomeAssistant webhook: %s", err)
+        _LOGGER.warning("Error registering menuai webhook: %s", err)
 
     async def _stop_nuki(_: Event):
         """Stop and remove the Nuki webhook."""
-        webhook.async_unregister(hass, entry.entry_id)
+        webhook.async_unregister(menuai, entry.entry_id)
         try:
             async with asyncio.timeout(10):
-                await hass.async_add_executor_job(
+                await menuai.async_add_executor_job(
                     _remove_webhook, bridge, entry.entry_id
                 )
         except InvalidCredentialsException as err:
@@ -219,11 +219,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Error communicating with bridge: %s", err)
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_nuki)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _stop_nuki)
     )
 
-    coordinator = NukiCoordinator(hass, entry, bridge, locks, openers)
-    hass.data[DOMAIN][entry.entry_id] = NukiEntryData(
+    coordinator = NukiCoordinator(menuai, entry, bridge, locks, openers)
+    menuai.data[DOMAIN][entry.entry_id] = NukiEntryData(
         coordinator=coordinator,
         bridge=bridge,
         locks=locks,
@@ -233,19 +233,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_refresh()
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload the Nuki entry."""
-    webhook.async_unregister(hass, entry.entry_id)
-    entry_data: NukiEntryData = hass.data[DOMAIN][entry.entry_id]
+    webhook.async_unregister(menuai, entry.entry_id)
+    entry_data: NukiEntryData = menuai.data[DOMAIN][entry.entry_id]
 
     try:
         async with asyncio.timeout(10):
-            await hass.async_add_executor_job(
+            await menuai.async_add_executor_job(
                 _remove_webhook,
                 entry_data.bridge,
                 entry.entry_id,
@@ -259,8 +259,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Unable to remove callback. Error communicating with Bridge: {err}"
         ) from err
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

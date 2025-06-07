@@ -9,15 +9,15 @@ from scsgate.messages import ScenarioTriggeredMessage, StateMessage
 from scsgate.tasks import ToggleStatusTask
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_STATE, CONF_DEVICES, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_ENTITY_ID, ATTR_STATE, CONF_DEVICES, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_SCS_ID, DOMAIN, SCSGATE_SCHEMA
 
@@ -32,14 +32,14 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the SCSGate switches."""
     logger = logging.getLogger(__name__)
-    scsgate = hass.data[DOMAIN]
+    scsgate = menuai.data[DOMAIN]
 
     _setup_traditional_switches(
         logger=logger,
@@ -48,7 +48,7 @@ def setup_platform(
         add_entities_callback=add_entities,
     )
 
-    _setup_scenario_switches(logger=logger, config=config, scsgate=scsgate, hass=hass)
+    _setup_scenario_switches(logger=logger, config=config, scsgate=scsgate, menuai=menuai)
 
 
 def _setup_traditional_switches(logger, config, scsgate, add_entities_callback):
@@ -75,7 +75,7 @@ def _setup_traditional_switches(logger, config, scsgate, add_entities_callback):
     scsgate.add_devices_to_register(switches)
 
 
-def _setup_scenario_switches(logger, config, scsgate, hass):
+def _setup_scenario_switches(logger, config, scsgate, menuai):
     """Add only SCSGate scenario switches."""
     if scenario := config.get(CONF_SCENARIO):
         for entity_info in scenario.values():
@@ -88,7 +88,7 @@ def _setup_scenario_switches(logger, config, scsgate, hass):
             logger.info("Adding %s scsgate.scenario_switch", name)
 
             switch = SCSGateScenarioSwitch(
-                name=name, scs_id=scs_id, logger=logger, hass=hass
+                name=name, scs_id=scs_id, logger=logger, menuai=menuai
             )
             scsgate.add_device(switch)
 
@@ -155,7 +155,7 @@ class SCSGateSwitch(SwitchEntity):
         if self._toggled:
             command = "on"
 
-        self.hass.bus.fire(
+        self.menuai.bus.fire(
             "button_pressed", {ATTR_ENTITY_ID: self._scs_id, ATTR_STATE: command}
         )
 
@@ -167,12 +167,12 @@ class SCSGateScenarioSwitch:
     events.
     """
 
-    def __init__(self, scs_id, name, logger, hass):
+    def __init__(self, scs_id, name, logger, menuai):
         """Initialize the scenario."""
         self._name = name
         self._scs_id = scs_id
         self._logger = logger
-        self._hass = hass
+        self._menuai = menuai
 
     @property
     def scs_id(self):
@@ -197,7 +197,7 @@ class SCSGateScenarioSwitch:
             )
             return
 
-        self._hass.bus.fire(
+        self._menuai.bus.fire(
             "scenario_switch_triggered",
             {ATTR_ENTITY_ID: int(self._scs_id), ATTR_SCENARIO_ID: int(scenario_id, 16)},
         )

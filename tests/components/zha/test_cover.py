@@ -7,7 +7,7 @@ from zigpy.profiles import zha
 from zigpy.zcl.clusters import closures
 import zigpy.zcl.foundation as zcl_f
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
     ATTR_TILT_POSITION,
@@ -22,16 +22,16 @@ from homeassistant.components.cover import (
     SERVICE_STOP_COVER_TILT,
     CoverState,
 )
-from homeassistant.components.zha.helpers import (
+from menuai.components.zha.helpers import (
     ZHADeviceProxy,
     ZHAGatewayProxy,
     get_zha_gateway,
     get_zha_gateway_proxy,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_component import async_update_entity
 
 from .common import find_entity_id, send_attributes_report, update_attribute_cache
 from .conftest import SIG_EP_INPUT, SIG_EP_OUTPUT, SIG_EP_PROFILE, SIG_EP_TYPE
@@ -43,7 +43,7 @@ Default_Response = zcl_f.GENERAL_COMMANDS[zcl_f.GeneralCommand.Default_Response]
 def cover_platform_only():
     """Only set up the cover and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.COVER,
             Platform.DEVICE_TRACKER,
@@ -60,12 +60,12 @@ WCT = closures.WindowCovering.WindowCoveringType
 WCCS = closures.WindowCovering.ConfigStatus
 
 
-async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
+async def test_cover(menuai: menuai, setup_zha, zigpy_device_mock) -> None:
     """Test ZHA cover platform."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -89,10 +89,10 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
-    entity_id = find_entity_id(Platform.COVER, zha_device_proxy, hass)
+    entity_id = find_entity_id(Platform.COVER, zha_device_proxy, menuai)
     assert entity_id is not None
 
     assert (
@@ -110,8 +110,8 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         in cluster.read_attributes.call_args[0][0]
     )
 
-    await async_update_entity(hass, entity_id)
-    state = hass.states.get(entity_id)
+    await async_update_entity(menuai, entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes[ATTR_CURRENT_POSITION] == 100  # HA open %
@@ -119,31 +119,31 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
 
     # test that the state has changed from open to closed
     await send_attributes_report(
-        hass, cluster, {WCAttrs.current_position_lift_percentage.id: 100}
+        menuai, cluster, {WCAttrs.current_position_lift_percentage.id: 100}
     )
-    assert hass.states.get(entity_id).state == CoverState.CLOSED
+    assert menuai.states.get(entity_id).state == CoverState.CLOSED
 
     # test that it opens
     await send_attributes_report(
-        hass, cluster, {WCAttrs.current_position_lift_percentage.id: 0}
+        menuai, cluster, {WCAttrs.current_position_lift_percentage.id: 0}
     )
-    assert hass.states.get(entity_id).state == CoverState.OPEN
+    assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # test that the state remains after tilting to 0% (open)
     await send_attributes_report(
-        hass, cluster, {WCAttrs.current_position_tilt_percentage.id: 0}
+        menuai, cluster, {WCAttrs.current_position_tilt_percentage.id: 0}
     )
-    assert hass.states.get(entity_id).state == CoverState.OPEN
+    assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # test that the state remains after tilting to 100% (closed)
     await send_attributes_report(
-        hass, cluster, {WCAttrs.current_position_tilt_percentage.id: 100}
+        menuai, cluster, {WCAttrs.current_position_tilt_percentage.id: 100}
     )
-    assert hass.states.get(entity_id).state == CoverState.OPEN
+    assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # close lift from UI
     with patch("zigpy.zcl.Cluster.request", return_value=[0x1, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN, SERVICE_CLOSE_COVER, {"entity_id": entity_id}, blocking=True
         )
         assert cluster.request.call_count == 1
@@ -152,23 +152,23 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         assert cluster.request.call_args[0][2].command.name == WCCmds.down_close.name
         assert cluster.request.call_args[1]["expect_reply"] is True
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSING
+        assert menuai.states.get(entity_id).state == CoverState.CLOSING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_lift_percentage.id: 100}
+            menuai, cluster, {WCAttrs.current_position_lift_percentage.id: 100}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSED
+        assert menuai.states.get(entity_id).state == CoverState.CLOSED
 
     # close tilt from UI, needs re-opening first
     await send_attributes_report(
-        hass, cluster, {WCAttrs.current_position_tilt_percentage.id: 0}
+        menuai, cluster, {WCAttrs.current_position_tilt_percentage.id: 0}
     )
     assert (
-        hass.states.get(entity_id).state == CoverState.CLOSED
+        menuai.states.get(entity_id).state == CoverState.CLOSED
     )  # CLOSED lift state currently takes precedence over OPEN tilt
     with patch("zigpy.zcl.Cluster.request", return_value=[0x1, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER_TILT,
             {"entity_id": entity_id},
@@ -184,17 +184,17 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         assert cluster.request.call_args[0][3] == 100
         assert cluster.request.call_args[1]["expect_reply"] is True
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSING
+        assert menuai.states.get(entity_id).state == CoverState.CLOSING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_tilt_percentage.id: 100}
+            menuai, cluster, {WCAttrs.current_position_tilt_percentage.id: 100}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSED
+        assert menuai.states.get(entity_id).state == CoverState.CLOSED
 
     # open lift from UI
     with patch("zigpy.zcl.Cluster.request", return_value=[0x0, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN, SERVICE_OPEN_COVER, {"entity_id": entity_id}, blocking=True
         )
         assert cluster.request.call_count == 1
@@ -203,17 +203,17 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         assert cluster.request.call_args[0][2].command.name == WCCmds.up_open.name
         assert cluster.request.call_args[1]["expect_reply"] is True
 
-        assert hass.states.get(entity_id).state == CoverState.OPENING
+        assert menuai.states.get(entity_id).state == CoverState.OPENING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_lift_percentage.id: 0}
+            menuai, cluster, {WCAttrs.current_position_lift_percentage.id: 0}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.OPEN
+        assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # open tilt from UI
     with patch("zigpy.zcl.Cluster.request", return_value=[0x0, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER_TILT,
             {"entity_id": entity_id},
@@ -229,17 +229,17 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         assert cluster.request.call_args[0][3] == 0
         assert cluster.request.call_args[1]["expect_reply"] is True
 
-        assert hass.states.get(entity_id).state == CoverState.OPENING
+        assert menuai.states.get(entity_id).state == CoverState.OPENING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_tilt_percentage.id: 0}
+            menuai, cluster, {WCAttrs.current_position_tilt_percentage.id: 0}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.OPEN
+        assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # set lift position from UI
     with patch("zigpy.zcl.Cluster.request", return_value=[0x5, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_SET_COVER_POSITION,
             {"entity_id": entity_id, "position": 47},
@@ -255,23 +255,23 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         assert cluster.request.call_args[0][3] == 53
         assert cluster.request.call_args[1]["expect_reply"] is True
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSING
+        assert menuai.states.get(entity_id).state == CoverState.CLOSING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_lift_percentage.id: 35}
+            menuai, cluster, {WCAttrs.current_position_lift_percentage.id: 35}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSING
+        assert menuai.states.get(entity_id).state == CoverState.CLOSING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_lift_percentage.id: 53}
+            menuai, cluster, {WCAttrs.current_position_lift_percentage.id: 53}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.OPEN
+        assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # set tilt position from UI
     with patch("zigpy.zcl.Cluster.request", return_value=[0x5, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_SET_COVER_TILT_POSITION,
             {"entity_id": entity_id, ATTR_TILT_POSITION: 47},
@@ -287,23 +287,23 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         assert cluster.request.call_args[0][3] == 53
         assert cluster.request.call_args[1]["expect_reply"] is True
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSING
+        assert menuai.states.get(entity_id).state == CoverState.CLOSING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_tilt_percentage.id: 35}
+            menuai, cluster, {WCAttrs.current_position_tilt_percentage.id: 35}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.CLOSING
+        assert menuai.states.get(entity_id).state == CoverState.CLOSING
 
         await send_attributes_report(
-            hass, cluster, {WCAttrs.current_position_tilt_percentage.id: 53}
+            menuai, cluster, {WCAttrs.current_position_tilt_percentage.id: 53}
         )
 
-        assert hass.states.get(entity_id).state == CoverState.OPEN
+        assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # stop from UI
     with patch("zigpy.zcl.Cluster.request", return_value=[0x2, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN, SERVICE_STOP_COVER, {"entity_id": entity_id}, blocking=True
         )
         assert cluster.request.call_count == 1
@@ -313,7 +313,7 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         assert cluster.request.call_args[1]["expect_reply"] is True
 
     with patch("zigpy.zcl.Cluster.request", return_value=[0x2, zcl_f.Status.SUCCESS]):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_STOP_COVER_TILT,
             {"entity_id": entity_id},
@@ -327,12 +327,12 @@ async def test_cover(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
 
 
 async def test_cover_failures(
-    hass: HomeAssistant, setup_zha, zigpy_device_mock
+    menuai: menuai, setup_zha, zigpy_device_mock
 ) -> None:
     """Test ZHA cover platform failure cases."""
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -354,19 +354,19 @@ async def test_cover_failures(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
-    entity_id = find_entity_id(Platform.COVER, zha_device_proxy, hass)
+    entity_id = find_entity_id(Platform.COVER, zha_device_proxy, menuai)
     assert entity_id is not None
 
     # test that the state has changed from unavailable to closed
-    await send_attributes_report(hass, cluster, {0: 0, 8: 100, 1: 1})
-    assert hass.states.get(entity_id).state == CoverState.CLOSED
+    await send_attributes_report(menuai, cluster, {0: 0, 8: 100, 1: 1})
+    assert menuai.states.get(entity_id).state == CoverState.CLOSED
 
     # test that it opens
-    await send_attributes_report(hass, cluster, {0: 1, 8: 0, 1: 100})
-    assert hass.states.get(entity_id).state == CoverState.OPEN
+    await send_attributes_report(menuai, cluster, {0: 1, 8: 0, 1: 100})
+    assert menuai.states.get(entity_id).state == CoverState.OPEN
 
     # close from UI
     with patch(
@@ -376,8 +376,8 @@ async def test_cover_failures(
             status=zcl_f.Status.UNSUP_CLUSTER_COMMAND,
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=r"Failed to close cover"):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=r"Failed to close cover"):
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_CLOSE_COVER,
                 {"entity_id": entity_id},
@@ -396,8 +396,8 @@ async def test_cover_failures(
             status=zcl_f.Status.UNSUP_CLUSTER_COMMAND,
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=r"Failed to close cover tilt"):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=r"Failed to close cover tilt"):
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_CLOSE_COVER_TILT,
                 {"entity_id": entity_id},
@@ -417,8 +417,8 @@ async def test_cover_failures(
             status=zcl_f.Status.UNSUP_CLUSTER_COMMAND,
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=r"Failed to open cover"):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=r"Failed to open cover"):
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_OPEN_COVER,
                 {"entity_id": entity_id},
@@ -437,8 +437,8 @@ async def test_cover_failures(
             status=zcl_f.Status.UNSUP_CLUSTER_COMMAND,
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=r"Failed to open cover tilt"):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=r"Failed to open cover tilt"):
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_OPEN_COVER_TILT,
                 {"entity_id": entity_id},
@@ -458,8 +458,8 @@ async def test_cover_failures(
             status=zcl_f.Status.UNSUP_CLUSTER_COMMAND,
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=r"Failed to set cover position"):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=r"Failed to set cover position"):
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_SET_COVER_POSITION,
                 {"entity_id": entity_id, "position": 47},
@@ -480,9 +480,9 @@ async def test_cover_failures(
         ),
     ):
         with pytest.raises(
-            HomeAssistantError, match=r"Failed to set cover tilt position"
+            menuaiError, match=r"Failed to set cover tilt position"
         ):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_SET_COVER_TILT_POSITION,
                 {"entity_id": entity_id, "tilt_position": 42},
@@ -502,8 +502,8 @@ async def test_cover_failures(
             status=zcl_f.Status.UNSUP_CLUSTER_COMMAND,
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=r"Failed to stop cover"):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=r"Failed to stop cover"):
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_STOP_COVER,
                 {"entity_id": entity_id},
@@ -523,8 +523,8 @@ async def test_cover_failures(
             status=zcl_f.Status.UNSUP_CLUSTER_COMMAND,
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=r"Failed to stop cover"):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=r"Failed to stop cover"):
+            await menuai.services.async_call(
                 COVER_DOMAIN,
                 SERVICE_STOP_COVER_TILT,
                 {"entity_id": entity_id},

@@ -4,18 +4,18 @@ from unittest.mock import MagicMock
 
 from asyncsleepiq import FootWarmingTemps
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
     ATTR_OPTION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import (
     BED_ID,
@@ -35,14 +35,14 @@ from .conftest import (
 
 
 async def test_split_foundation_preset(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_asyncsleepiq: MagicMock,
 ) -> None:
     """Test the SleepIQ select entity for split foundation presets."""
-    entry = await setup_platform(hass, SELECT_DOMAIN)
+    entry = await setup_platform(menuai, SELECT_DOMAIN)
 
-    state = hass.states.get(
+    state = menuai.states.get(
         f"select.sleepnumber_{BED_NAME_LOWER}_foundation_preset_right"
     )
     assert state.state == PRESET_R_STATE
@@ -58,7 +58,7 @@ async def test_split_foundation_preset(
     assert entry
     assert entry.unique_id == f"{BED_ID}_preset_R"
 
-    state = hass.states.get(
+    state = menuai.states.get(
         f"select.sleepnumber_{BED_NAME_LOWER}_foundation_preset_left"
     )
     assert state.state == PRESET_L_STATE
@@ -74,7 +74,7 @@ async def test_split_foundation_preset(
     assert entry
     assert entry.unique_id == f"{BED_ID}_preset_L"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {
@@ -83,7 +83,7 @@ async def test_split_foundation_preset(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_asyncsleepiq.beds[BED_ID].foundation.presets[0].set_preset.assert_called_once()
     mock_asyncsleepiq.beds[BED_ID].foundation.presets[0].set_preset.assert_called_with(
@@ -92,14 +92,14 @@ async def test_split_foundation_preset(
 
 
 async def test_single_foundation_preset(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_asyncsleepiq_single_foundation: MagicMock,
 ) -> None:
     """Test the SleepIQ select entity for single foundation presets."""
-    entry = await setup_platform(hass, SELECT_DOMAIN)
+    entry = await setup_platform(menuai, SELECT_DOMAIN)
 
-    state = hass.states.get(f"select.sleepnumber_{BED_NAME_LOWER}_foundation_preset")
+    state = menuai.states.get(f"select.sleepnumber_{BED_NAME_LOWER}_foundation_preset")
     assert state.state == PRESET_R_STATE
     assert state.attributes.get(ATTR_ICON) == "mdi:bed"
     assert (
@@ -113,7 +113,7 @@ async def test_single_foundation_preset(
     assert entry
     assert entry.unique_id == f"{BED_ID}_preset"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {
@@ -122,7 +122,7 @@ async def test_single_foundation_preset(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_asyncsleepiq_single_foundation.beds[BED_ID].foundation.presets[
         0
@@ -133,14 +133,14 @@ async def test_single_foundation_preset(
 
 
 async def test_foot_warmer(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_asyncsleepiq: MagicMock,
 ) -> None:
     """Test the SleepIQ select entity for foot warmers."""
-    entry = await setup_platform(hass, SELECT_DOMAIN)
+    entry = await setup_platform(menuai, SELECT_DOMAIN)
 
-    state = hass.states.get(
+    state = menuai.states.get(
         f"select.sleepnumber_{BED_NAME_LOWER}_{SLEEPER_L_NAME_LOWER}_foot_warmer"
     )
     assert state.state == FootWarmingTemps.MEDIUM.name.lower()
@@ -156,7 +156,7 @@ async def test_foot_warmer(
     assert entry
     assert entry.unique_id == f"{SLEEPER_L_ID}_foot_warmer"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {
@@ -165,13 +165,13 @@ async def test_foot_warmer(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_asyncsleepiq.beds[BED_ID].foundation.foot_warmers[
         0
     ].turn_off.assert_called_once()
 
-    state = hass.states.get(
+    state = menuai.states.get(
         f"select.sleepnumber_{BED_NAME_LOWER}_{SLEEPER_R_NAME_LOWER}_foot_warmer"
     )
     assert state.state == FootWarmingTemps.OFF.name.lower()
@@ -187,7 +187,7 @@ async def test_foot_warmer(
     assert entry
     assert entry.unique_id == f"{SLEEPER_R_ID}_foot_warmer"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {
@@ -196,7 +196,7 @@ async def test_foot_warmer(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_asyncsleepiq.beds[BED_ID].foundation.foot_warmers[
         1

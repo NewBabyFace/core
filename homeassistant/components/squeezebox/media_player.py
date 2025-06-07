@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any, cast
 from pysqueezebox import Server, async_discover
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_ENQUEUE,
     ATTR_MEDIA_EXTRA,
     BrowseError,
@@ -27,21 +27,21 @@ from homeassistant.components.media_player import (
     SearchMediaQuery,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
-from homeassistant.const import ATTR_COMMAND, CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import (
+from menuai.config_entries import SOURCE_INTEGRATION_DISCOVERY
+from menuai.const import ATTR_COMMAND, CONF_HOST, CONF_PORT, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import (
     config_validation as cv,
     discovery_flow,
     entity_platform,
     entity_registry as er,
 )
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.start import async_at_start
-from homeassistant.util.dt import utcnow
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.start import async_at_start
+from menuai.util.dt import utcnow
 
 from .browse_media import (
     BrowseData,
@@ -93,12 +93,12 @@ SQUEEZEBOX_MODE = {
 }
 
 
-async def start_server_discovery(hass: HomeAssistant) -> None:
+async def start_server_discovery(menuai: menuai) -> None:
     """Start a server discovery task."""
 
     def _discovered_server(server: Server) -> None:
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={"source": SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -108,17 +108,17 @@ async def start_server_discovery(hass: HomeAssistant) -> None:
             },
         )
 
-    hass.data.setdefault(DOMAIN, {})
-    if DISCOVERY_TASK not in hass.data[DOMAIN]:
+    menuai.data.setdefault(DOMAIN, {})
+    if DISCOVERY_TASK not in menuai.data[DOMAIN]:
         _LOGGER.debug("Adding server discovery task for squeezebox")
-        hass.data[DOMAIN][DISCOVERY_TASK] = hass.async_create_background_task(
+        menuai.data[DOMAIN][DISCOVERY_TASK] = menuai.async_create_background_task(
             async_discover(_discovered_server),
             name="squeezebox server discovery",
         )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SqueezeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -130,7 +130,7 @@ async def async_setup_entry(
         async_add_entities([SqueezeBoxMediaPlayerEntity(player)])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, SIGNAL_PLAYER_DISCOVERED, _player_discovered)
+        async_dispatcher_connect(menuai, SIGNAL_PLAYER_DISCOVERED, _player_discovered)
     )
 
     # Register entity services
@@ -157,7 +157,7 @@ async def async_setup_entry(
     )
 
     # Start server discovery task if not already running
-    entry.async_on_unload(async_at_start(hass, start_server_discovery))
+    entry.async_on_unload(async_at_start(menuai, start_server_discovery))
 
 
 def get_announce_volume(extra: dict) -> float | None:
@@ -272,9 +272,9 @@ class SqueezeBoxMediaPlayerEntity(SqueezeboxEntity, MediaPlayerEntity):
         )
         return None
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Remove from list of known players when removed from hass."""
-        known_servers = self.hass.data[DOMAIN][KNOWN_SERVERS]
+    async def async_will_remove_from_menuai(self) -> None:
+        """Remove from list of known players when removed from menuai."""
+        known_servers = self.menuai.data[DOMAIN][KNOWN_SERVERS]
         known_players = known_servers[self.coordinator.server_uuid][KNOWN_PLAYERS]
         known_players.remove(self.coordinator.player.player_id)
 
@@ -362,13 +362,13 @@ class SqueezeBoxMediaPlayerEntity(SqueezeboxEntity, MediaPlayerEntity):
     @property
     def shuffle(self) -> bool:
         """Boolean if shuffle is enabled."""
-        # Squeezebox has a third shuffle mode (album) not recognized by Home Assistant
+        # Squeezebox has a third shuffle mode (album) not recognized by MenuAI
         return bool(self._player.shuffle == "song")
 
     @property
     def group_members(self) -> list[str]:
         """List players we are synced with."""
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         return [
             entity_id
             for player in self._player.sync_group
@@ -467,7 +467,7 @@ class SqueezeBoxMediaPlayerEntity(SqueezeboxEntity, MediaPlayerEntity):
         if media_source.is_media_source_id(media_id):
             media_type = MediaType.MUSIC
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
 
@@ -512,7 +512,7 @@ class SqueezeBoxMediaPlayerEntity(SqueezeboxEntity, MediaPlayerEntity):
         if media_type in MediaType.MUSIC:
             if not media_id.startswith(SQUEEZEBOX_SOURCE_STRINGS):
                 # do not process special squeezebox "source" media ids
-                media_id = async_process_play_media_url(self.hass, media_id)
+                media_id = async_process_play_media_url(self.menuai, media_id)
 
             await self._player.async_load_url(media_id, cmd)
             return
@@ -673,7 +673,7 @@ class SqueezeBoxMediaPlayerEntity(SqueezeboxEntity, MediaPlayerEntity):
         If the other player is a member of a sync group, it will leave the current sync group
         without asking.
         """
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         for other_player_entity_id in group_members:
             other_player = ent_reg.async_get(other_player_entity_id)
             if other_player is None:
@@ -716,11 +716,11 @@ class SqueezeBoxMediaPlayerEntity(SqueezeboxEntity, MediaPlayerEntity):
             media_content_type = media_content_type.lower()
 
         if media_content_type in [None, "library"]:
-            return await library_payload(self.hass, self._player, self._browse_data)
+            return await library_payload(self.menuai, self._player, self._browse_data)
 
         if media_content_id and media_source.is_media_source_id(media_content_id):
             return await media_source.async_browse_media(
-                self.hass, media_content_id, content_filter=media_source_content_filter
+                self.menuai, media_content_id, content_filter=media_source_content_filter
             )
 
         payload = {

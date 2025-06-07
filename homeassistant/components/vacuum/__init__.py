@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (  # noqa: F401 # STATE_PAUSED/IDLE are API
+from menuai.config_entries import ConfigEntry
+from menuai.const import (  # noqa: F401 # STATE_PAUSED/IDLE are API
     ATTR_BATTERY_LEVEL,
     ATTR_COMMAND,
     SERVICE_TOGGLE,
@@ -21,22 +21,22 @@ from homeassistant.const import (  # noqa: F401 # STATE_PAUSED/IDLE are API
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.deprecation import (
     DeprecatedConstantEnum,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_platform import EntityPlatform
-from homeassistant.helpers.frame import ReportBehavior, report_usage
-from homeassistant.helpers.icon import icon_for_battery_level
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.entity_platform import EntityPlatform
+from menuai.helpers.frame import ReportBehavior, report_usage
+from menuai.helpers.icon import icon_for_battery_level
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (  # noqa: F401
     _DEPRECATED_STATE_CLEANING,
@@ -49,7 +49,7 @@ from .const import (  # noqa: F401
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[StateVacuumEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[StateVacuumEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -74,7 +74,7 @@ SERVICE_STOP = "stop"
 
 DEFAULT_NAME = "Vacuum cleaner robot"
 
-# These STATE_* constants are deprecated as of Home Assistant 2025.1.
+# These STATE_* constants are deprecated as of MenuAI 2025.1.
 # Please use the VacuumActivity enum instead.
 _DEPRECATED_STATE_IDLE = DeprecatedConstantEnum(VacuumActivity.IDLE, "2026.1")
 _DEPRECATED_STATE_PAUSED = DeprecatedConstantEnum(VacuumActivity.PAUSED, "2026.1")
@@ -99,7 +99,7 @@ class VacuumEntityFeature(IntFlag):
     START = 8192
 
 
-# These SUPPORT_* constants are deprecated as of Home Assistant 2022.5.
+# These SUPPORT_* constants are deprecated as of MenuAI 2022.5.
 # Please use the VacuumEntityFeature enum instead.
 _DEPRECATED_SUPPORT_TURN_ON = DeprecatedConstantEnum(
     VacuumEntityFeature.TURN_ON, "2025.10"
@@ -137,16 +137,16 @@ _DEPRECATED_SUPPORT_START = DeprecatedConstantEnum(VacuumEntityFeature.START, "2
 # mypy: disallow-any-generics
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Return if the vacuum is on based on the statemachine."""
-    return hass.states.is_state(entity_id, STATE_ON)
+    return menuai.states.is_state(entity_id, STATE_ON)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the vacuum component."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[StateVacuumEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[StateVacuumEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
@@ -206,14 +206,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class StateVacuumEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -269,12 +269,12 @@ class StateVacuumEntity(
     @callback
     def add_to_platform_start(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         platform: EntityPlatform,
         parallel_updates: asyncio.Semaphore | None,
     ) -> None:
         """Start adding an entity to a platform."""
-        super().add_to_platform_start(hass, platform, parallel_updates)
+        super().add_to_platform_start(menuai, platform, parallel_updates)
         if self.__vacuum_legacy_state:
             self._report_deprecated_activity_handling()
 
@@ -391,7 +391,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(partial(self.stop, **kwargs))
+        await self.menuai.async_add_executor_job(partial(self.stop, **kwargs))
 
     def return_to_base(self, **kwargs: Any) -> None:
         """Set the vacuum cleaner to return to the dock."""
@@ -402,7 +402,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(partial(self.return_to_base, **kwargs))
+        await self.menuai.async_add_executor_job(partial(self.return_to_base, **kwargs))
 
     def clean_spot(self, **kwargs: Any) -> None:
         """Perform a spot clean-up."""
@@ -413,7 +413,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(partial(self.clean_spot, **kwargs))
+        await self.menuai.async_add_executor_job(partial(self.clean_spot, **kwargs))
 
     def locate(self, **kwargs: Any) -> None:
         """Locate the vacuum cleaner."""
@@ -424,7 +424,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(partial(self.locate, **kwargs))
+        await self.menuai.async_add_executor_job(partial(self.locate, **kwargs))
 
     def set_fan_speed(self, fan_speed: str, **kwargs: Any) -> None:
         """Set fan speed."""
@@ -435,7 +435,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(self.set_fan_speed, fan_speed, **kwargs)
         )
 
@@ -458,7 +458,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(self.send_command, command, params=params, **kwargs)
         )
 
@@ -471,7 +471,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(self.start)
+        await self.menuai.async_add_executor_job(self.start)
 
     def pause(self) -> None:
         """Pause the cleaning task."""
@@ -482,7 +482,7 @@ class StateVacuumEntity(
 
         This method must be run in the event loop.
         """
-        await self.hass.async_add_executor_job(self.pause)
+        await self.menuai.async_add_executor_job(self.pause)
 
 
 # As we import deprecated constants from the const module, we need to add these two functions

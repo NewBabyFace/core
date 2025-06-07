@@ -7,7 +7,7 @@ from typing import Any
 
 from pymystrom.exceptions import MyStromConnectionError
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_HS_COLOR,
@@ -15,10 +15,10 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, MANUFACTURER
 
@@ -31,13 +31,13 @@ EFFECT_SUNRISE = "sunrise"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the myStrom entities."""
-    info = hass.data[DOMAIN][entry.entry_id].info
-    device = hass.data[DOMAIN][entry.entry_id].device
+    info = menuai.data[DOMAIN][entry.entry_id].info
+    device = menuai.data[DOMAIN][entry.entry_id].device
     async_add_entities([MyStromLight(device, entry.title, info["mac"])])
 
 

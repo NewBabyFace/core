@@ -13,19 +13,19 @@ from typing import Any
 from mysensors import BaseAsyncGateway, Message, Sensor, get_const, mysensors
 import voluptuous as vol
 
-from homeassistant.components.mqtt import (
+from menuai.components.mqtt import (
     DOMAIN as MQTT_DOMAIN,
     ReceiveMessage as MQTTReceiveMessage,
     async_publish,
     async_subscribe,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.setup import SetupPhases, async_pause_setup
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE, EVENT_menuai_STOP
+from menuai.core import Event, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.setup import SetupPhases, async_pause_setup
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import (
     CONF_BAUD_RATE,
@@ -77,7 +77,7 @@ def is_socket_address(value: str) -> str:
 
 
 async def try_connect(
-    hass: HomeAssistant, gateway_type: ConfGatewayType, user_input: dict[str, Any]
+    menuai: menuai, gateway_type: ConfGatewayType, user_input: dict[str, Any]
 ) -> bool:
     """Try to connect to a gateway and report if it worked."""
     if gateway_type == "MQTT":
@@ -89,7 +89,7 @@ async def try_connect(
             gateway_ready.set()
 
         gateway: BaseAsyncGateway | None = await _get_gateway(
-            hass,
+            menuai,
             gateway_type,
             device=user_input[CONF_DEVICE],
             version=user_input[CONF_VERSION],
@@ -125,16 +125,16 @@ async def try_connect(
 
 
 async def setup_gateway(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> BaseAsyncGateway | None:
     """Set up the Gateway for the given ConfigEntry."""
 
     return await _get_gateway(
-        hass,
+        menuai,
         gateway_type=entry.data[CONF_GATEWAY_TYPE],
         device=entry.data[CONF_DEVICE],
         version=entry.data[CONF_VERSION],
-        event_callback=_gw_callback_factory(hass, entry.entry_id),
+        event_callback=_gw_callback_factory(menuai, entry.entry_id),
         persistence_file=entry.data.get(
             CONF_PERSISTENCE_FILE, f"mysensors_{entry.entry_id}.json"
         ),
@@ -147,7 +147,7 @@ async def setup_gateway(
 
 
 async def _get_gateway(
-    hass: HomeAssistant,
+    menuai: menuai,
     gateway_type: ConfGatewayType,
     device: str,
     version: str,
@@ -162,26 +162,26 @@ async def _get_gateway(
 ) -> BaseAsyncGateway | None:
     """Return gateway after setup of the gateway."""
 
-    with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PACKAGES):
+    with async_pause_setup(menuai, SetupPhases.WAIT_IMPORT_PACKAGES):
         # get_const will import a const module based on the version
         # so we need to import it here to avoid it being imported
         # in the event loop
-        await hass.async_add_import_executor_job(get_const, version)
+        await menuai.async_add_import_executor_job(get_const, version)
 
     if persistence_file is not None:
-        # Interpret relative paths to be in hass config folder.
+        # Interpret relative paths to be in menuai config folder.
         # Absolute paths will be left as they are.
-        persistence_file = hass.config.path(persistence_file)
+        persistence_file = menuai.config.path(persistence_file)
 
     if gateway_type == CONF_GATEWAY_TYPE_MQTT:
         # Make sure the mqtt integration is set up.
         # Naive check that doesn't consider config entry state.
-        if MQTT_DOMAIN not in hass.config.components:
+        if MQTT_DOMAIN not in menuai.config.components:
             return None
 
         def pub_callback(topic: str, payload: str, qos: int, retain: bool) -> None:
             """Call MQTT publish function."""
-            hass.async_create_task(async_publish(hass, topic, payload, qos, retain))
+            menuai.async_create_task(async_publish(menuai, topic, payload, qos, retain))
 
         def sub_callback(
             topic: str, sub_cb: Callable[[str, ReceivePayloadType, int], None], qos: int
@@ -193,7 +193,7 @@ async def _get_gateway(
                 """Call callback."""
                 sub_cb(msg.topic, msg.payload, msg.qos)
 
-            hass.async_create_task(async_subscribe(hass, topic, internal_callback, qos))
+            menuai.async_create_task(async_subscribe(menuai, topic, internal_callback, qos))
 
         gateway = mysensors.AsyncMQTTGateway(
             pub_callback,
@@ -225,7 +225,7 @@ async def _get_gateway(
             protocol_version=version,
         )
     gateway.event_callback = event_callback
-    gateway.metric = hass.config.units is METRIC_SYSTEM
+    gateway.metric = menuai.config.units is METRIC_SYSTEM
 
     if persistence:
         await gateway.start_persistence()
@@ -234,22 +234,22 @@ async def _get_gateway(
 
 
 async def finish_setup(
-    hass: HomeAssistant, entry: ConfigEntry, gateway: BaseAsyncGateway
+    menuai: menuai, entry: ConfigEntry, gateway: BaseAsyncGateway
 ) -> None:
     """Load any persistent devices and platforms and start gateway."""
-    await _discover_persistent_devices(hass, entry, gateway)
-    await _gw_start(hass, entry, gateway)
+    await _discover_persistent_devices(menuai, entry, gateway)
+    await _gw_start(menuai, entry, gateway)
 
 
 async def _discover_persistent_devices(
-    hass: HomeAssistant, entry: ConfigEntry, gateway: BaseAsyncGateway
+    menuai: menuai, entry: ConfigEntry, gateway: BaseAsyncGateway
 ) -> None:
     """Discover platforms for devices loaded via persistence file."""
     new_devices = defaultdict(list)
     for node_id in gateway.sensors:
         if not validate_node(gateway, node_id):
             continue
-        discover_mysensors_node(hass, entry.entry_id, node_id)
+        discover_mysensors_node(menuai, entry.entry_id, node_id)
         node: Sensor = gateway.sensors[node_id]
         for child in node.children.values():  # child is of type ChildSensor
             validated = validate_child(entry.entry_id, gateway, node_id, child)
@@ -257,14 +257,14 @@ async def _discover_persistent_devices(
                 new_devices[platform].extend(dev_ids)
     _LOGGER.debug("discovering persistent devices: %s", new_devices)
     for platform, dev_ids in new_devices.items():
-        discover_mysensors_platform(hass, entry.entry_id, platform, dev_ids)
+        discover_mysensors_platform(menuai, entry.entry_id, platform, dev_ids)
 
 
 async def gw_stop(
-    hass: HomeAssistant, entry: ConfigEntry, gateway: BaseAsyncGateway
+    menuai: menuai, entry: ConfigEntry, gateway: BaseAsyncGateway
 ) -> None:
     """Stop the gateway."""
-    connect_task = hass.data[DOMAIN].pop(
+    connect_task = menuai.data[DOMAIN].pop(
         MYSENSORS_GATEWAY_START_TASK.format(entry.entry_id), None
     )
     if connect_task is not None and not connect_task.done():
@@ -273,7 +273,7 @@ async def gw_stop(
 
 
 async def _gw_start(
-    hass: HomeAssistant, entry: ConfigEntry, gateway: BaseAsyncGateway
+    menuai: menuai, entry: ConfigEntry, gateway: BaseAsyncGateway
 ) -> None:
     """Start the gateway."""
     gateway_ready = asyncio.Event()
@@ -283,17 +283,17 @@ async def _gw_start(
         gateway_ready.set()
 
     gateway.on_conn_made = gateway_connected
-    # Don't use hass.async_create_task to avoid holding up setup indefinitely.
-    hass.data[DOMAIN][MYSENSORS_GATEWAY_START_TASK.format(entry.entry_id)] = (
+    # Don't use menuai.async_create_task to avoid holding up setup indefinitely.
+    menuai.data[DOMAIN][MYSENSORS_GATEWAY_START_TASK.format(entry.entry_id)] = (
         asyncio.create_task(gateway.start())
     )  # store the connect task so it can be cancelled in gw_stop
 
     async def stop_this_gw(_: Event) -> None:
         """Stop the gateway."""
-        await gw_stop(hass, entry, gateway)
+        await gw_stop(menuai, entry, gateway)
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_this_gw),
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_this_gw),
     )
 
     if entry.data[CONF_DEVICE] == MQTT_COMPONENT:
@@ -311,7 +311,7 @@ async def _gw_start(
 
 
 def _gw_callback_factory(
-    hass: HomeAssistant, gateway_id: GatewayId
+    menuai: menuai, gateway_id: GatewayId
 ) -> Callable[[Message], None]:
     """Return a new callback for the gateway."""
 
@@ -330,6 +330,6 @@ def _gw_callback_factory(
         if msg_handler is None:
             return
 
-        msg_handler(hass, gateway_id, msg)
+        msg_handler(menuai, gateway_id, msg)
 
     return mysensors_callback

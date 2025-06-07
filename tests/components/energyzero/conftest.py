@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from energyzero import Electricity, Gas
 import pytest
 
-from homeassistant.components.energyzero.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.energyzero.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_json_object_fixture
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry, async_load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.energyzero.async_setup_entry", return_value=True
+        "menuai.components.energyzero.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -34,29 +34,29 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-async def mock_energyzero(hass: HomeAssistant) -> AsyncGenerator[MagicMock]:
+async def mock_energyzero(menuai: menuai) -> AsyncGenerator[MagicMock]:
     """Return a mocked EnergyZero client."""
     with patch(
-        "homeassistant.components.energyzero.coordinator.EnergyZero", autospec=True
+        "menuai.components.energyzero.coordinator.EnergyZero", autospec=True
     ) as energyzero_mock:
         client = energyzero_mock.return_value
         client.energy_prices.return_value = Electricity.from_dict(
-            await async_load_json_object_fixture(hass, "today_energy.json", DOMAIN)
+            await async_load_json_object_fixture(menuai, "today_energy.json", DOMAIN)
         )
         client.gas_prices.return_value = Gas.from_dict(
-            await async_load_json_object_fixture(hass, "today_gas.json", DOMAIN)
+            await async_load_json_object_fixture(menuai, "today_gas.json", DOMAIN)
         )
         yield client
 
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_energyzero: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_energyzero: MagicMock
 ) -> MockConfigEntry:
     """Set up the EnergyZero integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

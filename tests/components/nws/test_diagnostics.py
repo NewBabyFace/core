@@ -2,8 +2,8 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import nws
-from homeassistant.core import HomeAssistant
+from menuai.components import nws
+from menuai.core import menuai
 
 from .const import NWS_CONFIG
 
@@ -13,8 +13,8 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
     mock_simple_nws,
 ) -> None:
@@ -24,10 +24,10 @@ async def test_entry_diagnostics(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
 
     assert result == snapshot

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components import mqtt
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
+from menuai.components import mqtt
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
 
 from .const import DISCOVERY_TOPIC, DOMAIN
 
@@ -38,7 +38,7 @@ class PGLabFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle a flow initialized by the user."""
         try:
-            if not mqtt.is_connected(self.hass):
+            if not mqtt.is_connected(self.menuai):
                 return self.async_abort(reason="mqtt_not_connected")
         except KeyError:
             return self.async_abort(reason="mqtt_not_configured")

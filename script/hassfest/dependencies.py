@@ -7,8 +7,8 @@ from collections import deque
 import multiprocessing
 from pathlib import Path
 
-from homeassistant.const import Platform
-from homeassistant.requirements import DISCOVERY_INTEGRATIONS
+from menuai.const import Platform
+from menuai.requirements import DISCOVERY_INTEGRATIONS
 
 from . import ast_parse_module
 from .model import Config, Integration
@@ -61,27 +61,27 @@ class ImportCollector(ast.NodeVisitor):
 
         # Exception: we will allow importing the sign path code.
         if (
-            node.module == "homeassistant.components.http.auth"
+            node.module == "menuai.components.http.auth"
             and len(node.names) == 1
             and node.names[0].name == "async_sign_path"
         ):
             return
 
-        if node.module.startswith("homeassistant.components."):
-            # from homeassistant.components.alexa.smart_home import EVENT_ALEXA_SMART_HOME
-            # from homeassistant.components.logbook import bla
+        if node.module.startswith("menuai.components."):
+            # from menuai.components.alexa.smart_home import EVENT_ALEXA_SMART_HOME
+            # from menuai.components.logbook import bla
             self._add_reference(node.module.split(".")[2])
 
-        elif node.module == "homeassistant.components":
-            # from homeassistant.components import sun
+        elif node.module == "menuai.components":
+            # from menuai.components import sun
             for name_node in node.names:
                 self._add_reference(name_node.name)
 
     def visit_Import(self, node: ast.Import) -> None:
         """Visit Import node."""
-        # import homeassistant.components.hue as hue
+        # import menuai.components.hue as hue
         for name_node in node.names:
-            if name_node.name.startswith("homeassistant.components."):
+            if name_node.name.startswith("menuai.components."):
                 self._add_reference(name_node.name.split(".")[2])
 
 
@@ -95,7 +95,7 @@ ALLOWED_USED_COMPONENTS = {
     "device_automation",
     "frontend",
     "group",
-    "homeassistant",
+    "menuai",
     "input_boolean",
     "input_button",
     "input_datetime",
@@ -131,11 +131,11 @@ IGNORE_VIOLATIONS = {
     ("http", "network"),
     ("http", "cloud"),
     # This would be a circular dep
-    ("zha", "homeassistant_hardware"),
-    ("zha", "homeassistant_sky_connect"),
-    ("zha", "homeassistant_yellow"),
-    ("homeassistant_sky_connect", "zha"),
-    ("homeassistant_hardware", "zha"),
+    ("zha", "menuai_hardware"),
+    ("zha", "menuai_sky_connect"),
+    ("zha", "menuai_yellow"),
+    ("menuai_sky_connect", "zha"),
+    ("menuai_hardware", "zha"),
     # This should become a helper method that integrations can submit data to
     ("websocket_api", "lovelace"),
     ("websocket_api", "shopping_list"),
@@ -224,7 +224,7 @@ def _compute_integration_dependencies(
     if integration.domain in IGNORE_VIOLATIONS:
         return (integration.domain, None)
 
-    # Find usage of hass.components
+    # Find usage of menuai.components
     collector = ImportCollector(integration)
     collector.collect()
     return (integration.domain, collector.referenced)

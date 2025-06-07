@@ -3,9 +3,9 @@
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.components.environment_canada.const import CONF_STATION, DOMAIN
-from homeassistant.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
+from menuai.components.environment_canada.const import CONF_STATION, DOMAIN
+from menuai.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -17,8 +17,8 @@ FIXTURE_USER_INPUT = {
 }
 
 
-async def init_integration(hass: HomeAssistant, ec_data) -> MockConfigEntry:
-    """Set up the Environment Canada integration in Home Assistant."""
+async def init_integration(menuai: menuai, ec_data) -> MockConfigEntry:
+    """Set up the Environment Canada integration in MenuAI."""
 
     def mock_ec():
         ec_mock = MagicMock()
@@ -30,7 +30,7 @@ async def init_integration(hass: HomeAssistant, ec_data) -> MockConfigEntry:
         return ec_mock
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=FIXTURE_USER_INPUT, title="Home")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     weather_mock = mock_ec()
     ec_data["metadata"].timestamp = datetime(2022, 10, 4, tzinfo=UTC)
@@ -46,23 +46,23 @@ async def init_integration(hass: HomeAssistant, ec_data) -> MockConfigEntry:
 
     with (
         patch(
-            "homeassistant.components.environment_canada.ECWeather",
+            "menuai.components.environment_canada.ECWeather",
             return_value=weather_mock,
         ),
         patch(
-            "homeassistant.components.environment_canada.ECAirQuality",
+            "menuai.components.environment_canada.ECAirQuality",
             return_value=mock_ec(),
         ),
         patch(
-            "homeassistant.components.environment_canada.ECRadar",
+            "menuai.components.environment_canada.ECRadar",
             return_value=radar_mock,
         ),
         patch(
-            "homeassistant.components.environment_canada.config_flow.ECWeather",
+            "menuai.components.environment_canada.config_flow.ECWeather",
             return_value=weather_mock,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry

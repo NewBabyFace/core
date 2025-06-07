@@ -12,17 +12,17 @@ from urllib.parse import urlparse
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     BinarySensorDeviceClass,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_BINARY_SENSORS,
     CONF_DISCOVERY,
@@ -37,9 +37,9 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_ZONE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MANUFACTURER,
     ATTR_UPNP_MODEL_NAME,
     SsdpServiceInfo,
@@ -198,7 +198,7 @@ class KonnectedFlowHandler(ConfigFlow, domain=DOMAIN):
         self.data[CONF_HOST] = host
         self.data[CONF_PORT] = port
         try:
-            status = await get_status(self.hass, host, port)
+            status = await get_status(self.menuai, host, port)
             self.data[CONF_ID] = status.get("chipId", status["mac"].replace(":", ""))
         except (CannotConnect, KeyError) as err:
             raise CannotConnect from err
@@ -294,7 +294,7 @@ class KonnectedFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
             try:
-                status = await get_status(self.hass, netloc[0], int(netloc[1]))
+                status = await get_status(self.menuai, netloc[0], int(netloc[1]))
             except CannotConnect:
                 return self.async_abort(reason="cannot_connect")
 
@@ -325,7 +325,7 @@ class KonnectedFlowHandler(ConfigFlow, domain=DOMAIN):
             await asyncio.sleep(0.1)
             try:
                 status = await get_status(
-                    self.hass, self.data[CONF_HOST], self.data[CONF_PORT]
+                    self.menuai, self.data[CONF_HOST], self.data[CONF_PORT]
                 )
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -383,7 +383,7 @@ class KonnectedFlowHandler(ConfigFlow, domain=DOMAIN):
 
         # Create access token, attach default options and create entry
         self.data[CONF_DEFAULT_OPTIONS] = self.options
-        self.data[CONF_ACCESS_TOKEN] = self.hass.data.get(DOMAIN, {}).get(
+        self.data[CONF_ACCESS_TOKEN] = self.menuai.data.get(DOMAIN, {}).get(
             CONF_ACCESS_TOKEN
         ) or "".join(random.choices(f"{string.ascii_uppercase}{string.digits}", k=20))
 

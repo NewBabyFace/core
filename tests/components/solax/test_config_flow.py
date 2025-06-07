@@ -6,11 +6,11 @@ from solax import RealTimeAPI
 from solax.inverter import InverterResponse
 from solax.inverters import X1MiniV34
 
-from homeassistant import config_entries
-from homeassistant.components.solax.const import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.solax.const import DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 def __mock_real_time_api_success():
@@ -27,9 +27,9 @@ def __mock_get_data():
     )
 
 
-async def test_form_success(hass: HomeAssistant) -> None:
+async def test_form_success(menuai: menuai) -> None:
     """Test successful form."""
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert flow["type"] is FlowResultType.FORM
@@ -37,20 +37,20 @@ async def test_form_success(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.solax.config_flow.real_time_api",
+            "menuai.components.solax.config_flow.real_time_api",
             return_value=__mock_real_time_api_success(),
         ),
         patch("solax.RealTimeAPI.get_data", return_value=__mock_get_data()),
         patch(
-            "homeassistant.components.solax.async_setup_entry",
+            "menuai.components.solax.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        entry_result = await hass.config_entries.flow.async_configure(
+        entry_result = await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {CONF_IP_ADDRESS: "192.168.1.87", CONF_PORT: 80, CONF_PASSWORD: "password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert entry_result["type"] is FlowResultType.CREATE_ENTRY
     assert entry_result["title"] == "ABCDEFGHIJ"
@@ -62,19 +62,19 @@ async def test_form_success(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_connect_error(hass: HomeAssistant) -> None:
+async def test_form_connect_error(menuai: menuai) -> None:
     """Test cannot connect form."""
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert flow["type"] is FlowResultType.FORM
     assert flow["errors"] == {}
 
     with patch(
-        "homeassistant.components.solax.config_flow.real_time_api",
+        "menuai.components.solax.config_flow.real_time_api",
         side_effect=ConnectionError,
     ):
-        entry_result = await hass.config_entries.flow.async_configure(
+        entry_result = await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {CONF_IP_ADDRESS: "192.168.1.87", CONF_PORT: 80, CONF_PASSWORD: "password"},
         )
@@ -83,19 +83,19 @@ async def test_form_connect_error(hass: HomeAssistant) -> None:
     assert entry_result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_unknown_error(hass: HomeAssistant) -> None:
+async def test_form_unknown_error(menuai: menuai) -> None:
     """Test unknown error form."""
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert flow["type"] is FlowResultType.FORM
     assert flow["errors"] == {}
 
     with patch(
-        "homeassistant.components.solax.config_flow.real_time_api",
+        "menuai.components.solax.config_flow.real_time_api",
         side_effect=Exception,
     ):
-        entry_result = await hass.config_entries.flow.async_configure(
+        entry_result = await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {CONF_IP_ADDRESS: "192.168.1.87", CONF_PORT: 80, CONF_PASSWORD: "password"},
         )

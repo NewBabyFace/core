@@ -10,11 +10,11 @@ from typing import Any
 
 from ondilo import OndiloError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from . import DOMAIN
 from .api import OndiloClient
@@ -47,11 +47,11 @@ class OndiloIcoPoolsCoordinator(DataUpdateCoordinator[dict[str, OndiloIcoPoolDat
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, api: OndiloClient
+        self, menuai: menuai, config_entry: ConfigEntry, api: OndiloClient
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_pools",
@@ -59,14 +59,14 @@ class OndiloIcoPoolsCoordinator(DataUpdateCoordinator[dict[str, OndiloIcoPoolDat
         )
         self.api = api
         self.config_entry = config_entry
-        self._device_registry = dr.async_get(self.hass)
+        self._device_registry = dr.async_get(self.menuai)
 
     async def _async_update_data(self) -> dict[str, OndiloIcoPoolData]:
         """Fetch pools data from API endpoint and update devices."""
         known_pools: set[str] = set(self.data) if self.data else set()
         try:
             async with UPDATE_LOCK:
-                data = await self.hass.async_add_executor_job(self._update_data)
+                data = await self.menuai.async_add_executor_job(self._update_data)
         except OndiloError as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
@@ -76,7 +76,7 @@ class OndiloIcoPoolsCoordinator(DataUpdateCoordinator[dict[str, OndiloIcoPoolDat
         for pool_id in new_pools:
             pool_data = data[pool_id]
             pool_data.measures_coordinator = OndiloIcoMeasuresCoordinator(
-                self.hass, self.config_entry, self.api, pool_id
+                self.menuai, self.config_entry, self.api, pool_id
             )
             self._device_registry.async_get_or_create(
                 config_entry_id=self.config_entry.entry_id,
@@ -146,14 +146,14 @@ class OndiloIcoMeasuresCoordinator(DataUpdateCoordinator[OndiloIcoMeasurementDat
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         api: OndiloClient,
         pool_id: str,
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=config_entry,
             logger=_LOGGER,
             name=f"{DOMAIN}_measures_{pool_id}",
@@ -165,7 +165,7 @@ class OndiloIcoMeasuresCoordinator(DataUpdateCoordinator[OndiloIcoMeasurementDat
     async def _async_update_data(self) -> OndiloIcoMeasurementData:
         """Fetch measurement data from API endpoint."""
         async with UPDATE_LOCK:
-            data = await self.hass.async_add_executor_job(self._update_data)
+            data = await self.menuai.async_add_executor_job(self._update_data)
         if next_refresh := self._next_refresh:
             now = dt_util.utcnow()
             # If we've missed the next refresh, schedule a refresh in one hour.

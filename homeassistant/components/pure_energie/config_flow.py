@@ -7,11 +7,11 @@ from typing import Any
 from gridnet import Device, GridNet, GridNetConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import TextSelector
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import TextSelector
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -103,6 +103,6 @@ class PureEnergieFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _async_get_device(self, host: str) -> Device:
         """Get device information from Pure Energie device."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         gridnet = GridNet(host, session=session)
         return await gridnet.device()

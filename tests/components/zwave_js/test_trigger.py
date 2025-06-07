@@ -8,20 +8,20 @@ from zwave_js_server.const import CommandClass
 from zwave_js_server.event import Event
 from zwave_js_server.model.node import Node
 
-from homeassistant.components import automation
-from homeassistant.components.zwave_js import DOMAIN
-from homeassistant.components.zwave_js.helpers import get_device_id
-from homeassistant.components.zwave_js.trigger import (
+from menuai.components import automation
+from menuai.components.zwave_js import DOMAIN
+from menuai.components.zwave_js.helpers import get_device_id
+from menuai.components.zwave_js.trigger import (
     _get_trigger_platform,
     async_validate_trigger_config,
 )
-from homeassistant.components.zwave_js.triggers.trigger_helpers import (
+from menuai.components.zwave_js.triggers.trigger_helpers import (
     async_bypass_dynamic_config_validation,
 )
-from homeassistant.const import CONF_PLATFORM, SERVICE_RELOAD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_PLATFORM, SERVICE_RELOAD
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from .common import SCHLAGE_BE469_LOCK_ENTITY
 
@@ -29,7 +29,7 @@ from tests.common import async_capture_events
 
 
 async def test_zwave_js_value_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -43,13 +43,13 @@ async def test_zwave_js_value_updated(
     )
     assert device
 
-    no_value_filter = async_capture_events(hass, "no_value_filter")
-    single_from_value_filter = async_capture_events(hass, "single_from_value_filter")
+    no_value_filter = async_capture_events(menuai, "no_value_filter")
+    single_from_value_filter = async_capture_events(menuai, "single_from_value_filter")
     multiple_from_value_filters = async_capture_events(
-        hass, "multiple_from_value_filters"
+        menuai, "multiple_from_value_filters"
     )
-    from_and_to_value_filters = async_capture_events(hass, "from_and_to_value_filters")
-    different_value = async_capture_events(hass, "different_value")
+    from_and_to_value_filters = async_capture_events(menuai, "from_and_to_value_filters")
+    different_value = async_capture_events(menuai, "different_value")
 
     def clear_events():
         """Clear all events in the event list."""
@@ -60,7 +60,7 @@ async def test_zwave_js_value_updated(
         different_value.clear()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -151,7 +151,7 @@ async def test_zwave_js_value_updated(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 1
     assert len(single_from_value_filter) == 0
@@ -180,7 +180,7 @@ async def test_zwave_js_value_updated(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 1
     assert len(single_from_value_filter) == 1
@@ -209,7 +209,7 @@ async def test_zwave_js_value_updated(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 1
     assert len(single_from_value_filter) == 0
@@ -238,7 +238,7 @@ async def test_zwave_js_value_updated(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 1
     assert len(single_from_value_filter) == 0
@@ -266,7 +266,7 @@ async def test_zwave_js_value_updated(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 0
     assert len(single_from_value_filter) == 0
@@ -276,25 +276,25 @@ async def test_zwave_js_value_updated(
 
     clear_events()
 
-    with patch("homeassistant.config.load_yaml_dict", return_value={}):
-        await hass.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
+    with patch("menuai.config.load_yaml_dict", return_value={}):
+        await menuai.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
 
 
 async def test_zwave_js_value_updated_bypass_dynamic_validation(
-    hass: HomeAssistant, client, lock_schlage_be469, integration
+    menuai: menuai, client, lock_schlage_be469, integration
 ) -> None:
     """Test zwave_js.value_updated trigger when bypassing dynamic validation."""
     trigger_type = f"{DOMAIN}.value_updated"
     node: Node = lock_schlage_be469
 
-    no_value_filter = async_capture_events(hass, "no_value_filter")
+    no_value_filter = async_capture_events(menuai, "no_value_filter")
 
     with patch(
-        "homeassistant.components.zwave_js.triggers.value_updated.async_bypass_dynamic_config_validation",
+        "menuai.components.zwave_js.triggers.value_updated.async_bypass_dynamic_config_validation",
         return_value=True,
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: [
@@ -333,26 +333,26 @@ async def test_zwave_js_value_updated_bypass_dynamic_validation(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 1
 
 
 async def test_zwave_js_value_updated_bypass_dynamic_validation_no_nodes(
-    hass: HomeAssistant, client, lock_schlage_be469, integration
+    menuai: menuai, client, lock_schlage_be469, integration
 ) -> None:
     """Test value_updated trigger when bypassing dynamic validation with no nodes."""
     trigger_type = f"{DOMAIN}.value_updated"
     node: Node = lock_schlage_be469
 
-    no_value_filter = async_capture_events(hass, "no_value_filter")
+    no_value_filter = async_capture_events(menuai, "no_value_filter")
 
     with patch(
-        "homeassistant.components.zwave_js.triggers.value_updated.async_bypass_dynamic_config_validation",
+        "menuai.components.zwave_js.triggers.value_updated.async_bypass_dynamic_config_validation",
         return_value=True,
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: [
@@ -391,13 +391,13 @@ async def test_zwave_js_value_updated_bypass_dynamic_validation_no_nodes(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 0
 
 
 async def test_zwave_js_value_updated_bypass_dynamic_validation_no_driver(
-    hass: HomeAssistant, client, lock_schlage_be469, integration
+    menuai: menuai, client, lock_schlage_be469, integration
 ) -> None:
     """Test zwave_js.value_updated trigger without driver."""
     trigger_type = f"{DOMAIN}.value_updated"
@@ -405,10 +405,10 @@ async def test_zwave_js_value_updated_bypass_dynamic_validation_no_driver(
     driver = client.driver
     client.driver = None
 
-    no_value_filter = async_capture_events(hass, "no_value_filter")
+    no_value_filter = async_capture_events(menuai, "no_value_filter")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -427,7 +427,7 @@ async def test_zwave_js_value_updated_bypass_dynamic_validation_no_driver(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     client.driver = driver
 
@@ -450,13 +450,13 @@ async def test_zwave_js_value_updated_bypass_dynamic_validation_no_driver(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(no_value_filter) == 0
 
 
 async def test_zwave_js_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -470,23 +470,23 @@ async def test_zwave_js_event(
     )
     assert device
 
-    node_no_event_data_filter = async_capture_events(hass, "node_no_event_data_filter")
-    node_event_data_filter = async_capture_events(hass, "node_event_data_filter")
+    node_no_event_data_filter = async_capture_events(menuai, "node_no_event_data_filter")
+    node_event_data_filter = async_capture_events(menuai, "node_event_data_filter")
     controller_no_event_data_filter = async_capture_events(
-        hass, "controller_no_event_data_filter"
+        menuai, "controller_no_event_data_filter"
     )
     controller_event_data_filter = async_capture_events(
-        hass, "controller_event_data_filter"
+        menuai, "controller_event_data_filter"
     )
     driver_no_event_data_filter = async_capture_events(
-        hass, "driver_no_event_data_filter"
+        menuai, "driver_no_event_data_filter"
     )
-    driver_event_data_filter = async_capture_events(hass, "driver_event_data_filter")
+    driver_event_data_filter = async_capture_events(menuai, "driver_event_data_filter")
     node_event_data_no_partial_dict_match_filter = async_capture_events(
-        hass, "node_event_data_no_partial_dict_match_filter"
+        menuai, "node_event_data_no_partial_dict_match_filter"
     )
     node_event_data_partial_dict_match_filter = async_capture_events(
-        hass, "node_event_data_partial_dict_match_filter"
+        menuai, "node_event_data_partial_dict_match_filter"
     )
 
     def clear_events():
@@ -501,7 +501,7 @@ async def test_zwave_js_event(
         node_event_data_partial_dict_match_filter.clear()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -623,7 +623,7 @@ async def test_zwave_js_event(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 1
     assert len(node_event_data_filter) == 0
@@ -647,7 +647,7 @@ async def test_zwave_js_event(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 1
     assert len(node_event_data_filter) == 1
@@ -671,7 +671,7 @@ async def test_zwave_js_event(
         },
     )
     client.driver.controller.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 0
     assert len(node_event_data_filter) == 0
@@ -695,7 +695,7 @@ async def test_zwave_js_event(
         },
     )
     client.driver.controller.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 0
     assert len(node_event_data_filter) == 0
@@ -729,7 +729,7 @@ async def test_zwave_js_event(
         },
     )
     client.driver.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 0
     assert len(node_event_data_filter) == 0
@@ -763,7 +763,7 @@ async def test_zwave_js_event(
         },
     )
     client.driver.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 0
     assert len(node_event_data_filter) == 0
@@ -795,7 +795,7 @@ async def test_zwave_js_event(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 0
     assert len(node_event_data_filter) == 0
@@ -828,7 +828,7 @@ async def test_zwave_js_event(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 0
     assert len(node_event_data_filter) == 0
@@ -841,25 +841,25 @@ async def test_zwave_js_event(
 
     clear_events()
 
-    with patch("homeassistant.config.load_yaml_dict", return_value={}):
-        await hass.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
+    with patch("menuai.config.load_yaml_dict", return_value={}):
+        await menuai.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
 
 
 async def test_zwave_js_event_bypass_dynamic_validation(
-    hass: HomeAssistant, client, lock_schlage_be469, integration
+    menuai: menuai, client, lock_schlage_be469, integration
 ) -> None:
     """Test zwave_js.event trigger when bypassing dynamic config validation."""
     trigger_type = f"{DOMAIN}.event"
     node: Node = lock_schlage_be469
 
-    node_no_event_data_filter = async_capture_events(hass, "node_no_event_data_filter")
+    node_no_event_data_filter = async_capture_events(menuai, "node_no_event_data_filter")
 
     with patch(
-        "homeassistant.components.zwave_js.triggers.event.async_bypass_dynamic_config_validation",
+        "menuai.components.zwave_js.triggers.event.async_bypass_dynamic_config_validation",
         return_value=True,
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: [
@@ -891,26 +891,26 @@ async def test_zwave_js_event_bypass_dynamic_validation(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 1
 
 
 async def test_zwave_js_event_bypass_dynamic_validation_no_nodes(
-    hass: HomeAssistant, client, lock_schlage_be469, integration
+    menuai: menuai, client, lock_schlage_be469, integration
 ) -> None:
     """Test event trigger when bypassing dynamic validation with no nodes."""
     trigger_type = f"{DOMAIN}.event"
     node: Node = lock_schlage_be469
 
-    node_no_event_data_filter = async_capture_events(hass, "node_no_event_data_filter")
+    node_no_event_data_filter = async_capture_events(menuai, "node_no_event_data_filter")
 
     with patch(
-        "homeassistant.components.zwave_js.triggers.event.async_bypass_dynamic_config_validation",
+        "menuai.components.zwave_js.triggers.event.async_bypass_dynamic_config_validation",
         return_value=True,
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: [
@@ -942,19 +942,19 @@ async def test_zwave_js_event_bypass_dynamic_validation_no_nodes(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(node_no_event_data_filter) == 0
 
 
 async def test_zwave_js_event_invalid_config_entry_id(
-    hass: HomeAssistant, client, integration, caplog: pytest.LogCaptureFixture
+    menuai: menuai, client, integration, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test zwave_js.event automation trigger fails when config entry ID is invalid."""
     trigger_type = f"{DOMAIN}.event"
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -977,23 +977,23 @@ async def test_zwave_js_event_invalid_config_entry_id(
     caplog.clear()
 
 
-async def test_async_validate_trigger_config(hass: HomeAssistant) -> None:
+async def test_async_validate_trigger_config(menuai: menuai) -> None:
     """Test async_validate_trigger_config."""
     mock_platform = AsyncMock()
     with patch(
-        "homeassistant.components.zwave_js.trigger._get_trigger_platform",
+        "menuai.components.zwave_js.trigger._get_trigger_platform",
         return_value=mock_platform,
     ):
         mock_platform.async_validate_trigger_config.return_value = {}
-        await async_validate_trigger_config(hass, {})
+        await async_validate_trigger_config(menuai, {})
         mock_platform.async_validate_trigger_config.assert_awaited()
 
 
-async def test_invalid_trigger_configs(hass: HomeAssistant) -> None:
+async def test_invalid_trigger_configs(menuai: menuai) -> None:
     """Test invalid trigger configs."""
     with pytest.raises(vol.Invalid):
         await async_validate_trigger_config(
-            hass,
+            menuai,
             {
                 "platform": f"{DOMAIN}.event",
                 "entity_id": "fake.entity",
@@ -1004,7 +1004,7 @@ async def test_invalid_trigger_configs(hass: HomeAssistant) -> None:
 
     with pytest.raises(vol.Invalid):
         await async_validate_trigger_config(
-            hass,
+            menuai,
             {
                 "platform": f"{DOMAIN}.value_updated",
                 "entity_id": "fake.entity",
@@ -1015,7 +1015,7 @@ async def test_invalid_trigger_configs(hass: HomeAssistant) -> None:
 
 
 async def test_zwave_js_trigger_config_entry_unloaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1029,7 +1029,7 @@ async def test_zwave_js_trigger_config_entry_unloaded(
 
     # Test bypass check is False
     assert not async_bypass_dynamic_config_validation(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.value_updated",
             "entity_id": SCHLAGE_BE469_LOCK_ENTITY,
@@ -1038,11 +1038,11 @@ async def test_zwave_js_trigger_config_entry_unloaded(
         },
     )
 
-    await hass.config_entries.async_unload(integration.entry_id)
+    await menuai.config_entries.async_unload(integration.entry_id)
 
     # Test full validation for both events
     assert await async_validate_trigger_config(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.value_updated",
             "entity_id": SCHLAGE_BE469_LOCK_ENTITY,
@@ -1052,7 +1052,7 @@ async def test_zwave_js_trigger_config_entry_unloaded(
     )
 
     assert await async_validate_trigger_config(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.event",
             "entity_id": SCHLAGE_BE469_LOCK_ENTITY,
@@ -1063,7 +1063,7 @@ async def test_zwave_js_trigger_config_entry_unloaded(
 
     # Test bypass check
     assert async_bypass_dynamic_config_validation(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.value_updated",
             "entity_id": SCHLAGE_BE469_LOCK_ENTITY,
@@ -1073,7 +1073,7 @@ async def test_zwave_js_trigger_config_entry_unloaded(
     )
 
     assert async_bypass_dynamic_config_validation(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.value_updated",
             "device_id": device.id,
@@ -1084,7 +1084,7 @@ async def test_zwave_js_trigger_config_entry_unloaded(
     )
 
     assert async_bypass_dynamic_config_validation(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.event",
             "entity_id": SCHLAGE_BE469_LOCK_ENTITY,
@@ -1094,7 +1094,7 @@ async def test_zwave_js_trigger_config_entry_unloaded(
     )
 
     assert async_bypass_dynamic_config_validation(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.event",
             "device_id": device.id,
@@ -1105,7 +1105,7 @@ async def test_zwave_js_trigger_config_entry_unloaded(
     )
 
     assert async_bypass_dynamic_config_validation(
-        hass,
+        menuai,
         {
             "platform": f"{DOMAIN}.event",
             "config_entry_id": integration.entry_id,
@@ -1122,7 +1122,7 @@ def test_get_trigger_platform_failure() -> None:
 
 
 async def test_server_reconnect_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     lock_schlage_be469,
     lock_schlage_be469_state,
@@ -1139,7 +1139,7 @@ async def test_server_reconnect_event(
     original_len = len(old_node._listeners.get(event_name, []))
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -1174,7 +1174,7 @@ async def test_server_reconnect_event(
     )
     client.driver.controller.receive_event(node_removed_event)
     assert 20 not in client.driver.controller.nodes
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Add node like new server connection would
     node_added_event = Event(
@@ -1187,11 +1187,11 @@ async def test_server_reconnect_event(
         },
     )
     client.driver.controller.receive_event(node_added_event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reload integration to trigger the dispatch signal
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     # Make sure there is a listener added for the trigger to the new node
     new_node = client.driver.controller.nodes[20]
@@ -1202,7 +1202,7 @@ async def test_server_reconnect_event(
 
 
 async def test_server_reconnect_value_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     lock_schlage_be469,
     lock_schlage_be469_state,
@@ -1219,7 +1219,7 @@ async def test_server_reconnect_value_updated(
     original_len = len(old_node._listeners.get(event_name, []))
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -1254,7 +1254,7 @@ async def test_server_reconnect_value_updated(
     )
     client.driver.controller.receive_event(node_removed_event)
     assert 20 not in client.driver.controller.nodes
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Add node like new server connection would
     node_added_event = Event(
@@ -1267,11 +1267,11 @@ async def test_server_reconnect_value_updated(
         },
     )
     client.driver.controller.receive_event(node_added_event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reload integration to trigger the dispatch signal
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     # Make sure there is a listener added for the trigger to the new node
     new_node = client.driver.controller.nodes[20]

@@ -9,17 +9,17 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.history_stats.const import (
+from menuai.components.history_stats.const import (
     CONF_END,
     CONF_START,
     DEFAULT_NAME,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, CONF_STATE, CONF_TYPE
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_ENTITY_ID, CONF_NAME, CONF_STATE, CONF_TYPE
+from menuai.core import menuai, State
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -28,7 +28,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Automatically patch history stats setup."""
     with patch(
-        "homeassistant.components.history_stats.async_setup_entry",
+        "menuai.components.history_stats.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -53,9 +53,9 @@ async def get_config_to_integration_load() -> dict[str, Any]:
 
 @pytest.fixture(name="loaded_entry")
 async def load_integration(
-    hass: HomeAssistant, get_config: dict[str, Any]
+    menuai: menuai, get_config: dict[str, Any]
 ) -> MockConfigEntry:
-    """Set up the History stats integration in Home Assistant."""
+    """Set up the History stats integration in MenuAI."""
     start_time = dt_util.utcnow() - timedelta(minutes=60)
     t0 = start_time + timedelta(minutes=20)
     t1 = t0 + timedelta(minutes=10)
@@ -79,15 +79,15 @@ async def load_integration(
         entry_id="1",
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.recorder.history.state_changes_during_period",
+        "menuai.components.recorder.history.state_changes_during_period",
         _fake_states,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
-        await async_update_entity(hass, "sensor.test")
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
+        await async_update_entity(menuai, "sensor.test")
+        await menuai.async_block_till_done()
 
     return config_entry

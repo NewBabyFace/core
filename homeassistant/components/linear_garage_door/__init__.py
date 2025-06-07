@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
 
 from .const import DOMAIN
 from .coordinator import LinearUpdateCoordinator
@@ -13,11 +13,11 @@ from .coordinator import LinearUpdateCoordinator
 PLATFORMS: list[Platform] = [Platform.COVER, Platform.LIGHT]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Linear Garage Door from a config entry."""
 
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         DOMAIN,
         breaks_in_ha_version="2025.8.0",
@@ -31,28 +31,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         },
     )
 
-    coordinator = LinearUpdateCoordinator(hass, entry)
+    coordinator = LinearUpdateCoordinator(menuai, entry)
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Remove a config entry."""
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        ir.async_delete_issue(hass, DOMAIN, DOMAIN)
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
+        ir.async_delete_issue(menuai, DOMAIN, DOMAIN)
         # Remove any remaining disabled or ignored entries
-        for _entry in hass.config_entries.async_entries(DOMAIN):
-            hass.async_create_task(hass.config_entries.async_remove(_entry.entry_id))
+        for _entry in menuai.config_entries.async_entries(DOMAIN):
+            menuai.async_create_task(menuai.config_entries.async_remove(_entry.entry_id))

@@ -50,7 +50,7 @@ rules:
   test-coverage:
     status: todo
     comment: |
-      - remove the await hass.async_block_till_done() after service calls with blocking=True
+      - remove the await menuai.async_block_till_done() after service calls with blocking=True
       - use constants (like SERVICE_PRESS and ATTR_ENTITY_ID) in the tests calling services
       - rename test_buttons.py -> test_button.py
       - rename test_sensors.py -> test_sensor.py

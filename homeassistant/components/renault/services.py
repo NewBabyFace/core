@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, device_registry as dr
 
 from .const import DOMAIN
 from .renault_vehicle import RenaultVehicleProxy
@@ -165,7 +165,7 @@ async def ac_set_schedules(service_call: ServiceCall) -> None:
 
 def get_vehicle_proxy(service_call: ServiceCall) -> RenaultVehicleProxy:
     """Get vehicle from service_call data."""
-    device_registry = dr.async_get(service_call.hass)
+    device_registry = dr.async_get(service_call.menuai)
     device_id = service_call.data[ATTR_VEHICLE]
     device_entry = device_registry.async_get(device_id)
     if device_entry is None:
@@ -177,7 +177,7 @@ def get_vehicle_proxy(service_call: ServiceCall) -> RenaultVehicleProxy:
 
     loaded_entries: list[RenaultConfigEntry] = [
         entry
-        for entry in service_call.hass.config_entries.async_loaded_entries(DOMAIN)
+        for entry in service_call.menuai.config_entries.async_loaded_entries(DOMAIN)
         if entry.entry_id in device_entry.config_entries
     ]
     for entry in loaded_entries:
@@ -191,28 +191,28 @@ def get_vehicle_proxy(service_call: ServiceCall) -> RenaultVehicleProxy:
     )
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Register the Renault services."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_AC_CANCEL,
         ac_cancel,
         schema=SERVICE_VEHICLE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_AC_START,
         ac_start,
         schema=SERVICE_AC_START_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CHARGE_SET_SCHEDULES,
         charge_set_schedules,
         schema=SERVICE_CHARGE_SET_SCHEDULES_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_AC_SET_SCHEDULES,
         ac_set_schedules,

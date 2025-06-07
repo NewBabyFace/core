@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.components.sensor import (
+from menuai.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
+from menuai.components.number import DOMAIN as NUMBER_DOMAIN
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASS_UNITS,
     DEVICE_CLASSES_SCHEMA,
@@ -24,8 +24,8 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_CLASS,
     CONF_ENTITIES,
@@ -36,24 +36,24 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import (
+from menuai.core import menuai, State, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import (
     get_capability,
     get_device_class,
     get_unit_of_measurement,
 )
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.issue_registry import (
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 
 from .const import CONF_IGNORE_NON_NUMERIC, DOMAIN
 from .entity import GroupEntity
@@ -107,7 +107,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -116,7 +116,7 @@ async def async_setup_platform(
     async_add_entities(
         [
             SensorGroup(
-                hass,
+                menuai,
                 config.get(CONF_UNIQUE_ID),
                 config[CONF_NAME],
                 config[CONF_ENTITIES],
@@ -131,19 +131,19 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Switch Group config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITIES]
     )
     async_add_entities(
         [
             SensorGroup(
-                hass,
+                menuai,
                 config_entry.entry_id,
                 config_entry.title,
                 entities,
@@ -159,11 +159,11 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_sensor(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    menuai: menuai, name: str, validated_config: dict[str, Any]
 ) -> SensorGroup:
     """Create a preview sensor."""
     return SensorGroup(
-        hass,
+        menuai,
         None,
         name,
         validated_config[CONF_ENTITIES],
@@ -175,9 +175,9 @@ def async_create_preview_sensor(
     )
 
 
-def _has_numeric_state(hass: HomeAssistant, entity_id: str) -> bool:
+def _has_numeric_state(menuai: menuai, entity_id: str) -> bool:
     """Test if state is numeric."""
-    if not (state := hass.states.get(entity_id)):
+    if not (state := menuai.states.get(entity_id)):
         return False
     try:
         float(state.state)
@@ -324,7 +324,7 @@ class SensorGroup(GroupEntity, SensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         unique_id: str | None,
         name: str,
         entity_ids: list[str],
@@ -335,7 +335,7 @@ class SensorGroup(GroupEntity, SensorEntity):
         device_class: SensorDeviceClass | None,
     ) -> None:
         """Initialize a sensor group."""
-        self.hass = hass
+        self.menuai = menuai
         self._entity_ids = entity_ids
         self._sensor_type = sensor_type
         self._configured_state_class = state_class
@@ -379,7 +379,7 @@ class SensorGroup(GroupEntity, SensorEntity):
         valid_states: list[bool] = []
         sensor_values: list[tuple[str, float, State]] = []
         for entity_id in self._entity_ids:
-            if (state := self.hass.states.get(entity_id)) is not None:
+            if (state := self.menuai.states.get(entity_id)) is not None:
                 states.append(state.state)
                 try:
                     numeric_state = float(state.state)
@@ -395,7 +395,7 @@ class SensorGroup(GroupEntity, SensorEntity):
                     # If we have valid units and the entity's unit does not match
                     # we raise which skips the state and log a warning once
                     if valid_units and uom not in valid_units:
-                        raise HomeAssistantError("Not a valid unit")  # noqa: TRY301
+                        raise menuaiError("Not a valid unit")  # noqa: TRY301
 
                     sensor_values.append((entity_id, numeric_state, state))
                     if entity_id in self._state_incorrect:
@@ -417,7 +417,7 @@ class SensorGroup(GroupEntity, SensorEntity):
                             self.entity_id,
                         )
                     continue
-                except (KeyError, HomeAssistantError):
+                except (KeyError, menuaiError):
                     # This exception handling can be simplified
                     # once sensor entity doesn't allow incorrect unit of measurement
                     # with a device class, implementation see PR #107639
@@ -495,8 +495,8 @@ class SensorGroup(GroupEntity, SensorEntity):
         state_classes: list[SensorStateClass] = []
         for entity_id in valid_state_entities:
             try:
-                _state_class = get_capability(self.hass, entity_id, "state_class")
-            except HomeAssistantError:
+                _state_class = get_capability(self.menuai, entity_id, "state_class")
+            except menuaiError:
                 return None
             if not _state_class:
                 return None
@@ -504,11 +504,11 @@ class SensorGroup(GroupEntity, SensorEntity):
 
         if all(x == state_classes[0] for x in state_classes):
             async_delete_issue(
-                self.hass, SENSOR_DOMAIN, f"{self.entity_id}_state_classes_not_matching"
+                self.menuai, SENSOR_DOMAIN, f"{self.entity_id}_state_classes_not_matching"
             )
             return state_classes[0]
         async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"{self.entity_id}_state_classes_not_matching",
             is_fixable=False,
@@ -550,8 +550,8 @@ class SensorGroup(GroupEntity, SensorEntity):
         device_classes: list[SensorDeviceClass] = []
         for entity_id in valid_state_entities:
             try:
-                _device_class = get_device_class(self.hass, entity_id)
-            except HomeAssistantError:
+                _device_class = get_device_class(self.menuai, entity_id)
+            except menuaiError:
                 return None
             if not _device_class:
                 return None
@@ -559,13 +559,13 @@ class SensorGroup(GroupEntity, SensorEntity):
 
         if all(x == device_classes[0] for x in device_classes):
             async_delete_issue(
-                self.hass,
+                self.menuai,
                 SENSOR_DOMAIN,
                 f"{self.entity_id}_device_classes_not_matching",
             )
             return device_classes[0]
         async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"{self.entity_id}_device_classes_not_matching",
             is_fixable=False,
@@ -606,8 +606,8 @@ class SensorGroup(GroupEntity, SensorEntity):
         unit_of_measurements: list[str] = []
         for entity_id in valid_state_entities:
             try:
-                _unit_of_measurement = get_unit_of_measurement(self.hass, entity_id)
-            except HomeAssistantError:
+                _unit_of_measurement = get_unit_of_measurement(self.menuai, entity_id)
+            except menuaiError:
                 return None
             if not _unit_of_measurement:
                 return None
@@ -640,12 +640,12 @@ class SensorGroup(GroupEntity, SensorEntity):
             )
         ):
             async_delete_issue(
-                self.hass,
+                self.menuai,
                 SENSOR_DOMAIN,
                 f"{self.entity_id}_uoms_not_matching_device_class",
             )
             async_delete_issue(
-                self.hass,
+                self.menuai,
                 SENSOR_DOMAIN,
                 f"{self.entity_id}_uoms_not_matching_no_device_class",
             )
@@ -653,7 +653,7 @@ class SensorGroup(GroupEntity, SensorEntity):
 
         if device_class:
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"{self.entity_id}_uoms_not_matching_device_class",
                 is_fixable=False,
@@ -669,7 +669,7 @@ class SensorGroup(GroupEntity, SensorEntity):
             )
         else:
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"{self.entity_id}_uoms_not_matching_no_device_class",
                 is_fixable=False,
@@ -715,5 +715,5 @@ class SensorGroup(GroupEntity, SensorEntity):
         return [
             entity_id
             for entity_id in self._entity_ids
-            if _has_numeric_state(self.hass, entity_id)
+            if _has_numeric_state(self.menuai, entity_id)
         ]

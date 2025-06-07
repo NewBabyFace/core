@@ -2,12 +2,12 @@
 
 from urllib.parse import urlencode
 
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.mjpeg import MjpegCamera, filter_urllib3_logging
-from homeassistant.const import HTTP_DIGEST_AUTHENTICATION
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.mjpeg import MjpegCamera, filter_urllib3_logging
+from menuai.const import HTTP_DIGEST_AUTHENTICATION
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AxisConfigEntry
 from .const import DEFAULT_STREAM_PROFILE, DEFAULT_VIDEO_SOURCE
@@ -16,7 +16,7 @@ from .hub import AxisHub
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AxisConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,15 +60,15 @@ class AxisCamera(AxisEntity, MjpegCamera):
             unique_id=f"{hub.unique_id}-camera",
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe camera events."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, self.hub.signal_new_address, self._generate_sources
+                self.menuai, self.hub.signal_new_address, self._generate_sources
             )
         )
 
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     def _generate_sources(self) -> None:
         """Generate sources.

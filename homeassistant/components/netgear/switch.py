@@ -8,12 +8,12 @@ from typing import Any
 
 from pynetgear import ALLOW, BLOCK
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, KEY_COORDINATOR, KEY_ROUTER
 from .entity import NetgearDeviceEntity, NetgearRouterEntity
@@ -99,12 +99,12 @@ ROUTER_SWITCH_TYPES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches for Netgear component."""
-    router = hass.data[DOMAIN][entry.entry_id][KEY_ROUTER]
+    router = menuai.data[DOMAIN][entry.entry_id][KEY_ROUTER]
 
     async_add_entities(
         NetgearRouterSwitchEntity(router, description)
@@ -112,7 +112,7 @@ async def async_setup_entry(
     )
 
     # Entities per network device
-    coordinator = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR]
+    coordinator = menuai.data[DOMAIN][entry.entry_id][KEY_COORDINATOR]
     tracked = set()
 
     @callback
@@ -200,15 +200,15 @@ class NetgearRouterSwitchEntity(NetgearRouterEntity, SwitchEntity):
         self._attr_is_on = None
         self._attr_available = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Fetch state when entity is added."""
         await self.async_update()
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_update(self) -> None:
         """Poll the state of the switch."""
         async with self._router.api_lock:
-            response = await self.hass.async_add_executor_job(
+            response = await self.menuai.async_add_executor_job(
                 self.entity_description.update(self._router)
             )
         if response is None:
@@ -220,13 +220,13 @@ class NetgearRouterSwitchEntity(NetgearRouterEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         async with self._router.api_lock:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.entity_description.action(self._router), True
             )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         async with self._router.api_lock:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.entity_description.action(self._router), False
             )

@@ -6,10 +6,10 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -18,7 +18,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 def sensor_only() -> Generator[None]:
     """Enable only the sensor platform."""
     with patch(
-        "homeassistant.components.cookidoo.PLATFORMS",
+        "menuai.components.cookidoo.PLATFORMS",
         [Platform.SENSOR],
     ):
         yield
@@ -26,19 +26,19 @@ def sensor_only() -> Generator[None]:
 
 @pytest.mark.usefixtures("mock_cookidoo_client")
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Snapshot test states of sensor platform."""
 
-    cookidoo_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(cookidoo_config_entry.entry_id)
-    await hass.async_block_till_done()
+    cookidoo_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(cookidoo_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
     await snapshot_platform(
-        hass, entity_registry, snapshot, cookidoo_config_entry.entry_id
+        menuai, entity_registry, snapshot, cookidoo_config_entry.entry_id
     )

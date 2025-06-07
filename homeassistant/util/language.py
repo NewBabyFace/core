@@ -1,4 +1,4 @@
-"""Helper methods for language selection in Home Assistant."""
+"""Helper methods for language selection in MenuAI."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import math
 import operator
 import re
 
-from homeassistant.const import MATCH_ALL
+from menuai.const import MATCH_ALL
 
 SEPARATOR_RE = re.compile(r"[-_]")
 SAME_LANGUAGES = (

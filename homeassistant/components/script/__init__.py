@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Any, cast
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.blueprint import CONF_USE_BLUEPRINT
-from homeassistant.const import (
+from menuai.components import websocket_api
+from menuai.components.blueprint import CONF_USE_BLUEPRINT
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     ATTR_NAME,
@@ -31,25 +31,25 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import (
+from menuai.core import (
     Context,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.config_validation import make_entity_service_schema
-from homeassistant.helpers.entity import ToggleEntity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.issue_registry import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.config_validation import make_entity_service_schema
+from menuai.helpers.entity import ToggleEntity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.script import (
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.script import (
     ATTR_CUR,
     ATTR_MAX,
     CONF_MAX,
@@ -58,12 +58,12 @@ from homeassistant.helpers.script import (
     ScriptRunResult,
     script_stack_cv,
 )
-from homeassistant.helpers.service import async_set_service_schema
-from homeassistant.helpers.trace import trace_get, trace_path
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.dt import parse_datetime
+from menuai.helpers.service import async_set_service_schema
+from menuai.helpers.trace import trace_get, trace_path
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.async_ import create_eager_task
+from menuai.util.dt import parse_datetime
 
 from .config import ScriptConfig, ValidationStatus
 from .const import (
@@ -87,20 +87,20 @@ SCRIPT_TURN_ONOFF_SCHEMA = make_entity_service_schema(
 RELOAD_SERVICE_SCHEMA = vol.Schema({})
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Return if the script is on based on the statemachine."""
-    return hass.states.is_state(entity_id, STATE_ON)
+    return menuai.states.is_state(entity_id, STATE_ON)
 
 
 def _scripts_with_x(
-    hass: HomeAssistant, referenced_id: str, property_name: str
+    menuai: menuai, referenced_id: str, property_name: str
 ) -> list[str]:
     """Return all scripts that reference the x."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         return []
 
-    component: EntityComponent[BaseScriptEntity] = hass.data[DOMAIN]
+    component: EntityComponent[BaseScriptEntity] = menuai.data[DOMAIN]
 
     return [
         script_entity.entity_id
@@ -109,12 +109,12 @@ def _scripts_with_x(
     ]
 
 
-def _x_in_script(hass: HomeAssistant, entity_id: str, property_name: str) -> list[str]:
+def _x_in_script(menuai: menuai, entity_id: str, property_name: str) -> list[str]:
     """Return all x in a script."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         return []
 
-    component: EntityComponent[BaseScriptEntity] = hass.data[DOMAIN]
+    component: EntityComponent[BaseScriptEntity] = menuai.data[DOMAIN]
 
     if (script_entity := component.get_entity(entity_id)) is None:
         return []
@@ -123,72 +123,72 @@ def _x_in_script(hass: HomeAssistant, entity_id: str, property_name: str) -> lis
 
 
 @callback
-def scripts_with_entity(hass: HomeAssistant, entity_id: str) -> list[str]:
+def scripts_with_entity(menuai: menuai, entity_id: str) -> list[str]:
     """Return all scripts that reference the entity."""
-    return _scripts_with_x(hass, entity_id, "referenced_entities")
+    return _scripts_with_x(menuai, entity_id, "referenced_entities")
 
 
 @callback
-def entities_in_script(hass: HomeAssistant, entity_id: str) -> list[str]:
+def entities_in_script(menuai: menuai, entity_id: str) -> list[str]:
     """Return all entities in script."""
-    return _x_in_script(hass, entity_id, "referenced_entities")
+    return _x_in_script(menuai, entity_id, "referenced_entities")
 
 
 @callback
-def scripts_with_device(hass: HomeAssistant, device_id: str) -> list[str]:
+def scripts_with_device(menuai: menuai, device_id: str) -> list[str]:
     """Return all scripts that reference the device."""
-    return _scripts_with_x(hass, device_id, "referenced_devices")
+    return _scripts_with_x(menuai, device_id, "referenced_devices")
 
 
 @callback
-def devices_in_script(hass: HomeAssistant, entity_id: str) -> list[str]:
+def devices_in_script(menuai: menuai, entity_id: str) -> list[str]:
     """Return all devices in script."""
-    return _x_in_script(hass, entity_id, "referenced_devices")
+    return _x_in_script(menuai, entity_id, "referenced_devices")
 
 
 @callback
-def scripts_with_area(hass: HomeAssistant, area_id: str) -> list[str]:
+def scripts_with_area(menuai: menuai, area_id: str) -> list[str]:
     """Return all scripts that reference the area."""
-    return _scripts_with_x(hass, area_id, "referenced_areas")
+    return _scripts_with_x(menuai, area_id, "referenced_areas")
 
 
 @callback
-def areas_in_script(hass: HomeAssistant, entity_id: str) -> list[str]:
+def areas_in_script(menuai: menuai, entity_id: str) -> list[str]:
     """Return all areas in a script."""
-    return _x_in_script(hass, entity_id, "referenced_areas")
+    return _x_in_script(menuai, entity_id, "referenced_areas")
 
 
 @callback
-def scripts_with_floor(hass: HomeAssistant, floor_id: str) -> list[str]:
+def scripts_with_floor(menuai: menuai, floor_id: str) -> list[str]:
     """Return all scripts that reference the floor."""
-    return _scripts_with_x(hass, floor_id, "referenced_floors")
+    return _scripts_with_x(menuai, floor_id, "referenced_floors")
 
 
 @callback
-def floors_in_script(hass: HomeAssistant, entity_id: str) -> list[str]:
+def floors_in_script(menuai: menuai, entity_id: str) -> list[str]:
     """Return all floors in a script."""
-    return _x_in_script(hass, entity_id, "referenced_floors")
+    return _x_in_script(menuai, entity_id, "referenced_floors")
 
 
 @callback
-def scripts_with_label(hass: HomeAssistant, label_id: str) -> list[str]:
+def scripts_with_label(menuai: menuai, label_id: str) -> list[str]:
     """Return all scripts that reference the label."""
-    return _scripts_with_x(hass, label_id, "referenced_labels")
+    return _scripts_with_x(menuai, label_id, "referenced_labels")
 
 
 @callback
-def labels_in_script(hass: HomeAssistant, entity_id: str) -> list[str]:
+def labels_in_script(menuai: menuai, entity_id: str) -> list[str]:
     """Return all labels in a script."""
-    return _x_in_script(hass, entity_id, "referenced_labels")
+    return _x_in_script(menuai, entity_id, "referenced_labels")
 
 
 @callback
-def scripts_with_blueprint(hass: HomeAssistant, blueprint_path: str) -> list[str]:
+def scripts_with_blueprint(menuai: menuai, blueprint_path: str) -> list[str]:
     """Return all scripts that reference the blueprint."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         return []
 
-    component: EntityComponent[BaseScriptEntity] = hass.data[DOMAIN]
+    component: EntityComponent[BaseScriptEntity] = menuai.data[DOMAIN]
 
     return [
         script_entity.entity_id
@@ -198,12 +198,12 @@ def scripts_with_blueprint(hass: HomeAssistant, blueprint_path: str) -> list[str
 
 
 @callback
-def blueprint_in_script(hass: HomeAssistant, entity_id: str) -> str | None:
+def blueprint_in_script(menuai: menuai, entity_id: str) -> str | None:
     """Return the blueprint the script is based on or None."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         return None
 
-    component: EntityComponent[BaseScriptEntity] = hass.data[DOMAIN]
+    component: EntityComponent[BaseScriptEntity] = menuai.data[DOMAIN]
 
     if (script_entity := component.get_entity(entity_id)) is None:
         return None
@@ -211,32 +211,32 @@ def blueprint_in_script(hass: HomeAssistant, entity_id: str) -> str | None:
     return script_entity.referenced_blueprint
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Load the scripts from the configuration."""
-    hass.data[DOMAIN] = component = EntityComponent[BaseScriptEntity](
-        LOGGER, DOMAIN, hass
+    menuai.data[DOMAIN] = component = EntityComponent[BaseScriptEntity](
+        LOGGER, DOMAIN, menuai
     )
 
     # Register script as valid domain for Blueprint
-    async_get_blueprints(hass)
+    async_get_blueprints(menuai)
 
-    await _async_process_config(hass, config, component)
+    await _async_process_config(menuai, config, component)
 
     # Add some default blueprints to blueprints/script, does nothing
     # if blueprints/script already exists but still has to create
     # an executor job to check if the folder exists so we run it in a
     # separate task to avoid waiting for it to finish setting up
     # since a tracked task will be waited at the end of startup
-    hass.async_create_task(
-        async_get_blueprints(hass).async_populate(), eager_start=True
+    menuai.async_create_task(
+        async_get_blueprints(menuai).async_populate(), eager_start=True
     )
 
     async def reload_service(service: ServiceCall) -> None:
         """Call a service to reload scripts."""
-        await async_get_blueprints(hass).async_reset_cache()
+        await async_get_blueprints(menuai).async_reset_cache()
         if (conf := await component.async_prepare_reload(skip_reset=True)) is None:
             return
-        await _async_process_config(hass, conf, component)
+        await _async_process_config(menuai, conf, component)
 
     async def turn_on_service(service: ServiceCall) -> None:
         """Call a service to turn script on."""
@@ -268,19 +268,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         for script_entity in script_entities:
             await script_entity.async_toggle(context=service.context, wait=False)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_RELOAD, reload_service, schema=RELOAD_SERVICE_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TURN_ON, turn_on_service, schema=SCRIPT_TURN_ONOFF_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TURN_OFF, turn_off_service, schema=SCRIPT_TURN_ONOFF_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TOGGLE, toggle_service, schema=SCRIPT_TURN_ONOFF_SCHEMA
     )
-    websocket_api.async_register_command(hass, websocket_config)
+    websocket_api.async_register_command(menuai, websocket_config)
 
     return True
 
@@ -298,7 +298,7 @@ class ScriptEntityConfig:
 
 
 async def _prepare_script_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
 ) -> list[ScriptEntityConfig]:
     """Parse configuration and prepare script entity configuration."""
@@ -327,7 +327,7 @@ async def _prepare_script_config(
 
 
 async def _create_script_entities(
-    hass: HomeAssistant, script_configs: list[ScriptEntityConfig]
+    menuai: menuai, script_configs: list[ScriptEntityConfig]
 ) -> list[BaseScriptEntity]:
     """Create script entities from prepared configuration."""
     entities: list[BaseScriptEntity] = []
@@ -345,7 +345,7 @@ async def _create_script_entities(
             continue
 
         entity = ScriptEntity(
-            hass,
+            menuai,
             script_config.key,
             script_config.config_block,
             script_config.raw_config,
@@ -357,7 +357,7 @@ async def _create_script_entities(
 
 
 async def _async_process_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     component: EntityComponent[BaseScriptEntity],
 ) -> None:
@@ -396,7 +396,7 @@ async def _async_process_config(
 
         return script_matches, config_matches
 
-    script_configs = await _prepare_script_config(hass, config)
+    script_configs = await _prepare_script_config(menuai, config)
     scripts: list[BaseScriptEntity] = list(component.entities)
 
     # Find scripts and configurations which have matches
@@ -414,7 +414,7 @@ async def _async_process_config(
     updated_script_configs = [
         config for idx, config in enumerate(script_configs) if idx not in config_matches
     ]
-    entities = await _create_script_entities(hass, updated_script_configs)
+    entities = await _create_script_entities(menuai, updated_script_configs)
     await component.async_add_entities(entities)
 
 
@@ -511,11 +511,11 @@ class UnavailableScriptEntity(BaseScriptEntity):
         """Return a set of referenced entities."""
         return set()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Create a repair issue to notify the user the automation has errors."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"{self.entity_id}_validation_{self._validation_status}",
             is_fixable=False,
@@ -529,11 +529,11 @@ class UnavailableScriptEntity(BaseScriptEntity):
             },
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         async_delete_issue(
-            self.hass, DOMAIN, f"{self.entity_id}_validation_{self._validation_status}"
+            self.menuai, DOMAIN, f"{self.entity_id}_validation_{self._validation_status}"
         )
 
 
@@ -546,7 +546,7 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         key: str,
         cfg: ConfigType,
         raw_config: ConfigType | None,
@@ -562,7 +562,7 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
 
         self.entity_id = ENTITY_ID_FORMAT.format(key)
         self.script = Script(
-            hass,
+            menuai,
             cfg[CONF_SEQUENCE],
             cfg.get(CONF_ALIAS, key),
             DOMAIN,
@@ -655,7 +655,7 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
     ) -> ServiceResponse:
         """Start the run of a script."""
         self.async_set_context(context)
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SCRIPT_STARTED,
             {ATTR_NAME: self.script.name, ATTR_ENTITY_ID: self.entity_id},
             context=context,
@@ -680,7 +680,7 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
         script_stack_cv.set([])
 
         self._changed.clear()
-        self.hass.async_create_task(coro, eager_start=True)
+        self.menuai.async_create_task(coro, eager_start=True)
         # Wait for first state change so we can guarantee that
         # it is written to the State Machine before we return.
         await self._changed.wait()
@@ -690,7 +690,7 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
         self, variables: dict[str, Any] | None, context: Context
     ) -> ScriptRunResult | None:
         with trace_script(
-            self.hass,
+            self.menuai,
             self._attr_unique_id,
             self.raw_config,
             self._blueprint_inputs,
@@ -701,7 +701,7 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
             script_trace.set_trace(trace_get())
             with trace_path("sequence"):
                 this = None
-                if state := self.hass.states.get(self.entity_id):
+                if state := self.menuai.states.get(self.entity_id):
                     this = state.as_dict()
                 script_vars = {"this": this, **(variables or {})}
                 return await self.script.async_run(script_vars, context)
@@ -722,15 +722,15 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
             return response or {}
         return None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last triggered on startup and register service."""
         if TYPE_CHECKING:
             assert self.unique_id is not None
             assert self.registry_entry is not None
 
         unique_id = self.unique_id
-        hass = self.hass
-        hass.services.async_register(
+        menuai = self.menuai
+        menuai.services.async_register(
             DOMAIN,
             unique_id,
             self._service_handler,
@@ -744,29 +744,29 @@ class ScriptEntity(BaseScriptEntity, RestoreEntity):
             CONF_DESCRIPTION: self.description,
             CONF_FIELDS: self.fields,
         }
-        async_set_service_schema(hass, DOMAIN, unique_id, service_desc)
+        async_set_service_schema(menuai, DOMAIN, unique_id, service_desc)
 
         if (state := await self.async_get_last_state()) and (
             last_triggered := state.attributes.get("last_triggered")
         ):
             self.script.last_triggered = parse_datetime(last_triggered)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop script and remove service when it will be removed from HA."""
         await self.script.async_stop()
 
         # remove service
-        self.hass.services.async_remove(DOMAIN, self._attr_unique_id)
+        self.menuai.services.async_remove(DOMAIN, self._attr_unique_id)
 
 
 @websocket_api.websocket_command({"type": "script/config", "entity_id": str})
 def websocket_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get script config."""
-    component: EntityComponent[BaseScriptEntity] = hass.data[DOMAIN]
+    component: EntityComponent[BaseScriptEntity] = menuai.data[DOMAIN]
 
     script = component.get_entity(msg["entity_id"])
 

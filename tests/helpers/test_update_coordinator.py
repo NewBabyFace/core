@@ -11,16 +11,16 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 import requests
 
-from homeassistant import config_entries
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CALLBACK_TYPE, CoreState, HomeAssistant, callback
-from homeassistant.exceptions import (
+from menuai import config_entries
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import CALLBACK_TYPE, CoreState, menuai, callback
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
 )
-from homeassistant.helpers import update_coordinator
-from homeassistant.util.dt import utcnow
+from menuai.helpers import update_coordinator
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -58,7 +58,7 @@ KNOWN_ERRORS: list[tuple[Exception, type[Exception], str]] = [
 
 
 def get_crd(
-    hass: HomeAssistant,
+    menuai: menuai,
     update_interval: timedelta | None,
     config_entry: config_entries.ConfigEntry | None = None,
 ) -> update_coordinator.DataUpdateCoordinator[int]:
@@ -71,7 +71,7 @@ def get_crd(
         return calls
 
     return update_coordinator.DataUpdateCoordinator[int](
-        hass,
+        menuai,
         _LOGGER,
         config_entry=config_entry,
         name="test",
@@ -84,17 +84,17 @@ DEFAULT_UPDATE_INTERVAL = timedelta(seconds=10)
 
 
 @pytest.fixture
-def crd(hass: HomeAssistant) -> update_coordinator.DataUpdateCoordinator[int]:
+def crd(menuai: menuai) -> update_coordinator.DataUpdateCoordinator[int]:
     """Coordinator mock with default update interval."""
-    return get_crd(hass, DEFAULT_UPDATE_INTERVAL)
+    return get_crd(menuai, DEFAULT_UPDATE_INTERVAL)
 
 
 @pytest.fixture
 def crd_without_update_interval(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> update_coordinator.DataUpdateCoordinator[int]:
     """Coordinator mock that never automatically updates."""
-    return get_crd(hass, None)
+    return get_crd(menuai, None)
 
 
 async def test_async_refresh(
@@ -125,7 +125,7 @@ async def test_async_refresh(
 
 
 async def test_shutdown(
-    hass: HomeAssistant, crd: update_coordinator.DataUpdateCoordinator[int]
+    menuai: menuai, crd: update_coordinator.DataUpdateCoordinator[int]
 ) -> None:
     """Test async_shutdown for update coordinator."""
     assert crd.data is None
@@ -149,8 +149,8 @@ async def test_shutdown(
     with patch.object(crd._debounced_refresh, "async_shutdown") as mock_shutdown:
         await crd.async_shutdown()
 
-    async_fire_time_changed(hass, utcnow() + crd.update_interval)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + crd.update_interval)
+    await menuai.async_block_till_done()
 
     # Test we shutdown the debouncer and cleared the subscriptions
     assert len(mock_shutdown.mock_calls) == 1
@@ -161,7 +161,7 @@ async def test_shutdown(
 
 
 async def test_shutdown_on_entry_unload(
-    hass: HomeAssistant, crd: update_coordinator.DataUpdateCoordinator[int]
+    menuai: menuai, crd: update_coordinator.DataUpdateCoordinator[int]
 ) -> None:
     """Test shutdown is requested on entry unload."""
     entry = MockConfigEntry()
@@ -175,7 +175,7 @@ async def test_shutdown_on_entry_unload(
         return calls
 
     crd = update_coordinator.DataUpdateCoordinator[int](
-        hass,
+        menuai,
         _LOGGER,
         name="test",
         update_method=_refresh,
@@ -186,14 +186,14 @@ async def test_shutdown_on_entry_unload(
     assert crd._unsub_refresh is not None
     assert not crd._shutdown_requested
 
-    await entry._async_process_on_unload(hass)
+    await entry._async_process_on_unload(menuai)
 
     assert crd._shutdown_requested
     assert crd._unsub_refresh is None
 
 
-async def test_shutdown_on_hass_stop(
-    hass: HomeAssistant, crd: update_coordinator.DataUpdateCoordinator[int]
+async def test_shutdown_on_menuai_stop(
+    menuai: menuai, crd: update_coordinator.DataUpdateCoordinator[int]
 ) -> None:
     """Test shutdown can be shutdown on STOP event."""
     calls = 0
@@ -204,7 +204,7 @@ async def test_shutdown_on_hass_stop(
         return calls
 
     crd = update_coordinator.DataUpdateCoordinator[int](
-        hass,
+        menuai,
         _LOGGER,
         name="test",
         update_method=_refresh,
@@ -216,8 +216,8 @@ async def test_shutdown_on_hass_stop(
     assert crd._unsub_refresh is not None
     assert not crd._shutdown_requested
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
 
     assert crd._shutdown_requested
     assert crd._unsub_refresh is None
@@ -334,15 +334,15 @@ async def test_refresh_no_update_method(
 
 
 async def test_update_interval(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     crd: update_coordinator.DataUpdateCoordinator[int],
 ) -> None:
     """Test update interval works."""
     # Test we don't update without subscriber
     freezer.tick(crd.update_interval)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert crd.data is None
 
     # Add subscriber
@@ -351,35 +351,35 @@ async def test_update_interval(
 
     # Test twice we update with subscriber
     freezer.tick(crd.update_interval)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert crd.data == 1
 
     freezer.tick(crd.update_interval)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert crd.data == 2
 
     # Test removing listener
     unsub()
 
     freezer.tick(crd.update_interval)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Test we stop updating after we lose last subscriber
     assert crd.data == 2
 
 
 async def test_update_interval_not_present(
-    hass: HomeAssistant,
+    menuai: menuai,
     crd_without_update_interval: update_coordinator.DataUpdateCoordinator[int],
 ) -> None:
     """Test update never happens with no update interval."""
     crd = crd_without_update_interval
     # Test we don't update without subscriber with no update interval
-    async_fire_time_changed(hass, utcnow() + DEFAULT_UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + DEFAULT_UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
     assert crd.data is None
 
     # Add subscriber
@@ -387,19 +387,19 @@ async def test_update_interval_not_present(
     unsub = crd.async_add_listener(update_callback)
 
     # Test twice we don't update with subscriber with no update interval
-    async_fire_time_changed(hass, utcnow() + DEFAULT_UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + DEFAULT_UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
     assert crd.data is None
 
-    async_fire_time_changed(hass, utcnow() + DEFAULT_UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + DEFAULT_UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
     assert crd.data is None
 
     # Test removing listener
     unsub()
 
-    async_fire_time_changed(hass, utcnow() + DEFAULT_UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + DEFAULT_UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
     # Test we stop don't update after we lose last subscriber
     assert crd.data is None
@@ -433,16 +433,16 @@ async def test_coordinator_entity(
     assert entity.available is True
 
     with patch(
-        "homeassistant.helpers.entity.Entity.async_on_remove"
+        "menuai.helpers.entity.Entity.async_on_remove"
     ) as mock_async_on_remove:
-        await entity.async_added_to_hass()
+        await entity.async_added_to_menuai()
 
     mock_async_on_remove.assert_called_once()
     _on_remove_callback = mock_async_on_remove.call_args[0][0]
 
     # Verify we do not update if the entity is disabled
     crd.last_update_success = False
-    with patch("homeassistant.helpers.entity.Entity.enabled", False):
+    with patch("menuai.helpers.entity.Entity.enabled", False):
         await entity.async_update()
     assert entity.available is False
 
@@ -494,9 +494,9 @@ async def test_async_set_updated_data(
 
 
 async def test_stop_refresh_on_ha_stop(
-    hass: HomeAssistant, crd: update_coordinator.DataUpdateCoordinator[int]
+    menuai: menuai, crd: update_coordinator.DataUpdateCoordinator[int]
 ) -> None:
-    """Test no update interval refresh when Home Assistant is stopping."""
+    """Test no update interval refresh when MenuAI is stopping."""
     # Add subscriber
     update_callback = Mock()
     crd.async_add_listener(update_callback)
@@ -504,18 +504,18 @@ async def test_stop_refresh_on_ha_stop(
     update_interval = crd.update_interval
 
     # Test we update with subscriber
-    async_fire_time_changed(hass, utcnow() + update_interval)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + update_interval)
+    await menuai.async_block_till_done()
     assert crd.data == 1
 
-    # Fire Home Assistant stop event
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    hass.set_state(CoreState.stopping)
-    await hass.async_block_till_done()
+    # Fire MenuAI stop event
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    menuai.set_state(CoreState.stopping)
+    await menuai.async_block_till_done()
 
     # Make sure no update with subscriber after stop event
-    async_fire_time_changed(hass, utcnow() + update_interval)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + update_interval)
+    await menuai.async_block_till_done()
     assert crd.data == 1
 
     # Ensure we can still manually refresh after stop
@@ -523,8 +523,8 @@ async def test_stop_refresh_on_ha_stop(
     assert crd.data == 2
 
     # ...and that the manual refresh doesn't setup another scheduled refresh
-    async_fire_time_changed(hass, utcnow() + update_interval)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + update_interval)
+    await menuai.async_block_till_done()
     assert crd.data == 2
 
 
@@ -540,7 +540,7 @@ async def test_stop_refresh_on_ha_stop(
     ["update_method", "setup_method"],
 )
 async def test_async_config_entry_first_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     err_msg: tuple[Exception, type[Exception], str],
     method: str,
     caplog: pytest.LogCaptureFixture,
@@ -553,9 +553,9 @@ async def test_async_config_entry_first_refresh_failure(
     """
     entry = MockConfigEntry()
     entry._async_set_state(
-        hass, config_entries.ConfigEntryState.SETUP_IN_PROGRESS, None
+        menuai, config_entries.ConfigEntryState.SETUP_IN_PROGRESS, None
     )
-    crd = get_crd(hass, DEFAULT_UPDATE_INTERVAL, entry)
+    crd = get_crd(menuai, DEFAULT_UPDATE_INTERVAL, entry)
     setattr(crd, method, AsyncMock(side_effect=err_msg[0]))
 
     with pytest.raises(ConfigEntryNotReady):
@@ -578,7 +578,7 @@ async def test_async_config_entry_first_refresh_failure(
     ["update_method", "setup_method"],
 )
 async def test_async_config_entry_first_refresh_failure_passed_through(
-    hass: HomeAssistant,
+    menuai: menuai,
     err_msg: tuple[Exception, type[Exception], str],
     method: str,
     caplog: pytest.LogCaptureFixture,
@@ -591,9 +591,9 @@ async def test_async_config_entry_first_refresh_failure_passed_through(
     """
     entry = MockConfigEntry()
     entry._async_set_state(
-        hass, config_entries.ConfigEntryState.SETUP_IN_PROGRESS, None
+        menuai, config_entries.ConfigEntryState.SETUP_IN_PROGRESS, None
     )
-    crd = get_crd(hass, DEFAULT_UPDATE_INTERVAL, entry)
+    crd = get_crd(menuai, DEFAULT_UPDATE_INTERVAL, entry)
     setattr(crd, method, AsyncMock(side_effect=err_msg[0]))
 
     with pytest.raises(err_msg[1]):
@@ -604,13 +604,13 @@ async def test_async_config_entry_first_refresh_failure_passed_through(
     assert err_msg[2] not in caplog.text
 
 
-async def test_async_config_entry_first_refresh_success(hass: HomeAssistant) -> None:
+async def test_async_config_entry_first_refresh_success(menuai: menuai) -> None:
     """Test first refresh successfully."""
     entry = MockConfigEntry()
     entry._async_set_state(
-        hass, config_entries.ConfigEntryState.SETUP_IN_PROGRESS, None
+        menuai, config_entries.ConfigEntryState.SETUP_IN_PROGRESS, None
     )
-    crd = get_crd(hass, DEFAULT_UPDATE_INTERVAL, entry)
+    crd = get_crd(menuai, DEFAULT_UPDATE_INTERVAL, entry)
     crd.setup_method = AsyncMock()
     await crd.async_config_entry_first_refresh()
 
@@ -619,11 +619,11 @@ async def test_async_config_entry_first_refresh_success(hass: HomeAssistant) -> 
 
 
 async def test_async_config_entry_first_refresh_invalid_state(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test first refresh fails due to invalid state."""
     entry = MockConfigEntry()
-    crd = get_crd(hass, DEFAULT_UPDATE_INTERVAL, entry)
+    crd = get_crd(menuai, DEFAULT_UPDATE_INTERVAL, entry)
     crd.setup_method = AsyncMock()
     with pytest.raises(
         RuntimeError,
@@ -639,11 +639,11 @@ async def test_async_config_entry_first_refresh_invalid_state(
 
 @pytest.mark.usefixtures("mock_integration_frame")
 async def test_async_config_entry_first_refresh_invalid_state_in_integration(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test first refresh successfully, despite wrong state."""
     entry = MockConfigEntry()
-    crd = get_crd(hass, DEFAULT_UPDATE_INTERVAL, entry)
+    crd = get_crd(menuai, DEFAULT_UPDATE_INTERVAL, entry)
     crd.setup_method = AsyncMock()
 
     await crd.async_config_entry_first_refresh()
@@ -653,14 +653,14 @@ async def test_async_config_entry_first_refresh_invalid_state_in_integration(
         "Detected that integration 'hue' uses `async_config_entry_first_refresh`, which "
         "is only supported when entry state is ConfigEntryState.SETUP_IN_PROGRESS, "
         "but it is in state ConfigEntryState.NOT_LOADED at "
-        "homeassistant/components/hue/light.py, line 23: self.light.is_on. "
-        "This will stop working in Home Assistant 2025.11"
+        "menuai/components/hue/light.py, line 23: self.light.is_on. "
+        "This will stop working in MenuAI 2025.11"
     ) in caplog.text
 
 
-async def test_async_config_entry_first_refresh_no_entry(hass: HomeAssistant) -> None:
+async def test_async_config_entry_first_refresh_no_entry(menuai: menuai) -> None:
     """Test first refresh successfully."""
-    crd = get_crd(hass, DEFAULT_UPDATE_INTERVAL, None)
+    crd = get_crd(menuai, DEFAULT_UPDATE_INTERVAL, None)
     crd.setup_method = AsyncMock()
     with pytest.raises(
         RuntimeError,
@@ -675,11 +675,11 @@ async def test_async_config_entry_first_refresh_no_entry(hass: HomeAssistant) ->
 
 
 async def test_not_schedule_refresh_if_system_option_disable_polling(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we do not schedule a refresh if disable polling in config entry."""
     entry = MockConfigEntry(pref_disable_polling=True)
-    crd = get_crd(hass, DEFAULT_UPDATE_INTERVAL, entry)
+    crd = get_crd(menuai, DEFAULT_UPDATE_INTERVAL, entry)
     crd.async_add_listener(lambda: None)
     assert crd._unsub_refresh is None
 
@@ -833,7 +833,7 @@ async def test_always_callback_when_always_update_is_true(
     remove_callbacks()
 
 
-async def test_timestamp_date_update_coordinator(hass: HomeAssistant) -> None:
+async def test_timestamp_date_update_coordinator(menuai: menuai) -> None:
     """Test last_update_success_time is set before calling listeners."""
     last_update_success_times: list[datetime | None] = []
 
@@ -841,7 +841,7 @@ async def test_timestamp_date_update_coordinator(hass: HomeAssistant) -> None:
         return 1
 
     crd = update_coordinator.TimestampDataUpdateCoordinator[int](
-        hass,
+        menuai,
         _LOGGER,
         name="test",
         update_method=refresh,
@@ -865,23 +865,23 @@ async def test_timestamp_date_update_coordinator(hass: HomeAssistant) -> None:
     assert len(last_update_success_times) == 1
 
 
-async def test_config_entry(hass: HomeAssistant) -> None:
+async def test_config_entry(menuai: menuai) -> None:
     """Test behavior of coordinator.entry."""
     entry = MockConfigEntry()
 
     # Default without context should be None
-    crd = update_coordinator.DataUpdateCoordinator[int](hass, _LOGGER, name="test")
+    crd = update_coordinator.DataUpdateCoordinator[int](menuai, _LOGGER, name="test")
     assert crd.config_entry is None
 
     # Explicit None is OK
     crd = update_coordinator.DataUpdateCoordinator[int](
-        hass, _LOGGER, name="test", config_entry=None
+        menuai, _LOGGER, name="test", config_entry=None
     )
     assert crd.config_entry is None
 
     # Explicit entry is OK
     crd = update_coordinator.DataUpdateCoordinator[int](
-        hass, _LOGGER, name="test", config_entry=entry
+        menuai, _LOGGER, name="test", config_entry=entry
     )
     assert crd.config_entry is entry
 
@@ -889,18 +889,18 @@ async def test_config_entry(hass: HomeAssistant) -> None:
     config_entries.current_entry.set(entry)
 
     # Default with ContextVar should match the ContextVar
-    crd = update_coordinator.DataUpdateCoordinator[int](hass, _LOGGER, name="test")
+    crd = update_coordinator.DataUpdateCoordinator[int](menuai, _LOGGER, name="test")
     assert crd.config_entry is entry
 
     # Explicit entry different from ContextVar not recommended, but should work
     another_entry = MockConfigEntry()
     crd = update_coordinator.DataUpdateCoordinator[int](
-        hass, _LOGGER, name="test", config_entry=another_entry
+        menuai, _LOGGER, name="test", config_entry=another_entry
     )
     assert crd.config_entry is another_entry
 
 
-async def test_listener_unsubscribe_releases_coordinator(hass: HomeAssistant) -> None:
+async def test_listener_unsubscribe_releases_coordinator(menuai: menuai) -> None:
     """Test listener subscribe/unsubscribe releases parent class.
 
     See https://github.com/home-assistant/core/issues/137237
@@ -920,7 +920,7 @@ async def test_listener_unsubscribe_releases_coordinator(hass: HomeAssistant) ->
             self._unsub = None
 
     coordinator = update_coordinator.DataUpdateCoordinator[int](
-        hass, _LOGGER, name="test"
+        menuai, _LOGGER, name="test"
     )
     subscriber = Subscriber()
     subscriber.start_listen(coordinator)

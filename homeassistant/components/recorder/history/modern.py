@@ -23,11 +23,11 @@ from sqlalchemy import (
 from sqlalchemy.engine.row import Row
 from sqlalchemy.orm.session import Session
 
-from homeassistant.const import COMPRESSED_STATE_LAST_UPDATED, COMPRESSED_STATE_STATE
-from homeassistant.core import HomeAssistant, State, split_entity_id
-from homeassistant.helpers.recorder import get_instance
-from homeassistant.util import dt as dt_util
-from homeassistant.util.collection import chunked_or_all
+from menuai.const import COMPRESSED_STATE_LAST_UPDATED, COMPRESSED_STATE_STATE
+from menuai.core import menuai, State, split_entity_id
+from menuai.helpers.recorder import get_instance
+from menuai.util import dt as dt_util
+from menuai.util.collection import chunked_or_all
 
 from ..const import LAST_REPORTED_SCHEMA_VERSION, MAX_IDS_FOR_INDEXED_GROUP_BY
 from ..db_schema import (
@@ -113,7 +113,7 @@ def _select_from_subquery(
 
 
 def get_significant_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: datetime,
     end_time: datetime | None = None,
     entity_ids: list[str] | None = None,
@@ -125,9 +125,9 @@ def get_significant_states(
     compressed_state_format: bool = False,
 ) -> dict[str, list[State | dict[str, Any]]]:
     """Wrap get_significant_states_with_session with an sql session."""
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         return get_significant_states_with_session(
-            hass,
+            menuai,
             session,
             start_time,
             end_time,
@@ -209,7 +209,7 @@ def _significant_states_stmt(
 
 
 def get_significant_states_with_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     start_time: datetime,
     end_time: datetime | None = None,
@@ -238,7 +238,7 @@ def get_significant_states_with_session(
         raise ValueError("entity_ids must be provided")
     entity_id_to_metadata_id: dict[str, int | None] | None = None
     metadata_ids_in_significant_domains: list[int] = []
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     if not (
         entity_id_to_metadata_id := instance.states_meta_manager.get_many(
             entity_ids, session, False
@@ -255,7 +255,7 @@ def get_significant_states_with_session(
         ]
     oldest_ts: float | None = None
     if include_start_time_state and not (
-        oldest_ts := _get_oldest_possible_ts(hass, start_time)
+        oldest_ts := _get_oldest_possible_ts(menuai, start_time)
     ):
         include_start_time_state = False
     start_time_ts = start_time.timestamp()
@@ -348,7 +348,7 @@ def _generate_significant_states_with_session_stmt(
 
 
 def get_full_significant_states_with_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     start_time: datetime,
     end_time: datetime | None = None,
@@ -366,7 +366,7 @@ def get_full_significant_states_with_session(
     return cast(
         dict[str, list[State]],
         get_significant_states_with_session(
-            hass=hass,
+            menuai=menuai,
             session=session,
             start_time=start_time,
             end_time=end_time,
@@ -444,7 +444,7 @@ def _state_changed_during_period_stmt(
 
 
 def state_changes_during_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: datetime,
     end_time: datetime | None = None,
     entity_id: str | None = None,
@@ -455,14 +455,14 @@ def state_changes_during_period(
 ) -> dict[str, list[State]]:
     """Return states changes during UTC period start_time - end_time."""
     has_last_reported = (
-        get_instance(hass).schema_version >= LAST_REPORTED_SCHEMA_VERSION
+        get_instance(menuai).schema_version >= LAST_REPORTED_SCHEMA_VERSION
     )
     if not entity_id:
         raise ValueError("entity_id must be provided")
     entity_ids = [entity_id.lower()]
 
-    with session_scope(hass=hass, read_only=True) as session:
-        instance = get_instance(hass)
+    with session_scope(menuai=menuai, read_only=True) as session:
+        instance = get_instance(menuai)
         if not (
             possible_metadata_id := instance.states_meta_manager.get(
                 entity_id, session, False
@@ -475,7 +475,7 @@ def state_changes_during_period(
         }
         oldest_ts: float | None = None
         if include_start_time_state and not (
-            oldest_ts := _get_oldest_possible_ts(hass, start_time)
+            oldest_ts := _get_oldest_possible_ts(menuai, start_time)
         ):
             include_start_time_state = False
         start_time_ts = start_time.timestamp()
@@ -565,11 +565,11 @@ def _get_last_state_changes_multiple_stmt(
 
 
 def get_last_state_changes(
-    hass: HomeAssistant, number_of_states: int, entity_id: str
+    menuai: menuai, number_of_states: int, entity_id: str
 ) -> dict[str, list[State]]:
     """Return the last number_of_states."""
     has_last_reported = (
-        get_instance(hass).schema_version >= LAST_REPORTED_SCHEMA_VERSION
+        get_instance(menuai).schema_version >= LAST_REPORTED_SCHEMA_VERSION
     )
     entity_id_lower = entity_id.lower()
     entity_ids = [entity_id_lower]
@@ -578,8 +578,8 @@ def get_last_state_changes(
     # because it has to scan the table to find the last number_of_states states
     # because the metadata_id_last_updated_ts index is in ascending order.
 
-    with session_scope(hass=hass, read_only=True) as session:
-        instance = get_instance(hass)
+    with session_scope(menuai=menuai, read_only=True) as session:
+        instance = get_instance(menuai)
         if not (
             possible_metadata_id := instance.states_meta_manager.get(
                 entity_id, session, False
@@ -711,14 +711,14 @@ def _get_start_time_state_for_entities_stmt_group_by(
 
 
 def _get_oldest_possible_ts(
-    hass: HomeAssistant, utc_point_in_time: datetime
+    menuai: menuai, utc_point_in_time: datetime
 ) -> float | None:
     """Return the oldest possible timestamp.
 
     Returns None if there are no states as old as utc_point_in_time.
     """
 
-    oldest_ts = get_instance(hass).states_manager.oldest_ts
+    oldest_ts = get_instance(menuai).states_manager.oldest_ts
     if oldest_ts is not None and oldest_ts < utc_point_in_time.timestamp():
         return oldest_ts
     return None

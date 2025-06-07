@@ -9,21 +9,21 @@ from pylamarzocco.const import ModelName, PreExtractionMode, WidgetType
 from pylamarzocco.exceptions import RequestNotSuccessful
 from pylamarzocco.models import CoffeeBoiler, PreBrewing
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     PRECISION_TENTHS,
     PRECISION_WHOLE,
     EntityCategory,
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LaMarzoccoConfigEntry
@@ -200,7 +200,7 @@ ENTITIES: tuple[LaMarzoccoNumberEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LaMarzoccoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -233,7 +233,7 @@ class LaMarzoccoNumberEntity(LaMarzoccoEntity, NumberEntity):
                     self.coordinator.device, value
                 )
             except RequestNotSuccessful as exc:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="number_exception",
                     translation_placeholders={

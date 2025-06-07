@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock
 from google_drive_api.exceptions import GoogleDriveApiError
 import pytest
 
-from homeassistant.components.google_drive.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.google_drive.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -21,21 +21,21 @@ type ComponentSetup = Callable[[], Awaitable[None]]
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> Callable[[], Coroutine[Any, Any, None]]:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     async def func() -> None:
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return func
 
 
 async def test_setup_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     mock_api: MagicMock,
 ) -> None:
@@ -47,18 +47,18 @@ async def test_setup_success(
 
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entries[0].entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entries[0].entry_id)
+    await menuai.async_block_till_done()
 
     assert entries[0].state is ConfigEntryState.NOT_LOADED
 
 
 async def test_create_folder_if_missing(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     mock_api: MagicMock,
 ) -> None:
@@ -67,12 +67,12 @@ async def test_create_folder_if_missing(
     # and creates it if missing
     mock_api.list_files = AsyncMock(return_value={"files": []})
     mock_api.create_file = AsyncMock(
-        return_value={"id": "new folder id", "name": "Home Assistant"}
+        return_value={"id": "new folder id", "name": "MenuAI"}
     )
 
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
@@ -81,7 +81,7 @@ async def test_create_folder_if_missing(
 
 
 async def test_setup_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     mock_api: MagicMock,
 ) -> None:
@@ -91,14 +91,14 @@ async def test_setup_error(
 
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.parametrize("expires_at", [time.time() - 3600], ids=["expired"])
 async def test_expired_token_refresh_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
     mock_api: MagicMock,
@@ -120,7 +120,7 @@ async def test_expired_token_refresh_success(
 
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert entries[0].data["token"]["access_token"] == "updated-access-token"
@@ -144,7 +144,7 @@ async def test_expired_token_refresh_success(
     ids=["failure_requires_reauth", "transient_failure"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
@@ -160,5 +160,5 @@ async def test_expired_token_refresh_failure(
     await setup_integration()
 
     # Verify a transient failure has occurred
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].state is expected_state

@@ -2,10 +2,10 @@
 
 from datetime import timedelta
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
 )
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "ibeacon"
 

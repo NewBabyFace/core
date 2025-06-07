@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
     ATTR_TILT_POSITION,
@@ -21,9 +21,9 @@ from homeassistant.components.cover import (
     SERVICE_STOP_COVER_TILT,
     CoverState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -52,7 +52,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
     ],
 )
 async def test_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
@@ -60,14 +60,14 @@ async def test_cover(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that all supported cover entities are created."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.COVER]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.COVER]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Event signals cover is open
 
     await light_ws_data({"state": {"lift": 0, "open": True}})
-    cover = hass.states.get("cover.window_covering_device")
+    cover = menuai.states.get("cover.window_covering_device")
     assert cover.state == CoverState.OPEN
     assert cover.attributes[ATTR_CURRENT_POSITION] == 100
 
@@ -77,7 +77,7 @@ async def test_cover(
 
     # Service open cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: "cover.window_covering_device"},
@@ -87,7 +87,7 @@ async def test_cover(
 
     # Service close cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: "cover.window_covering_device"},
@@ -97,7 +97,7 @@ async def test_cover(
 
     # Service set cover position
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: "cover.window_covering_device", ATTR_POSITION: 40},
@@ -107,7 +107,7 @@ async def test_cover(
 
     # Service stop cover movement
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: "cover.window_covering_device"},
@@ -141,16 +141,16 @@ async def test_cover(
     ],
 )
 async def test_tilt_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that tilting a cover works."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.COVER]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.COVER]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Verify service calls for tilting cover
 
@@ -158,7 +158,7 @@ async def test_tilt_cover(
 
     # Service set tilt cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_TILT_POSITION,
         {ATTR_ENTITY_ID: "cover.covering_device", ATTR_TILT_POSITION: 40},
@@ -168,7 +168,7 @@ async def test_tilt_cover(
 
     # Service open tilt cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.covering_device"},
@@ -178,7 +178,7 @@ async def test_tilt_cover(
 
     # Service close tilt cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.covering_device"},
@@ -188,7 +188,7 @@ async def test_tilt_cover(
 
     # Service stop cover movement
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.covering_device"},
@@ -222,16 +222,16 @@ async def test_tilt_cover(
     ],
 )
 async def test_level_controllable_output_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that tilting a cover works."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.COVER]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.COVER]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Verify service calls for tilting cover
 
@@ -239,7 +239,7 @@ async def test_level_controllable_output_cover(
 
     # Service open cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: "cover.vent"},
@@ -249,7 +249,7 @@ async def test_level_controllable_output_cover(
 
     # Service close cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: "cover.vent"},
@@ -259,7 +259,7 @@ async def test_level_controllable_output_cover(
 
     # Service set cover position
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: "cover.vent", ATTR_POSITION: 40},
@@ -269,7 +269,7 @@ async def test_level_controllable_output_cover(
 
     # Service set tilt cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_TILT_POSITION,
         {ATTR_ENTITY_ID: "cover.vent", ATTR_TILT_POSITION: 40},
@@ -279,7 +279,7 @@ async def test_level_controllable_output_cover(
 
     # Service open tilt cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.vent"},
@@ -289,7 +289,7 @@ async def test_level_controllable_output_cover(
 
     # Service close tilt cover
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.vent"},
@@ -299,7 +299,7 @@ async def test_level_controllable_output_cover(
 
     # Service stop cover movement
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.vent"},

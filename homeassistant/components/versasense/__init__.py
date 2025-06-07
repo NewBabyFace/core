@@ -5,11 +5,11 @@ import logging
 import pyversasense as pyv
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     KEY_CONSUMER,
@@ -32,20 +32,20 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the versasense component."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
     consumer = pyv.Consumer(config[DOMAIN]["host"], session)
 
-    hass.data[DOMAIN] = {KEY_CONSUMER: consumer}
+    menuai.data[DOMAIN] = {KEY_CONSUMER: consumer}
 
-    await _configure_entities(hass, config, consumer)
+    await _configure_entities(menuai, config, consumer)
 
     # Return boolean to indicate that initialization was successful.
     return True
 
 
-async def _configure_entities(hass, config, consumer):
+async def _configure_entities(menuai, config, consumer):
     """Fetch all devices with their peripherals for representation."""
     devices = await consumer.fetchDevices()
     _LOGGER.debug(devices)
@@ -55,10 +55,10 @@ async def _configure_entities(hass, config, consumer):
 
     for mac, device in devices.items():
         _LOGGER.debug("Device connected: %s %s", device.name, mac)
-        hass.data[DOMAIN][mac] = {}
+        menuai.data[DOMAIN][mac] = {}
 
         for peripheral_id, peripheral in device.peripherals.items():
-            hass.data[DOMAIN][mac][peripheral_id] = peripheral
+            menuai.data[DOMAIN][mac][peripheral_id] = peripheral
 
             if peripheral.classification == PERIPHERAL_CLASS_SENSOR:
                 sensor_info = _add_entity_info(peripheral, device, sensor_info)
@@ -66,10 +66,10 @@ async def _configure_entities(hass, config, consumer):
                 switch_info = _add_entity_info(peripheral, device, switch_info)
 
     if sensor_info:
-        _load_platform(hass, config, Platform.SENSOR, sensor_info)
+        _load_platform(menuai, config, Platform.SENSOR, sensor_info)
 
     if switch_info:
-        _load_platform(hass, config, Platform.SWITCH, switch_info)
+        _load_platform(menuai, config, Platform.SWITCH, switch_info)
 
 
 def _add_entity_info(peripheral, device, entity_dict) -> None:
@@ -89,8 +89,8 @@ def _add_entity_info(peripheral, device, entity_dict) -> None:
     return entity_dict
 
 
-def _load_platform(hass, config, entity_type, entity_info):
+def _load_platform(menuai, config, entity_type, entity_info):
     """Load platform with list of entity info."""
-    hass.async_create_task(
-        async_load_platform(hass, entity_type, DOMAIN, entity_info, config)
+    menuai.async_create_task(
+        async_load_platform(menuai, entity_type, DOMAIN, entity_info, config)
     )

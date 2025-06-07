@@ -9,10 +9,10 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.rehlko.coordinator import SCAN_INTERVAL_MINUTES
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.rehlko.coordinator import SCAN_INTERVAL_MINUTES
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_platform
 
@@ -20,13 +20,13 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 @pytest.fixture(name="platform_sensor", autouse=True)
 async def platform_sensor_fixture():
     """Patch Rehlko to only load Sensor platform."""
-    with patch("homeassistant.components.rehlko.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.rehlko.PLATFORMS", [Platform.SENSOR]):
         yield
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     rehlko_config_entry: MockConfigEntry,
@@ -34,19 +34,19 @@ async def test_sensors(
 ) -> None:
     """Test the Rehlko sensors."""
     await snapshot_platform(
-        hass, entity_registry, snapshot, rehlko_config_entry.entry_id
+        menuai, entity_registry, snapshot, rehlko_config_entry.entry_id
     )
 
 
 async def test_sensor_availability_device_disconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     generator: dict[str, Any],
     mock_rehlko: AsyncMock,
     load_rehlko_config_entry: None,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Rehlko sensor availability when device is disconnected."""
-    state = hass.states.get("sensor.generator_1_battery_voltage")
+    state = menuai.states.get("sensor.generator_1_battery_voltage")
     assert state
     assert state.state == "13.9"
 
@@ -54,22 +54,22 @@ async def test_sensor_availability_device_disconnect(
 
     # Move time to next update
     freezer.tick(SCAN_INTERVAL_MINUTES)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.generator_1_battery_voltage")
+    state = menuai.states.get("sensor.generator_1_battery_voltage")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_sensor_availability_poll_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rehlko: AsyncMock,
     load_rehlko_config_entry: None,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Rehlko sensor availability when cloud poll fails."""
-    state = hass.states.get("sensor.generator_1_battery_voltage")
+    state = menuai.states.get("sensor.generator_1_battery_voltage")
     assert state
     assert state.state == "13.9"
 
@@ -77,9 +77,9 @@ async def test_sensor_availability_poll_failure(
 
     # Move time to next update
     freezer.tick(SCAN_INTERVAL_MINUTES)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.generator_1_battery_voltage")
+    state = menuai.states.get("sensor.generator_1_battery_voltage")
     assert state
     assert state.state == STATE_UNAVAILABLE

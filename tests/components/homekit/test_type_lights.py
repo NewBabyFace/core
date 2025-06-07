@@ -6,16 +6,16 @@ import sys
 from pyhap.const import HAP_REPR_AID, HAP_REPR_CHARS, HAP_REPR_IID, HAP_REPR_VALUE
 import pytest
 
-from homeassistant.components.homekit.const import (
+from menuai.components.homekit.const import (
     ATTR_VALUE,
     PROP_MAX_VALUE,
     PROP_MIN_VALUE,
 )
-from homeassistant.components.homekit.type_lights import (
+from menuai.components.homekit.type_lights import (
     CHANGE_COALESCE_TIME_WINDOW,
     Light,
 )
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_BRIGHTNESS_PCT,
     ATTR_COLOR_MODE,
@@ -31,36 +31,36 @@ from homeassistant.components.light import (
     DOMAIN as LIGHT_DOMAIN,
     ColorMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     PERCENTAGE,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import CoreState, Event, HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import CoreState, Event, menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed, async_mock_service
 
 
-async def _wait_for_light_coalesce(hass: HomeAssistant) -> None:
+async def _wait_for_light_coalesce(menuai: menuai) -> None:
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=CHANGE_COALESCE_TIME_WINDOW)
+        menuai, dt_util.utcnow() + timedelta(seconds=CHANGE_COALESCE_TIME_WINDOW)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_light_basic(hass: HomeAssistant, hk_driver, events: list[Event]) -> None:
+async def test_light_basic(menuai: menuai, hk_driver, events: list[Event]) -> None:
     """Test light with char state."""
     entity_id = "light.demo"
 
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_SUPPORTED_FEATURES: 0})
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_SUPPORTED_FEATURES: 0})
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.aid == 1
@@ -68,24 +68,24 @@ async def test_light_basic(hass: HomeAssistant, hk_driver, events: list[Event]) 
     assert acc.char_on.value
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_on.value == 1
 
-    hass.states.async_set(entity_id, STATE_OFF, {ATTR_SUPPORTED_FEATURES: 0})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_OFF, {ATTR_SUPPORTED_FEATURES: 0})
+    await menuai.async_block_till_done()
     assert acc.char_on.value == 0
 
-    hass.states.async_set(entity_id, STATE_UNKNOWN)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_UNKNOWN)
+    await menuai.async_block_till_done()
     assert acc.char_on.value == 0
 
-    hass.states.async_remove(entity_id)
-    await hass.async_block_till_done()
+    menuai.states.async_remove(entity_id)
+    await menuai.async_block_till_done()
     assert acc.char_on.value == 0
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
-    call_turn_off = async_mock_service(hass, LIGHT_DOMAIN, "turn_off")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
+    call_turn_off = async_mock_service(menuai, LIGHT_DOMAIN, "turn_off")
 
     char_on_iid = acc.char_on.to_HAP()[HAP_REPR_IID]
 
@@ -99,14 +99,14 @@ async def test_light_basic(hass: HomeAssistant, hk_driver, events: list[Event]) 
     )
 
     acc.char_on.client_update_value(1)
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert len(events) == 1
     assert events[-1].data[ATTR_VALUE] == "Set state to 1"
 
-    hass.states.async_set(entity_id, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_ON)
+    await menuai.async_block_till_done()
 
     hk_driver.set_characteristics(
         {
@@ -116,7 +116,7 @@ async def test_light_basic(hass: HomeAssistant, hk_driver, events: list[Event]) 
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_off
     assert call_turn_off[0].data[ATTR_ENTITY_ID] == entity_id
     assert len(events) == 2
@@ -128,18 +128,18 @@ async def test_light_basic(hass: HomeAssistant, hk_driver, events: list[Event]) 
     [[ColorMode.BRIGHTNESS], [ColorMode.HS], [ColorMode.COLOR_TEMP]],
 )
 async def test_light_brightness(
-    hass: HomeAssistant, hk_driver, events: list[Event], supported_color_modes
+    menuai: menuai, hk_driver, events: list[Event], supported_color_modes
 ) -> None:
     """Test light with brightness."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 255},
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     # Initial value can be anything but 0. If it is 0, it might cause HomeKit to set the
@@ -149,20 +149,20 @@ async def test_light_brightness(
     char_brightness_iid = acc.char_brightness.to_HAP()[HAP_REPR_IID]
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 100
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 102},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 40
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
-    call_turn_off = async_mock_service(hass, LIGHT_DOMAIN, "turn_off")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
+    call_turn_off = async_mock_service(menuai, LIGHT_DOMAIN, "turn_off")
 
     hk_driver.set_characteristics(
         {
@@ -177,7 +177,7 @@ async def test_light_brightness(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[0]
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_BRIGHTNESS_PCT] == 20
@@ -199,7 +199,7 @@ async def test_light_brightness(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[1]
     assert call_turn_on[1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[1].data[ATTR_BRIGHTNESS_PCT] == 40
@@ -221,7 +221,7 @@ async def test_light_brightness(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_off
     assert call_turn_off[0].data[ATTR_ENTITY_ID] == entity_id
     assert len(events) == 3
@@ -239,7 +239,7 @@ async def test_light_brightness(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_off
     assert call_turn_off[0].data[ATTR_ENTITY_ID] == entity_id
     assert len(events) == 4
@@ -247,75 +247,75 @@ async def test_light_brightness(
 
     # 0 is a special case for homekit, see "Handle Brightness"
     # in update_state
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 0},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 1
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 255},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 100
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 0},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 1
 
     # Ensure floats are handled
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 55.66},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 22
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 108.4},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 43
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_BRIGHTNESS: 0.0},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 1
 
 
 async def test_light_color_temperature(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test light with color temperature."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: ["color_temp"], ATTR_COLOR_TEMP_KELVIN: 5263},
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_color_temp.value == 190
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 190
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_color_temp_iid = acc.char_color_temp.to_HAP()[HAP_REPR_IID]
 
@@ -331,7 +331,7 @@ async def test_light_color_temperature(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_COLOR_TEMP_KELVIN] == 4000
@@ -344,12 +344,12 @@ async def test_light_color_temperature(
     [["color_temp", "hs"], ["color_temp", "rgb"], ["color_temp", "xy"]],
 )
 async def test_light_color_temperature_and_rgb_color(
-    hass: HomeAssistant, hk_driver, events: list[Event], supported_color_modes
+    menuai: menuai, hk_driver, events: list[Event], supported_color_modes
 ) -> None:
     """Test light with color temperature and rgb color not exposing temperature."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -358,8 +358,8 @@ async def test_light_color_temperature_and_rgb_color(
             ATTR_HS_COLOR: (260, 90),
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_color_temp.value == 190
@@ -368,18 +368,18 @@ async def test_light_color_temperature_and_rgb_color(
 
     assert hasattr(acc, "char_color_temp")
 
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 4464})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 4464})
+    await menuai.async_block_till_done()
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 224
     assert acc.char_hue.value == 27
     assert acc.char_saturation.value == 27
 
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 2840})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 2840})
+    await menuai.async_block_till_done()
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 352
     assert acc.char_hue.value == 28
     assert acc.char_saturation.value == 61
@@ -391,7 +391,7 @@ async def test_light_color_temperature_and_rgb_color(
     char_color_temp_iid = acc.char_color_temp.to_HAP()[HAP_REPR_IID]
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     hk_driver.set_characteristics(
         {
@@ -421,7 +421,7 @@ async def test_light_color_temperature_and_rgb_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[0]
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_BRIGHTNESS_PCT] == 20
@@ -446,7 +446,7 @@ async def test_light_color_temperature_and_rgb_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[1]
     assert call_turn_on[1].data[ATTR_HS_COLOR] == (30, 50)
 
@@ -465,7 +465,7 @@ async def test_light_color_temperature_and_rgb_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[2]
     assert call_turn_on[2].data[ATTR_HS_COLOR] == (30, 20)
 
@@ -496,7 +496,7 @@ async def test_light_color_temperature_and_rgb_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[3]
     assert call_turn_on[3].data[ATTR_COLOR_TEMP_KELVIN] == 3125
     assert events[-1].data[ATTR_VALUE] == "color temperature at 320"
@@ -526,28 +526,28 @@ async def test_light_color_temperature_and_rgb_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[4]
     assert call_turn_on[4].data[ATTR_HS_COLOR] == (80, 35)
     assert events[-1].data[ATTR_VALUE] == "set color at (80, 35)"
 
-    # Set from HASS
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_HS_COLOR: (100, 100)})
-    await hass.async_block_till_done()
+    # Set from menuai
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_HS_COLOR: (100, 100)})
+    await menuai.async_block_till_done()
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 404
     assert acc.char_hue.value == 100
     assert acc.char_saturation.value == 100
 
 
 async def test_light_invalid_hs_color(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test light that starts out with an invalid hs color."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -556,8 +556,8 @@ async def test_light_invalid_hs_color(
             ATTR_HS_COLOR: 260,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_color_temp.value == 153
@@ -566,18 +566,18 @@ async def test_light_invalid_hs_color(
 
     assert hasattr(acc, "char_color_temp")
 
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 4464})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 4464})
+    await menuai.async_block_till_done()
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 224
     assert acc.char_hue.value == 27
     assert acc.char_saturation.value == 27
 
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 2840})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_COLOR_TEMP_KELVIN: 2840})
+    await menuai.async_block_till_done()
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 352
     assert acc.char_hue.value == 28
     assert acc.char_saturation.value == 61
@@ -589,7 +589,7 @@ async def test_light_invalid_hs_color(
     char_color_temp_iid = acc.char_color_temp.to_HAP()[HAP_REPR_IID]
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     hk_driver.set_characteristics(
         {
@@ -619,7 +619,7 @@ async def test_light_invalid_hs_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[0]
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_BRIGHTNESS_PCT] == 20
@@ -644,7 +644,7 @@ async def test_light_invalid_hs_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[1]
     assert call_turn_on[1].data[ATTR_HS_COLOR] == (30, 50)
 
@@ -663,7 +663,7 @@ async def test_light_invalid_hs_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[2]
     assert call_turn_on[2].data[ATTR_HS_COLOR] == (30, 20)
 
@@ -694,7 +694,7 @@ async def test_light_invalid_hs_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[3]
     assert call_turn_on[3].data[ATTR_COLOR_TEMP_KELVIN] == 3125
     assert events[-1].data[ATTR_VALUE] == "color temperature at 320"
@@ -724,28 +724,28 @@ async def test_light_invalid_hs_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[4]
     assert call_turn_on[4].data[ATTR_HS_COLOR] == (80, 35)
     assert events[-1].data[ATTR_VALUE] == "set color at (80, 35)"
 
-    # Set from HASS
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_HS_COLOR: (100, 100)})
-    await hass.async_block_till_done()
+    # Set from menuai
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_HS_COLOR: (100, 100)})
+    await menuai.async_block_till_done()
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 404
     assert acc.char_hue.value == 100
     assert acc.char_saturation.value == 100
 
 
 async def test_light_invalid_values(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test light with a variety of invalid values."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -754,14 +754,14 @@ async def test_light_invalid_values(
             ATTR_HS_COLOR: (-1, -1),
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_color_temp.value == 153
     assert acc.char_hue.value == 0
     assert acc.char_saturation.value == 0
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -770,13 +770,13 @@ async def test_light_invalid_values(
             ATTR_COLOR_TEMP_KELVIN: -1,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     acc.run()
 
     assert acc.char_color_temp.value == 153
     assert acc.char_hue.value == 16
     assert acc.char_saturation.value == 100
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -785,13 +785,13 @@ async def test_light_invalid_values(
             ATTR_COLOR_TEMP_KELVIN: sys.maxsize,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.char_color_temp.value == 153
     assert acc.char_hue.value == 220
     assert acc.char_saturation.value == 41
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -800,18 +800,18 @@ async def test_light_invalid_values(
             ATTR_COLOR_TEMP_KELVIN: 2000,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.char_color_temp.value == 500
     assert acc.char_hue.value == 31
     assert acc.char_saturation.value == 95
 
 
-async def test_light_out_of_range_color_temp(hass: HomeAssistant, hk_driver) -> None:
+async def test_light_out_of_range_color_temp(menuai: menuai, hk_driver) -> None:
     """Test light with an out of range color temp."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -823,8 +823,8 @@ async def test_light_out_of_range_color_temp(hass: HomeAssistant, hk_driver) -> 
             ATTR_HS_COLOR: (-1, -1),
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_color_temp.value == 333
@@ -832,7 +832,7 @@ async def test_light_out_of_range_color_temp(hass: HomeAssistant, hk_driver) -> 
     assert acc.char_color_temp.properties[PROP_MIN_VALUE] == 250
     assert acc.char_hue.value == 31
     assert acc.char_saturation.value == 95
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -843,13 +843,13 @@ async def test_light_out_of_range_color_temp(hass: HomeAssistant, hk_driver) -> 
             ATTR_COLOR_TEMP_KELVIN: -1,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     acc.run()
 
     assert acc.char_color_temp.value == 250
     assert acc.char_hue.value == 16
     assert acc.char_saturation.value == 100
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -860,13 +860,13 @@ async def test_light_out_of_range_color_temp(hass: HomeAssistant, hk_driver) -> 
             ATTR_COLOR_TEMP_KELVIN: sys.maxsize,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.char_color_temp.value == 250
     assert acc.char_hue.value == 220
     assert acc.char_saturation.value == 41
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -875,18 +875,18 @@ async def test_light_out_of_range_color_temp(hass: HomeAssistant, hk_driver) -> 
             ATTR_COLOR_TEMP_KELVIN: 2000,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.char_color_temp.value == 250
     assert acc.char_hue.value == 220
     assert acc.char_saturation.value == 41
 
 
-async def test_reversed_color_temp_min_max(hass: HomeAssistant, hk_driver) -> None:
+async def test_reversed_color_temp_min_max(menuai: menuai, hk_driver) -> None:
     """Test light with a reversed color temp min max."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -898,8 +898,8 @@ async def test_reversed_color_temp_min_max(hass: HomeAssistant, hk_driver) -> No
             ATTR_HS_COLOR: (-1, -1),
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_color_temp.value == 333
@@ -907,7 +907,7 @@ async def test_reversed_color_temp_min_max(hass: HomeAssistant, hk_driver) -> No
     assert acc.char_color_temp.properties[PROP_MIN_VALUE] == 250
     assert acc.char_hue.value == 31
     assert acc.char_saturation.value == 95
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -918,13 +918,13 @@ async def test_reversed_color_temp_min_max(hass: HomeAssistant, hk_driver) -> No
             ATTR_COLOR_TEMP_KELVIN: -1,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     acc.run()
 
     assert acc.char_color_temp.value == 250
     assert acc.char_hue.value == 16
     assert acc.char_saturation.value == 100
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -935,13 +935,13 @@ async def test_reversed_color_temp_min_max(hass: HomeAssistant, hk_driver) -> No
             ATTR_COLOR_TEMP_KELVIN: sys.maxsize,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.char_color_temp.value == 250
     assert acc.char_hue.value == 220
     assert acc.char_saturation.value == 41
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -950,7 +950,7 @@ async def test_reversed_color_temp_min_max(hass: HomeAssistant, hk_driver) -> No
             ATTR_COLOR_TEMP_KELVIN: 2000,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.char_color_temp.value == 250
     assert acc.char_hue.value == 220
@@ -961,30 +961,30 @@ async def test_reversed_color_temp_min_max(hass: HomeAssistant, hk_driver) -> No
     "supported_color_modes", [[ColorMode.HS], [ColorMode.RGB], [ColorMode.XY]]
 )
 async def test_light_rgb_color(
-    hass: HomeAssistant, hk_driver, events: list[Event], supported_color_modes
+    menuai: menuai, hk_driver, events: list[Event], supported_color_modes
 ) -> None:
     """Test light with rgb_color."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, ATTR_HS_COLOR: (260, 90)},
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 260
     assert acc.char_saturation.value == 90
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 260
     assert acc.char_saturation.value == 90
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_hue_iid = acc.char_hue.to_HAP()[HAP_REPR_IID]
     char_saturation_iid = acc.char_saturation.to_HAP()[HAP_REPR_IID]
@@ -1006,7 +1006,7 @@ async def test_light_rgb_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_HS_COLOR] == (145, 75)
@@ -1015,10 +1015,10 @@ async def test_light_rgb_color(
 
 
 async def test_light_restore(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, hk_driver
+    menuai: menuai, entity_registry: er.EntityRegistry, hk_driver
 ) -> None:
     """Test setting up an entity from state in the event registry."""
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     entity_registry.async_get_or_create(
         "light", "hue", "1234", suggested_object_id="simple"
@@ -1033,17 +1033,17 @@ async def test_light_restore(
         original_device_class="mock-device-class",
     )
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START, {})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START, {})
+    await menuai.async_block_till_done()
 
-    acc = Light(hass, hk_driver, "Light", "light.simple", 1, None)
+    acc = Light(menuai, hk_driver, "Light", "light.simple", 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.category == 5  # Lightbulb
     assert acc.chars == []
     assert acc.char_on.value == 0
 
-    acc = Light(hass, hk_driver, "Light", "light.all_info_set", 2, None)
+    acc = Light(menuai, hk_driver, "Light", "light.all_info_set", 2, None)
     assert acc.category == 5  # Lightbulb
     assert acc.chars == ["Brightness"]
     assert acc.char_on.value == 0
@@ -1077,7 +1077,7 @@ async def test_light_restore(
     ],
 )
 async def test_light_rgb_with_color_temp(
-    hass: HomeAssistant,
+    menuai: menuai,
     hk_driver,
     events: list[Event],
     supported_color_modes,
@@ -1087,26 +1087,26 @@ async def test_light_rgb_with_color_temp(
     """Test lights with RGBW/RGBWW with color temp support."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, **state_props},
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
     assert acc.char_brightness.value == 100
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_hue_iid = acc.char_hue.to_HAP()[HAP_REPR_IID]
     char_saturation_iid = acc.char_saturation.to_HAP()[HAP_REPR_IID]
@@ -1129,7 +1129,7 @@ async def test_light_rgb_with_color_temp(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_HS_COLOR] == (145, 75)
@@ -1159,7 +1159,7 @@ async def test_light_rgb_with_color_temp(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     for k, v in turn_on_props_with_brightness.items():
@@ -1197,7 +1197,7 @@ async def test_light_rgb_with_color_temp(
     ],
 )
 async def test_light_rgbwx_with_color_temp_and_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     hk_driver,
     events: list[Event],
     supported_color_modes,
@@ -1207,26 +1207,26 @@ async def test_light_rgbwx_with_color_temp_and_brightness(
     """Test lights with RGBW/RGBWW with color temp support and setting brightness."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, **state_props},
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
     assert acc.char_brightness.value == 100
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_color_temp_iid = acc.char_color_temp.to_HAP()[HAP_REPR_IID]
     char_brightness_iid = acc.char_brightness.to_HAP()[HAP_REPR_IID]
@@ -1248,7 +1248,7 @@ async def test_light_rgbwx_with_color_temp_and_brightness(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     for k, v in turn_on_props_with_brightness.items():
@@ -1259,14 +1259,14 @@ async def test_light_rgbwx_with_color_temp_and_brightness(
 
 
 async def test_light_rgb_or_w_lights(
-    hass: HomeAssistant,
+    menuai: menuai,
     hk_driver,
     events: list[Event],
 ) -> None:
     """Test lights with RGB or W lights."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1278,22 +1278,22 @@ async def test_light_rgb_or_w_lights(
             ATTR_COLOR_MODE: ColorMode.RGB,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
     assert acc.char_brightness.value == 100
     assert acc.char_color_temp.value == 153
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_hue_iid = acc.char_hue.to_HAP()[HAP_REPR_IID]
     char_saturation_iid = acc.char_saturation.to_HAP()[HAP_REPR_IID]
@@ -1317,7 +1317,7 @@ async def test_light_rgb_or_w_lights(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_HS_COLOR] == (145, 75)
@@ -1342,7 +1342,7 @@ async def test_light_rgb_or_w_lights(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_WHITE] == round(25 * 255 / 100)
@@ -1350,7 +1350,7 @@ async def test_light_rgb_or_w_lights(
     assert events[-1].data[ATTR_VALUE] == "brightness at 25%, color temperature at 153"
     assert acc.char_brightness.value == 25
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1359,7 +1359,7 @@ async def test_light_rgb_or_w_lights(
             ATTR_COLOR_MODE: ColorMode.WHITE,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 0
     assert acc.char_saturation.value == 0
     assert acc.char_brightness.value == 100
@@ -1392,7 +1392,7 @@ async def test_light_rgb_or_w_lights(
     ],
 )
 async def test_light_rgb_with_white_switch_to_temp(
-    hass: HomeAssistant,
+    menuai: menuai,
     hk_driver,
     events: list[Event],
     supported_color_modes,
@@ -1401,26 +1401,26 @@ async def test_light_rgb_with_white_switch_to_temp(
     """Test lights with RGBW/RGBWW that preserves brightness when switching to color temp."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: supported_color_modes, **state_props},
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
     assert acc.char_brightness.value == 100
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_hue_iid = acc.char_hue.to_HAP()[HAP_REPR_IID]
     char_saturation_iid = acc.char_saturation.to_HAP()[HAP_REPR_IID]
@@ -1443,7 +1443,7 @@ async def test_light_rgb_with_white_switch_to_temp(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_HS_COLOR] == (145, 75)
@@ -1462,7 +1462,7 @@ async def test_light_rgb_with_white_switch_to_temp(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_COLOR_TEMP_KELVIN] == 2000
@@ -1471,11 +1471,11 @@ async def test_light_rgb_with_white_switch_to_temp(
     assert acc.char_brightness.value == 100
 
 
-async def test_light_rgb_with_hs_color_none(hass: HomeAssistant, hk_driver) -> None:
+async def test_light_rgb_with_hs_color_none(menuai: menuai, hk_driver) -> None:
     """Test lights hs color set to None."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1487,29 +1487,29 @@ async def test_light_rgb_with_hs_color_none(hass: HomeAssistant, hk_driver) -> N
             ATTR_COLOR_MODE: ColorMode.RGB,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 0
     assert acc.char_saturation.value == 75
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 0
     assert acc.char_saturation.value == 75
     assert acc.char_brightness.value == 100
 
 
 async def test_light_rgbww_with_color_temp_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     hk_driver,
     events: list[Event],
 ) -> None:
     """Test lights with RGBWW convert color temp as expected."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1521,21 +1521,21 @@ async def test_light_rgbww_with_color_temp_conversion(
             ATTR_COLOR_MODE: ColorMode.RGBWW,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
     assert acc.char_brightness.value == 100
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_hue_iid = acc.char_hue.to_HAP()[HAP_REPR_IID]
     char_saturation_iid = acc.char_saturation.to_HAP()[HAP_REPR_IID]
@@ -1559,7 +1559,7 @@ async def test_light_rgbww_with_color_temp_conversion(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_HS_COLOR] == (145, 75)
@@ -1579,7 +1579,7 @@ async def test_light_rgbww_with_color_temp_conversion(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_RGBWW_COLOR] == (0, 0, 0, 220, 35)
@@ -1587,7 +1587,7 @@ async def test_light_rgbww_with_color_temp_conversion(
     assert events[-1].data[ATTR_VALUE] == "color temperature at 200"
     assert acc.char_brightness.value == 100
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1599,7 +1599,7 @@ async def test_light_rgbww_with_color_temp_conversion(
             ATTR_COLOR_MODE: ColorMode.RGBWW,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     hk_driver.set_characteristics(
         {
@@ -1613,7 +1613,7 @@ async def test_light_rgbww_with_color_temp_conversion(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_BRIGHTNESS_PCT] == 100
@@ -1623,14 +1623,14 @@ async def test_light_rgbww_with_color_temp_conversion(
 
 
 async def test_light_rgbw_with_color_temp_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     hk_driver,
     events: list[Event],
 ) -> None:
     """Test lights with RGBW convert color temp as expected."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1642,21 +1642,21 @@ async def test_light_rgbw_with_color_temp_conversion(
             ATTR_COLOR_MODE: ColorMode.RGBW,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 23
     assert acc.char_saturation.value == 100
     assert acc.char_brightness.value == 100
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     char_hue_iid = acc.char_hue.to_HAP()[HAP_REPR_IID]
     char_saturation_iid = acc.char_saturation.to_HAP()[HAP_REPR_IID]
@@ -1683,7 +1683,7 @@ async def test_light_rgbw_with_color_temp_conversion(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_HS_COLOR] == (145, 75)
@@ -1703,7 +1703,7 @@ async def test_light_rgbw_with_color_temp_conversion(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on
     assert call_turn_on[-1].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[-1].data[ATTR_RGBW_COLOR] == (0, 0, 0, 255)
@@ -1713,12 +1713,12 @@ async def test_light_rgbw_with_color_temp_conversion(
 
 
 async def test_light_set_brightness_and_color(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test light with all chars in one go."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1726,8 +1726,8 @@ async def test_light_set_brightness_and_color(
             ATTR_BRIGHTNESS: 255,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     # Initial value can be anything but 0. If it is 0, it might cause HomeKit to set the
@@ -1739,28 +1739,28 @@ async def test_light_set_brightness_and_color(
     char_saturation_iid = acc.char_saturation.to_HAP()[HAP_REPR_IID]
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 100
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: [ColorMode.HS], ATTR_BRIGHTNESS: 102},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 40
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: [ColorMode.HS], ATTR_HS_COLOR: (4.5, 9.2)},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_hue.value == 4
     assert acc.char_saturation.value == 9
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     hk_driver.set_characteristics(
         {
@@ -1785,7 +1785,7 @@ async def test_light_set_brightness_and_color(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[0]
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_BRIGHTNESS_PCT] == 20
@@ -1798,11 +1798,11 @@ async def test_light_set_brightness_and_color(
     )
 
 
-async def test_light_min_max_mireds(hass: HomeAssistant, hk_driver) -> None:
+async def test_light_min_max_mireds(menuai: menuai, hk_driver) -> None:
     """Test mireds are forced to ints."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1812,19 +1812,19 @@ async def test_light_min_max_mireds(hass: HomeAssistant, hk_driver) -> None:
             ATTR_MAX_COLOR_TEMP_KELVIN: 6499,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     assert acc.char_color_temp.properties["maxValue"] == 500
     assert acc.char_color_temp.properties["minValue"] == 153
 
 
 async def test_light_set_brightness_and_color_temp(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test light with all chars in one go."""
     entity_id = "light.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1832,8 +1832,8 @@ async def test_light_set_brightness_and_color_temp(
             ATTR_BRIGHTNESS: 255,
         },
     )
-    await hass.async_block_till_done()
-    acc = Light(hass, hk_driver, "Light", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Light(menuai, hk_driver, "Light", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     # Initial value can be anything but 0. If it is 0, it might cause HomeKit to set the
@@ -1844,18 +1844,18 @@ async def test_light_set_brightness_and_color_temp(
     char_color_temp_iid = acc.char_color_temp.to_HAP()[HAP_REPR_IID]
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 100
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_COLOR_MODES: [ColorMode.COLOR_TEMP], ATTR_BRIGHTNESS: 102},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_brightness.value == 40
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -1863,11 +1863,11 @@ async def test_light_set_brightness_and_color_temp(
             ATTR_COLOR_TEMP_KELVIN: (4461),
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_color_temp.value == 224
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, LIGHT_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, LIGHT_DOMAIN, "turn_on")
 
     hk_driver.set_characteristics(
         {
@@ -1887,7 +1887,7 @@ async def test_light_set_brightness_and_color_temp(
         },
         "mock_addr",
     )
-    await _wait_for_light_coalesce(hass)
+    await _wait_for_light_coalesce(menuai)
     assert call_turn_on[0]
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_BRIGHTNESS_PCT] == 20

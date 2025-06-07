@@ -18,19 +18,19 @@ from freezegun import freeze_time
 import numpy as np
 import pytest
 
-from homeassistant.components.media_player import BrowseError
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError
+from menuai.components.media_source import (
     URI_SCHEME,
     Unresolvable,
     async_browse_media,
     async_resolve_media,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.template import DATE_STR_FORMAT
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.template import DATE_STR_FORMAT
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import (
     DEVICE_ID,
@@ -106,9 +106,9 @@ def platforms() -> list[str]:
 
 
 @pytest.fixture(autouse=True)
-async def setup_components(hass: HomeAssistant) -> None:
+async def setup_components(menuai: menuai) -> None:
     """Fixture to initialize the integration."""
-    await async_setup_component(hass, "media_source", {})
+    await async_setup_component(menuai, "media_source", {})
 
 
 @pytest.fixture
@@ -178,7 +178,7 @@ def cache_size() -> int:
 @pytest.fixture(autouse=True)
 def apply_cache_size(cache_size):
     """Fixture for patching the cache size."""
-    with patch("homeassistant.components.nest.EVENT_MEDIA_CACHE_SIZE", new=cache_size):
+    with patch("menuai.components.nest.EVENT_MEDIA_CACHE_SIZE", new=cache_size):
         yield
 
 
@@ -242,10 +242,10 @@ def create_battery_event_data(
         )
     ],
 )
-async def test_no_eligible_devices(hass: HomeAssistant, setup_platform) -> None:
+async def test_no_eligible_devices(menuai: menuai, setup_platform) -> None:
     """Test a media source with no eligible camera devices."""
     await setup_platform()
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert browse.domain == DOMAIN
     assert browse.identifier == ""
     assert browse.title == "Nest"
@@ -254,20 +254,20 @@ async def test_no_eligible_devices(hass: HomeAssistant, setup_platform) -> None:
 
 @pytest.mark.parametrize("device_traits", [CAMERA_TRAITS, BATTERY_CAMERA_TRAITS])
 async def test_supported_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, setup_platform
+    menuai: menuai, device_registry: dr.DeviceRegistry, setup_platform
 ) -> None:
     """Test a media source with a supported camera."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
     assert device
     assert device.name == DEVICE_NAME
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert browse.domain == DOMAIN
     assert browse.title == "Nest"
     assert browse.identifier == ""
@@ -277,7 +277,7 @@ async def test_supported_device(
     assert browse.children[0].identifier == device.id
     assert browse.children[0].title == "Front: Recent Events"
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -285,27 +285,27 @@ async def test_supported_device(
 
 
 async def test_integration_unloaded(
-    hass: HomeAssistant, auth: FakeAuth, setup_platform
+    menuai: menuai, auth: FakeAuth, setup_platform
 ) -> None:
     """Test the media player loads, but has no devices, when config unloaded."""
     await setup_platform()
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert browse.domain == DOMAIN
     assert browse.identifier == ""
     assert browse.title == "Nest"
     assert len(browse.children) == 1
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert await menuai.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
 
     # No devices returned
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert browse.domain == DOMAIN
     assert browse.identifier == ""
     assert browse.title == "Nest"
@@ -313,8 +313,8 @@ async def test_integration_unloaded(
 
 
 async def test_camera_event(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     subscriber,
     auth,
@@ -323,8 +323,8 @@ async def test_camera_event(
     """Test a media source and image created for an event."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -332,7 +332,7 @@ async def test_camera_event(
     assert device.name == DEVICE_NAME
 
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     # Set up fake media, and publish image events
     auth.responses = [
@@ -348,7 +348,7 @@ async def test_camera_event(
             timestamp=event_timestamp,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(received_events) == 1
     received_event = received_events[0]
@@ -357,7 +357,7 @@ async def test_camera_event(
     event_identifier = received_event.data["nest_event_id"]
 
     # Media root directory
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert browse.title == "Nest"
     assert browse.identifier == ""
     assert browse.can_expand
@@ -372,7 +372,7 @@ async def test_camera_event(
     assert len(browse.children[0].children) == 0
 
     # Browse to the device
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -388,7 +388,7 @@ async def test_camera_event(
 
     # Browse to the event
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}"
     )
     assert browse.domain == DOMAIN
     assert browse.identifier == f"{device.id}/{event_identifier}"
@@ -399,25 +399,25 @@ async def test_camera_event(
 
     # Resolving the event links to the media
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}", None
     )
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier}"
     assert media.mime_type == "image/jpeg"
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     contents = await response.read()
     assert contents == IMAGE_BYTES_FROM_EVENT
 
     # Resolving the device id points to the most recent event
-    media = await async_resolve_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}", None)
+    media = await async_resolve_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}", None)
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier}"
     assert media.mime_type == "image/jpeg"
 
 
 async def test_event_order(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
     subscriber,
@@ -442,7 +442,7 @@ async def test_event_order(
             timestamp=event_timestamp1,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     event_session_id2 = "GXXWRWVeHNUlUU3V3MGV3bUOYW..."
     event_timestamp2 = event_timestamp1 + datetime.timedelta(seconds=5)
@@ -454,17 +454,17 @@ async def test_event_order(
             timestamp=event_timestamp2,
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
     assert device
     assert device.name == DEVICE_NAME
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -487,10 +487,10 @@ async def test_event_order(
 
 
 async def test_multiple_image_events_in_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
 ) -> None:
@@ -501,8 +501,8 @@ async def test_multiple_image_events_in_session(
     event_timestamp1 = dt_util.now()
     event_timestamp2 = event_timestamp1 + datetime.timedelta(seconds=5)
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -510,7 +510,7 @@ async def test_multiple_image_events_in_session(
     assert device.name == DEVICE_NAME
 
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     auth.responses = [
         aiohttp.web.json_response(GENERATE_IMAGE_URL_RESPONSE),
@@ -527,7 +527,7 @@ async def test_multiple_image_events_in_session(
             timestamp=event_timestamp1,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     await subscriber.async_receive_event(
         create_event(
             event_session_id,
@@ -536,7 +536,7 @@ async def test_multiple_image_events_in_session(
             timestamp=event_timestamp2,
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(received_events) == 2
     received_event = received_events[0]
@@ -548,7 +548,7 @@ async def test_multiple_image_events_in_session(
     assert received_event.data["type"] == "camera_person"
     event_identifier2 = received_event.data["nest_event_id"]
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -575,12 +575,12 @@ async def test_multiple_image_events_in_session(
 
     # Resolve the most recent event
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier2}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier2}", None
     )
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier2}"
     assert media.mime_type == "image/jpeg"
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     contents = await response.read()
@@ -588,12 +588,12 @@ async def test_multiple_image_events_in_session(
 
     # Resolving the event links to the media
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier1}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier1}", None
     )
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier1}"
     assert media.mime_type == "image/jpeg"
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     contents = await response.read()
@@ -602,10 +602,10 @@ async def test_multiple_image_events_in_session(
 
 @pytest.mark.parametrize("device_traits", [BATTERY_CAMERA_TRAITS])
 async def test_multiple_clip_preview_events_in_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
 ) -> None:
@@ -615,8 +615,8 @@ async def test_multiple_clip_preview_events_in_session(
     event_timestamp1 = dt_util.now()
     event_timestamp2 = event_timestamp1 + datetime.timedelta(seconds=5)
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -624,7 +624,7 @@ async def test_multiple_clip_preview_events_in_session(
     assert device.name == DEVICE_NAME
 
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     # Publish two events: First motion, then a person is recognized. Both
     # events share a single clip.
@@ -637,14 +637,14 @@ async def test_multiple_clip_preview_events_in_session(
             timestamp=event_timestamp1,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     await subscriber.async_receive_event(
         create_event_message(
             create_battery_event_data(PERSON_EVENT),
             timestamp=event_timestamp2,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(received_events) == 2
     received_event = received_events[0]
@@ -656,7 +656,7 @@ async def test_multiple_clip_preview_events_in_session(
     assert received_event.data["type"] == "camera_person"
     event_identifier2 = received_event.data["nest_event_id"]
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -676,12 +676,12 @@ async def test_multiple_clip_preview_events_in_session(
     # to the same clip preview media clip object.
     # Resolve media for the first event
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier1}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier1}", None
     )
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier1}"
     assert media.mime_type == "video/mp4"
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     contents = await response.read()
@@ -689,7 +689,7 @@ async def test_multiple_clip_preview_events_in_session(
 
     # Resolve media for the second event
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier1}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier1}", None
     )
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier1}"
     assert media.mime_type == "video/mp4"
@@ -701,7 +701,7 @@ async def test_multiple_clip_preview_events_in_session(
 
 
 async def test_browse_invalid_device_id(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, auth, setup_platform
+    menuai: menuai, device_registry: dr.DeviceRegistry, auth, setup_platform
 ) -> None:
     """Test a media source request for an invalid device id."""
     await setup_platform()
@@ -711,17 +711,17 @@ async def test_browse_invalid_device_id(
     assert device.name == DEVICE_NAME
 
     with pytest.raises(BrowseError):
-        await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/invalid-device-id")
+        await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/invalid-device-id")
 
     with pytest.raises(BrowseError):
         await async_browse_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/invalid-device-id/invalid-event-id",
         )
 
 
 async def test_browse_invalid_event_id(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, auth, setup_platform
+    menuai: menuai, device_registry: dr.DeviceRegistry, auth, setup_platform
 ) -> None:
     """Test a media source browsing for an invalid event id."""
     await setup_platform()
@@ -730,20 +730,20 @@ async def test_browse_invalid_event_id(
     assert device
     assert device.name == DEVICE_NAME
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
 
     with pytest.raises(BrowseError):
         await async_browse_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/{device.id}/GXXWRWVeHNUlUU3V3MGV3bUOYW...",
         )
 
 
 async def test_resolve_missing_event_id(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, auth, setup_platform
+    menuai: menuai, device_registry: dr.DeviceRegistry, auth, setup_platform
 ) -> None:
     """Test a media source request missing an event id."""
     await setup_platform()
@@ -754,27 +754,27 @@ async def test_resolve_missing_event_id(
 
     with pytest.raises(Unresolvable):
         await async_resolve_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/{device.id}",
             None,
         )
 
 
 async def test_resolve_invalid_device_id(
-    hass: HomeAssistant, auth, setup_platform
+    menuai: menuai, auth, setup_platform
 ) -> None:
     """Test resolving media for an invalid event id."""
     await setup_platform()
     with pytest.raises(Unresolvable):
         await async_resolve_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/invalid-device-id/GXXWRWVeHNUlUU3V3MGV3bUOYW...",
             None,
         )
 
 
 async def test_resolve_invalid_event_id(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, auth, setup_platform
+    menuai: menuai, device_registry: dr.DeviceRegistry, auth, setup_platform
 ) -> None:
     """Test resolving media for an invalid event id."""
     await setup_platform()
@@ -786,7 +786,7 @@ async def test_resolve_invalid_event_id(
     # Assume any event ID can be resolved to a media url. Fetching the actual media may fail
     # if the ID is not valid. Content type is inferred based on the capabilities of the device.
     media = await async_resolve_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{device.id}/GXXWRWVeHNUlUU3V3MGV3bUOYW...",
         None,
     )
@@ -798,17 +798,17 @@ async def test_resolve_invalid_event_id(
 
 @pytest.mark.parametrize("device_traits", [BATTERY_CAMERA_TRAITS])
 async def test_camera_event_clip_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mp4,
     subscriber,
     setup_platform,
 ) -> None:
     """Test an event for a battery camera video clip."""
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
     await setup_platform()
 
     auth.responses = [
@@ -821,10 +821,10 @@ async def test_camera_event_clip_preview(
             timestamp=event_timestamp,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -839,7 +839,7 @@ async def test_camera_event_clip_preview(
     event_identifier = received_event.data["nest_event_id"]
 
     # List devices
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert browse.domain == DOMAIN
     assert len(browse.children) == 1
     assert browse.children[0].domain == DOMAIN
@@ -851,7 +851,7 @@ async def test_camera_event_clip_preview(
     )
     assert browse.children[0].can_play
     # Browse to the device
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -876,7 +876,7 @@ async def test_camera_event_clip_preview(
 
     # Browse to the event
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}"
     )
     assert browse.domain == DOMAIN
     event_timestamp_string = event_timestamp.strftime(DATE_STR_FORMAT)
@@ -887,12 +887,12 @@ async def test_camera_event_clip_preview(
 
     # Resolving the event links to the media
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}", None
     )
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier}"
     assert media.mime_type == "video/mp4"
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     contents = await response.read()
@@ -907,20 +907,20 @@ async def test_camera_event_clip_preview(
 
 
 async def test_event_media_render_invalid_device_id(
-    hass: HomeAssistant, auth, hass_client: ClientSessionGenerator, setup_platform
+    menuai: menuai, auth, menuai_client: ClientSessionGenerator, setup_platform
 ) -> None:
     """Test event media API called with an invalid device id."""
     await setup_platform()
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get("/api/nest/event_media/invalid-device-id")
     assert response.status == HTTPStatus.NOT_FOUND, f"Response not matched: {response}"
 
 
 async def test_event_media_render_invalid_event_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     setup_platform,
 ) -> None:
     """Test event media API called with an invalid device id."""
@@ -929,21 +929,21 @@ async def test_event_media_render_invalid_event_id(
     assert device
     assert device.name == DEVICE_NAME
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(f"/api/nest/event_media/{device.id}/invalid-event-id")
     assert response.status == HTTPStatus.NOT_FOUND, f"Response not matched: {response}"
 
 
 async def test_event_media_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
 ) -> None:
     """Test event media fetch sees a failure from the server."""
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     await setup_platform()
     # Failure from server when fetching media
@@ -959,10 +959,10 @@ async def test_event_media_failure(
             timestamp=event_timestamp,
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -978,29 +978,29 @@ async def test_event_media_failure(
 
     # Resolving the event links to the media
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}", None
     )
     assert media.url == f"/api/nest/event_media/{device.id}/{event_identifier}"
     assert media.mime_type == "image/jpeg"
 
     # Media is not available to be fetched
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.NOT_FOUND, f"Response not matched: {response}"
 
 
 async def test_media_permission_unauthorized(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
-    hass_admin_user: MockUser,
+    menuai_client: ClientSessionGenerator,
+    menuai_admin_user: MockUser,
     setup_platform,
 ) -> None:
     """Test case where user does not have permissions to view media."""
     await setup_platform()
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -1010,9 +1010,9 @@ async def test_media_permission_unauthorized(
     media_url = f"/api/nest/event_media/{device.id}/some-event-id"
 
     # Empty policy with no access to the entity
-    hass_admin_user.mock_policy({})
+    menuai_admin_user.mock_policy({})
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media_url)
     assert response.status == HTTPStatus.UNAUTHORIZED, (
         f"Response not matched: {response}"
@@ -1020,10 +1020,10 @@ async def test_media_permission_unauthorized(
 
 
 async def test_multiple_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     create_device,
     subscriber,
     setup_platform,
@@ -1045,13 +1045,13 @@ async def test_multiple_devices(
     assert device2
 
     # Very no events have been received yet
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert len(browse.children) == 2
     assert not browse.children[0].can_play
     assert not browse.children[1].can_play
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device1.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device1.id}")
     assert len(browse.children) == 0
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device2.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device2.id}")
     assert len(browse.children) == 0
 
     # Send events for device #1
@@ -1068,15 +1068,15 @@ async def test_multiple_devices(
                 device_id=DEVICE_ID,
             )
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert len(browse.children) == 2
     assert browse.children[0].can_play
     assert not browse.children[1].can_play
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device1.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device1.id}")
     assert len(browse.children) == 5
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device2.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device2.id}")
     assert len(browse.children) == 0
 
     # Send events for device #2
@@ -1090,15 +1090,15 @@ async def test_multiple_devices(
                 f"other-id-{i}", f"event-id{i}", PERSON_EVENT, device_id=device_id2
             )
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert len(browse.children) == 2
     assert browse.children[0].can_play
     assert browse.children[1].can_play
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device1.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device1.id}")
     assert len(browse.children) == 5
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device2.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device2.id}")
     assert len(browse.children) == 3
 
 
@@ -1106,7 +1106,7 @@ async def test_multiple_devices(
 def event_store() -> Generator[None]:
     """Persist changes to event store immediately."""
     with patch(
-        "homeassistant.components.nest.media_source.STORAGE_SAVE_DELAY_SECONDS",
+        "menuai.components.nest.media_source.STORAGE_SAVE_DELAY_SECONDS",
         new=0,
     ):
         yield
@@ -1114,10 +1114,10 @@ def event_store() -> Generator[None]:
 
 @pytest.mark.parametrize("device_traits", [BATTERY_CAMERA_TRAITS])
 async def test_media_store_persistence(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     event_store,
     subscriber,
     setup_platform,
@@ -1139,10 +1139,10 @@ async def test_media_store_persistence(
             create_battery_event_data(MOTION_EVENT), timestamp=event_timestamp
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Browse to event
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert len(browse.children) == 1
     assert browse.children[0].domain == DOMAIN
     event_timestamp_string = event_timestamp.strftime(DATE_STR_FORMAT)
@@ -1152,38 +1152,38 @@ async def test_media_store_persistence(
     event_identifier = browse.children[0].identifier
 
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{event_identifier}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{event_identifier}", None
     )
     assert media.url == f"/api/nest/event_media/{event_identifier}"
     assert media.mime_type == "video/mp4"
 
     # Fetch event media
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     contents = await response.read()
     assert contents == IMAGE_BYTES_FROM_EVENT
 
     # Ensure event media store persists to disk
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Unload the integration.
     assert config_entry.state is ConfigEntryState.LOADED
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
     # Now rebuild the entire integration and verify that all persisted storage
     # can be re-loaded from disk.
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
     assert device
     assert device.name == DEVICE_NAME
 
     # Verify event metadata exists
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert len(browse.children) == 1
     assert browse.children[0].domain == DOMAIN
     event_timestamp_string = event_timestamp.strftime(DATE_STR_FORMAT)
@@ -1193,7 +1193,7 @@ async def test_media_store_persistence(
     event_identifier = browse.children[0].identifier
 
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{event_identifier}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{event_identifier}", None
     )
     assert media.url == f"/api/nest/event_media/{event_identifier}"
     assert media.mime_type == "video/mp4"
@@ -1207,10 +1207,10 @@ async def test_media_store_persistence(
 
 @pytest.mark.parametrize("device_traits", [BATTERY_CAMERA_TRAITS])
 async def test_media_store_save_filesystem_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
 ) -> None:
@@ -1223,56 +1223,56 @@ async def test_media_store_save_filesystem_error(
     event_timestamp = dt_util.now()
     # The client fetches the media from the server, but has a failure when
     # persisting the media to disk.
-    client = await hass_client()
-    with patch("homeassistant.components.nest.media_source.open", side_effect=OSError):
+    client = await menuai_client()
+    with patch("menuai.components.nest.media_source.open", side_effect=OSError):
         await subscriber.async_receive_event(
             create_event_message(
                 create_battery_event_data(MOTION_EVENT),
                 timestamp=event_timestamp,
             )
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
     assert device
     assert device.name == DEVICE_NAME
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert len(browse.children) == 1
     event = browse.children[0]
 
     media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{event.identifier}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{event.identifier}", None
     )
     assert media.url == f"/api/nest/event_media/{event.identifier}"
     assert media.mime_type == "video/mp4"
 
     # We fail to retrieve the media from the server since the origin filesystem op failed
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(media.url)
     assert response.status == HTTPStatus.NOT_FOUND, f"Response not matched: {response}"
 
 
 @pytest.mark.parametrize("device_traits", [BATTERY_CAMERA_TRAITS])
 async def test_media_store_load_filesystem_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
 ) -> None:
     """Test a filesystem error reading event media."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -1280,7 +1280,7 @@ async def test_media_store_load_filesystem_error(
     assert device.name == DEVICE_NAME
 
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     auth.responses = [
         aiohttp.web.Response(body=IMAGE_BYTES_FROM_EVENT),
@@ -1292,7 +1292,7 @@ async def test_media_store_load_filesystem_error(
             timestamp=event_timestamp,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(received_events) == 1
     received_event = received_events[0]
@@ -1300,11 +1300,11 @@ async def test_media_store_load_filesystem_error(
     assert received_event.data["type"] == "camera_motion"
     event_identifier = received_event.data["nest_event_id"]
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Fetch the media from the server, and simluate a failure reading from disk
-    client = await hass_client()
-    with patch("homeassistant.components.nest.media_source.open", side_effect=OSError):
+    client = await menuai_client()
+    with patch("menuai.components.nest.media_source.open", side_effect=OSError):
         response = await client.get(
             f"/api/nest/event_media/{device.id}/{event_identifier}"
         )
@@ -1315,10 +1315,10 @@ async def test_media_store_load_filesystem_error(
 
 @pytest.mark.parametrize(("device_traits", "cache_size"), [(BATTERY_CAMERA_TRAITS, 5)])
 async def test_camera_event_media_eviction(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
 ) -> None:
@@ -1330,7 +1330,7 @@ async def test_camera_event_media_eviction(
     assert device.name == DEVICE_NAME
 
     # Browse to the device
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -1351,10 +1351,10 @@ async def test_camera_event_media_eviction(
                 timestamp=ts,
             )
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Cache is limited to 5 events removing media as the cache is filled
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert len(browse.children) == 5
 
     auth.responses = [
@@ -1363,7 +1363,7 @@ async def test_camera_event_media_eviction(
     ts = event_timestamp + datetime.timedelta(seconds=8)
     # Simulate a failure case removing the media on cache eviction
     with patch(
-        "homeassistant.components.nest.media_source.os.remove", side_effect=OSError
+        "menuai.components.nest.media_source.os.remove", side_effect=OSError
     ) as mock_remove:
         await subscriber.async_receive_event(
             create_event_message(
@@ -1373,29 +1373,29 @@ async def test_camera_event_media_eviction(
                 timestamp=ts,
             )
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert mock_remove.called
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert len(browse.children) == 5
     child_events = iter(browse.children)
 
     # Verify all other content is still persisted correctly
-    client = await hass_client()
+    client = await menuai_client()
     for i in reversed(range(3, 8)):
         child_event = next(child_events)
         response = await client.get(f"/api/nest/event_media/{child_event.identifier}")
         assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
         contents = await response.read()
         assert contents == f"image-bytes-{i}".encode()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 async def test_camera_image_resize(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
 ) -> None:
@@ -1407,7 +1407,7 @@ async def test_camera_image_resize(
     assert device.name == DEVICE_NAME
 
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     auth.responses = [
         aiohttp.web.json_response(GENERATE_IMAGE_URL_RESPONSE),
@@ -1422,7 +1422,7 @@ async def test_camera_image_resize(
             timestamp=event_timestamp,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(received_events) == 1
     received_event = received_events[0]
@@ -1431,7 +1431,7 @@ async def test_camera_image_resize(
     event_identifier = received_event.data["nest_event_id"]
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}/{event_identifier}"
     )
     assert browse.domain == DOMAIN
     assert browse.identifier == f"{device.id}/{event_identifier}"
@@ -1443,14 +1443,14 @@ async def test_camera_image_resize(
         == f"/api/nest/event_media/{device.id}/{event_identifier}/thumbnail"
     )
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(browse.thumbnail)
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     contents = await response.read()
     assert contents == IMAGE_BYTES_FROM_EVENT
 
     # The event thumbnail is used for the device thumbnail
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
     assert browse.domain == DOMAIN
     assert len(browse.children) == 1
     assert browse.children[0].identifier == device.id
@@ -1462,7 +1462,7 @@ async def test_camera_image_resize(
     assert browse.children[0].can_play
 
     # Browse to device. No thumbnail is needed for the device on the device page
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{device.id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{device.id}")
     assert browse.domain == DOMAIN
     assert browse.identifier == device.id
     assert browse.title == "Front: Recent Events"
@@ -1471,8 +1471,8 @@ async def test_camera_image_resize(
 
 
 async def test_event_media_attachment(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     subscriber,
     auth,
@@ -1481,8 +1481,8 @@ async def test_event_media_attachment(
     """Verify that an event media attachment is successfully resolved."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -1490,7 +1490,7 @@ async def test_event_media_attachment(
     assert device.name == DEVICE_NAME
 
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     # Set up fake media, and publish image events
     auth.responses = [
@@ -1506,7 +1506,7 @@ async def test_event_media_attachment(
             timestamp=event_timestamp,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(received_events) == 1
     received_event = received_events[0]
@@ -1517,7 +1517,7 @@ async def test_event_media_attachment(
     assert attachment["image"].endswith("/thumbnail")
 
     # Download the attachment content and verify it works
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(attachment["image"])
     assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
     await response.read()
@@ -1525,8 +1525,8 @@ async def test_event_media_attachment(
 
 @pytest.mark.parametrize("device_traits", [BATTERY_CAMERA_TRAITS])
 async def test_event_clip_media_attachment(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     subscriber,
     auth,
@@ -1536,8 +1536,8 @@ async def test_event_clip_media_attachment(
     """Verify that an event media attachment is successfully resolved."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.front")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.front")
     assert camera is not None
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
@@ -1545,7 +1545,7 @@ async def test_event_clip_media_attachment(
     assert device.name == DEVICE_NAME
 
     # Capture any events published
-    received_events = async_capture_events(hass, NEST_EVENT)
+    received_events = async_capture_events(menuai, NEST_EVENT)
 
     # Set up fake media, and publish clip events
     auth.responses = [
@@ -1558,7 +1558,7 @@ async def test_event_clip_media_attachment(
             timestamp=event_timestamp,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(received_events) == 1
     received_event = received_events[0]
@@ -1572,7 +1572,7 @@ async def test_event_clip_media_attachment(
 
     # Download the attachment content and verify it works
     for content_path in attachment.values():
-        client = await hass_client()
+        client = await menuai_client()
         response = await client.get(content_path)
         assert response.status == HTTPStatus.OK, f"Response not matched: {response}"
         await response.read()
@@ -1580,11 +1580,11 @@ async def test_event_clip_media_attachment(
 
 @pytest.mark.parametrize(("device_traits", "cache_size"), [(BATTERY_CAMERA_TRAITS, 5)])
 async def test_remove_stale_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     auth,
     mp4,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     subscriber,
     setup_platform,
     media_path: str,
@@ -1607,7 +1607,7 @@ async def test_remove_stale_media(
             timestamp=event_timestamp,
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # The first subdirectory is the device id. Media for events are stored in the
     # device subdirectory. First verify that the media was persisted. We will
@@ -1643,9 +1643,9 @@ async def test_remove_stale_media(
     # files that are not valid events that are old enough.
     point_in_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
     with freeze_time(point_in_time):
-        async_fire_time_changed(hass, point_in_time)
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, point_in_time)
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Verify that the event media is still present and that the extra files
     # are removed. Newer media is not removed.

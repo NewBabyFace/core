@@ -6,10 +6,10 @@ from google_nest_sdm.exceptions import SubscriberException
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.nest.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.nest.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .conftest import CreateDevice, PlatformSetup
 
@@ -64,8 +64,8 @@ def platforms() -> list[str]:
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
     config_entry: MockConfigEntry,
@@ -78,14 +78,14 @@ async def test_entry_diagnostics(
 
     # Test that only non identifiable device information is returned
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         == snapshot
     )
 
 
 async def test_device_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -101,32 +101,32 @@ async def test_device_diagnostics(
     assert device is not None
 
     assert (
-        await get_diagnostics_for_device(hass, hass_client, config_entry, device)
+        await get_diagnostics_for_device(menuai, menuai_client, config_entry, device)
         == snapshot
     )
 
 
 async def test_setup_susbcriber_failure(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     setup_base_platform: PlatformSetup,
 ) -> None:
     """Test configuration error."""
     with patch(
-        "homeassistant.components.nest.api.GoogleNestSubscriber.start_async",
+        "menuai.components.nest.api.GoogleNestSubscriber.start_async",
         side_effect=SubscriberException(),
     ):
         await setup_base_platform()
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, config_entry) == {}
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry) == {}
 
 
 async def test_camera_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
     config_entry: MockConfigEntry,
@@ -139,6 +139,6 @@ async def test_camera_diagnostics(
 
     # Test that only non identifiable device information is returned
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         == snapshot
     )

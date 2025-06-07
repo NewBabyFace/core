@@ -8,12 +8,12 @@ import tempfile
 
 from atomicwrites import AtomicWriter
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class WriteError(HomeAssistantError):
+class WriteError(menuaiError):
     """Error writing the data."""
 
 

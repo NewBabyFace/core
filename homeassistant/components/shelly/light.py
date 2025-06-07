@@ -7,7 +7,7 @@ from typing import Any, cast
 from aioshelly.block_device import Block
 from aioshelly.const import MODEL_BULB, RPC_GENERATIONS
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -20,8 +20,8 @@ from homeassistant.components.light import (
     LightEntityFeature,
     brightness_supported,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     BLOCK_MAX_TRANSITION_TIME_MS,
@@ -53,20 +53,20 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up lights for device."""
     if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
-        return async_setup_rpc_entry(hass, config_entry, async_add_entities)
+        return async_setup_rpc_entry(menuai, config_entry, async_add_entities)
 
-    return async_setup_block_entry(hass, config_entry, async_add_entities)
+    return async_setup_block_entry(menuai, config_entry, async_add_entities)
 
 
 @callback
 def async_setup_block_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ def async_setup_block_entry(
 
             blocks.append(block)
             unique_id = f"{coordinator.mac}-{block.type}_{block.channel}"
-            async_remove_shelly_entity(hass, "switch", unique_id)
+            async_remove_shelly_entity(menuai, "switch", unique_id)
 
     if not blocks:
         return
@@ -96,7 +96,7 @@ def async_setup_block_entry(
 
 @callback
 def async_setup_rpc_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -112,7 +112,7 @@ def async_setup_rpc_entry(
 
         switch_ids.append(id_)
         unique_id = f"{coordinator.mac}-switch:{id_}"
-        async_remove_shelly_entity(hass, "switch", unique_id)
+        async_remove_shelly_entity(menuai, "switch", unique_id)
 
     if switch_ids:
         async_add_entities(
@@ -133,7 +133,7 @@ def async_setup_rpc_entry(
     async_add_entities(entities)
 
     async_remove_orphaned_entities(
-        hass,
+        menuai,
         config_entry.entry_id,
         coordinator.mac,
         LIGHT_DOMAIN,

@@ -5,16 +5,16 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_LIGHTS, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_LIGHTS, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import get_hub
 from .const import (
@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -47,18 +47,18 @@ async def async_setup_platform(
     """Read configuration and create Modbus lights."""
     if discovery_info is None or not (lights := discovery_info[CONF_LIGHTS]):
         return
-    hub = get_hub(hass, discovery_info[CONF_NAME])
-    async_add_entities(ModbusLight(hass, hub, config) for config in lights)
+    hub = get_hub(menuai, discovery_info[CONF_NAME])
+    async_add_entities(ModbusLight(menuai, hub, config) for config in lights)
 
 
 class ModbusLight(BaseSwitch, LightEntity):
     """Class representing a Modbus light."""
 
     def __init__(
-        self, hass: HomeAssistant, hub: ModbusHub, config: dict[str, Any]
+        self, menuai: menuai, hub: ModbusHub, config: dict[str, Any]
     ) -> None:
         """Initialize the Modbus light entity."""
-        super().__init__(hass, hub, config)
+        super().__init__(menuai, hub, config)
         self._brightness_address: int | None = config.get(CONF_BRIGHTNESS_REGISTER)
         self._color_temp_address: int | None = config.get(CONF_COLOR_TEMP_REGISTER)
 
@@ -75,9 +75,9 @@ class ModbusLight(BaseSwitch, LightEntity):
                 CONF_MAX_TEMP, LIGHT_DEFAULT_MAX_KELVIN
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (state := await self.async_get_last_state()) is None:
             return
 

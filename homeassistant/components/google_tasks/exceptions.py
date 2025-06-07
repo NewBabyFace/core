@@ -1,7 +1,7 @@
 """Exceptions for Google Tasks api calls."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class GoogleTasksApiError(HomeAssistantError):
+class GoogleTasksApiError(menuaiError):
     """Error talking to the Google Tasks API."""

@@ -1,4 +1,4 @@
-"""Home Assistant component for accessing the Wallbox Portal API.
+"""MenuAI component for accessing the Wallbox Portal API.
 
 The number component allows control of charging current.
 """
@@ -9,11 +9,11 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import cast
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberEntity, NumberEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     BIDIRECTIONAL_MODEL_PREFIXES,
@@ -80,12 +80,12 @@ NUMBER_TYPES: dict[str, WallboxNumberEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create wallbox number entities in HASS."""
-    coordinator: WallboxCoordinator = hass.data[DOMAIN][entry.entry_id]
+    """Create wallbox number entities in menuai."""
+    coordinator: WallboxCoordinator = menuai.data[DOMAIN][entry.entry_id]
     # Check if the user has sufficient rights to change values, if so, add number component:
     try:
         await coordinator.async_set_charging_current(

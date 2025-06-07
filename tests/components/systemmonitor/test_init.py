@@ -7,47 +7,47 @@ from unittest.mock import Mock
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.systemmonitor.const import CONF_PROCESS, DOMAIN
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.systemmonitor.const import CONF_PROCESS, DOMAIN
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant, mock_added_config_entry: ConfigEntry
+    menuai: menuai, mock_added_config_entry: ConfigEntry
 ) -> None:
     """Test load and unload an entry."""
 
     assert mock_added_config_entry.state is ConfigEntryState.LOADED
-    assert await hass.config_entries.async_unload(mock_added_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(mock_added_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_added_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_adding_processor_to_options(
-    hass: HomeAssistant, mock_added_config_entry: ConfigEntry
+    menuai: menuai, mock_added_config_entry: ConfigEntry
 ) -> None:
     """Test options listener."""
-    process_sensor = hass.states.get("binary_sensor.system_monitor_process_systemd")
+    process_sensor = menuai.states.get("binary_sensor.system_monitor_process_systemd")
     assert process_sensor is None
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         mock_added_config_entry.entry_id
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROCESS: ["python3", "pip", "systemd"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -63,13 +63,13 @@ async def test_adding_processor_to_options(
         ],
     }
 
-    process_sensor = hass.states.get("binary_sensor.system_monitor_process_systemd")
+    process_sensor = menuai.states.get("binary_sensor.system_monitor_process_systemd")
     assert process_sensor is not None
     assert process_sensor.state == STATE_OFF
 
 
 async def test_migrate_process_sensor_to_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     freezer: FrozenDateTimeFactory,
@@ -91,11 +91,11 @@ async def test_migrate_process_sensor_to_binary_sensors(
             ],
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    process_sensor = hass.states.get("binary_sensor.system_monitor_process_python3")
+    process_sensor = menuai.states.get("binary_sensor.system_monitor_process_python3")
     assert process_sensor is not None
     assert process_sensor.state == STATE_ON
 
@@ -113,7 +113,7 @@ async def test_migrate_process_sensor_to_binary_sensors(
 
 
 async def test_migration_from_future_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     freezer: FrozenDateTimeFactory,
@@ -136,8 +136,8 @@ async def test_migration_from_future_version(
             ],
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.MIGRATION_ERROR

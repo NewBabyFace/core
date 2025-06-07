@@ -8,15 +8,15 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.engine.row import Row
 
-from homeassistant.components.recorder import Recorder, get_instance
-from homeassistant.components.recorder.db_schema import EventData, Events, States
-from homeassistant.components.recorder.filters import (
+from menuai.components.recorder import Recorder, get_instance
+from menuai.components.recorder.db_schema import EventData, Events, States
+from menuai.components.recorder.filters import (
     Filters,
     extract_include_exclude_filter_conf,
     sqlalchemy_filter_from_include_exclude_conf,
 )
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.const import (
+from menuai.components.recorder.util import session_scope
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DOMAINS,
     CONF_ENTITIES,
@@ -24,8 +24,8 @@ from homeassistant.const import (
     CONF_INCLUDE,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entityfilter import (
+from menuai.core import menuai
+from menuai.helpers.entityfilter import (
     CONF_ENTITY_GLOBS,
     convert_include_exclude_filter,
 )
@@ -36,7 +36,7 @@ from tests.typing import RecorderInstanceContextManager
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
@@ -44,9 +44,9 @@ async def mock_recorder_before_hass(
 
 # This test is for schema 37 and below (32 is new enough to test)
 @pytest.fixture(autouse=True)
-def db_schema_32(hass: HomeAssistant) -> Generator[None]:
+def db_schema_32(menuai: menuai) -> Generator[None]:
     """Fixture to initialize the db with the old schema 32."""
-    with old_db_schema(hass, "32"):
+    with old_db_schema(menuai, "32"):
         yield
 
 
@@ -60,17 +60,17 @@ async def legacy_recorder_mock_fixture(
 
 
 async def _async_get_states_and_events_with_filter(
-    hass: HomeAssistant, sqlalchemy_filter: Filters, entity_ids: set[str]
+    menuai: menuai, sqlalchemy_filter: Filters, entity_ids: set[str]
 ) -> tuple[list[Row], list[Row]]:
     """Get states from the database based on a filter."""
     for entity_id in entity_ids:
-        hass.states.async_set(entity_id, STATE_ON)
-        hass.bus.async_fire("any", {ATTR_ENTITY_ID: entity_id})
+        menuai.states.async_set(entity_id, STATE_ON)
+        menuai.bus.async_fire("any", {ATTR_ENTITY_ID: entity_id})
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     def _get_states_with_session():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return session.execute(
                 select(States.entity_id).filter(
                     sqlalchemy_filter.states_entity_filter()
@@ -79,13 +79,13 @@ async def _async_get_states_and_events_with_filter(
 
     filtered_states_entity_ids = {
         row[0]
-        for row in await get_instance(hass).async_add_executor_job(
+        for row in await get_instance(menuai).async_add_executor_job(
             _get_states_with_session
         )
     }
 
     def _get_events_with_session():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return session.execute(
                 select(EventData.shared_data)
                 .outerjoin(Events, EventData.data_id == Events.data_id)
@@ -93,7 +93,7 @@ async def _async_get_states_and_events_with_filter(
             ).all()
 
     filtered_events_entity_ids = set()
-    for row in await get_instance(hass).async_add_executor_job(
+    for row in await get_instance(menuai).async_add_executor_job(
         _get_events_with_session
     ):
         event_data = json.loads(row[0])
@@ -105,7 +105,7 @@ async def _async_get_states_and_events_with_filter(
 
 
 async def test_included_and_excluded_simple_case_no_domains(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with included and excluded without domains."""
     filter_accept = {"sensor.kitchen4", "switch.kitchen"}
@@ -152,7 +152,7 @@ async def test_included_and_excluded_simple_case_no_domains(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -163,14 +163,14 @@ async def test_included_and_excluded_simple_case_no_domains(
 
 
 async def test_included_and_excluded_simple_case_no_globs(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with included and excluded without globs."""
     filter_accept = {"switch.bla", "sensor.blu", "sensor.keep"}
     filter_reject = {"sensor.bli"}
     conf = {
         CONF_INCLUDE: {
-            CONF_DOMAINS: ["sensor", "homeassistant"],
+            CONF_DOMAINS: ["sensor", "menuai"],
             CONF_ENTITIES: ["switch.bla"],
         },
         CONF_EXCLUDE: {
@@ -194,7 +194,7 @@ async def test_included_and_excluded_simple_case_no_globs(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -205,7 +205,7 @@ async def test_included_and_excluded_simple_case_no_globs(
 
 
 async def test_included_and_excluded_simple_case_without_underscores(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with included and excluded without underscores."""
     filter_accept = {"light.any", "sensor.kitchen4", "switch.kitchen"}
@@ -248,7 +248,7 @@ async def test_included_and_excluded_simple_case_without_underscores(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -259,7 +259,7 @@ async def test_included_and_excluded_simple_case_without_underscores(
 
 
 async def test_included_and_excluded_simple_case_with_underscores(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with included and excluded with underscores."""
     filter_accept = {"light.any", "sensor.kitchen_4", "switch.kitchen"}
@@ -302,7 +302,7 @@ async def test_included_and_excluded_simple_case_with_underscores(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -313,7 +313,7 @@ async def test_included_and_excluded_simple_case_with_underscores(
 
 
 async def test_included_and_excluded_complex_case(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with included and excluded with a complex filter."""
     filter_accept = {"light.any", "sensor.kitchen_4", "switch.kitchen"}
@@ -361,7 +361,7 @@ async def test_included_and_excluded_complex_case(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -372,7 +372,7 @@ async def test_included_and_excluded_complex_case(
 
 
 async def test_included_entities_and_excluded_domain(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with included entities and excluded domain."""
     filter_accept = {
@@ -409,7 +409,7 @@ async def test_included_entities_and_excluded_domain(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -420,7 +420,7 @@ async def test_included_entities_and_excluded_domain(
 
 
 async def test_same_domain_included_excluded(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with the same domain included and excluded."""
     filter_accept = {
@@ -457,7 +457,7 @@ async def test_same_domain_included_excluded(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -468,7 +468,7 @@ async def test_same_domain_included_excluded(
 
 
 async def test_same_entity_included_excluded(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with the same entity included and excluded."""
     filter_accept = {
@@ -505,7 +505,7 @@ async def test_same_entity_included_excluded(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -516,7 +516,7 @@ async def test_same_entity_included_excluded(
 
 
 async def test_same_entity_included_excluded_include_domain_wins(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test filters with domain and entities and the include domain wins."""
     filter_accept = {
@@ -555,7 +555,7 @@ async def test_same_entity_included_excluded_include_domain_wins(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -566,7 +566,7 @@ async def test_same_entity_included_excluded_include_domain_wins(
 
 
 async def test_specificly_included_entity_always_wins(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test specifically included entity always wins."""
     filter_accept = {
@@ -605,7 +605,7 @@ async def test_specificly_included_entity_always_wins(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept
@@ -616,7 +616,7 @@ async def test_specificly_included_entity_always_wins(
 
 
 async def test_specificly_included_entity_always_wins_over_glob(
-    legacy_recorder_mock: Recorder, hass: HomeAssistant
+    legacy_recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test specifically included entity always wins over a glob."""
     filter_accept = {
@@ -684,7 +684,7 @@ async def test_specificly_included_entity_always_wins_over_glob(
         filtered_states_entity_ids,
         filtered_events_entity_ids,
     ) = await _async_get_states_and_events_with_filter(
-        hass, sqlalchemy_filter, filter_accept | filter_reject
+        menuai, sqlalchemy_filter, filter_accept | filter_reject
     )
 
     assert filtered_states_entity_ids == filter_accept

@@ -12,17 +12,17 @@ import pygtfs
 from sqlalchemy.sql import text
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import CONF_NAME, CONF_OFFSET, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, slugify
+from menuai.const import CONF_NAME, CONF_OFFSET, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, slugify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -479,13 +479,13 @@ def get_next_departure(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the GTFS sensor."""
-    gtfs_dir = hass.config.path(DEFAULT_PATH)
+    gtfs_dir = menuai.config.path(DEFAULT_PATH)
     data = config[CONF_DATA]
     origin = config.get(CONF_ORIGIN)
     destination = config.get(CONF_DESTINATION)

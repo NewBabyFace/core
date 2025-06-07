@@ -11,7 +11,7 @@ import pytest
 def mock_bluetooth(enable_bluetooth: None) -> Generator[None]:
     """Auto mock bluetooth."""
     with mock.patch(
-        "homeassistant.components.idasen_desk.bluetooth.async_ble_device_from_address"
+        "menuai.components.idasen_desk.bluetooth.async_ble_device_from_address"
     ):
         yield
 
@@ -21,10 +21,10 @@ def mock_desk_api():
     """Set up idasen desk API fixture."""
     with (
         mock.patch(
-            "homeassistant.components.idasen_desk.coordinator.Desk"
+            "menuai.components.idasen_desk.coordinator.Desk"
         ) as desk_patched,
         mock.patch(
-            "homeassistant.components.idasen_desk.config_flow.Desk", new=desk_patched
+            "menuai.components.idasen_desk.config_flow.Desk", new=desk_patched
         ),
     ):
         mock_desk = MagicMock()

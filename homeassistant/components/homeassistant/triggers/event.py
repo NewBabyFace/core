@@ -7,12 +7,12 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_EVENT_DATA, CONF_PLATFORM, EVENT_STATE_REPORTED
-from homeassistant.core import CALLBACK_TYPE, Event, HassJob, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_EVENT_DATA, CONF_PLATFORM, EVENT_STATE_REPORTED
+from menuai.core import CALLBACK_TYPE, Event, menuaiJob, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 CONF_EVENT_TYPE = "event_type"
 CONF_EVENT_CONTEXT = "context"
@@ -49,7 +49,7 @@ def _schema_value(value: Any) -> Any:
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -64,7 +64,7 @@ async def async_attach_trigger(
         config[CONF_EVENT_TYPE], variables, limited=True
     )
     if EVENT_STATE_REPORTED in event_types:
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Can't listen to {EVENT_STATE_REPORTED} in event trigger"
         )
     event_data_schema: vol.Schema | None = None
@@ -118,7 +118,7 @@ async def async_attach_trigger(
             # Use a simple items comparison if possible
             event_context_items = event_context.items()
 
-    job = HassJob(action, f"event trigger {trigger_info}")
+    job = menuaiJob(action, f"event trigger {trigger_info}")
 
     @callback
     def filter_event(event_data: Mapping[str, Any]) -> bool:
@@ -155,8 +155,8 @@ async def async_attach_trigger(
                 # If event doesn't match, skip event
                 return
 
-        hass.loop.call_soon(
-            hass.async_run_hass_job,
+        menuai.loop.call_soon(
+            menuai.async_run_menuai_job,
             job,
             {
                 "trigger": {
@@ -171,7 +171,7 @@ async def async_attach_trigger(
 
     event_filter = filter_event if event_data_items or event_data_schema else None
     removes = [
-        hass.bus.async_listen(event_type, handle_event, event_filter=event_filter)
+        menuai.bus.async_listen(event_type, handle_event, event_filter=event_filter)
         for event_type in event_types
     ]
 

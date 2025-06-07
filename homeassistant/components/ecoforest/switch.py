@@ -9,9 +9,9 @@ from typing import Any
 from pyecoforest.api import EcoforestApi
 from pyecoforest.models.device import Device
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import EcoforestConfigEntry
 from .entity import EcoforestEntity
@@ -36,7 +36,7 @@ SWITCH_TYPES: tuple[EcoforestSwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcoforestConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

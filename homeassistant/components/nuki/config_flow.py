@@ -9,10 +9,10 @@ from pynuki.bridge import InvalidCredentialsException
 from requests.exceptions import RequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_ENCRYPT_TOKEN, DEFAULT_PORT, DEFAULT_TIMEOUT, DOMAIN
 from .helpers import CannotConnect, InvalidAuth, parse_id
@@ -35,14 +35,14 @@ REAUTH_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from USER_SCHEMA with values provided by the user.
     """
 
     try:
-        bridge = await hass.async_add_executor_job(
+        bridge = await menuai.async_add_executor_job(
             NukiBridge,
             data[CONF_HOST],
             data[CONF_TOKEN],
@@ -51,7 +51,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             DEFAULT_TIMEOUT,
         )
 
-        info = await hass.async_add_executor_job(bridge.info)
+        info = await menuai.async_add_executor_job(bridge.info)
     except InvalidCredentialsException as err:
         raise InvalidAuth from err
     except RequestException as err:
@@ -118,7 +118,7 @@ class NukiConfigFlow(ConfigFlow, domain=DOMAIN):
         }
 
         try:
-            info = await validate_input(self.hass, conf)
+            info = await validate_input(self.menuai, conf)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -132,9 +132,9 @@ class NukiConfigFlow(ConfigFlow, domain=DOMAIN):
                 parse_id(info["ids"]["hardwareId"])
             )
             if existing_entry:
-                self.hass.config_entries.async_update_entry(existing_entry, data=conf)
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(existing_entry.entry_id)
+                self.menuai.config_entries.async_update_entry(existing_entry, data=conf)
+                self.menuai.async_create_task(
+                    self.menuai.config_entries.async_reload(existing_entry.entry_id)
                 )
                 return self.async_abort(reason="reauth_successful")
             errors["base"] = "unknown"
@@ -158,7 +158,7 @@ class NukiConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             )
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:

@@ -7,7 +7,7 @@ from functools import lru_cache
 import logging
 from uuid import UUID
 
-from homeassistant.util.ulid import (  # noqa: F401
+from menuai.util.ulid import (  # noqa: F401
     bytes_to_ulid,
     bytes_to_ulid_or_none,
     ulid_to_bytes,

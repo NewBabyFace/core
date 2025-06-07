@@ -13,29 +13,29 @@ from aio_geojson_nsw_rfs_incidents.feed_entry import (
 )
 import voluptuous as vol
 
-from homeassistant.components.geo_location import (
+from menuai.components.geo_location import (
     PLATFORM_SCHEMA as GEO_LOCATION_PLATFORM_SCHEMA,
     GeolocationEvent,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_LOCATION,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
     UnitOfLength,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.dispatcher import (
+from menuai.core import Event, menuai, callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ PLATFORM_SCHEMA = GEO_LOCATION_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -83,14 +83,14 @@ async def async_setup_platform(
     """Set up the NSW Rural Fire Service Feed platform."""
     scan_interval: timedelta = config.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL)
     coordinates: tuple[float, float] = (
-        config.get(CONF_LATITUDE, hass.config.latitude),
-        config.get(CONF_LONGITUDE, hass.config.longitude),
+        config.get(CONF_LATITUDE, menuai.config.latitude),
+        config.get(CONF_LONGITUDE, menuai.config.longitude),
     )
     radius_in_km: float = config[CONF_RADIUS]
     categories: list[str] = config[CONF_CATEGORIES]
     # Initialize the entity manager.
     manager = NswRuralFireServiceFeedEntityManager(
-        hass, async_add_entities, scan_interval, coordinates, radius_in_km, categories
+        menuai, async_add_entities, scan_interval, coordinates, radius_in_km, categories
     )
 
     async def start_feed_manager(event: Event) -> None:
@@ -101,9 +101,9 @@ async def async_setup_platform(
         """Stop feed manager."""
         await manager.async_stop()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, start_feed_manager)
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_feed_manager)
-    hass.async_create_task(manager.async_update())
+    menuai.bus.async_listen_once(EVENT_menuai_START, start_feed_manager)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_feed_manager)
+    menuai.async_create_task(manager.async_update())
 
 
 class NswRuralFireServiceFeedEntityManager:
@@ -111,7 +111,7 @@ class NswRuralFireServiceFeedEntityManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         async_add_entities: AddEntitiesCallback,
         scan_interval: timedelta,
         coordinates: tuple[float, float],
@@ -119,8 +119,8 @@ class NswRuralFireServiceFeedEntityManager:
         categories: list[str],
     ) -> None:
         """Initialize the Feed Entity Manager."""
-        self._hass = hass
-        websession = aiohttp_client.async_get_clientsession(hass)
+        self._menuai = menuai
+        websession = aiohttp_client.async_get_clientsession(menuai)
         self._feed_manager = NswRuralFireServiceIncidentsFeedManager(
             websession,
             self._generate_entity,
@@ -143,7 +143,7 @@ class NswRuralFireServiceFeedEntityManager:
 
         # Trigger updates at regular intervals.
         self._track_time_remove_callback = async_track_time_interval(
-            self._hass, update, self._scan_interval
+            self._menuai, update, self._scan_interval
         )
 
         _LOGGER.debug("Feed entity manager initialized")
@@ -173,11 +173,11 @@ class NswRuralFireServiceFeedEntityManager:
 
     async def _update_entity(self, external_id: str) -> None:
         """Update entity."""
-        async_dispatcher_send(self._hass, SIGNAL_UPDATE_ENTITY.format(external_id))
+        async_dispatcher_send(self._menuai, SIGNAL_UPDATE_ENTITY.format(external_id))
 
     async def _remove_entity(self, external_id: str) -> None:
         """Remove entity."""
-        async_dispatcher_send(self._hass, SIGNAL_DELETE_ENTITY.format(external_id))
+        async_dispatcher_send(self._menuai, SIGNAL_DELETE_ENTITY.format(external_id))
 
 
 class NswRuralFireServiceLocationEvent(GeolocationEvent):
@@ -205,28 +205,28 @@ class NswRuralFireServiceLocationEvent(GeolocationEvent):
         self._remove_signal_delete: Callable[[], None]
         self._remove_signal_update: Callable[[], None]
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self._remove_signal_delete = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_DELETE_ENTITY.format(self._external_id),
             self._delete_callback,
         )
         self._remove_signal_update = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_UPDATE_ENTITY.format(self._external_id),
             self._update_callback,
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Call when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Call when entity will be removed from menuai."""
         self._remove_signal_delete()
         self._remove_signal_update()
 
     @callback
     def _delete_callback(self) -> None:
         """Remove this entity."""
-        self.hass.async_create_task(self.async_remove(force_remove=True))
+        self.menuai.async_create_task(self.async_remove(force_remove=True))
 
     @callback
     def _update_callback(self) -> None:

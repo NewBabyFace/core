@@ -2,14 +2,14 @@
 
 from unittest.mock import mock_open, patch
 
-from homeassistant.components.device_tracker import legacy
-from homeassistant.core import HomeAssistant
-from homeassistant.util.yaml import dump
+from menuai.components.device_tracker import legacy
+from menuai.core import menuai
+from menuai.util.yaml import dump
 
 from tests.common import patch_yaml_files
 
 
-def test_remove_device_from_config(hass: HomeAssistant) -> None:
+def test_remove_device_from_config(menuai: menuai) -> None:
     """Test the removal of a device from a config."""
     yaml_devices = {
         "test": {
@@ -32,9 +32,9 @@ def test_remove_device_from_config(hass: HomeAssistant) -> None:
     files = {legacy.YAML_DEVICES: dump(yaml_devices)}
     with (
         patch_yaml_files(files, True),
-        patch("homeassistant.components.device_tracker.legacy.open", mopen),
+        patch("menuai.components.device_tracker.legacy.open", mopen),
     ):
-        legacy.remove_device_from_config(hass, "test")
+        legacy.remove_device_from_config(menuai, "test")
 
     mopen().write.assert_called_once_with(
         "test2:\n"

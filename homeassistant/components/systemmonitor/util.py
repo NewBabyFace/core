@@ -6,7 +6,7 @@ import os
 from psutil._common import shwtemp
 import psutil_home_assistant as ha_psutil
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import CPU_SENSOR_PREFIXES
 
@@ -16,7 +16,7 @@ SKIP_DISK_TYPES = {"proc", "tmpfs", "devtmpfs"}
 
 
 def get_all_disk_mounts(
-    hass: HomeAssistant, psutil_wrapper: ha_psutil.PsutilWrapper
+    menuai: menuai, psutil_wrapper: ha_psutil.PsutilWrapper
 ) -> set[str]:
     """Return all disk mount points on system."""
     disks: set[str] = set()
@@ -55,7 +55,7 @@ def get_all_disk_mounts(
 
 
 def get_all_network_interfaces(
-    hass: HomeAssistant, psutil_wrapper: ha_psutil.PsutilWrapper
+    menuai: menuai, psutil_wrapper: ha_psutil.PsutilWrapper
 ) -> set[str]:
     """Return all network interfaces on system."""
     interfaces: set[str] = set()
@@ -68,7 +68,7 @@ def get_all_network_interfaces(
     return interfaces
 
 
-def get_all_running_processes(hass: HomeAssistant) -> set[str]:
+def get_all_running_processes(menuai: menuai) -> set[str]:
     """Return all running processes on system."""
     psutil_wrapper = ha_psutil.PsutilWrapper()
     processes: set[str] = set()

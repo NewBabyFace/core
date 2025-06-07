@@ -7,8 +7,8 @@ import json_api_doc
 from pyflick import FlickPrice
 import pytest
 
-from homeassistant.components.flick_electric.const import CONF_ACCOUNT_ID, DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.components.flick_electric.const import CONF_ACCOUNT_ID, DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from . import CONF
 
@@ -48,15 +48,15 @@ def mock_flick_client() -> Generator[AsyncMock]:
     """Mock a Flick Electric client."""
     with (
         patch(
-            "homeassistant.components.flick_electric.FlickAPI",
+            "menuai.components.flick_electric.FlickAPI",
             autospec=True,
         ) as mock_api,
         patch(
-            "homeassistant.components.flick_electric.config_flow.FlickAPI",
+            "menuai.components.flick_electric.config_flow.FlickAPI",
             new=mock_api,
         ),
         patch(
-            "homeassistant.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
+            "menuai.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
             return_value="123456789abcdef",
         ),
     ):
@@ -79,15 +79,15 @@ def mock_flick_client_multiple() -> Generator[AsyncMock]:
     """Mock a Flick Electric with multiple accounts."""
     with (
         patch(
-            "homeassistant.components.flick_electric.FlickAPI",
+            "menuai.components.flick_electric.FlickAPI",
             autospec=True,
         ) as mock_api,
         patch(
-            "homeassistant.components.flick_electric.config_flow.FlickAPI",
+            "menuai.components.flick_electric.config_flow.FlickAPI",
             new=mock_api,
         ),
         patch(
-            "homeassistant.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
+            "menuai.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
             return_value="123456789abcdef",
         ),
     ):

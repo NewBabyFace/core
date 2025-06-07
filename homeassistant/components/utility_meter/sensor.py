@@ -12,7 +12,7 @@ from typing import Any, Self
 from cronsim import CronSim
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ATTR_LAST_RESET,
     DEVICE_CLASS_UNITS,
     RestoreSensor,
@@ -20,9 +20,9 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.components.sensor.recorder import _suggest_report_issue
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.sensor.recorder import _suggest_report_issue
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME,
@@ -31,29 +31,29 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import entity_platform, entity_registry as er
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import entity_platform, entity_registry as er
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_point_in_time,
     async_track_state_change_event,
 )
-from homeassistant.helpers.start import async_at_started
-from homeassistant.helpers.template import is_number
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, slugify
-from homeassistant.util.enum import try_parse_enum
+from menuai.helpers.start import async_at_started
+from menuai.helpers.template import is_number
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, slugify
+from menuai.util.enum import try_parse_enum
 
 from .const import (
     ATTR_NEXT_RESET,
@@ -117,20 +117,20 @@ def validate_is_number(value):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Utility Meter config entry."""
     entry_id = config_entry.entry_id
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     # Validate + resolve entity registry id to entity_id
     source_entity_id = er.async_validate_entity_id(
         registry, config_entry.options[CONF_SOURCE_SENSOR]
     )
 
     device_info = async_device_info_to_link_from_entity(
-        hass,
+        menuai,
         source_entity_id,
     )
 
@@ -143,7 +143,7 @@ async def async_setup_entry(
     name = config_entry.title
     net_consumption = config_entry.options[CONF_METER_NET_CONSUMPTION]
     periodically_resetting = config_entry.options[CONF_METER_PERIODICALLY_RESETTING]
-    tariff_entity = hass.data[DATA_UTILITY][entry_id][CONF_TARIFF_ENTITY]
+    tariff_entity = menuai.data[DATA_UTILITY][entry_id][CONF_TARIFF_ENTITY]
     sensor_always_available = config_entry.options.get(
         CONF_SENSOR_ALWAYS_AVAILABLE, False
     )
@@ -170,7 +170,7 @@ async def async_setup_entry(
             sensor_always_available=sensor_always_available,
         )
         meters.append(meter_sensor)
-        hass.data[DATA_UTILITY][entry_id][DATA_TARIFF_SENSORS].append(meter_sensor)
+        menuai.data[DATA_UTILITY][entry_id][DATA_TARIFF_SENSORS].append(meter_sensor)
     else:
         # Add sensors for each tariff
         for tariff in tariffs:
@@ -191,7 +191,7 @@ async def async_setup_entry(
                 sensor_always_available=sensor_always_available,
             )
             meters.append(meter_sensor)
-            hass.data[DATA_UTILITY][entry_id][DATA_TARIFF_SENSORS].append(meter_sensor)
+            menuai.data[DATA_UTILITY][entry_id][DATA_TARIFF_SENSORS].append(meter_sensor)
 
     async_add_entities(meters)
 
@@ -205,7 +205,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -221,15 +221,15 @@ async def async_setup_platform(
     meters = []
     for conf in discovery_info.values():
         meter = conf[CONF_METER]
-        conf_meter_source = hass.data[DATA_UTILITY][meter][CONF_SOURCE_SENSOR]
-        conf_meter_unique_id = hass.data[DATA_UTILITY][meter].get(CONF_UNIQUE_ID)
+        conf_meter_source = menuai.data[DATA_UTILITY][meter][CONF_SOURCE_SENSOR]
+        conf_meter_unique_id = menuai.data[DATA_UTILITY][meter].get(CONF_UNIQUE_ID)
         conf_sensor_tariff = conf.get(CONF_TARIFF, "single_tariff")
         conf_sensor_unique_id = (
             f"{conf_meter_unique_id}_{conf_sensor_tariff}"
             if conf_meter_unique_id
             else None
         )
-        conf_meter_name = hass.data[DATA_UTILITY][meter].get(CONF_NAME, meter)
+        conf_meter_name = menuai.data[DATA_UTILITY][meter].get(CONF_NAME, meter)
         conf_sensor_tariff = conf.get(CONF_TARIFF)
 
         suggested_entity_id = None
@@ -240,22 +240,22 @@ async def async_setup_platform(
         else:
             conf_sensor_name = conf_meter_name
 
-        conf_meter_type = hass.data[DATA_UTILITY][meter].get(CONF_METER_TYPE)
-        conf_meter_offset = hass.data[DATA_UTILITY][meter][CONF_METER_OFFSET]
-        conf_meter_delta_values = hass.data[DATA_UTILITY][meter][
+        conf_meter_type = menuai.data[DATA_UTILITY][meter].get(CONF_METER_TYPE)
+        conf_meter_offset = menuai.data[DATA_UTILITY][meter][CONF_METER_OFFSET]
+        conf_meter_delta_values = menuai.data[DATA_UTILITY][meter][
             CONF_METER_DELTA_VALUES
         ]
-        conf_meter_net_consumption = hass.data[DATA_UTILITY][meter][
+        conf_meter_net_consumption = menuai.data[DATA_UTILITY][meter][
             CONF_METER_NET_CONSUMPTION
         ]
-        conf_meter_periodically_resetting = hass.data[DATA_UTILITY][meter][
+        conf_meter_periodically_resetting = menuai.data[DATA_UTILITY][meter][
             CONF_METER_PERIODICALLY_RESETTING
         ]
-        conf_meter_tariff_entity = hass.data[DATA_UTILITY][meter].get(
+        conf_meter_tariff_entity = menuai.data[DATA_UTILITY][meter].get(
             CONF_TARIFF_ENTITY
         )
-        conf_cron_pattern = hass.data[DATA_UTILITY][meter].get(CONF_CRON_PATTERN)
-        conf_sensor_always_available = hass.data[DATA_UTILITY][meter][
+        conf_cron_pattern = menuai.data[DATA_UTILITY][meter].get(CONF_CRON_PATTERN)
+        conf_sensor_always_available = menuai.data[DATA_UTILITY][meter][
             CONF_SENSOR_ALWAYS_AVAILABLE
         ]
         meter_sensor = UtilityMeterSensor(
@@ -276,7 +276,7 @@ async def async_setup_platform(
         )
         meters.append(meter_sensor)
 
-        hass.data[DATA_UTILITY][meter][DATA_TARIFF_SENSORS].append(meter_sensor)
+        menuai.data[DATA_UTILITY][meter][DATA_TARIFF_SENSORS].append(meter_sensor)
 
     async_add_entities(meters)
 
@@ -476,7 +476,7 @@ class UtilityMeterSensor(RestoreSensor):
     def async_reading(self, event: Event[EventStateChangedData]) -> None:
         """Handle the sensor state changes."""
         if (
-            source_state := self.hass.states.get(self._sensor_source_id)
+            source_state := self.menuai.states.get(self._sensor_source_id)
         ) is None or source_state.state == STATE_UNAVAILABLE:
             if not self._sensor_always_available:
                 self._attr_available = False
@@ -503,7 +503,7 @@ class UtilityMeterSensor(RestoreSensor):
 
         if self.native_value is None:
             # First state update initializes the utility_meter sensors
-            for sensor in self.hass.data[DATA_UTILITY][self._parent_meter][
+            for sensor in self.menuai.data[DATA_UTILITY][self._parent_meter][
                 DATA_TARIFF_SENSORS
             ]:
                 sensor.start(new_state_attributes)
@@ -511,7 +511,7 @@ class UtilityMeterSensor(RestoreSensor):
                     _LOGGER.warning(
                         "Source sensor %s has no unit of measurement. Please %s",
                         self._sensor_source_id,
-                        _suggest_report_issue(self.hass, self._sensor_source_id),
+                        _suggest_report_issue(self.menuai, self._sensor_source_id),
                     )
 
         if (
@@ -538,7 +538,7 @@ class UtilityMeterSensor(RestoreSensor):
     def _change_status(self, tariff: str) -> None:
         if self._tariff == tariff:
             self._collecting = async_track_state_change_event(
-                self.hass, [self._sensor_source_id], self.async_reading
+                self.menuai, [self._sensor_source_id], self.async_reading
             )
         else:
             if self._collecting:
@@ -567,7 +567,7 @@ class UtilityMeterSensor(RestoreSensor):
             _LOGGER.debug("Next reset of %s is %s", self.entity_id, self._next_reset)
             self.async_on_remove(
                 async_track_point_in_time(
-                    self.hass,
+                    self.menuai,
                     self._async_reset_meter,
                     self._next_reset,
                 )
@@ -605,19 +605,19 @@ class UtilityMeterSensor(RestoreSensor):
         self._attr_native_value = Decimal(str(value))
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         # track current timezone in case it changes
         # and we need to reconfigure the scheduler
-        self._current_tz = self.hass.config.time_zone
+        self._current_tz = self.menuai.config.time_zone
 
         await self._program_reset()
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_RESET_METER, self.async_reset_meter
+                self.menuai, SIGNAL_RESET_METER, self.async_reset_meter
             )
         )
 
@@ -643,11 +643,11 @@ class UtilityMeterSensor(RestoreSensor):
                 )
                 self.async_on_remove(
                     async_track_state_change_event(
-                        self.hass, [self._tariff_entity], self.async_tariff_change
+                        self.menuai, [self._tariff_entity], self.async_tariff_change
                     )
                 )
 
-                tariff_entity_state = self.hass.states.get(self._tariff_entity)
+                tariff_entity_state = self.menuai.states.get(self._tariff_entity)
                 if not tariff_entity_state:
                     # The utility meter is not yet added
                     return
@@ -662,26 +662,26 @@ class UtilityMeterSensor(RestoreSensor):
                 self._sensor_source_id,
             )
             self._collecting = async_track_state_change_event(
-                self.hass, [self._sensor_source_id], self.async_reading
+                self.menuai, [self._sensor_source_id], self.async_reading
             )
 
-        self.async_on_remove(async_at_started(self.hass, async_source_tracking))
+        self.async_on_remove(async_at_started(self.menuai, async_source_tracking))
 
         async def async_track_time_zone(event):
             """Reconfigure Scheduler after time zone changes."""
 
-            if self._current_tz != self.hass.config.time_zone:
-                self._current_tz = self.hass.config.time_zone
+            if self._current_tz != self.menuai.config.time_zone:
+                self._current_tz = self.menuai.config.time_zone
 
                 self._config_scheduler()
                 await self._program_reset()
 
         self.async_on_remove(
-            self.hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, async_track_time_zone)
+            self.menuai.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, async_track_time_zone)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         if self._collecting:
             self._collecting()
         self._collecting = None

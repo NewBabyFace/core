@@ -5,7 +5,7 @@ from unittest.mock import call
 import pytest
 from vallox_websocket_api import MetricData, MetricValue, Profile, ValloxApiException
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PERCENTAGE,
     ATTR_PRESET_MODE,
     DOMAIN as FAN_DOMAIN,
@@ -13,9 +13,9 @@ from homeassistant.components.fan import (
     SERVICE_SET_PRESET_MODE,
     NotValidPresetModeError,
 )
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import patch_set_fan_speed, patch_set_profile, patch_set_values
 
@@ -31,7 +31,7 @@ async def test_fan_state(
     expected_state: str,
     mock_entry: MockConfigEntry,
     setup_fetch_metric_data_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test fan on/off state."""
 
@@ -39,12 +39,12 @@ async def test_fan_state(
     fetch_metric_data_mock = setup_fetch_metric_data_mock(metrics=metrics)
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
     fetch_metric_data_mock.assert_called_once()
-    sensor = hass.states.get("fan.vallox")
+    sensor = menuai.states.get("fan.vallox")
     assert sensor
     assert sensor.state == expected_state
 
@@ -63,7 +63,7 @@ async def test_fan_profile(
     expected_preset: str,
     mock_entry: MockConfigEntry,
     setup_fetch_metric_data_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test fan profile."""
 
@@ -76,11 +76,11 @@ async def test_fan_profile(
     setup_fetch_metric_data_mock(metric_data_class=MockMetricData)
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
-    sensor = hass.states.get("fan.vallox")
+    sensor = menuai.states.get("fan.vallox")
     assert sensor
     assert sensor.attributes["preset_mode"] == expected_preset
 
@@ -98,15 +98,15 @@ async def test_turn_on_off(
     expected_called_with: dict[str, MetricValue],
     mock_entry: MockConfigEntry,
     setup_fetch_metric_data_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test turn on/off."""
     setup_fetch_metric_data_mock(metrics=initial_metrics)
 
     with patch_set_values() as set_values:
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.services.async_call(
             FAN_DOMAIN,
             service,
             service_data={ATTR_ENTITY_ID: "fan.vallox"},
@@ -137,7 +137,7 @@ async def test_turn_on_with_parameters(
     initial_metrics: dict[str, MetricValue],
     expected_call_args_list: list[tuple],
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test turn on/off."""
@@ -145,9 +145,9 @@ async def test_turn_on_with_parameters(
     setup_fetch_metric_data_mock(metrics=initial_metrics)
 
     with patch_set_values() as set_values, patch_set_profile() as set_profile:
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_TURN_ON,
             service_data={
@@ -176,7 +176,7 @@ async def test_set_preset_mode(
     initial_profile: Profile,
     expected_call_args_list: list[tuple],
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test set preset mode."""
@@ -189,9 +189,9 @@ async def test_set_preset_mode(
     setup_fetch_metric_data_mock(metric_data_class=MockMetricData)
 
     with patch_set_profile() as set_profile:
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_PRESET_MODE,
             service_data={ATTR_ENTITY_ID: "fan.vallox", ATTR_PRESET_MODE: preset},
@@ -202,13 +202,13 @@ async def test_set_preset_mode(
 
 async def test_set_invalid_preset_mode(
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test set preset mode."""
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
     with pytest.raises(NotValidPresetModeError) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_PRESET_MODE,
             service_data={
@@ -222,15 +222,15 @@ async def test_set_invalid_preset_mode(
 
 async def test_set_preset_mode_exception(
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test set preset mode."""
     with patch_set_profile() as set_profile:
         set_profile.side_effect = ValloxApiException("Fake exception")
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 FAN_DOMAIN,
                 SERVICE_SET_PRESET_MODE,
                 service_data={ATTR_ENTITY_ID: "fan.vallox", ATTR_PRESET_MODE: "Away"},
@@ -258,7 +258,7 @@ async def test_set_fan_speed(
     expected_set_fan_speed_call: list[tuple],
     expected_set_values_call: list[tuple],
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test set fan speed percentage."""
@@ -273,9 +273,9 @@ async def test_set_fan_speed(
     )
 
     with patch_set_fan_speed() as set_fan_speed, patch_set_values() as set_values:
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_PERCENTAGE,
             service_data={ATTR_ENTITY_ID: "fan.vallox", ATTR_PERCENTAGE: percentage},
@@ -286,7 +286,7 @@ async def test_set_fan_speed(
 
 
 async def test_set_fan_speed_exception(
-    mock_entry: MockConfigEntry, hass: HomeAssistant, setup_fetch_metric_data_mock
+    mock_entry: MockConfigEntry, menuai: menuai, setup_fetch_metric_data_mock
 ) -> None:
     """Test set fan speed percentage."""
     setup_fetch_metric_data_mock(
@@ -295,10 +295,10 @@ async def test_set_fan_speed_exception(
 
     with patch_set_values() as set_values:
         set_values.side_effect = ValloxApiException("Fake failure")
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 FAN_DOMAIN,
                 SERVICE_SET_PERCENTAGE,
                 service_data={ATTR_ENTITY_ID: "fan.vallox", ATTR_PERCENTAGE: 5},

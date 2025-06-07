@@ -7,11 +7,11 @@ from aiohttp import ClientError
 from igloohome_api import AuthException
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.igloohome.const import DOMAIN
-from homeassistant.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.igloohome.const import DOMAIN
+from menuai.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import setup_integration
 
@@ -22,18 +22,18 @@ FORM_USER_INPUT = {
 
 
 async def test_form_valid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: Generator[AsyncMock],
     mock_auth: Generator[AsyncMock],
 ) -> None:
     """Test that the form correct reacts to valid input."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         FORM_USER_INPUT,
     )
@@ -49,19 +49,19 @@ async def test_form_valid_input(
     [(AuthException(), "invalid_auth"), (ClientError(), "cannot_connect")],
 )
 async def test_form_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_auth: Generator[AsyncMock],
     exception: Exception,
     result_error: str,
 ) -> None:
     """Tests where we handle errors in the config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_auth.side_effect = exception
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         FORM_USER_INPUT,
     )
@@ -73,7 +73,7 @@ async def test_form_invalid_input(
     # FlowResultType.CREATE_ENTRY or FlowResultType.ABORT so
     # we can show the config flow is able to recover from an error.
     mock_auth.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         FORM_USER_INPUT,
     )
@@ -85,20 +85,20 @@ async def test_form_invalid_input(
 
 
 async def test_form_abort_on_matching_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: Generator[AsyncMock],
     mock_auth: Generator[AsyncMock],
 ) -> None:
     """Tests where we handle errors in the config flow."""
     # Create first config flow.
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Attempt another config flow with the same client credentials
     # and ensure that FlowResultType.ABORT is returned.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         FORM_USER_INPUT,
     )

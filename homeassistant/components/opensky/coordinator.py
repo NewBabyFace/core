@@ -6,16 +6,16 @@ from datetime import timedelta
 
 from python_opensky import OpenSky, OpenSkyError, StateVector
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_ALTITUDE,
@@ -37,11 +37,11 @@ class OpenSkyDataUpdateCoordinator(DataUpdateCoordinator[int]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, opensky: OpenSky
+        self, menuai: menuai, config_entry: ConfigEntry, opensky: OpenSky
     ) -> None:
         """Initialize the OpenSky data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -119,4 +119,4 @@ class OpenSkyDataUpdateCoordinator(DataUpdateCoordinator[int]):
                 ATTR_LATITUDE: latitude,
                 ATTR_ICAO24: icao24,
             }
-            self.hass.bus.fire(event, data)
+            self.menuai.bus.fire(event, data)

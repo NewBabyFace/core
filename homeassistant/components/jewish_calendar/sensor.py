@@ -11,16 +11,16 @@ from hdate import HDateInfo, Zmanim
 from hdate.holidays import HolidayDatabase
 from hdate.parasha import Parasha
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import SUN_EVENT_SUNSET, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.sun import get_astral_event_date
-from homeassistant.util import dt as dt_util
+from menuai.const import SUN_EVENT_SUNSET, EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.sun import get_astral_event_date
+from menuai.util import dt as dt_util
 
 from .entity import (
     JewishCalendarConfigEntry,
@@ -213,7 +213,7 @@ TIME_SENSORS: tuple[JewishCalendarTimestampSensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: JewishCalendarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -233,9 +233,9 @@ class JewishCalendarBaseSensor(JewishCalendarEntity, SensorEntity):
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
+        await super().async_added_to_menuai()
         await self.async_update_data()
 
     async def async_update_data(self) -> None:
@@ -244,7 +244,7 @@ class JewishCalendarBaseSensor(JewishCalendarEntity, SensorEntity):
         _LOGGER.debug("Now: %s Location: %r", now, self.data.location)
 
         today = now.date()
-        event_date = get_astral_event_date(self.hass, SUN_EVENT_SUNSET, today)
+        event_date = get_astral_event_date(self.menuai, SUN_EVENT_SUNSET, today)
 
         if event_date is None:
             _LOGGER.error("Can't get sunset event date for %s", today)

@@ -4,12 +4,12 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.components.samsungtv.const import DOMAIN
-from homeassistant.const import SERVICE_RELOAD, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.samsungtv.const import DOMAIN
+from menuai.const import SERVICE_RELOAD, SERVICE_TURN_ON
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import setup_samsungtv_entry
 from .const import ENTRYDATA_ENCRYPTED_WEBSOCKET
@@ -20,13 +20,13 @@ from tests.common import MockEntity, MockEntityPlatform
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 @pytest.mark.parametrize("entity_domain", ["media_player", "remote"])
 async def test_turn_on_trigger_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     entity_domain: str,
 ) -> None:
     """Test for turn_on triggers by device_id firing."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
 
     entity_id = f"{entity_domain}.mock_title"
 
@@ -36,7 +36,7 @@ async def test_turn_on_trigger_device_id(
     assert device, repr(device_registry.devices)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -57,28 +57,28 @@ async def test_turn_on_trigger_device_id(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         entity_domain, SERVICE_TURN_ON, {"entity_id": entity_id}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == device.id
     assert service_calls[1].data["id"] == 0
 
-    with patch("homeassistant.config.load_yaml_dict", return_value={}):
-        await hass.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
+    with patch("menuai.config.load_yaml_dict", return_value={}):
+        await menuai.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
 
     service_calls.clear()
 
     # Ensure WOL backup is called when trigger not present
     with patch(
-        "homeassistant.components.samsungtv.entity.send_magic_packet"
+        "menuai.components.samsungtv.entity.send_magic_packet"
     ) as mock_send_magic_packet:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             entity_domain, SERVICE_TURN_ON, {"entity_id": entity_id}, blocking=True
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     mock_send_magic_packet.assert_called()
@@ -87,15 +87,15 @@ async def test_turn_on_trigger_device_id(
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 @pytest.mark.parametrize("entity_domain", ["media_player", "remote"])
 async def test_turn_on_trigger_entity_id(
-    hass: HomeAssistant, service_calls: list[ServiceCall], entity_domain: str
+    menuai: menuai, service_calls: list[ServiceCall], entity_domain: str
 ) -> None:
     """Test for turn_on triggers by entity_id firing."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
 
     entity_id = f"{entity_domain}.mock_title"
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -116,10 +116,10 @@ async def test_turn_on_trigger_entity_id(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         entity_domain, SERVICE_TURN_ON, {"entity_id": entity_id}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == entity_id
@@ -129,14 +129,14 @@ async def test_turn_on_trigger_entity_id(
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 @pytest.mark.parametrize("entity_domain", ["media_player", "remote"])
 async def test_wrong_trigger_platform_type(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, entity_domain: str
+    menuai: menuai, caplog: pytest.LogCaptureFixture, entity_domain: str
 ) -> None:
     """Test wrong trigger platform type."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
     entity_id = f"{entity_domain}.fake"
 
     await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -166,19 +166,19 @@ async def test_wrong_trigger_platform_type(
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 @pytest.mark.parametrize("entity_domain", ["media_player", "remote"])
 async def test_trigger_invalid_entity_id(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, entity_domain: str
+    menuai: menuai, caplog: pytest.LogCaptureFixture, entity_domain: str
 ) -> None:
     """Test turn on trigger using invalid entity_id."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
     entity_id = f"{entity_domain}.fake"
 
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
 
     invalid_entity = f"{DOMAIN}.invalid"
     await platform.async_add_entities([MockEntity(name=invalid_entity)])
 
     await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [

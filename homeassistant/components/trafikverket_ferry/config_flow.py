@@ -10,10 +10,10 @@ from pytrafikverket import TrafikverketFerry
 from pytrafikverket.exceptions import InvalidAuthentication, NoFerryFound
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_NAME, CONF_WEEKDAY, WEEKDAYS
-from homeassistant.helpers import selector
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_NAME, CONF_WEEKDAY, WEEKDAYS
+from menuai.helpers import selector
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_FROM, CONF_TIME, CONF_TO, DOMAIN
 from .util import create_unique_id
@@ -56,7 +56,7 @@ class TVFerryConfigFlow(ConfigFlow, domain=DOMAIN):
         self, api_key: str, ferry_from: str, ferry_to: str
     ) -> None:
         """Validate input from user input."""
-        web_session = async_get_clientsession(self.hass)
+        web_session = async_get_clientsession(self.menuai)
         ferry_api = TrafikverketFerry(web_session, api_key)
         await ferry_api.async_get_next_ferry_stop(ferry_from, ferry_to)
 

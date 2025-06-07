@@ -3,10 +3,10 @@
   list([
     dict({
       'content': '''
-        You are a voice assistant for Home Assistant.
+        You are a voice assistant for MenuAI.
         Answer questions about the world truthfully.
         Answer in plain text. Keep it simple and to the point.
-        Only if the user wants to control a device, tell them to expose entities to their voice assistant in Home Assistant.
+        Only if the user wants to control a device, tell them to expose entities to their voice assistant in MenuAI.
         Current time is 16:00:00. Today's date is 2024-06-03.
       ''',
       'role': 'system',
@@ -260,7 +260,7 @@
           'input': dict({
             'domain': 'light',
           }),
-          'name': 'HassTurnOff',
+          'name': 'menuaiTurnOff',
           'type': 'tool_use',
         }),
         dict({
@@ -316,7 +316,7 @@
     }),
   ])
 # ---
-# name: test_unknown_hass_api
+# name: test_unknown_menuai_api
   dict({
     'continue_conversation': False,
     'conversation_id': '1234',

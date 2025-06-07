@@ -25,14 +25,14 @@ from here_transit import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfLength
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.location import find_coordinates
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_conversion import DistanceConverter
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfLength
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.location import find_coordinates
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
+from menuai.util.unit_conversion import DistanceConverter
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, ROUTE_MODE_FASTEST
 from .model import HERETravelTimeConfig, HERETravelTimeData
@@ -53,14 +53,14 @@ class HERERoutingDataUpdateCoordinator(DataUpdateCoordinator[HERETravelTimeData]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: HereConfigEntry,
         api_key: str,
         config: HERETravelTimeConfig,
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -72,7 +72,7 @@ class HERERoutingDataUpdateCoordinator(DataUpdateCoordinator[HERETravelTimeData]
     async def _async_update_data(self) -> HERETravelTimeData:
         """Get the latest data from the HERE Routing API."""
         origin, destination, arrival, departure = prepare_parameters(
-            self.hass, self.config
+            self.menuai, self.config
         )
 
         route_mode = (
@@ -181,14 +181,14 @@ class HERETransitDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: HereConfigEntry,
         api_key: str,
         config: HERETravelTimeConfig,
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -200,7 +200,7 @@ class HERETransitDataUpdateCoordinator(
     async def _async_update_data(self) -> HERETravelTimeData | None:
         """Get the latest data from the HERE Routing API."""
         origin, destination, arrival, departure = prepare_parameters(
-            self.hass, self.config
+            self.menuai, self.config
         )
 
         _LOGGER.debug(
@@ -254,7 +254,7 @@ class HERETransitDataUpdateCoordinator(
     def _parse_transit_response(self, response: dict[str, Any]) -> HERETravelTimeData:
         """Parse the transit response dict to a HERETravelTimeData."""
         sections: list[dict[str, Any]] = response["routes"][0]["sections"]
-        attribution: str | None = build_hass_attribution(sections)
+        attribution: str | None = build_menuai_attribution(sections)
         mapped_origin_lat: float = sections[0]["departure"]["place"]["location"]["lat"]
         mapped_origin_lon: float = sections[0]["departure"]["place"]["location"]["lng"]
         mapped_destination_lat: float = sections[-1]["arrival"]["place"]["location"][
@@ -284,13 +284,13 @@ class HERETransitDataUpdateCoordinator(
 
 
 def prepare_parameters(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: HERETravelTimeConfig,
 ) -> tuple[list[str], list[str], str | None, str | None]:
     """Prepare parameters for the HERE api."""
 
     def _from_entity_id(entity_id: str) -> list[str]:
-        coordinates = find_coordinates(hass, entity_id)
+        coordinates = find_coordinates(menuai, entity_id)
         if coordinates is None:
             raise UpdateFailed(f"No coordinates found for {entity_id}")
         if coordinates is entity_id:
@@ -333,8 +333,8 @@ def prepare_parameters(
     return (origin, destination, arrival, departure)
 
 
-def build_hass_attribution(sections: list[dict[str, Any]]) -> str | None:
-    """Build a hass frontend ready string out of the attributions."""
+def build_menuai_attribution(sections: list[dict[str, Any]]) -> str | None:
+    """Build a menuai frontend ready string out of the attributions."""
     relevant_attributions = []
     for section in sections:
         if (attributions := section.get("attributions")) is not None:

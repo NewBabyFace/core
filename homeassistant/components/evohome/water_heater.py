@@ -9,21 +9,21 @@ import evohomeasync2 as evo
 from evohomeasync2.const import SZ_STATE_STATUS, SZ_TEMPERATURE_STATUS
 from evohomeasync2.schemas.const import DhwState as EvoDhwState, ZoneMode as EvoZoneMode
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     PRECISION_TENTHS,
     PRECISION_WHOLE,
     STATE_OFF,
     STATE_ON,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from . import EVOHOME_KEY
 from .coordinator import EvoDataUpdateCoordinator
@@ -38,7 +38,7 @@ EVO_STATE_TO_HA = {v: k for k, v in HA_STATE_TO_EVO.items() if k != ""}
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -47,8 +47,8 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    coordinator = hass.data[EVOHOME_KEY].coordinator
-    tcs = hass.data[EVOHOME_KEY].tcs
+    coordinator = menuai.data[EVOHOME_KEY].coordinator
+    tcs = menuai.data[EVOHOME_KEY].tcs
 
     assert tcs.hotwater is not None  # mypy check
 

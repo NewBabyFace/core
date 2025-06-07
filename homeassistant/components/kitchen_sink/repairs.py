@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
-from homeassistant.core import HomeAssistant
+from menuai import data_entry_flow
+from menuai.components.repairs import ConfirmRepairFlow, RepairsFlow
+from menuai.core import menuai
 
 
 class DemoFixFlow(RepairsFlow):
@@ -40,7 +40,7 @@ class DemoColdTeaFixFlow(RepairsFlow):
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:

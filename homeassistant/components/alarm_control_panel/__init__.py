@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, Final, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CODE,
     ATTR_CODE_FORMAT,
     SERVICE_ALARM_ARM_AWAY,
@@ -22,16 +22,16 @@ from homeassistant.const import (
     SERVICE_ALARM_DISARM,
     SERVICE_ALARM_TRIGGER,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.config_validation import make_entity_service_schema
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_platform import EntityPlatform
-from homeassistant.helpers.frame import ReportBehavior, report_usage
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.config_validation import make_entity_service_schema
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.entity_platform import EntityPlatform
+from menuai.helpers.frame import ReportBehavior, report_usage
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     ATTR_CHANGED_BY,
@@ -44,7 +44,7 @@ from .const import (
 
 _LOGGER: Final = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[AlarmControlPanelEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[AlarmControlPanelEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT: Final = DOMAIN + ".{}"
 PLATFORM_SCHEMA: Final = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE: Final = cv.PLATFORM_SCHEMA_BASE
@@ -60,10 +60,10 @@ ALARM_SERVICE_SCHEMA: Final = make_entity_service_schema(
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for sensors."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[AlarmControlPanelEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[AlarmControlPanelEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
@@ -113,14 +113,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class AlarmControlPanelEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -172,12 +172,12 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
     @callback
     def add_to_platform_start(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         platform: EntityPlatform,
         parallel_updates: asyncio.Semaphore | None,
     ) -> None:
         """Start adding an entity to a platform."""
-        super().add_to_platform_start(hass, platform, parallel_updates)
+        super().add_to_platform_start(menuai, platform, parallel_updates)
         if self.__alarm_legacy_state:
             self._report_deprecated_alarm_state_handling()
 
@@ -275,7 +275,7 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""
-        await self.hass.async_add_executor_job(self.alarm_disarm, code)
+        await self.menuai.async_add_executor_job(self.alarm_disarm, code)
 
     @final
     async def async_handle_alarm_arm_home(self, code: str | None = None) -> None:
@@ -288,7 +288,7 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
 
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home command."""
-        await self.hass.async_add_executor_job(self.alarm_arm_home, code)
+        await self.menuai.async_add_executor_job(self.alarm_arm_home, code)
 
     @final
     async def async_handle_alarm_arm_away(self, code: str | None = None) -> None:
@@ -301,7 +301,7 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         """Send arm away command."""
-        await self.hass.async_add_executor_job(self.alarm_arm_away, code)
+        await self.menuai.async_add_executor_job(self.alarm_arm_away, code)
 
     @final
     async def async_handle_alarm_arm_night(self, code: str | None = None) -> None:
@@ -314,7 +314,7 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
 
     async def async_alarm_arm_night(self, code: str | None = None) -> None:
         """Send arm night command."""
-        await self.hass.async_add_executor_job(self.alarm_arm_night, code)
+        await self.menuai.async_add_executor_job(self.alarm_arm_night, code)
 
     @final
     async def async_handle_alarm_arm_vacation(self, code: str | None = None) -> None:
@@ -327,7 +327,7 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
 
     async def async_alarm_arm_vacation(self, code: str | None = None) -> None:
         """Send arm vacation command."""
-        await self.hass.async_add_executor_job(self.alarm_arm_vacation, code)
+        await self.menuai.async_add_executor_job(self.alarm_arm_vacation, code)
 
     def alarm_trigger(self, code: str | None = None) -> None:
         """Send alarm trigger command."""
@@ -335,7 +335,7 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
 
     async def async_alarm_trigger(self, code: str | None = None) -> None:
         """Send alarm trigger command."""
-        await self.hass.async_add_executor_job(self.alarm_trigger, code)
+        await self.menuai.async_add_executor_job(self.alarm_trigger, code)
 
     @final
     async def async_handle_alarm_arm_custom_bypass(
@@ -350,7 +350,7 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
 
     async def async_alarm_arm_custom_bypass(self, code: str | None = None) -> None:
         """Send arm custom bypass command."""
-        await self.hass.async_add_executor_job(self.alarm_arm_custom_bypass, code)
+        await self.menuai.async_add_executor_job(self.alarm_arm_custom_bypass, code)
 
     @cached_property
     def supported_features(self) -> AlarmControlPanelEntityFeature:
@@ -367,9 +367,9 @@ class AlarmControlPanelEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_A
             ATTR_CODE_ARM_REQUIRED: self.code_arm_required,
         }
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the alarm control panel entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the alarm control panel entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         if not self.registry_entry:
             return
         self._async_read_entity_options()

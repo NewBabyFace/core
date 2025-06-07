@@ -7,9 +7,9 @@ from agent import AgentConnectionError, AgentError
 from agent.a import Agent
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, SERVER_URL
 from .helpers import generate_url
@@ -31,7 +31,7 @@ class AgentFlowHandler(ConfigFlow, domain=DOMAIN):
             port = user_input[CONF_PORT]
 
             server_origin = generate_url(host, port)
-            agent_client = Agent(server_origin, async_get_clientsession(self.hass))
+            agent_client = Agent(server_origin, async_get_clientsession(self.menuai))
 
             with suppress(AgentConnectionError, AgentError):
                 await agent_client.update()

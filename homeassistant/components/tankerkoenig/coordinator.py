@@ -16,13 +16,13 @@ from aiotankerkoenig import (
     TankerkoenigRateLimitError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ID, CONF_API_KEY, CONF_SHOW_ON_MAP
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ID, CONF_API_KEY, CONF_SHOW_ON_MAP
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_STATIONS, DOMAIN
 
@@ -38,14 +38,14 @@ class TankerkoenigDataUpdateCoordinator(DataUpdateCoordinator[dict[str, PriceInf
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TankerkoenigConfigEntry,
         update_interval: int,
     ) -> None:
         """Initialize the data object."""
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=config_entry.unique_id or DOMAIN,
@@ -58,7 +58,7 @@ class TankerkoenigDataUpdateCoordinator(DataUpdateCoordinator[dict[str, PriceInf
 
         self._tankerkoenig = Tankerkoenig(
             api_key=self.config_entry.data[CONF_API_KEY],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
 
     async def async_setup(self) -> None:
@@ -86,7 +86,7 @@ class TankerkoenigDataUpdateCoordinator(DataUpdateCoordinator[dict[str, PriceInf
 
             self.stations[station_id] = station
 
-        entity_reg = er.async_get(self.hass)
+        entity_reg = er.async_get(self.menuai)
         for entity in er.async_entries_for_config_entry(
             entity_reg, self.config_entry.entry_id
         ):
@@ -94,7 +94,7 @@ class TankerkoenigDataUpdateCoordinator(DataUpdateCoordinator[dict[str, PriceInf
                 _LOGGER.debug("Removing obsolete entity entry %s", entity.entity_id)
                 entity_reg.async_remove(entity.entity_id)
 
-        device_reg = dr.async_get(self.hass)
+        device_reg = dr.async_get(self.menuai)
         for device in dr.async_entries_for_config_entry(
             device_reg, self.config_entry.entry_id
         ):

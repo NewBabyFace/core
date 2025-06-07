@@ -8,9 +8,9 @@ from typing import Any
 from toonapi import Agreement, Toon, ToonError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.config_entries import ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import CONF_AGREEMENT, CONF_AGREEMENT_ID, CONF_MIGRATE, DOMAIN
 
@@ -36,7 +36,7 @@ class ToonFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
 
         toon = Toon(
             token=self.data["token"]["access_token"],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         try:
             self.agreements = await toon.agreements()
@@ -90,7 +90,7 @@ class ToonFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
 
     async def _create_entry(self, agreement: Agreement) -> ConfigFlowResult:
         if self.migrate_entry:
-            await self.hass.config_entries.async_remove(self.migrate_entry)
+            await self.menuai.config_entries.async_remove(self.migrate_entry)
 
         await self.async_set_unique_id(agreement.agreement_id)
         self._abort_if_unique_id_configured()

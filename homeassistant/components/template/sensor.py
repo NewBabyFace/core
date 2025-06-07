@@ -8,7 +8,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ATTR_LAST_RESET,
     CONF_STATE_CLASS,
     DEVICE_CLASSES_SCHEMA,
@@ -20,9 +20,9 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.components.sensor.helpers import async_parse_date_datetime
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.sensor.helpers import async_parse_date_datetime
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_CLASS,
     CONF_DEVICE_ID,
@@ -41,18 +41,18 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv, selector, template
-from homeassistant.helpers.device import async_device_info_to_link_from_device_id
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv, selector, template
+from menuai.helpers.device import async_device_info_to_link_from_device_id
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.trigger_template_entity import TEMPLATE_SENSOR_BASE_SCHEMA
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.trigger_template_entity import TEMPLATE_SENSOR_BASE_SCHEMA
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from . import TriggerUpdateCoordinator
 from .const import CONF_ATTRIBUTE_TEMPLATES, CONF_AVAILABILITY_TEMPLATE, CONF_OBJECT_ID
@@ -143,7 +143,7 @@ def extra_validation_checks(val):
 
 
 def rewrite_legacy_to_modern_conf(
-    hass: HomeAssistant, cfg: dict[str, dict]
+    menuai: menuai, cfg: dict[str, dict]
 ) -> list[dict]:
     """Rewrite legacy sensor definitions to modern ones."""
     sensors = []
@@ -152,11 +152,11 @@ def rewrite_legacy_to_modern_conf(
         entity_cfg = {**entity_cfg, CONF_OBJECT_ID: object_id}
 
         entity_cfg = rewrite_common_legacy_to_modern_conf(
-            hass, entity_cfg, LEGACY_FIELDS
+            menuai, entity_cfg, LEGACY_FIELDS
         )
 
         if CONF_NAME not in entity_cfg:
-            entity_cfg[CONF_NAME] = template.Template(object_id, hass)
+            entity_cfg[CONF_NAME] = template.Template(object_id, menuai)
 
         sensors.append(entity_cfg)
 
@@ -180,7 +180,7 @@ _LOGGER = logging.getLogger(__name__)
 @callback
 def _async_create_template_tracking_entities(
     async_add_entities: AddEntitiesCallback | AddConfigEntryEntitiesCallback,
-    hass: HomeAssistant,
+    menuai: menuai,
     definitions: list[dict],
     unique_id_prefix: str | None,
 ) -> None:
@@ -195,7 +195,7 @@ def _async_create_template_tracking_entities(
 
         sensors.append(
             SensorTemplate(
-                hass,
+                menuai,
                 entity_conf,
                 unique_id,
             )
@@ -205,7 +205,7 @@ def _async_create_template_tracking_entities(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -214,29 +214,29 @@ async def async_setup_platform(
     if discovery_info is None:
         _async_create_template_tracking_entities(
             async_add_entities,
-            hass,
-            rewrite_legacy_to_modern_conf(hass, config[CONF_SENSORS]),
+            menuai,
+            rewrite_legacy_to_modern_conf(menuai, config[CONF_SENSORS]),
             None,
         )
         return
 
     if "coordinator" in discovery_info:
         async_add_entities(
-            TriggerSensorEntity(hass, discovery_info["coordinator"], config)
+            TriggerSensorEntity(menuai, discovery_info["coordinator"], config)
             for config in discovery_info["entities"]
         )
         return
 
     _async_create_template_tracking_entities(
         async_add_entities,
-        hass,
+        menuai,
         discovery_info["entities"],
         discovery_info["unique_id"],
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -244,16 +244,16 @@ async def async_setup_entry(
     _options = dict(config_entry.options)
     _options.pop("template_type")
     validated_config = SENSOR_CONFIG_SCHEMA(_options)
-    async_add_entities([SensorTemplate(hass, validated_config, config_entry.entry_id)])
+    async_add_entities([SensorTemplate(menuai, validated_config, config_entry.entry_id)])
 
 
 @callback
 def async_create_preview_sensor(
-    hass: HomeAssistant, name: str, config: dict[str, Any]
+    menuai: menuai, name: str, config: dict[str, Any]
 ) -> SensorTemplate:
     """Create a preview sensor."""
     validated_config = SENSOR_CONFIG_SCHEMA(config | {CONF_NAME: name})
-    return SensorTemplate(hass, validated_config, None)
+    return SensorTemplate(menuai, validated_config, None)
 
 
 class SensorTemplate(TemplateEntity, SensorEntity):
@@ -263,12 +263,12 @@ class SensorTemplate(TemplateEntity, SensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: dict[str, Any],
         unique_id: str | None,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(hass, config=config, fallback_name=None, unique_id=unique_id)
+        super().__init__(menuai, config=config, fallback_name=None, unique_id=unique_id)
         self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
         self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._attr_state_class = config.get(CONF_STATE_CLASS)
@@ -277,12 +277,12 @@ class SensorTemplate(TemplateEntity, SensorEntity):
             ATTR_LAST_RESET
         )
         self._attr_device_info = async_device_info_to_link_from_device_id(
-            hass,
+            menuai,
             config.get(CONF_DEVICE_ID),
         )
         if (object_id := config.get(CONF_OBJECT_ID)) is not None:
             self.entity_id = async_generate_entity_id(
-                ENTITY_ID_FORMAT, object_id, hass=hass
+                ENTITY_ID_FORMAT, object_id, menuai=menuai
             )
 
     @callback
@@ -332,12 +332,12 @@ class TriggerSensorEntity(TriggerEntity, RestoreSensor):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: TriggerUpdateCoordinator,
         config: ConfigType,
     ) -> None:
         """Initialize."""
-        super().__init__(hass, coordinator, config)
+        super().__init__(menuai, coordinator, config)
 
         if (last_reset_template := config.get(ATTR_LAST_RESET)) is not None:
             if last_reset_template.is_static:
@@ -348,9 +348,9 @@ class TriggerSensorEntity(TriggerEntity, RestoreSensor):
         self._attr_state_class = config.get(CONF_STATE_CLASS)
         self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (
             (last_state := await self.async_get_last_state()) is not None
             and (extra_data := await self.async_get_last_sensor_data()) is not None

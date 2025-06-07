@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, cast
 
 from aiohttp import web
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from .const import (
     EXT_X_START_LL_HLS,
@@ -28,19 +28,19 @@ from .core import (
 from .fmp4utils import get_codec_string, transform_init
 
 if TYPE_CHECKING:
-    from homeassistant.components.camera import DynamicStreamSettings
+    from menuai.components.camera import DynamicStreamSettings
 
     from . import Stream
 
 
 @callback
-def async_setup_hls(hass: HomeAssistant) -> str:
+def async_setup_hls(menuai: menuai) -> str:
     """Set up api endpoints."""
-    hass.http.register_view(HlsPlaylistView())
-    hass.http.register_view(HlsSegmentView())
-    hass.http.register_view(HlsInitView())
-    hass.http.register_view(HlsMasterPlaylistView())
-    hass.http.register_view(HlsPartView())
+    menuai.http.register_view(HlsPlaylistView())
+    menuai.http.register_view(HlsSegmentView())
+    menuai.http.register_view(HlsInitView())
+    menuai.http.register_view(HlsMasterPlaylistView())
+    menuai.http.register_view(HlsPartView())
     return "/api/hls/{}/master_playlist.m3u8"
 
 
@@ -50,14 +50,14 @@ class HlsStreamOutput(StreamOutput):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         idle_timer: IdleTimer,
         stream_settings: StreamSettings,
         dynamic_stream_settings: DynamicStreamSettings,
     ) -> None:
         """Initialize HLS output."""
         super().__init__(
-            hass,
+            menuai,
             idle_timer,
             stream_settings,
             dynamic_stream_settings,
@@ -96,7 +96,7 @@ class HlsStreamOutput(StreamOutput):
 
     def discontinuity(self) -> None:
         """Fix incomplete segment at end of deque."""
-        self._hass.loop.call_soon_threadsafe(self._async_discontinuity)
+        self._menuai.loop.call_soon_threadsafe(self._async_discontinuity)
 
     @callback
     def _async_discontinuity(self) -> None:

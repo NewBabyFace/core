@@ -3,10 +3,10 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.media_player import DOMAIN
-from homeassistant.const import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.media_player import DOMAIN
+from menuai.const import (
     STATE_BUFFERING,
     STATE_IDLE,
     STATE_OFF,
@@ -15,10 +15,10 @@ from homeassistant.const import (
     STATE_PLAYING,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
@@ -29,13 +29,13 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 async def test_get_conditions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected conditions from a media_player."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -62,7 +62,7 @@ async def test_get_conditions(
         )
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
@@ -77,7 +77,7 @@ async def test_get_conditions(
     ],
 )
 async def test_get_conditions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -85,7 +85,7 @@ async def test_get_conditions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected conditions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -117,20 +117,20 @@ async def test_get_conditions_hidden_auxiliary(
         )
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
 
 async def test_if_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -139,10 +139,10 @@ async def test_if_state(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_ON)
+    menuai.states.async_set(entry.entity_id, STATE_ON)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -257,81 +257,81 @@ async def test_if_state(
             ]
         },
     )
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_on - event - test_event1"
 
-    hass.states.async_set(entry.entity_id, STATE_OFF)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_OFF)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "is_off - event - test_event2"
 
-    hass.states.async_set(entry.entity_id, STATE_IDLE)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_IDLE)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
     assert service_calls[2].data["some"] == "is_idle - event - test_event3"
 
-    hass.states.async_set(entry.entity_id, STATE_PAUSED)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_PAUSED)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4
     assert service_calls[3].data["some"] == "is_paused - event - test_event4"
 
-    hass.states.async_set(entry.entity_id, STATE_PLAYING)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_PLAYING)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 5
     assert service_calls[4].data["some"] == "is_playing - event - test_event5"
 
-    hass.states.async_set(entry.entity_id, STATE_BUFFERING)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_BUFFERING)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 6
     assert service_calls[5].data["some"] == "is_buffering - event - test_event6"
 
 
 async def test_if_state_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -340,10 +340,10 @@ async def test_if_state_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_ON)
+    menuai.states.async_set(entry.entity_id, STATE_ON)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -368,7 +368,7 @@ async def test_if_state_legacy(
             ]
         },
     )
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_on - event - test_event1"

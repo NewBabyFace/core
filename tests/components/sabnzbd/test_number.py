@@ -8,29 +8,29 @@ from pysabnzbd import SabnzbdApiException
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_platform
 
 
-@patch("homeassistant.components.sabnzbd.PLATFORMS", [Platform.NUMBER])
+@patch("menuai.components.sabnzbd.PLATFORMS", [Platform.NUMBER])
 async def test_number_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test number setup."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -41,7 +41,7 @@ async def test_number_setup(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_number_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     sabnzbd: AsyncMock,
     number: str,
     input_number: float,
@@ -49,7 +49,7 @@ async def test_number_set(
     expected_state: str,
 ) -> None:
     """Test the sabnzbd number set."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -69,7 +69,7 @@ async def test_number_set(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_number_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     sabnzbd: AsyncMock,
     number: str,
     input_number: float,
@@ -80,10 +80,10 @@ async def test_number_exception(
     function.side_effect = SabnzbdApiException("Boom")
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Unable to send command to SABnzbd due to a connection error, try again later",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -102,22 +102,22 @@ async def test_number_exception(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_number_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     sabnzbd: AsyncMock,
     number: str,
     initial_state: str,
 ) -> None:
     """Test the number is unavailable when coordinator can't update data."""
-    state = hass.states.get(f"number.sabnzbd_{number}")
+    state = menuai.states.get(f"number.sabnzbd_{number}")
     assert state
     assert state.state == initial_state
 
     sabnzbd.refresh_data.side_effect = Exception("Boom")
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"number.sabnzbd_{number}")
+    state = menuai.states.get(f"number.sabnzbd_{number}")
     assert state
     assert state.state == STATE_UNAVAILABLE

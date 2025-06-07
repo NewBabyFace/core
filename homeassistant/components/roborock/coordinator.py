@@ -32,15 +32,15 @@ from vacuum_map_parser_base.config.size import Size, Sizes
 from vacuum_map_parser_base.map_data import MapData
 from vacuum_map_parser_roborock.map_data_parser import RoborockMapDataParser
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util, slugify
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_CONNECTIONS
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util, slugify
 
 from .const import (
     A01_UPDATE_INTERVAL,
@@ -56,7 +56,7 @@ from .const import (
     V1_LOCAL_IN_CLEANING_INTERVAL,
     V1_LOCAL_NOT_CLEANING_INTERVAL,
 )
-from .models import RoborockA01HassDeviceInfo, RoborockHassDeviceInfo, RoborockMapInfo
+from .models import RoborockA01menuaiDeviceInfo, RoborockmenuaiDeviceInfo, RoborockMapInfo
 from .roborock_storage import RoborockMapStorage
 
 SCAN_INTERVAL = timedelta(seconds=30)
@@ -88,7 +88,7 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RoborockConfigEntry,
         device: HomeDataDevice,
         device_networking: NetworkInfo,
@@ -100,14 +100,14 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             # Assume we can use the local api.
             update_interval=V1_LOCAL_NOT_CLEANING_INTERVAL,
         )
-        self.roborock_device_info = RoborockHassDeviceInfo(
+        self.roborock_device_info = RoborockmenuaiDeviceInfo(
             device,
             device_networking,
             product_info,
@@ -136,7 +136,7 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
         self.maps: dict[int, RoborockMapInfo] = {}
         self._home_data_rooms = {str(room.id): room.name for room in home_data_rooms}
         self.map_storage = RoborockMapStorage(
-            hass, self.config_entry.entry_id, self.duid_slug
+            menuai, self.config_entry.entry_id, self.duid_slug
         )
         self._user_data = user_data
         self._api_client = api_client
@@ -238,19 +238,19 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
         try:
             response = await self.cloud_api.get_map_v1()
         except RoborockException as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="map_failure",
             ) from ex
         if not isinstance(response, bytes):
             _LOGGER.debug("Failed to parse map contents: %s", response)
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="map_failure",
             )
         parsed_image, parsed_map = self.parse_map_data_v1(response)
         if parsed_image is None or parsed_map is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="map_failure",
             )
@@ -271,7 +271,7 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
                 await self.api.ping()
             except RoborockException:
                 _LOGGER.warning(
-                    "Using the cloud API for device %s. This is not recommended as it can lead to rate limiting. We recommend making your vacuum accessible by your Home Assistant instance",
+                    "Using the cloud API for device %s. This is not recommended as it can lead to rate limiting. We recommend making your vacuum accessible by your MenuAI instance",
                     self.duid,
                 )
                 await self.api.async_disconnect()
@@ -322,7 +322,7 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
             ):
                 try:
                     await self.update_map()
-                except HomeAssistantError as err:
+                except menuaiError as err:
                     _LOGGER.debug("Failed to update map: %s", err)
             await self.set_current_map_rooms()
         except RoborockException as ex:
@@ -373,7 +373,7 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
             return await self._api_client.get_scenes(self._user_data, self.duid)
         except RoborockException as err:
             _LOGGER.error("Failed to get routines %s", err)
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_failed",
                 translation_placeholders={
@@ -387,7 +387,7 @@ class RoborockDataUpdateCoordinator(DataUpdateCoordinator[DeviceProp]):
             await self._api_client.execute_scene(self._user_data, routine_id)
         except RoborockException as err:
             _LOGGER.error("Failed to execute routines %s %s", routine_id, err)
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_failed",
                 translation_placeholders={
@@ -454,7 +454,7 @@ class RoborockDataUpdateCoordinatorA01(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RoborockConfigEntry,
         device: HomeDataDevice,
         product_info: HomeDataProduct,
@@ -462,7 +462,7 @@ class RoborockDataUpdateCoordinatorA01(
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -497,7 +497,7 @@ class RoborockDataUpdateCoordinatorA01(
             ]
         else:
             _LOGGER.warning("The device you added is not yet supported")
-        self.roborock_device_info = RoborockA01HassDeviceInfo(device, product_info)
+        self.roborock_device_info = RoborockA01menuaiDeviceInfo(device, product_info)
 
     async def _async_update_data(
         self,

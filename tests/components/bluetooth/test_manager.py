@@ -13,9 +13,9 @@ from freezegun import freeze_time
 from habluetooth.advertisement_tracker import TRACKER_BUFFERING_WOBBLE_SECONDS
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import (
+from menuai import config_entries
+from menuai.components import bluetooth
+from menuai.components.bluetooth import (
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
     MONOTONIC_TIME,
     BaseHaRemoteScanner,
@@ -32,17 +32,17 @@ from homeassistant.components.bluetooth import (
     async_track_unavailable,
     storage,
 )
-from homeassistant.components.bluetooth.const import (
+from menuai.components.bluetooth.const import (
     SOURCE_LOCAL,
     UNAVAILABLE_TRACK_SECONDS,
 )
-from homeassistant.components.bluetooth.manager import HomeAssistantBluetoothManager
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.discovery_flow import DiscoveryKey
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.dt import utcnow
-from homeassistant.util.json import json_loads
+from menuai.components.bluetooth.manager import menuaiBluetoothManager
+from menuai.core import menuai, callback
+from menuai.helpers.discovery_flow import DiscoveryKey
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.dt import utcnow
+from menuai.util.json import json_loads
 
 from . import (
     HCI0_SOURCE_ADDRESS,
@@ -70,7 +70,7 @@ from tests.common import (
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_advertisements_do_not_switch_adapters_for_no_reason(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -85,11 +85,11 @@ async def test_advertisements_do_not_switch_adapters_for_no_reason(
         local_name="wohand_signal_100", service_uuids=[]
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_100, switchbot_adv_signal_100, HCI0_SOURCE_ADDRESS
+        menuai, switchbot_device_signal_100, switchbot_adv_signal_100, HCI0_SOURCE_ADDRESS
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_signal_100
     )
 
@@ -100,11 +100,11 @@ async def test_advertisements_do_not_switch_adapters_for_no_reason(
         local_name="wohand_signal_99", service_uuids=[]
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_99, switchbot_adv_signal_99, HCI0_SOURCE_ADDRESS
+        menuai, switchbot_device_signal_99, switchbot_adv_signal_99, HCI0_SOURCE_ADDRESS
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_signal_99
     )
 
@@ -115,19 +115,19 @@ async def test_advertisements_do_not_switch_adapters_for_no_reason(
         local_name="wohand_good_signal", service_uuids=[]
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_98, switchbot_adv_signal_98, HCI1_SOURCE_ADDRESS
+        menuai, switchbot_device_signal_98, switchbot_adv_signal_98, HCI1_SOURCE_ADDRESS
     )
 
     # should not switch to hci1
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_signal_99
     )
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_switching_adapters_based_on_rssi(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -140,14 +140,14 @@ async def test_switching_adapters_based_on_rssi(
         local_name="wohand_poor_signal", service_uuids=[], rssi=-100
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal,
         switchbot_adv_poor_signal,
         HCI0_SOURCE_ADDRESS,
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal
     )
 
@@ -156,25 +156,25 @@ async def test_switching_adapters_based_on_rssi(
         local_name="wohand_good_signal", service_uuids=[], rssi=-60
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_good_signal,
         switchbot_adv_good_signal,
         HCI1_SOURCE_ADDRESS,
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_good_signal,
         switchbot_adv_poor_signal,
         HCI0_SOURCE_ADDRESS,
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
@@ -187,20 +187,20 @@ async def test_switching_adapters_based_on_rssi(
     )
 
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_similar_signal,
         switchbot_adv_similar_signal,
         HCI0_SOURCE_ADDRESS,
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_switching_adapters_based_on_zero_rssi(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -213,11 +213,11 @@ async def test_switching_adapters_based_on_zero_rssi(
         local_name="wohand_no_rssi", service_uuids=[], rssi=0
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_no_rssi, switchbot_adv_no_rssi, HCI0_SOURCE_ADDRESS
+        menuai, switchbot_device_no_rssi, switchbot_adv_no_rssi, HCI0_SOURCE_ADDRESS
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_no_rssi
     )
 
@@ -226,22 +226,22 @@ async def test_switching_adapters_based_on_zero_rssi(
         local_name="wohand_good_signal", service_uuids=[], rssi=-60
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_good_signal,
         switchbot_adv_good_signal,
         HCI1_SOURCE_ADDRESS,
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
     inject_advertisement_with_source(
-        hass, switchbot_device_good_signal, switchbot_adv_no_rssi, HCI0_SOURCE_ADDRESS
+        menuai, switchbot_device_good_signal, switchbot_adv_no_rssi, HCI0_SOURCE_ADDRESS
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
@@ -254,20 +254,20 @@ async def test_switching_adapters_based_on_zero_rssi(
     )
 
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_similar_signal,
         switchbot_adv_similar_signal,
         HCI0_SOURCE_ADDRESS,
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_switching_adapters_based_on_stale(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -283,7 +283,7 @@ async def test_switching_adapters_based_on_stale(
         local_name="wohand_poor_signal_hci0", service_uuids=[], rssi=-100
     )
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal_hci0,
         switchbot_adv_poor_signal_hci0,
         start_time_monotonic,
@@ -291,7 +291,7 @@ async def test_switching_adapters_based_on_stale(
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal_hci0
     )
 
@@ -302,7 +302,7 @@ async def test_switching_adapters_based_on_stale(
         local_name="wohand_poor_signal_hci1", service_uuids=[], rssi=-99
     )
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal_hci1,
         switchbot_adv_poor_signal_hci1,
         start_time_monotonic,
@@ -311,7 +311,7 @@ async def test_switching_adapters_based_on_stale(
 
     # Should not switch adapters until the advertisement is stale
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal_hci0
     )
 
@@ -319,7 +319,7 @@ async def test_switching_adapters_based_on_stale(
     # even though the signal is poor because the device is now
     # likely unreachable via hci0
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal_hci1,
         switchbot_adv_poor_signal_hci1,
         start_time_monotonic + FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1,
@@ -327,14 +327,14 @@ async def test_switching_adapters_based_on_stale(
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal_hci1
     )
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_switching_adapters_based_on_stale_with_discovered_interval(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -350,7 +350,7 @@ async def test_switching_adapters_based_on_stale_with_discovered_interval(
         local_name="wohand_poor_signal_hci0", service_uuids=[], rssi=-100
     )
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal_hci0,
         switchbot_adv_poor_signal_hci0,
         start_time_monotonic,
@@ -358,11 +358,11 @@ async def test_switching_adapters_based_on_stale_with_discovered_interval(
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal_hci0
     )
 
-    bluetooth.async_set_fallback_availability_interval(hass, address, 10)
+    bluetooth.async_set_fallback_availability_interval(menuai, address, 10)
 
     switchbot_device_poor_signal_hci1 = generate_ble_device(
         address, "wohand_poor_signal_hci1"
@@ -371,7 +371,7 @@ async def test_switching_adapters_based_on_stale_with_discovered_interval(
         local_name="wohand_poor_signal_hci1", service_uuids=[], rssi=-99
     )
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal_hci1,
         switchbot_adv_poor_signal_hci1,
         start_time_monotonic,
@@ -380,12 +380,12 @@ async def test_switching_adapters_based_on_stale_with_discovered_interval(
 
     # Should not switch adapters until the advertisement is stale
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal_hci0
     )
 
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal_hci1,
         switchbot_adv_poor_signal_hci1,
         start_time_monotonic + 10 + 1,
@@ -395,12 +395,12 @@ async def test_switching_adapters_based_on_stale_with_discovered_interval(
     # Should not switch yet since we are not within the
     # wobble period
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal_hci0
     )
 
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal_hci1,
         switchbot_adv_poor_signal_hci1,
         start_time_monotonic + 10 + TRACKER_BUFFERING_WOBBLE_SECONDS + 1,
@@ -410,14 +410,14 @@ async def test_switching_adapters_based_on_stale_with_discovered_interval(
     # even though the signal is poor because the device is now
     # likely unreachable via hci0
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal_hci1
     )
 
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_restore_history_from_dbus(
-    hass: HomeAssistant, disable_new_discovery_flows
+    menuai: menuai, disable_new_discovery_flows
 ) -> None:
     """Test we can restore history from dbus."""
     address = "AA:BB:CC:CC:CC:FF"
@@ -435,25 +435,25 @@ async def test_restore_history_from_dbus(
         "bluetooth_adapters.systems.linux.LinuxAdapters.history",
         history,
     ):
-        assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    assert bluetooth.async_ble_device_from_address(hass, address) is ble_device
-    info = bluetooth.async_last_service_info(hass, address, False)
+    assert bluetooth.async_ble_device_from_address(menuai, address) is ble_device
+    info = bluetooth.async_last_service_info(menuai, address, False)
     assert info.source == "00:00:00:00:00:01"
 
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_restore_history_from_dbus_and_remote_adapters(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     disable_new_discovery_flows,
 ) -> None:
     """Test we can restore history from dbus along with remote adapters."""
     address = "AA:BB:CC:CC:CC:FF"
 
-    data = hass_storage[storage.REMOTE_SCANNER_STORAGE_KEY] = json_loads(
-        await async_load_fixture(hass, "bluetooth.remote_scanners", bluetooth.DOMAIN)
+    data = menuai_storage[storage.REMOTE_SCANNER_STORAGE_KEY] = json_loads(
+        await async_load_fixture(menuai, "bluetooth.remote_scanners", bluetooth.DOMAIN)
     )
     now = time.time()
     timestamps = data["data"]["atom-bluetooth-proxy-ceaac4"][
@@ -475,28 +475,28 @@ async def test_restore_history_from_dbus_and_remote_adapters(
         "bluetooth_adapters.systems.linux.LinuxAdapters.history",
         history,
     ):
-        assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    assert bluetooth.async_ble_device_from_address(hass, address) is not None
+    assert bluetooth.async_ble_device_from_address(menuai, address) is not None
     assert (
-        bluetooth.async_ble_device_from_address(hass, "EB:0B:36:35:6F:A4") is not None
+        bluetooth.async_ble_device_from_address(menuai, "EB:0B:36:35:6F:A4") is not None
     )
     assert disable_new_discovery_flows.call_count > 1
 
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_restore_history_from_dbus_and_corrupted_remote_adapters(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     disable_new_discovery_flows,
 ) -> None:
     """Test we can restore history from dbus when the remote adapters data is corrupted."""
     address = "AA:BB:CC:CC:CC:FF"
 
-    data = hass_storage[storage.REMOTE_SCANNER_STORAGE_KEY] = json_loads(
+    data = menuai_storage[storage.REMOTE_SCANNER_STORAGE_KEY] = json_loads(
         await async_load_fixture(
-            hass, "bluetooth.remote_scanners.corrupt", bluetooth.DOMAIN
+            menuai, "bluetooth.remote_scanners.corrupt", bluetooth.DOMAIN
         )
     )
     now = time.time()
@@ -519,17 +519,17 @@ async def test_restore_history_from_dbus_and_corrupted_remote_adapters(
         "bluetooth_adapters.systems.linux.LinuxAdapters.history",
         history,
     ):
-        assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    assert bluetooth.async_ble_device_from_address(hass, address) is not None
-    assert bluetooth.async_ble_device_from_address(hass, "EB:0B:36:35:6F:A4") is None
+    assert bluetooth.async_ble_device_from_address(menuai, address) is not None
+    assert bluetooth.async_ble_device_from_address(menuai, "EB:0B:36:35:6F:A4") is None
     assert disable_new_discovery_flows.call_count >= 1
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -542,7 +542,7 @@ async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
         local_name="wohand_poor_signal", service_uuids=[], rssi=-100
     )
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         switchbot_device_poor_signal,
         switchbot_adv_poor_signal,
         now,
@@ -551,11 +551,11 @@ async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, False)
+        bluetooth.async_ble_device_from_address(menuai, address, False)
         is switchbot_device_poor_signal
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, True)
+        bluetooth.async_ble_device_from_address(menuai, address, True)
         is switchbot_device_poor_signal
     )
     switchbot_device_good_signal = generate_ble_device(address, "wohand_good_signal")
@@ -563,7 +563,7 @@ async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
         local_name="wohand_good_signal", service_uuids=[], rssi=-60
     )
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         switchbot_device_good_signal,
         switchbot_adv_good_signal,
         now,
@@ -572,15 +572,15 @@ async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, False)
+        bluetooth.async_ble_device_from_address(menuai, address, False)
         is switchbot_device_good_signal
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, True)
+        bluetooth.async_ble_device_from_address(menuai, address, True)
         is switchbot_device_poor_signal
     )
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         switchbot_device_good_signal,
         switchbot_adv_poor_signal,
         now,
@@ -588,11 +588,11 @@ async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
         False,
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, False)
+        bluetooth.async_ble_device_from_address(menuai, address, False)
         is switchbot_device_good_signal
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, True)
+        bluetooth.async_ble_device_from_address(menuai, address, True)
         is switchbot_device_poor_signal
     )
     switchbot_device_excellent_signal = generate_ble_device(
@@ -603,7 +603,7 @@ async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
     )
 
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         switchbot_device_excellent_signal,
         switchbot_adv_excellent_signal,
         now,
@@ -611,18 +611,18 @@ async def test_switching_adapters_based_on_rssi_connectable_to_non_connectable(
         False,
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, False)
+        bluetooth.async_ble_device_from_address(menuai, address, False)
         is switchbot_device_excellent_signal
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, True)
+        bluetooth.async_ble_device_from_address(menuai, address, True)
         is switchbot_device_poor_signal
     )
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_connectable_advertisement_can_be_retrieved_with_best_path_is_non_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -639,7 +639,7 @@ async def test_connectable_advertisement_can_be_retrieved_with_best_path_is_non_
         local_name="wohand_good_signal", service_uuids=[], rssi=-60
     )
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         switchbot_device_good_signal,
         switchbot_adv_good_signal,
         now,
@@ -648,17 +648,17 @@ async def test_connectable_advertisement_can_be_retrieved_with_best_path_is_non_
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, False)
+        bluetooth.async_ble_device_from_address(menuai, address, False)
         is switchbot_device_good_signal
     )
-    assert bluetooth.async_ble_device_from_address(hass, address, True) is None
+    assert bluetooth.async_ble_device_from_address(menuai, address, True) is None
 
     switchbot_device_poor_signal = generate_ble_device(address, "wohand_poor_signal")
     switchbot_adv_poor_signal = generate_advertisement_data(
         local_name="wohand_poor_signal", service_uuids=[], rssi=-100
     )
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         switchbot_device_poor_signal,
         switchbot_adv_poor_signal,
         now,
@@ -667,21 +667,21 @@ async def test_connectable_advertisement_can_be_retrieved_with_best_path_is_non_
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, False)
+        bluetooth.async_ble_device_from_address(menuai, address, False)
         is switchbot_device_good_signal
     )
     assert (
-        bluetooth.async_ble_device_from_address(hass, address, True)
+        bluetooth.async_ble_device_from_address(menuai, address, True)
         is switchbot_device_poor_signal
     )
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_switching_adapters_when_one_goes_away(
-    hass: HomeAssistant, register_hci0_scanner: None
+    menuai: menuai, register_hci0_scanner: None
 ) -> None:
     """Test switching adapters when one goes away."""
-    cancel_hci2 = bluetooth.async_register_scanner(hass, FakeScanner("hci2", "hci2"))
+    cancel_hci2 = bluetooth.async_register_scanner(menuai, FakeScanner("hci2", "hci2"))
 
     address = "44:44:33:11:23:45"
 
@@ -690,11 +690,11 @@ async def test_switching_adapters_when_one_goes_away(
         local_name="wohand_good_signal", service_uuids=[], rssi=-60
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_good_signal, switchbot_adv_good_signal, "hci2"
+        menuai, switchbot_device_good_signal, switchbot_adv_good_signal, "hci2"
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
@@ -703,7 +703,7 @@ async def test_switching_adapters_when_one_goes_away(
         local_name="wohand_poor_signal", service_uuids=[], rssi=-100
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal,
         switchbot_adv_poor_signal,
         HCI0_SOURCE_ADDRESS,
@@ -711,14 +711,14 @@ async def test_switching_adapters_when_one_goes_away(
 
     # We want to prefer the good signal when we have options
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
     cancel_hci2()
 
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal,
         switchbot_adv_poor_signal,
         HCI0_SOURCE_ADDRESS,
@@ -727,18 +727,18 @@ async def test_switching_adapters_when_one_goes_away(
     # Now that hci2 is gone, we should prefer the poor signal
     # since no poor signal is better than no signal
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal
     )
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_switching_adapters_when_one_stop_scanning(
-    hass: HomeAssistant, register_hci0_scanner: None
+    menuai: menuai, register_hci0_scanner: None
 ) -> None:
     """Test switching adapters when stops scanning."""
     hci2_scanner = FakeScanner("hci2", "hci2")
-    cancel_hci2 = bluetooth.async_register_scanner(hass, hci2_scanner)
+    cancel_hci2 = bluetooth.async_register_scanner(menuai, hci2_scanner)
 
     address = "44:44:33:11:23:45"
 
@@ -747,11 +747,11 @@ async def test_switching_adapters_when_one_stop_scanning(
         local_name="wohand_good_signal", service_uuids=[], rssi=-60
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_good_signal, switchbot_adv_good_signal, "hci2"
+        menuai, switchbot_device_good_signal, switchbot_adv_good_signal, "hci2"
     )
 
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
@@ -760,7 +760,7 @@ async def test_switching_adapters_when_one_stop_scanning(
         local_name="wohand_poor_signal", service_uuids=[], rssi=-100
     )
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal,
         switchbot_adv_poor_signal,
         HCI0_SOURCE_ADDRESS,
@@ -768,14 +768,14 @@ async def test_switching_adapters_when_one_stop_scanning(
 
     # We want to prefer the good signal when we have options
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_good_signal
     )
 
     hci2_scanner.scanning = False
 
     inject_advertisement_with_source(
-        hass,
+        menuai,
         switchbot_device_poor_signal,
         switchbot_adv_poor_signal,
         HCI0_SOURCE_ADDRESS,
@@ -784,7 +784,7 @@ async def test_switching_adapters_when_one_stop_scanning(
     # Now that hci2 has stopped scanning, we should prefer the poor signal
     # since poor signal is better than no signal
     assert (
-        bluetooth.async_ble_device_from_address(hass, address)
+        bluetooth.async_ble_device_from_address(menuai, address)
         is switchbot_device_poor_signal
     )
 
@@ -793,14 +793,14 @@ async def test_switching_adapters_when_one_stop_scanning(
 
 @pytest.mark.usefixtures("mock_bluetooth_adapters")
 async def test_goes_unavailable_connectable_only_and_recovers(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test all connectable scanners go unavailable, and than recover when there is a non-connectable scanner."""
-    assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    assert async_scanner_count(hass, connectable=True) == 0
-    assert async_scanner_count(hass, connectable=False) == 0
+    assert async_scanner_count(menuai, connectable=True) == 0
+    assert async_scanner_count(menuai, connectable=False) == 0
     switchbot_device_connectable = generate_ble_device(
         "44:44:33:11:23:45",
         "wohand",
@@ -830,7 +830,7 @@ async def test_goes_unavailable_connectable_only_and_recovers(
         callbacks.append((service_info, change))
 
     cancel = bluetooth.async_register_callback(
-        hass,
+        menuai,
         _fake_subscriber,
         {"address": "44:44:33:11:23:45", "connectable": True},
         BluetoothScanningMode.ACTIVE,
@@ -869,8 +869,8 @@ async def test_goes_unavailable_connectable_only_and_recovers(
     connectable_scanner.inject_advertisement(
         switchbot_device_connectable, switchbot_device_adv
     )
-    assert async_ble_device_from_address(hass, "44:44:33:11:23:45") is not None
-    assert async_scanner_count(hass, connectable=True) == 1
+    assert async_ble_device_from_address(menuai, "44:44:33:11:23:45") is not None
+    assert async_scanner_count(menuai, connectable=True) == 1
     assert len(callbacks) == 1
 
     assert (
@@ -891,8 +891,8 @@ async def test_goes_unavailable_connectable_only_and_recovers(
     not_connectable_scanner.inject_advertisement(
         switchbot_device_non_connectable, switchbot_device_adv
     )
-    assert async_scanner_count(hass, connectable=True) == 1
-    assert async_scanner_count(hass, connectable=False) == 2
+    assert async_scanner_count(menuai, connectable=True) == 1
+    assert async_scanner_count(menuai, connectable=False) == 2
 
     assert (
         "44:44:33:11:23:45"
@@ -908,22 +908,22 @@ async def test_goes_unavailable_connectable_only_and_recovers(
         unavailable_callbacks.append(service_info.address)
 
     cancel_unavailable = async_track_unavailable(
-        hass,
+        menuai,
         _unavailable_callback,
         switchbot_device_connectable.address,
         connectable=True,
     )
 
-    assert async_scanner_count(hass, connectable=True) == 1
+    assert async_scanner_count(menuai, connectable=True) == 1
     cancel_connectable_scanner()
     unsetup_connectable_scanner()
-    assert async_scanner_count(hass, connectable=True) == 0
-    assert async_scanner_count(hass, connectable=False) == 1
+    assert async_scanner_count(menuai, connectable=True) == 0
+    assert async_scanner_count(menuai, connectable=False) == 1
 
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+        menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "44:44:33:11:23:45" in unavailable_callbacks
     cancel_unavailable()
 
@@ -957,7 +957,7 @@ async def test_goes_unavailable_connectable_only_and_recovers(
 
 @pytest.mark.usefixtures("mock_bluetooth_adapters")
 async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that unavailable will dismiss any active discoveries and make device discoverable again."""
     mock_bt = [
@@ -968,12 +968,12 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
         },
     ]
     with patch(
-        "homeassistant.components.bluetooth.async_get_bluetooth", return_value=mock_bt
+        "menuai.components.bluetooth.async_get_bluetooth", return_value=mock_bt
     ):
-        assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    assert async_scanner_count(hass, connectable=False) == 0
+    assert async_scanner_count(menuai, connectable=False) == 0
     switchbot_device_non_connectable = generate_ble_device(
         "44:44:33:11:23:45",
         "wohand",
@@ -997,7 +997,7 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
         callbacks.append((service_info, change))
 
     cancel = bluetooth.async_register_callback(
-        hass,
+        menuai,
         _fake_subscriber,
         {"address": "44:44:33:11:23:45", "connectable": False},
         BluetoothScanningMode.ACTIVE,
@@ -1037,11 +1037,11 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
     cancel_connectable_scanner = _get_manager().async_register_scanner(
         non_connectable_scanner
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_config_flow:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow:
         non_connectable_scanner.inject_advertisement(
             switchbot_device_non_connectable, switchbot_device_adv
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "switchbot"
@@ -1052,8 +1052,8 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
         "source": "bluetooth",
     }
 
-    assert async_ble_device_from_address(hass, "44:44:33:11:23:45", False) is not None
-    assert async_scanner_count(hass, connectable=False) == 1
+    assert async_ble_device_from_address(menuai, "44:44:33:11:23:45", False) is not None
+    assert async_scanner_count(menuai, connectable=False) == 1
     assert len(callbacks) == 1
 
     assert (
@@ -1070,13 +1070,13 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
         unavailable_callbacks.append(service_info.address)
 
     cancel_unavailable = async_track_unavailable(
-        hass,
+        menuai,
         _unavailable_callback,
         switchbot_device_non_connectable.address,
         connectable=False,
     )
 
-    assert async_scanner_count(hass, connectable=False) == 1
+    assert async_scanner_count(menuai, connectable=False) == 1
 
     non_connectable_scanner.clear_all_devices()
     assert (
@@ -1086,26 +1086,26 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
     monotonic_now = time.monotonic()
     with (
         patch.object(
-            hass.config_entries.flow,
+            menuai.config_entries.flow,
             "async_progress_by_init_data_type",
             return_value=[{"flow_id": "mock_flow_id"}],
         ) as mock_async_progress_by_init_data_type,
-        patch.object(hass.config_entries.flow, "async_abort") as mock_async_abort,
+        patch.object(menuai.config_entries.flow, "async_abort") as mock_async_abort,
         patch_bluetooth_time(
             monotonic_now + FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
         ),
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "44:44:33:11:23:45" in unavailable_callbacks
 
     assert len(mock_async_progress_by_init_data_type.mock_calls) == 1
     assert mock_async_abort.mock_calls[0][1][0] == "mock_flow_id"
 
     # Test that if the device comes back online, it can be discovered again
-    with patch.object(hass.config_entries.flow, "async_init") as mock_config_flow:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow:
         new_switchbot_device_adv = generate_advertisement_data(
             local_name="wohand",
             service_uuids=["050a021a-0000-1000-8000-00805f9b34fb"],
@@ -1116,7 +1116,7 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
         non_connectable_scanner.inject_advertisement(
             switchbot_device_non_connectable, new_switchbot_device_adv
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert (
         "44:44:33:11:23:45"
@@ -1140,15 +1140,15 @@ async def test_goes_unavailable_dismisses_discovery_and_makes_discoverable(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_debug_logging(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test debug logging."""
-    assert await async_setup_component(hass, "logger", {"logger": {}})
+    assert await async_setup_component(menuai, "logger", {"logger": {}})
     async with async_call_logger_set_level(
-        "homeassistant.components.bluetooth", "DEBUG", hass=hass, caplog=caplog
+        "menuai.components.bluetooth", "DEBUG", menuai=menuai, caplog=caplog
     ):
         address = "44:44:33:11:23:41"
         start_time_monotonic = 50.0
@@ -1160,7 +1160,7 @@ async def test_debug_logging(
             local_name="wohand_poor_signal_hci0", service_uuids=[], rssi=-100
         )
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device_poor_signal_hci0,
             switchbot_adv_poor_signal_hci0,
             start_time_monotonic,
@@ -1170,7 +1170,7 @@ async def test_debug_logging(
         caplog.clear()
 
     async with async_call_logger_set_level(
-        "homeassistant.components.bluetooth", "WARNING", hass=hass, caplog=caplog
+        "menuai.components.bluetooth", "WARNING", menuai=menuai, caplog=caplog
     ):
         switchbot_device_good_signal_hci0 = generate_ble_device(
             address, "wohand_good_signal_hci0"
@@ -1179,7 +1179,7 @@ async def test_debug_logging(
             local_name="wohand_good_signal_hci0", service_uuids=[], rssi=-33
         )
         inject_advertisement_with_time_and_source(
-            hass,
+            menuai,
             switchbot_device_good_signal_hci0,
             switchbot_adv_good_signal_hci0,
             start_time_monotonic,
@@ -1189,12 +1189,12 @@ async def test_debug_logging(
 
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
-async def test_set_fallback_interval_small(hass: HomeAssistant) -> None:
+async def test_set_fallback_interval_small(menuai: menuai) -> None:
     """Test we can set the fallback advertisement interval."""
-    assert async_get_fallback_availability_interval(hass, "44:44:33:11:23:12") is None
+    assert async_get_fallback_availability_interval(menuai, "44:44:33:11:23:12") is None
 
-    async_set_fallback_availability_interval(hass, "44:44:33:11:23:12", 2.0)
-    assert async_get_fallback_availability_interval(hass, "44:44:33:11:23:12") == 2.0
+    async_set_fallback_availability_interval(menuai, "44:44:33:11:23:12", 2.0)
+    assert async_get_fallback_availability_interval(menuai, "44:44:33:11:23:12") == 2.0
 
     start_monotonic_time = time.monotonic()
     switchbot_device = generate_ble_device("44:44:33:11:23:12", "wohand")
@@ -1204,7 +1204,7 @@ async def test_set_fallback_interval_small(hass: HomeAssistant) -> None:
     switchbot_device_went_unavailable = False
 
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device,
         switchbot_adv,
         start_monotonic_time,
@@ -1217,10 +1217,10 @@ async def test_set_fallback_interval_small(hass: HomeAssistant) -> None:
         nonlocal switchbot_device_went_unavailable
         switchbot_device_went_unavailable = True
 
-    assert async_get_learned_advertising_interval(hass, "44:44:33:11:23:12") is None
+    assert async_get_learned_advertising_interval(menuai, "44:44:33:11:23:12") is None
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass,
+        menuai,
         _switchbot_device_unavailable_callback,
         switchbot_device.address,
         connectable=False,
@@ -1231,27 +1231,27 @@ async def test_set_fallback_interval_small(hass: HomeAssistant) -> None:
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is True
     switchbot_device_unavailable_cancel()
 
     # We should forget fallback interval after it expires
-    assert async_get_fallback_availability_interval(hass, "44:44:33:11:23:12") is None
+    assert async_get_fallback_availability_interval(menuai, "44:44:33:11:23:12") is None
 
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
-async def test_set_fallback_interval_big(hass: HomeAssistant) -> None:
+async def test_set_fallback_interval_big(menuai: menuai) -> None:
     """Test we can set the fallback advertisement interval."""
-    assert async_get_fallback_availability_interval(hass, "44:44:33:11:23:12") is None
+    assert async_get_fallback_availability_interval(menuai, "44:44:33:11:23:12") is None
 
     # Force the interval to be really big and check it doesn't expire using the default timeout (900)
 
-    async_set_fallback_availability_interval(hass, "44:44:33:11:23:12", 604800.0)
+    async_set_fallback_availability_interval(menuai, "44:44:33:11:23:12", 604800.0)
     assert (
-        async_get_fallback_availability_interval(hass, "44:44:33:11:23:12") == 604800.0
+        async_get_fallback_availability_interval(menuai, "44:44:33:11:23:12") == 604800.0
     )
 
     start_monotonic_time = time.monotonic()
@@ -1262,7 +1262,7 @@ async def test_set_fallback_interval_big(hass: HomeAssistant) -> None:
     switchbot_device_went_unavailable = False
 
     inject_advertisement_with_time_and_source(
-        hass,
+        menuai,
         switchbot_device,
         switchbot_adv,
         start_monotonic_time,
@@ -1275,10 +1275,10 @@ async def test_set_fallback_interval_big(hass: HomeAssistant) -> None:
         nonlocal switchbot_device_went_unavailable
         switchbot_device_went_unavailable = True
 
-    assert async_get_learned_advertising_interval(hass, "44:44:33:11:23:12") is None
+    assert async_get_learned_advertising_interval(menuai, "44:44:33:11:23:12") is None
 
     switchbot_device_unavailable_cancel = async_track_unavailable(
-        hass,
+        menuai,
         _switchbot_device_unavailable_callback,
         switchbot_device.address,
         connectable=False,
@@ -1291,9 +1291,9 @@ async def test_set_fallback_interval_big(hass: HomeAssistant) -> None:
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is False
 
@@ -1304,16 +1304,16 @@ async def test_set_fallback_interval_big(hass: HomeAssistant) -> None:
         monotonic_now + UNAVAILABLE_TRACK_SECONDS,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert switchbot_device_went_unavailable is True
 
     switchbot_device_unavailable_cancel()
 
     # We should forget fallback interval after it expires
-    assert async_get_fallback_availability_interval(hass, "44:44:33:11:23:12") is None
+    assert async_get_fallback_availability_interval(menuai, "44:44:33:11:23:12") is None
 
 
 @pytest.mark.usefixtures("mock_bluetooth_adapters")
@@ -1370,7 +1370,7 @@ async def test_set_fallback_interval_big(hass: HomeAssistant) -> None:
     ],
 )
 async def test_bluetooth_rediscover(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_domain: str,
     entry_discovery_keys: dict[str, tuple[DiscoveryKey, ...]],
     entry_source: str,
@@ -1384,12 +1384,12 @@ async def test_bluetooth_rediscover(
         },
     ]
     with patch(
-        "homeassistant.components.bluetooth.async_get_bluetooth", return_value=mock_bt
+        "menuai.components.bluetooth.async_get_bluetooth", return_value=mock_bt
     ):
-        assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    assert async_scanner_count(hass, connectable=False) == 0
+    assert async_scanner_count(menuai, connectable=False) == 0
     switchbot_device_non_connectable = generate_ble_device(
         "44:44:33:11:23:45",
         "wohand",
@@ -1413,7 +1413,7 @@ async def test_bluetooth_rediscover(
         callbacks.append((service_info, change))
 
     cancel = bluetooth.async_register_callback(
-        hass,
+        menuai,
         _fake_subscriber,
         {"address": "44:44:33:11:23:45", "connectable": False},
         BluetoothScanningMode.ACTIVE,
@@ -1453,11 +1453,11 @@ async def test_bluetooth_rediscover(
     cancel_connectable_scanner = _get_manager().async_register_scanner(
         non_connectable_scanner
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_config_flow:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow:
         non_connectable_scanner.inject_advertisement(
             switchbot_device_non_connectable, switchbot_device_adv
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         expected_context = {
             "discovery_key": DiscoveryKey(
@@ -1469,8 +1469,8 @@ async def test_bluetooth_rediscover(
         assert mock_config_flow.mock_calls[0][1][0] == "switchbot"
         assert mock_config_flow.mock_calls[0][2]["context"] == expected_context
 
-        hass.config.components.add(entry_domain)
-        mock_integration(hass, MockModule(entry_domain))
+        menuai.config.components.add(entry_domain)
+        mock_integration(menuai, MockModule(entry_domain))
 
         entry = MockConfigEntry(
             domain=entry_domain,
@@ -1479,12 +1479,12 @@ async def test_bluetooth_rediscover(
             state=config_entries.ConfigEntryState.LOADED,
             source=entry_source,
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
         assert (
-            async_ble_device_from_address(hass, "44:44:33:11:23:45", False) is not None
+            async_ble_device_from_address(menuai, "44:44:33:11:23:45", False) is not None
         )
-        assert async_scanner_count(hass, connectable=False) == 1
+        assert async_scanner_count(menuai, connectable=False) == 1
         assert len(callbacks) == 1
 
         assert (
@@ -1492,13 +1492,13 @@ async def test_bluetooth_rediscover(
             in non_connectable_scanner.discovered_devices_and_advertisement_data
         )
 
-        await hass.config_entries.async_remove(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_remove(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert (
-            async_ble_device_from_address(hass, "44:44:33:11:23:45", False) is not None
+            async_ble_device_from_address(menuai, "44:44:33:11:23:45", False) is not None
         )
-        assert async_scanner_count(hass, connectable=False) == 1
+        assert async_scanner_count(menuai, connectable=False) == 1
         assert len(callbacks) == 1
 
         assert len(mock_config_flow.mock_calls) == 2
@@ -1546,7 +1546,7 @@ async def test_bluetooth_rediscover(
     ],
 )
 async def test_bluetooth_rediscover_no_match(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_domain: str,
     entry_discovery_keys: dict[str, tuple[DiscoveryKey, ...]],
     entry_source: str,
@@ -1561,12 +1561,12 @@ async def test_bluetooth_rediscover_no_match(
         },
     ]
     with patch(
-        "homeassistant.components.bluetooth.async_get_bluetooth", return_value=mock_bt
+        "menuai.components.bluetooth.async_get_bluetooth", return_value=mock_bt
     ):
-        assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    assert async_scanner_count(hass, connectable=False) == 0
+    assert async_scanner_count(menuai, connectable=False) == 0
     switchbot_device_non_connectable = generate_ble_device(
         "44:44:33:11:23:45",
         "wohand",
@@ -1590,7 +1590,7 @@ async def test_bluetooth_rediscover_no_match(
         callbacks.append((service_info, change))
 
     cancel = bluetooth.async_register_callback(
-        hass,
+        menuai,
         _fake_subscriber,
         {"address": "44:44:33:11:23:45", "connectable": False},
         BluetoothScanningMode.ACTIVE,
@@ -1630,11 +1630,11 @@ async def test_bluetooth_rediscover_no_match(
     cancel_connectable_scanner = _get_manager().async_register_scanner(
         non_connectable_scanner
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_config_flow:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow:
         non_connectable_scanner.inject_advertisement(
             switchbot_device_non_connectable, switchbot_device_adv
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         expected_context = {
             "discovery_key": DiscoveryKey(
@@ -1646,8 +1646,8 @@ async def test_bluetooth_rediscover_no_match(
         assert mock_config_flow.mock_calls[0][1][0] == "switchbot"
         assert mock_config_flow.mock_calls[0][2]["context"] == expected_context
 
-        hass.config.components.add(entry_domain)
-        mock_integration(hass, MockModule(entry_domain))
+        menuai.config.components.add(entry_domain)
+        mock_integration(menuai, MockModule(entry_domain))
 
         entry = MockConfigEntry(
             domain=entry_domain,
@@ -1656,12 +1656,12 @@ async def test_bluetooth_rediscover_no_match(
             state=config_entries.ConfigEntryState.LOADED,
             source=entry_source,
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
         assert (
-            async_ble_device_from_address(hass, "44:44:33:11:23:45", False) is not None
+            async_ble_device_from_address(menuai, "44:44:33:11:23:45", False) is not None
         )
-        assert async_scanner_count(hass, connectable=False) == 1
+        assert async_scanner_count(menuai, connectable=False) == 1
         assert len(callbacks) == 1
 
         assert (
@@ -1669,13 +1669,13 @@ async def test_bluetooth_rediscover_no_match(
             in non_connectable_scanner.discovered_devices_and_advertisement_data
         )
 
-        await hass.config_entries.async_remove(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_remove(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert (
-            async_ble_device_from_address(hass, "44:44:33:11:23:45", False) is not None
+            async_ble_device_from_address(menuai, "44:44:33:11:23:45", False) is not None
         )
-        assert async_scanner_count(hass, connectable=False) == 1
+        assert async_scanner_count(menuai, connectable=False) == 1
         assert len(callbacks) == 1
         assert len(mock_config_flow.mock_calls) == 1
 
@@ -1686,7 +1686,7 @@ async def test_bluetooth_rediscover_no_match(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_async_register_disappeared_callback(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
 ) -> None:
@@ -1700,7 +1700,7 @@ async def test_async_register_disappeared_callback(
         local_name="wohand_signal_100", service_uuids=[]
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_100, switchbot_adv_signal_100, "hci0"
+        menuai, switchbot_device_signal_100, switchbot_adv_signal_100, "hci0"
     )
 
     failed_disappeared: list[str] = []
@@ -1716,7 +1716,7 @@ async def test_async_register_disappeared_callback(
         """Ok callback."""
         ok_disappeared.append(_address)
 
-    manager: HomeAssistantBluetoothManager = _get_manager()
+    manager: menuaiBluetoothManager = _get_manager()
     cancel1 = manager.async_register_disappeared_callback(_failing_callback)
     # Make sure the second callback still works if the first one fails and
     # raises an exception
@@ -1729,7 +1729,7 @@ async def test_async_register_disappeared_callback(
         rssi=-80,
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_100, switchbot_adv_signal_100, "hci1"
+        menuai, switchbot_device_signal_100, switchbot_adv_signal_100, "hci1"
     )
 
     future_time = utcnow() + timedelta(seconds=3600)
@@ -1741,7 +1741,7 @@ async def test_async_register_disappeared_callback(
             return_value=future_monotonic_time,
         ),
     ):
-        async_fire_time_changed(hass, future_time)
+        async_fire_time_changed(menuai, future_time)
 
     assert len(ok_disappeared) == 1
     assert ok_disappeared[0] == address

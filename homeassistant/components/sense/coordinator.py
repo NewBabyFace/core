@@ -12,9 +12,9 @@ from sense_energy import (
     SenseMFARequiredException,
 )
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import SenseConfigEntry
@@ -37,7 +37,7 @@ class SenseCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SenseConfigEntry,
         gateway: ASyncSenseable,
         name: str,
@@ -45,7 +45,7 @@ class SenseCoordinator(DataUpdateCoordinator[None]):
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=f"Sense {name} {gateway.sense_monitor_id}",
@@ -60,12 +60,12 @@ class SenseTrendCoordinator(SenseCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SenseConfigEntry,
         gateway: ASyncSenseable,
     ) -> None:
         """Initialize."""
-        super().__init__(hass, config_entry, gateway, "Trends", TREND_UPDATE_RATE)
+        super().__init__(menuai, config_entry, gateway, "Trends", TREND_UPDATE_RATE)
 
     async def _async_update_data(self) -> None:
         """Update the trend data."""
@@ -83,12 +83,12 @@ class SenseRealtimeCoordinator(SenseCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SenseConfigEntry,
         gateway: ASyncSenseable,
     ) -> None:
         """Initialize."""
-        super().__init__(hass, config_entry, gateway, "Realtime", ACTIVE_UPDATE_RATE)
+        super().__init__(menuai, config_entry, gateway, "Realtime", ACTIVE_UPDATE_RATE)
 
     async def _async_update_data(self) -> None:
         """Retrieve latest state."""

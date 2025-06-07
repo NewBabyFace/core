@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.components.media_player import MediaType
+from menuai.components.media_player import MediaType
 
 DOMAIN = "spotify"
 

@@ -9,12 +9,12 @@ from pyfritzhome import Fritzhome, FritzhomeDevice, LoginError
 from pyfritzhome.devicetypes import FritzhomeTemplate
 from requests.exceptions import ConnectionError as RequestConnectionError, HTTPError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -38,10 +38,10 @@ class FritzboxDataUpdateCoordinator(DataUpdateCoordinator[FritzboxCoordinatorDat
     fritz: Fritzhome
     has_templates: bool
 
-    def __init__(self, hass: HomeAssistant, config_entry: FritzboxConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: FritzboxConfigEntry) -> None:
         """Initialize the Fritzbox Smarthome device coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=config_entry.entry_id,
@@ -63,13 +63,13 @@ class FritzboxDataUpdateCoordinator(DataUpdateCoordinator[FritzboxCoordinatorDat
         )
 
         try:
-            await self.hass.async_add_executor_job(self.fritz.login)
+            await self.menuai.async_add_executor_job(self.fritz.login)
         except RequestConnectionError as err:
             raise ConfigEntryNotReady from err
         except LoginError as err:
             raise ConfigEntryAuthFailed from err
 
-        self.has_templates = await self.hass.async_add_executor_job(
+        self.has_templates = await self.menuai.async_add_executor_job(
             self.fritz.has_templates
         )
         LOGGER.debug("enable smarthome templates: %s", self.has_templates)
@@ -82,7 +82,7 @@ class FritzboxDataUpdateCoordinator(DataUpdateCoordinator[FritzboxCoordinatorDat
     def cleanup_removed_devices(self, data: FritzboxCoordinatorData) -> None:
         """Cleanup entity and device registry from removed devices."""
         available_ains = list(data.devices) + list(data.templates)
-        entity_reg = er.async_get(self.hass)
+        entity_reg = er.async_get(self.menuai)
         for entity in er.async_entries_for_config_entry(
             entity_reg, self.config_entry.entry_id
         ):
@@ -95,7 +95,7 @@ class FritzboxDataUpdateCoordinator(DataUpdateCoordinator[FritzboxCoordinatorDat
             for ain, dev in data.devices.items() | data.templates.items()
             if dev.device_and_unit_id[1] is None
         ]
-        device_reg = dr.async_get(self.hass)
+        device_reg = dr.async_get(self.menuai)
         identifiers = {(DOMAIN, ain) for ain in available_main_ains}
         for device in dr.async_entries_for_config_entry(
             device_reg, self.config_entry.entry_id
@@ -167,7 +167,7 @@ class FritzboxDataUpdateCoordinator(DataUpdateCoordinator[FritzboxCoordinatorDat
 
     async def _async_update_data(self) -> FritzboxCoordinatorData:
         """Fetch all device data."""
-        new_data = await self.hass.async_add_executor_job(self._update_fritz_devices)
+        new_data = await self.menuai.async_add_executor_job(self._update_fritz_devices)
 
         for device in new_data.devices.values():
             # create device registry entry for new main devices
@@ -175,7 +175,7 @@ class FritzboxDataUpdateCoordinator(DataUpdateCoordinator[FritzboxCoordinatorDat
                 device.ain not in self.data.devices
                 and device.device_and_unit_id[1] is None
             ):
-                dr.async_get(self.hass).async_get_or_create(
+                dr.async_get(self.menuai).async_get_or_create(
                     config_entry_id=self.config_entry.entry_id,
                     name=device.name,
                     identifiers={(DOMAIN, device.ain)},

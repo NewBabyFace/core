@@ -7,16 +7,16 @@ from typing import Any
 from pynina import ApiError, Nina
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import VolDictType
+from menuai.core import callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     _LOGGER,
@@ -105,7 +105,7 @@ class NinaConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, Any] = {}
 
         if not self._all_region_codes_sorted:
-            nina: Nina = Nina(async_get_clientsession(self.hass))
+            nina: Nina = Nina(async_get_clientsession(self.menuai))
 
             try:
                 self._all_region_codes_sorted = swap_key_value(
@@ -187,7 +187,7 @@ class OptionsFlowHandler(OptionsFlow):
         errors: dict[str, str] = {}
 
         if not self._all_region_codes_sorted:
-            nina: Nina = Nina(async_get_clientsession(self.hass))
+            nina: Nina = Nina(async_get_clientsession(self.menuai))
 
             try:
                 self._all_region_codes_sorted = swap_key_value(
@@ -213,7 +213,7 @@ class OptionsFlowHandler(OptionsFlow):
                     user_input, self._all_region_codes_sorted
                 )
 
-                entity_registry = er.async_get(self.hass)
+                entity_registry = er.async_get(self.menuai)
 
                 entries = er.async_entries_for_config_entry(
                     entity_registry, self.config_entry.entry_id
@@ -240,7 +240,7 @@ class OptionsFlowHandler(OptionsFlow):
                         if entry.unique_id == entity_uid:
                             entity_registry.async_remove(entry.entity_id)
 
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self.config_entry, data=user_input
                 )
 

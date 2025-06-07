@@ -17,9 +17,9 @@ from mcp.server import Server
 import voluptuous as vol
 from voluptuous_openapi import convert
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import llm
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import llm
 
 from .const import STATELESS_LLM_API
 
@@ -42,7 +42,7 @@ def _format_tool(
 
 
 async def create_server(
-    hass: HomeAssistant, llm_api_id: str, llm_context: llm.LLMContext
+    menuai: menuai, llm_api_id: str, llm_context: llm.LLMContext
 ) -> Server:
     """Create a new Model Context Protocol Server.
 
@@ -57,7 +57,7 @@ async def create_server(
     async def get_api_instance() -> llm.APIInstance:
         """Get the LLM API selected."""
         # Backwards compatibility with old MCP Server config
-        return await llm.async_get_api(hass, llm_api_id, llm_context)
+        return await llm.async_get_api(menuai, llm_api_id, llm_context)
 
     @server.list_prompts()  # type: ignore[no-untyped-call, misc]
     async def handle_list_prompts() -> list[types.Prompt]:
@@ -65,7 +65,7 @@ async def create_server(
         return [
             types.Prompt(
                 name=llm_api.api.name,
-                description=f"Default prompt for Home Assistant {llm_api.api.name} API",
+                description=f"Default prompt for MenuAI {llm_api.api.name} API",
             )
         ]
 
@@ -78,7 +78,7 @@ async def create_server(
             raise ValueError(f"Unknown prompt: {name}")
 
         return types.GetPromptResult(
-            description=f"Default prompt for Home Assistant {llm_api.api.name} API",
+            description=f"Default prompt for MenuAI {llm_api.api.name} API",
             messages=[
                 types.PromptMessage(
                     role="assistant",
@@ -105,8 +105,8 @@ async def create_server(
 
         try:
             tool_response = await llm_api.async_call_tool(tool_input)
-        except (HomeAssistantError, vol.Invalid) as e:
-            raise HomeAssistantError(f"Error calling tool: {e}") from e
+        except (menuaiError, vol.Invalid) as e:
+            raise menuaiError(f"Error calling tool: {e}") from e
         return [
             types.TextContent(
                 type="text",

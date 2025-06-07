@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import konnected
-from homeassistant.components.konnected import config_flow
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.setup import async_setup_component
+from menuai.components import konnected
+from menuai.components.konnected import config_flow
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator
@@ -45,7 +45,7 @@ async def mock_panel_fixture():
         yield konn_client
 
 
-async def test_config_schema(hass: HomeAssistant) -> None:
+async def test_config_schema(menuai: menuai) -> None:
     """Test that config schema is imported properly."""
     config = {
         konnected.DOMAIN: {
@@ -222,35 +222,35 @@ async def test_config_schema(hass: HomeAssistant) -> None:
     }
 
 
-async def test_setup_with_no_config(hass: HomeAssistant) -> None:
+async def test_setup_with_no_config(menuai: menuai) -> None:
     """Test that we do not discover anything or try to set up a Konnected panel."""
-    assert await async_setup_component(hass, konnected.DOMAIN, {})
+    assert await async_setup_component(menuai, konnected.DOMAIN, {})
 
     # No flows started
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
     # Nothing saved from configuration.yaml
-    assert hass.data[konnected.DOMAIN][konnected.CONF_ACCESS_TOKEN] is None
-    assert hass.data[konnected.DOMAIN][konnected.CONF_API_HOST] is None
-    assert konnected.YAML_CONFIGS not in hass.data[konnected.DOMAIN]
+    assert menuai.data[konnected.DOMAIN][konnected.CONF_ACCESS_TOKEN] is None
+    assert menuai.data[konnected.DOMAIN][konnected.CONF_API_HOST] is None
+    assert konnected.YAML_CONFIGS not in menuai.data[konnected.DOMAIN]
 
 
-async def test_setup_defined_hosts_known_auth(hass: HomeAssistant, mock_panel) -> None:
+async def test_setup_defined_hosts_known_auth(menuai: menuai, mock_panel) -> None:
     """Test we don't initiate a config entry if configured panel is known."""
     MockConfigEntry(
         domain="konnected",
         unique_id="112233445566",
         data={"host": "0.0.0.0", "id": "112233445566"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="konnected",
         unique_id="aabbccddeeff",
         data={"host": "1.2.3.4", "id": "aabbccddeeff"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             konnected.DOMAIN,
             {
                 konnected.DOMAIN: {
@@ -268,18 +268,18 @@ async def test_setup_defined_hosts_known_auth(hass: HomeAssistant, mock_panel) -
         is True
     )
 
-    assert hass.data[konnected.DOMAIN][konnected.CONF_ACCESS_TOKEN] == "abcdefgh"
-    assert konnected.YAML_CONFIGS not in hass.data[konnected.DOMAIN]
+    assert menuai.data[konnected.DOMAIN][konnected.CONF_ACCESS_TOKEN] == "abcdefgh"
+    assert konnected.YAML_CONFIGS not in menuai.data[konnected.DOMAIN]
 
     # Flow aborted
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
 
-async def test_setup_defined_hosts_no_known_auth(hass: HomeAssistant) -> None:
+async def test_setup_defined_hosts_no_known_auth(menuai: menuai) -> None:
     """Test we initiate config entry if config panel is not known."""
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             konnected.DOMAIN,
             {
                 konnected.DOMAIN: {
@@ -292,14 +292,14 @@ async def test_setup_defined_hosts_no_known_auth(hass: HomeAssistant) -> None:
     )
 
     # Flow started for discovered bridge
-    assert len(hass.config_entries.flow.async_progress()) == 1
+    assert len(menuai.config_entries.flow.async_progress()) == 1
 
 
-async def test_setup_multiple(hass: HomeAssistant) -> None:
+async def test_setup_multiple(menuai: menuai) -> None:
     """Test we initiate config entry for multiple panels."""
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             konnected.DOMAIN,
             {
                 konnected.DOMAIN: {
@@ -347,29 +347,29 @@ async def test_setup_multiple(hass: HomeAssistant) -> None:
     )
 
     # Flow started for discovered bridge
-    assert len(hass.config_entries.flow.async_progress()) == 2
+    assert len(menuai.config_entries.flow.async_progress()) == 2
 
     # Globals saved
     assert (
-        hass.data[konnected.DOMAIN][konnected.CONF_ACCESS_TOKEN] == "arandomstringvalue"
+        menuai.data[konnected.DOMAIN][konnected.CONF_ACCESS_TOKEN] == "arandomstringvalue"
     )
     assert (
-        hass.data[konnected.DOMAIN][konnected.CONF_API_HOST]
+        menuai.data[konnected.DOMAIN][konnected.CONF_API_HOST]
         == "http://192.168.86.32:8123"
     )
 
 
-async def test_config_passed_to_config_entry(hass: HomeAssistant) -> None:
+async def test_config_passed_to_config_entry(menuai: menuai) -> None:
     """Test that configured options for a host are loaded via config entry."""
     entry = MockConfigEntry(
         domain=konnected.DOMAIN,
         data={config_flow.CONF_ID: "aabbccddeeff", config_flow.CONF_HOST: "0.0.0.0"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch.object(konnected, "AlarmPanel", autospec=True) as mock_int:
         assert (
             await async_setup_component(
-                hass,
+                menuai,
                 konnected.DOMAIN,
                 {
                     konnected.DOMAIN: {
@@ -382,34 +382,34 @@ async def test_config_passed_to_config_entry(hass: HomeAssistant) -> None:
         )
 
     assert len(mock_int.mock_calls) == 3
-    p_hass, p_entry = mock_int.mock_calls[0][1]
+    p_menuai, p_entry = mock_int.mock_calls[0][1]
 
-    assert p_hass is hass
+    assert p_menuai is menuai
     assert p_entry is entry
 
 
-async def test_unload_entry(hass: HomeAssistant, mock_panel) -> None:
+async def test_unload_entry(menuai: menuai, mock_panel) -> None:
     """Test being able to unload an entry."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
     entry = MockConfigEntry(
         domain=konnected.DOMAIN, data={konnected.CONF_ID: "aabbccddeeff"}
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await async_setup_component(hass, konnected.DOMAIN, {}) is True
-    assert hass.data[konnected.DOMAIN]["devices"].get("aabbccddeeff") is not None
-    assert await konnected.async_unload_entry(hass, entry)
-    assert hass.data[konnected.DOMAIN]["devices"] == {}
+    assert await async_setup_component(menuai, konnected.DOMAIN, {}) is True
+    assert menuai.data[konnected.DOMAIN]["devices"].get("aabbccddeeff") is not None
+    assert await konnected.async_unload_entry(menuai, entry)
+    assert menuai.data[konnected.DOMAIN]["devices"] == {}
 
 
 async def test_api(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, mock_panel
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator, mock_panel
 ) -> None:
     """Test callback view."""
-    await async_setup_component(hass, "http", {"http": {}})
+    await async_setup_component(menuai, "http", {"http": {}})
 
     device_config = config_flow.CONFIG_ENTRY_SCHEMA(
         {
@@ -464,18 +464,18 @@ async def test_api(
         data=device_config,
         options=device_options,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             konnected.DOMAIN,
             {konnected.DOMAIN: {konnected.CONF_ACCESS_TOKEN: "globaltoken"}},
         )
         is True
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     # Test the get endpoint for switch status polling
     resp = await client.get("/api/konnected")
@@ -575,11 +575,11 @@ async def test_api(
 
 
 async def test_state_updates_zone(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, mock_panel
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator, mock_panel
 ) -> None:
     """Test callback view."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
 
@@ -634,22 +634,22 @@ async def test_state_updates_zone(
         data=device_config,
         options=device_options,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Add empty data field to ensure we process it correctly (possible if entry is ignored)
     entry = MockConfigEntry(domain="konnected", title="Konnected Alarm Panel", data={})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             konnected.DOMAIN,
             {konnected.DOMAIN: {konnected.CONF_ACCESS_TOKEN: "1122334455"}},
         )
         is True
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     # Test updating a binary sensor
     resp = await client.post(
@@ -660,8 +660,8 @@ async def test_state_updates_zone(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("binary_sensor.konnected_445566_zone_1").state == "off"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("binary_sensor.konnected_445566_zone_1").state == "off"
 
     resp = await client.post(
         "/api/konnected/device/112233445566",
@@ -671,8 +671,8 @@ async def test_state_updates_zone(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("binary_sensor.konnected_445566_zone_1").state == "on"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("binary_sensor.konnected_445566_zone_1").state == "on"
 
     # Test updating sht sensor
     resp = await client.post(
@@ -683,10 +683,10 @@ async def test_state_updates_zone(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.konnected_445566_sensor_4_humidity").state == "20"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.konnected_445566_sensor_4_humidity").state == "20"
     assert (
-        hass.states.get("sensor.konnected_445566_sensor_4_temperature").state == "22.0"
+        menuai.states.get("sensor.konnected_445566_sensor_4_temperature").state == "22.0"
     )
 
     resp = await client.post(
@@ -697,10 +697,10 @@ async def test_state_updates_zone(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.konnected_445566_sensor_4_humidity").state == "23"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.konnected_445566_sensor_4_humidity").state == "23"
     assert (
-        hass.states.get("sensor.konnected_445566_sensor_4_temperature").state == "25.0"
+        menuai.states.get("sensor.konnected_445566_sensor_4_temperature").state == "25.0"
     )
 
     # Test updating ds sensor
@@ -712,8 +712,8 @@ async def test_state_updates_zone(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.temper_temperature").state == "32.0"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.temper_temperature").state == "32.0"
 
     resp = await client.post(
         "/api/konnected/device/112233445566",
@@ -723,16 +723,16 @@ async def test_state_updates_zone(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.temper_temperature").state == "42.0"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.temper_temperature").state == "42.0"
 
 
 async def test_state_updates_pin(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, mock_panel
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator, mock_panel
 ) -> None:
     """Test callback view."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
 
@@ -787,7 +787,7 @@ async def test_state_updates_pin(
         data=device_config,
         options=device_options,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Add empty data field to ensure we process it correctly (possible if entry is ignored)
     entry = MockConfigEntry(
@@ -795,18 +795,18 @@ async def test_state_updates_pin(
         title="Konnected Alarm Panel",
         data={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert (
         await async_setup_component(
-            hass,
+            menuai,
             konnected.DOMAIN,
             {konnected.DOMAIN: {konnected.CONF_ACCESS_TOKEN: "1122334455"}},
         )
         is True
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     # Test updating a binary sensor
     resp = await client.post(
@@ -817,8 +817,8 @@ async def test_state_updates_pin(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("binary_sensor.konnected_445566_zone_1").state == "off"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("binary_sensor.konnected_445566_zone_1").state == "off"
 
     resp = await client.post(
         "/api/konnected/device/112233445566",
@@ -828,8 +828,8 @@ async def test_state_updates_pin(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("binary_sensor.konnected_445566_zone_1").state == "on"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("binary_sensor.konnected_445566_zone_1").state == "on"
 
     # Test updating sht sensor
     resp = await client.post(
@@ -840,10 +840,10 @@ async def test_state_updates_pin(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.konnected_445566_sensor_4_humidity").state == "20"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.konnected_445566_sensor_4_humidity").state == "20"
     assert (
-        hass.states.get("sensor.konnected_445566_sensor_4_temperature").state == "22.0"
+        menuai.states.get("sensor.konnected_445566_sensor_4_temperature").state == "22.0"
     )
 
     resp = await client.post(
@@ -854,10 +854,10 @@ async def test_state_updates_pin(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.konnected_445566_sensor_4_humidity").state == "23"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.konnected_445566_sensor_4_humidity").state == "23"
     assert (
-        hass.states.get("sensor.konnected_445566_sensor_4_temperature").state == "25.0"
+        menuai.states.get("sensor.konnected_445566_sensor_4_temperature").state == "25.0"
     )
 
     # Test updating ds sensor
@@ -869,8 +869,8 @@ async def test_state_updates_pin(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.temper_temperature").state == "32.0"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.temper_temperature").state == "32.0"
 
     resp = await client.post(
         "/api/konnected/device/112233445566",
@@ -880,5 +880,5 @@ async def test_state_updates_pin(
     assert resp.status == HTTPStatus.OK
     result = await resp.json()
     assert result == {"message": "ok"}
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.temper_temperature").state == "42.0"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.temper_temperature").state == "42.0"

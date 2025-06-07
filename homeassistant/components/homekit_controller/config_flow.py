@@ -19,22 +19,22 @@ from aiohomekit.model.status_flags import StatusFlags
 from aiohomekit.utils import domain_supported, domain_to_name, serialize_broadcast_key
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
 from .const import DOMAIN, KNOWN_DEVICES
 from .storage import async_get_entity_storage
 from .utils import async_get_controller
 
 if TYPE_CHECKING:
-    from homeassistant.components import bluetooth
+    from menuai.components import bluetooth
 
 
 HOMEKIT_DIR = ".homekit"
@@ -119,7 +119,7 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _async_setup_controller(self) -> None:
         """Create the controller."""
-        self.controller = await async_get_controller(self.hass)
+        self.controller = await async_get_controller(self.menuai)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -176,7 +176,7 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
     @callback
     def _hkid_is_homekit(self, hkid: str) -> bool:
         """Determine if the device is a homekit bridge or accessory."""
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         device = dev_reg.async_get_device(
             connections={(dr.CONNECTION_NETWORK_MAC, dr.format_mac(hkid))}
         )
@@ -185,7 +185,7 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
             return False
 
         for entry_id in device.config_entries:
-            entry = self.hass.config_entries.async_get_entry(entry_id)
+            entry = self.menuai.config_entries.async_get_entry(entry_id)
             if entry and entry.domain == HOMEKIT_BRIDGE_DOMAIN:
                 return True
 
@@ -240,9 +240,9 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
         }
         # If the device is already paired and known to us we should monitor c#
         # (config_num) for changes. If it changes, we check for new entities
-        if paired and upper_case_hkid in self.hass.data.get(KNOWN_DEVICES, {}):
+        if paired and upper_case_hkid in self.menuai.data.get(KNOWN_DEVICES, {}):
             if existing_entry:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     existing_entry, data={**existing_entry.data, **updated_ip_port}
                 )
             return self.async_abort(reason="already_configured")
@@ -288,7 +288,7 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
                     model,
                     hkid,
                 )
-                await self.hass.config_entries.async_remove(existing_entry.entry_id)
+                await self.menuai.config_entries.async_remove(existing_entry.entry_id)
             else:
                 _LOGGER.debug(
                     (
@@ -307,7 +307,7 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
 
         self.hkid = normalized_hkid
         self._device_paired = paired
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             raise AbortFlow("already_in_progress")
 
         if paired:
@@ -342,7 +342,7 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
                 # If the device gets paired, we want to dismiss
                 # an existing discovery since we can no longer
                 # pair with it
-                self.hass.config_entries.flow.async_abort(other_flow.flow_id)
+                self.menuai.config_entries.flow.async_abort(other_flow.flow_id)
             else:
                 return True
         return False
@@ -573,7 +573,7 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
         # have to request them again when we setup the
         # config entry.
         accessories_state = pairing.accessories_state
-        entity_storage = await async_get_entity_storage(self.hass)
+        entity_storage = await async_get_entity_storage(self.menuai)
         assert self.unique_id is not None
         entity_storage.async_create_or_update_map(
             pairing.id,

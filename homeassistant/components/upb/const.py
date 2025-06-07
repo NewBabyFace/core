@@ -2,8 +2,8 @@
 
 import voluptuous as vol
 
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import VolDictType
 
 DOMAIN = "upb"
 

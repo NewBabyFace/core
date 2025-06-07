@@ -1,11 +1,11 @@
 """The errors of Epson integration."""
 
-from homeassistant import exceptions
+from menuai import exceptions
 
 
-class CannotConnect(exceptions.HomeAssistantError):
+class CannotConnect(exceptions.menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class PoweredOff(exceptions.HomeAssistantError):
+class PoweredOff(exceptions.menuaiError):
     """Error to indicate projector is off."""

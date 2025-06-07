@@ -1,6 +1,6 @@
 """The rest component constants."""
 
-from homeassistant.util.ssl import SSLCipherList
+from menuai.util.ssl import SSLCipherList
 
 DOMAIN = "rest"
 

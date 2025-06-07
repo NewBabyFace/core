@@ -5,9 +5,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.helpers.selector import SelectSelector, SelectSelectorConfig
 
 from . import validate_projector
 from .const import CONF_CONNECTION_TYPE, DOMAIN, HTTP, SERIAL
@@ -47,7 +47,7 @@ class EpsonConfigFlow(ConfigFlow, domain=DOMAIN):
             projector = None
             try:
                 projector = await validate_projector(
-                    hass=self.hass,
+                    menuai=self.menuai,
                     conn_type=user_input[CONF_CONNECTION_TYPE],
                     host=user_input[CONF_HOST],
                     check_power=True,

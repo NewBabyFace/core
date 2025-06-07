@@ -23,8 +23,8 @@ from typing import (
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PRECISION_HALVES,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
@@ -32,27 +32,27 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import ABCCachedProperties, Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.update_coordinator import (
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import ABCCachedProperties, Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
     TimestampDataUpdateCoordinator,
 )
-from homeassistant.util.dt import utcnow
-from homeassistant.util.json import JsonValueType
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.util.dt import utcnow
+from menuai.util.json import JsonValueType
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (  # noqa: F401
     ATTR_WEATHER_APPARENT_TEMPERATURE,
@@ -205,10 +205,10 @@ class Forecast(TypedDict, total=False):
     is_daytime: bool | None  # Mandatory to use with forecast_twice_daily
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the weather component."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[WeatherEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[WeatherEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
     component.async_register_entity_service(
         SERVICE_GET_FORECASTS,
@@ -221,19 +221,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ],
         supports_response=SupportsResponse.ONLY,
     )
-    async_setup_ws_api(hass)
+    async_setup_ws_api(menuai)
     await component.async_setup(config)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class WeatherEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -321,9 +321,9 @@ class WeatherEntity(Entity, PostInit, cached_properties=CACHED_PROPERTIES_WITH_A
         """Finish initializing."""
         self._forecast_listeners = {"daily": [], "hourly": [], "twice_daily": []}
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the weather entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the weather entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         if not self.registry_entry:
             return
         self.async_registry_entry_updated()
@@ -355,7 +355,7 @@ class WeatherEntity(Entity, PostInit, cached_properties=CACHED_PROPERTIES_WITH_A
 
         Should not be set by integrations.
         """
-        return self.hass.config.units.temperature_unit
+        return self.menuai.config.units.temperature_unit
 
     @final
     @property
@@ -388,7 +388,7 @@ class WeatherEntity(Entity, PostInit, cached_properties=CACHED_PROPERTIES_WITH_A
 
         Should not be set by integrations.
         """
-        if self.hass.config.units is US_CUSTOMARY_SYSTEM:
+        if self.menuai.config.units is US_CUSTOMARY_SYSTEM:
             return UnitOfPressure.INHG
         return UnitOfPressure.HPA
 
@@ -433,7 +433,7 @@ class WeatherEntity(Entity, PostInit, cached_properties=CACHED_PROPERTIES_WITH_A
 
         Should not be set by integrations.
         """
-        if self.hass.config.units is US_CUSTOMARY_SYSTEM:
+        if self.menuai.config.units is US_CUSTOMARY_SYSTEM:
             return UnitOfSpeed.MILES_PER_HOUR
         return UnitOfSpeed.KILOMETERS_PER_HOUR
 
@@ -488,7 +488,7 @@ class WeatherEntity(Entity, PostInit, cached_properties=CACHED_PROPERTIES_WITH_A
 
         Should not be set by integrations.
         """
-        return self.hass.config.units.length_unit
+        return self.menuai.config.units.length_unit
 
     @final
     @property
@@ -528,7 +528,7 @@ class WeatherEntity(Entity, PostInit, cached_properties=CACHED_PROPERTIES_WITH_A
 
         Should not be set by integrations.
         """
-        return self.hass.config.units.accumulated_precipitation_unit
+        return self.menuai.config.units.accumulated_precipitation_unit
 
     @final
     @property
@@ -998,7 +998,7 @@ class WeatherEntity(Entity, PostInit, cached_properties=CACHED_PROPERTIES_WITH_A
 
 def raise_unsupported_forecast(entity_id: str, forecast_type: str) -> None:
     """Raise error on attempt to get an unsupported forecast."""
-    raise HomeAssistantError(
+    raise menuaiError(
         f"Weather entity '{entity_id}' does not support '{forecast_type}' forecast"
     )
 
@@ -1072,9 +1072,9 @@ class CoordinatorWeatherEntity(
             "twice_daily": None,
         }
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(partial(self._remove_forecast_listener, "daily"))
         self.async_on_remove(partial(self._remove_forecast_listener, "hourly"))
         self.async_on_remove(partial(self._remove_forecast_listener, "twice_daily"))
@@ -1122,7 +1122,7 @@ class CoordinatorWeatherEntity(
         assert coordinator.config_entry is not None
         getattr(self, f"_handle_{forecast_type}_forecast_coordinator_update")()
         coordinator.config_entry.async_create_task(
-            self.hass, self.async_update_listeners((forecast_type,))
+            self.menuai, self.async_update_listeners((forecast_type,))
         )
 
     @callback
@@ -1225,5 +1225,5 @@ class SingleCoordinatorWeatherEntity(
         super()._handle_coordinator_update()
         assert self.coordinator.config_entry
         self.coordinator.config_entry.async_create_task(
-            self.hass, self.async_update_listeners(None)
+            self.menuai, self.async_update_listeners(None)
         )

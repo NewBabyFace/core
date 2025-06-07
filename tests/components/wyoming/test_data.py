@@ -7,16 +7,16 @@ from unittest.mock import patch
 from syrupy.assertion import SnapshotAssertion
 from wyoming.info import Info
 
-from homeassistant.components.wyoming.data import WyomingService, load_wyoming_info
-from homeassistant.core import HomeAssistant
+from menuai.components.wyoming.data import WyomingService, load_wyoming_info
+from menuai.core import menuai
 
 from . import SATELLITE_INFO, STT_INFO, TTS_INFO, WAKE_WORD_INFO, MockAsyncTcpClient
 
 
-async def test_load_info(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None:
+async def test_load_info(menuai: menuai, snapshot: SnapshotAssertion) -> None:
     """Test loading info."""
     with patch(
-        "homeassistant.components.wyoming.data.AsyncTcpClient",
+        "menuai.components.wyoming.data.AsyncTcpClient",
         MockAsyncTcpClient([STT_INFO.event()]),
     ) as mock_client:
         info = await load_wyoming_info("localhost", 1234)
@@ -25,13 +25,13 @@ async def test_load_info(hass: HomeAssistant, snapshot: SnapshotAssertion) -> No
     assert mock_client.written == snapshot
 
 
-async def test_load_info_oserror(hass: HomeAssistant) -> None:
+async def test_load_info_oserror(menuai: menuai) -> None:
     """Test loading info and error raising."""
     mock_client = MockAsyncTcpClient([STT_INFO.event()])
 
     with (
         patch(
-            "homeassistant.components.wyoming.data.AsyncTcpClient",
+            "menuai.components.wyoming.data.AsyncTcpClient",
             mock_client,
         ),
         patch.object(mock_client, "read_event", side_effect=OSError("Boom!")),
@@ -47,10 +47,10 @@ async def test_load_info_oserror(hass: HomeAssistant) -> None:
     assert info is None
 
 
-async def test_service_name(hass: HomeAssistant) -> None:
+async def test_service_name(menuai: menuai) -> None:
     """Test loading service info."""
     with patch(
-        "homeassistant.components.wyoming.data.AsyncTcpClient",
+        "menuai.components.wyoming.data.AsyncTcpClient",
         MockAsyncTcpClient([STT_INFO.event()]),
     ):
         service = await WyomingService.create("localhost", 1234)
@@ -58,7 +58,7 @@ async def test_service_name(hass: HomeAssistant) -> None:
         assert service.get_name() == STT_INFO.asr[0].name
 
     with patch(
-        "homeassistant.components.wyoming.data.AsyncTcpClient",
+        "menuai.components.wyoming.data.AsyncTcpClient",
         MockAsyncTcpClient([TTS_INFO.event()]),
     ):
         service = await WyomingService.create("localhost", 1234)
@@ -66,7 +66,7 @@ async def test_service_name(hass: HomeAssistant) -> None:
         assert service.get_name() == TTS_INFO.tts[0].name
 
     with patch(
-        "homeassistant.components.wyoming.data.AsyncTcpClient",
+        "menuai.components.wyoming.data.AsyncTcpClient",
         MockAsyncTcpClient([WAKE_WORD_INFO.event()]),
     ):
         service = await WyomingService.create("localhost", 1234)
@@ -74,7 +74,7 @@ async def test_service_name(hass: HomeAssistant) -> None:
         assert service.get_name() == WAKE_WORD_INFO.wake[0].name
 
     with patch(
-        "homeassistant.components.wyoming.data.AsyncTcpClient",
+        "menuai.components.wyoming.data.AsyncTcpClient",
         MockAsyncTcpClient([SATELLITE_INFO.event()]),
     ):
         service = await WyomingService.create("localhost", 1234)
@@ -82,7 +82,7 @@ async def test_service_name(hass: HomeAssistant) -> None:
         assert service.get_name() == SATELLITE_INFO.satellite.name
 
 
-async def test_satellite_with_wake_word(hass: HomeAssistant) -> None:
+async def test_satellite_with_wake_word(menuai: menuai) -> None:
     """Test that wake word info with satellite doesn't overwrite the service name."""
     # Info for local wake word detection
     satellite_info = Info(
@@ -91,7 +91,7 @@ async def test_satellite_with_wake_word(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.wyoming.data.AsyncTcpClient",
+        "menuai.components.wyoming.data.AsyncTcpClient",
         MockAsyncTcpClient([satellite_info.event()]),
     ):
         service = await WyomingService.create("localhost", 1234)

@@ -6,7 +6,7 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from wled import Releases, WLEDError
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
     ATTR_RELEASE_SUMMARY,
@@ -17,8 +17,8 @@ from homeassistant.components.update import (
     UpdateDeviceClass,
     UpdateEntityFeature,
 )
-from homeassistant.components.wled.const import RELEASES_SCAN_INTERVAL
-from homeassistant.const import (
+from menuai.components.wled.const import RELEASES_SCAN_INTERVAL
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_ENTITY_PICTURE,
@@ -30,8 +30,8 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import async_fire_time_changed
 
@@ -39,10 +39,10 @@ pytestmark = pytest.mark.usefixtures("init_integration")
 
 
 async def test_update_available(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the firmware update available."""
-    assert (state := hass.states.get("update.wled_rgb_light_firmware"))
+    assert (state := menuai.states.get("update.wled_rgb_light_firmware"))
     assert state.attributes.get(ATTR_DEVICE_CLASS) == UpdateDeviceClass.FIRMWARE
     assert state.state == STATE_ON
     assert (
@@ -69,7 +69,7 @@ async def test_update_available(
 
 
 async def test_update_information_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     entity_registry: er.EntityRegistry,
     mock_wled_releases: MagicMock,
@@ -81,10 +81,10 @@ async def test_update_information_available(
     )
 
     freezer.tick(RELEASES_SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get("update.wled_rgb_light_firmware"))
+    assert (state := menuai.states.get("update.wled_rgb_light_firmware"))
     assert state.attributes.get(ATTR_DEVICE_CLASS) == UpdateDeviceClass.FIRMWARE
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_INSTALLED_VERSION] == "0.14.4"
@@ -107,10 +107,10 @@ async def test_update_information_available(
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 @pytest.mark.parametrize("device_fixture", ["rgb_websocket"])
 async def test_no_update_available(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test there is no update available."""
-    assert (state := hass.states.get("update.wled_websocket_firmware"))
+    assert (state := menuai.states.get("update.wled_websocket_firmware"))
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_DEVICE_CLASS) == UpdateDeviceClass.FIRMWARE
     assert state.attributes[ATTR_INSTALLED_VERSION] == "0.99.0"
@@ -135,27 +135,27 @@ async def test_no_update_available(
 
 
 async def test_update_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_wled: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test error handling of the WLED update."""
     mock_wled.update.side_effect = WLEDError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.wled_rgb_light_firmware"},
         blocking=True,
     )
 
-    assert (state := hass.states.get("update.wled_rgb_light_firmware"))
+    assert (state := menuai.states.get("update.wled_rgb_light_firmware"))
     assert state.state == STATE_UNAVAILABLE
     assert "Invalid response from API" in caplog.text
 
 
 async def test_update_stay_stable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_wled: MagicMock,
 ) -> None:
     """Test the update entity staying on stable.
@@ -164,12 +164,12 @@ async def test_update_stay_stable(
     is currently running a stable version. Therefore, the update entity should
     update to the next stable (even though beta is newer).
     """
-    assert (state := hass.states.get("update.wled_rgb_light_firmware"))
+    assert (state := menuai.states.get("update.wled_rgb_light_firmware"))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "0.14.4"
     assert state.attributes[ATTR_LATEST_VERSION] == "0.99.0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.wled_rgb_light_firmware"},
@@ -181,7 +181,7 @@ async def test_update_stay_stable(
 
 @pytest.mark.parametrize("device_fixture", ["rgbw"])
 async def test_update_beta_to_stable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_wled: MagicMock,
 ) -> None:
     """Test the update entity.
@@ -190,12 +190,12 @@ async def test_update_beta_to_stable(
     is currently a beta, however, a newer stable is available. Therefore, the
     update entity should update to the next stable.
     """
-    assert (state := hass.states.get("update.wled_rgbw_light_firmware"))
+    assert (state := menuai.states.get("update.wled_rgbw_light_firmware"))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "0.99.0b1"
     assert state.attributes[ATTR_LATEST_VERSION] == "0.99.0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.wled_rgbw_light_firmware"},
@@ -207,7 +207,7 @@ async def test_update_beta_to_stable(
 
 @pytest.mark.parametrize("device_fixture", ["rgb_single_segment"])
 async def test_update_stay_beta(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_wled: MagicMock,
 ) -> None:
     """Test the update entity.
@@ -215,12 +215,12 @@ async def test_update_stay_beta(
     There is an update for beta and the device is currently a beta. Therefore,
     the update entity should update to the next beta.
     """
-    assert (state := hass.states.get("update.wled_rgb_light_firmware"))
+    assert (state := menuai.states.get("update.wled_rgb_light_firmware"))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0b4"
     assert state.attributes[ATTR_LATEST_VERSION] == "1.0.0b5"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.wled_rgb_light_firmware"},

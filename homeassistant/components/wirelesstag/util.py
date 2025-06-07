@@ -4,8 +4,8 @@ import logging
 
 from wirelesstagpy.sensortag import SensorTag
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .const import DOMAIN
 
@@ -13,10 +13,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def async_migrate_unique_id(
-    hass: HomeAssistant, tag: SensorTag, domain: str, key: str
+    menuai: menuai, tag: SensorTag, domain: str, key: str
 ) -> None:
     """Migrate old unique id to new one with use of tag's uuid."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     new_unique_id = f"{tag.uuid}_{key}"
 
     if registry.async_get_entity_id(domain, DOMAIN, new_unique_id):

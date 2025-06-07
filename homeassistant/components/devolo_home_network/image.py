@@ -9,11 +9,11 @@ from functools import partial
 from devolo_plc_api import wifi_qr_code
 from devolo_plc_api.device_api import WifiGuestAccessGet
 
-from homeassistant.components.image import ImageEntity, ImageEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.image import ImageEntity, ImageEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import IMAGE_GUEST_WIFI, SWITCH_GUEST_WIFI
 from .coordinator import DevoloDataUpdateCoordinator, DevoloHomeNetworkConfigEntry
@@ -39,7 +39,7 @@ IMAGE_TYPES: dict[str, DevoloImageEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DevoloHomeNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -71,7 +71,7 @@ class DevoloImageEntity(DevoloCoordinatorEntity[WifiGuestAccessGet], ImageEntity
         """Initialize entity."""
         self.entity_description: DevoloImageEntityDescription = description
         super().__init__(entry, coordinator)
-        ImageEntity.__init__(self, coordinator.hass)
+        ImageEntity.__init__(self, coordinator.menuai)
         self._attr_image_last_updated = dt_util.utcnow()
         self._data = self.coordinator.data
 

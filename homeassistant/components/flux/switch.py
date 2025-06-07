@@ -11,7 +11,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_RGB_COLOR,
@@ -21,8 +21,8 @@ from homeassistant.components.light import (
     VALID_TRANSITION,
     is_on,
 )
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN, SwitchEntity
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN, SwitchEntity
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_BRIGHTNESS,
     CONF_LIGHTS,
@@ -34,18 +34,18 @@ from homeassistant.const import (
     SUN_EVENT_SUNRISE,
     SUN_EVENT_SUNSET,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, event
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.sun import get_astral_event_date
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import slugify
-from homeassistant.util.color import (
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv, event
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.sun import get_astral_event_date
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import slugify
+from menuai.util.color import (
     color_RGB_to_xy_brightness,
     color_temperature_to_rgb,
 )
-from homeassistant.util.dt import as_local, utcnow as dt_utcnow
+from menuai.util.dt import as_local, utcnow as dt_utcnow
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,10 +94,10 @@ PLATFORM_SCHEMA = vol.Schema(
 )
 
 
-async def async_set_lights_xy(hass, lights, x_val, y_val, brightness, transition):
+async def async_set_lights_xy(menuai, lights, x_val, y_val, brightness, transition):
     """Set color of array of lights."""
     for light in lights:
-        if is_on(hass, light):
+        if is_on(menuai, light):
             service_data = {ATTR_ENTITY_ID: light}
             if x_val is not None and y_val is not None:
                 service_data[ATTR_XY_COLOR] = [x_val, y_val]
@@ -105,13 +105,13 @@ async def async_set_lights_xy(hass, lights, x_val, y_val, brightness, transition
                 service_data[ATTR_BRIGHTNESS] = brightness
             if transition is not None:
                 service_data[ATTR_TRANSITION] = transition
-            await hass.services.async_call(LIGHT_DOMAIN, SERVICE_TURN_ON, service_data)
+            await menuai.services.async_call(LIGHT_DOMAIN, SERVICE_TURN_ON, service_data)
 
 
-async def async_set_lights_temp(hass, lights, kelvin, brightness, transition):
+async def async_set_lights_temp(menuai, lights, kelvin, brightness, transition):
     """Set color of array of lights."""
     for light in lights:
-        if is_on(hass, light):
+        if is_on(menuai, light):
             service_data = {ATTR_ENTITY_ID: light}
             if kelvin is not None:
                 service_data[ATTR_COLOR_TEMP_KELVIN] = kelvin
@@ -119,23 +119,23 @@ async def async_set_lights_temp(hass, lights, kelvin, brightness, transition):
                 service_data[ATTR_BRIGHTNESS] = brightness
             if transition is not None:
                 service_data[ATTR_TRANSITION] = transition
-            await hass.services.async_call(LIGHT_DOMAIN, SERVICE_TURN_ON, service_data)
+            await menuai.services.async_call(LIGHT_DOMAIN, SERVICE_TURN_ON, service_data)
 
 
-async def async_set_lights_rgb(hass, lights, rgb, transition):
+async def async_set_lights_rgb(menuai, lights, rgb, transition):
     """Set color of array of lights."""
     for light in lights:
-        if is_on(hass, light):
+        if is_on(menuai, light):
             service_data = {ATTR_ENTITY_ID: light}
             if rgb is not None:
                 service_data[ATTR_RGB_COLOR] = rgb
             if transition is not None:
                 service_data[ATTR_TRANSITION] = transition
-            await hass.services.async_call(LIGHT_DOMAIN, SERVICE_TURN_ON, service_data)
+            await menuai.services.async_call(LIGHT_DOMAIN, SERVICE_TURN_ON, service_data)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -156,7 +156,7 @@ async def async_setup_platform(
     unique_id = config.get(ATTR_UNIQUE_ID)
     flux = FluxSwitch(
         name,
-        hass,
+        menuai,
         lights,
         start_time,
         stop_time,
@@ -177,7 +177,7 @@ async def async_setup_platform(
         await flux.async_flux_update()
 
     service_name = slugify(f"{name} update")
-    hass.services.async_register(SWITCH_DOMAIN, service_name, async_update)
+    menuai.services.async_register(SWITCH_DOMAIN, service_name, async_update)
 
 
 class FluxSwitch(SwitchEntity, RestoreEntity):
@@ -186,7 +186,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
     def __init__(
         self,
         name,
-        hass,
+        menuai,
         lights,
         start_time,
         stop_time,
@@ -202,7 +202,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
     ):
         """Initialize the Flux switch."""
         self._name = name
-        self.hass = hass
+        self.menuai = menuai
         self._lights = lights
         self._start_time = start_time
         self._stop_time = stop_time
@@ -227,17 +227,17 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
         """Return true if switch is on."""
         return self.unsub_tracker is not None
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
         last_state = await self.async_get_last_state()
         if last_state and last_state.state == STATE_ON:
             await self.async_turn_on()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         if self.unsub_tracker:
             self.unsub_tracker()
-        return await super().async_will_remove_from_hass()
+        return await super().async_will_remove_from_menuai()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on flux."""
@@ -245,7 +245,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
             return
 
         self.unsub_tracker = event.async_track_time_interval(
-            self.hass,
+            self.menuai,
             self.async_flux_update,
             datetime.timedelta(seconds=self._interval),
         )
@@ -270,7 +270,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
 
         now = as_local(utcnow)
 
-        sunset = get_astral_event_date(self.hass, SUN_EVENT_SUNSET, now.date())
+        sunset = get_astral_event_date(self.menuai, SUN_EVENT_SUNSET, now.date())
         start_time = self.find_start_time(now)
         stop_time = self.find_stop_time(now)
 
@@ -325,7 +325,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
             brightness = None
         if self._mode == MODE_XY:
             await async_set_lights_xy(
-                self.hass, self._lights, x_val, y_val, brightness, self._transition
+                self.menuai, self._lights, x_val, y_val, brightness, self._transition
             )
             _LOGGER.debug(
                 (
@@ -340,7 +340,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
                 now,
             )
         elif self._mode == MODE_RGB:
-            await async_set_lights_rgb(self.hass, self._lights, rgb, self._transition)
+            await async_set_lights_rgb(self.menuai, self._lights, rgb, self._transition)
             _LOGGER.debug(
                 "Lights updated to rgb:%s, %s%% of %s cycle complete at %s",
                 rgb,
@@ -350,7 +350,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
             )
         else:
             await async_set_lights_temp(
-                self.hass, self._lights, int(temp), brightness, self._transition
+                self.menuai, self._lights, int(temp), brightness, self._transition
             )
             _LOGGER.debug(
                 (
@@ -371,7 +371,7 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
                 hour=self._start_time.hour, minute=self._start_time.minute, second=0
             )
         else:
-            sunrise = get_astral_event_date(self.hass, SUN_EVENT_SUNRISE, now.date())
+            sunrise = get_astral_event_date(self.menuai, SUN_EVENT_SUNRISE, now.date())
         return sunrise
 
     def find_stop_time(self, now):
@@ -381,5 +381,5 @@ class FluxSwitch(SwitchEntity, RestoreEntity):
                 hour=self._stop_time.hour, minute=self._stop_time.minute, second=0
             )
         else:
-            dusk = get_astral_event_date(self.hass, "dusk", now.date())
+            dusk = get_astral_event_date(self.menuai, "dusk", now.date())
         return dusk

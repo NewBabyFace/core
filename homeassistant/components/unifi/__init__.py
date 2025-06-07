@@ -2,14 +2,14 @@
 
 from aiounifi.models.client import Client
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, PLATFORMS, UNIFI_WIRELESS_CLIENTS
 from .errors import AuthenticationRequired, CannotConnect
@@ -25,22 +25,22 @@ STORAGE_VERSION = 1
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Integration doesn't support configuration through configuration.yaml."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
-    hass.data[UNIFI_WIRELESS_CLIENTS] = wireless_clients = UnifiWirelessClients(hass)
+    menuai.data[UNIFI_WIRELESS_CLIENTS] = wireless_clients = UnifiWirelessClients(menuai)
     await wireless_clients.async_load()
 
     return True
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: UnifiConfigEntry
+    menuai: menuai, config_entry: UnifiConfigEntry
 ) -> bool:
     """Set up the UniFi Network integration."""
     try:
-        api = await get_unifi_api(hass, config_entry.data)
+        api = await get_unifi_api(menuai, config_entry.data)
 
     except CannotConnect as err:
         raise ConfigEntryNotReady from err
@@ -48,30 +48,30 @@ async def async_setup_entry(
     except AuthenticationRequired as err:
         raise ConfigEntryAuthFailed from err
 
-    hub = config_entry.runtime_data = UnifiHub(hass, config_entry, api)
+    hub = config_entry.runtime_data = UnifiHub(menuai, config_entry, api)
     await hub.initialize()
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     hub.async_update_device_registry()
     hub.entity_loader.load_entities()
 
     hub.websocket.start()
 
     config_entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, hub.shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, hub.shutdown)
     )
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: UnifiConfigEntry
+    menuai: menuai, config_entry: UnifiConfigEntry
 ) -> bool:
     """Unload a config entry."""
     return await config_entry.runtime_data.async_reset()
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: UnifiConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, config_entry: UnifiConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove config entry from a device."""
     hub = config_entry.runtime_data
@@ -89,12 +89,12 @@ class UnifiWirelessClients:
     might get marked as wired by UniFi.
     """
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Set up client storage."""
-        self.hass = hass
+        self.menuai = menuai
         self.data: dict[str, dict[str, list[str]] | list[str]] = {}
         self.wireless_clients: set[str] = set()
-        self._store: Store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+        self._store: Store = Store(menuai, STORAGE_VERSION, STORAGE_KEY)
 
     async def async_load(self) -> None:
         """Load data from file."""

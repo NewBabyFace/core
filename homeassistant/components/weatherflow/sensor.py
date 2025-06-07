@@ -14,14 +14,14 @@ from pyweatherflowudp.device import (
     WeatherFlowDevice,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     DEGREE,
     LIGHT_LUX,
     PERCENTAGE,
@@ -37,12 +37,12 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolumetricFlux,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import DOMAIN, LOGGER, format_dispatch_call
 
@@ -284,7 +284,7 @@ SENSORS: tuple[WeatherFlowSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -299,7 +299,7 @@ async def async_setup_entry(
             WeatherFlowSensorEntity(
                 device=device,
                 description=description,
-                is_metric=(hass.config.units == METRIC_SYSTEM),
+                is_metric=(menuai.config.units == METRIC_SYSTEM),
             )
             for description in SENSORS
             if hasattr(device, description.key)
@@ -309,7 +309,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             format_dispatch_call(config_entry),
             async_add_sensor,
         )
@@ -363,7 +363,7 @@ class WeatherFlowSensorEntity(SensorEntity):
         self._attr_native_value = value
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to events."""
         self._async_update_state()
         for event in self.entity_description.event_subscriptions:

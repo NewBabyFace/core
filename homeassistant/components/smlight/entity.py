@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers.device_registry import (
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_MANUFACTURER
 from .coordinator import SmBaseDataUpdateCoordinator

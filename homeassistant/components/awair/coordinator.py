@@ -12,11 +12,11 @@ from python_awair.air_data import AirData
 from python_awair.devices import AwairBaseDevice, AwairLocalDevice
 from python_awair.exceptions import AuthError, AwairError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     API_TIMEOUT,
@@ -44,7 +44,7 @@ class AwairDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AwairResult]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AwairConfigEntry,
         update_interval: timedelta | None,
     ) -> None:
@@ -52,7 +52,7 @@ class AwairDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AwairResult]]):
         self.title = config_entry.title
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -72,7 +72,7 @@ class AwairCloudDataUpdateCoordinator(AwairDataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AwairConfigEntry,
         session: ClientSession,
     ) -> None:
@@ -80,7 +80,7 @@ class AwairCloudDataUpdateCoordinator(AwairDataUpdateCoordinator):
         access_token = config_entry.data[CONF_ACCESS_TOKEN]
         self._awair = Awair(access_token=access_token, session=session)
 
-        super().__init__(hass, config_entry, UPDATE_INTERVAL_CLOUD)
+        super().__init__(menuai, config_entry, UPDATE_INTERVAL_CLOUD)
 
     async def _async_update_data(self) -> dict[str, AwairResult]:
         """Update data via Awair client library."""
@@ -106,7 +106,7 @@ class AwairLocalDataUpdateCoordinator(AwairDataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AwairConfigEntry,
         session: ClientSession,
     ) -> None:
@@ -115,7 +115,7 @@ class AwairLocalDataUpdateCoordinator(AwairDataUpdateCoordinator):
             session=session, device_addrs=[config_entry.data[CONF_HOST]]
         )
 
-        super().__init__(hass, config_entry, UPDATE_INTERVAL_LOCAL)
+        super().__init__(menuai, config_entry, UPDATE_INTERVAL_LOCAL)
 
     async def _async_update_data(self) -> dict[str, AwairResult]:
         """Update data via Awair client library."""

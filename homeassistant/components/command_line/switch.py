@@ -6,8 +6,8 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
-from homeassistant.const import (
+from menuai.components.switch import ENTITY_ID_FORMAT, SwitchEntity
+from menuai.const import (
     CONF_COMMAND_OFF,
     CONF_COMMAND_ON,
     CONF_COMMAND_STATE,
@@ -15,16 +15,16 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.template import Template
+from menuai.helpers.trigger_template_entity import (
     ManualTriggerEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, slugify
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, slugify
 
 from .const import CONF_COMMAND_TIMEOUT, LOGGER, TRIGGER_ENTITY_OPTIONS
 from .utils import async_call_shell_with_timeout, async_check_output_or_log
@@ -33,7 +33,7 @@ SCAN_INTERVAL = timedelta(seconds=30)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -49,7 +49,7 @@ async def async_setup_platform(
 
     for object_id, switch_config in entities.items():
         trigger_entity_config = {
-            CONF_NAME: Template(switch_config.get(CONF_NAME, object_id), hass),
+            CONF_NAME: Template(switch_config.get(CONF_NAME, object_id), menuai),
             **{k: v for k, v in switch_config.items() if k in TRIGGER_ENTITY_OPTIONS},
         }
 
@@ -86,7 +86,7 @@ class CommandSwitch(ManualTriggerEntity, SwitchEntity):
         scan_interval: timedelta,
     ) -> None:
         """Initialize the switch."""
-        super().__init__(self.hass, config)
+        super().__init__(self.menuai, config)
         self.entity_id = ENTITY_ID_FORMAT.format(object_id)
         self._attr_is_on = False
         self._command_on = command_on
@@ -97,13 +97,13 @@ class CommandSwitch(ManualTriggerEntity, SwitchEntity):
         self._scan_interval = scan_interval
         self._process_updates: asyncio.Lock | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if self._command_state:
             self.async_on_remove(
                 async_track_time_interval(
-                    self.hass,
+                    self.menuai,
                     self._update_entity_state,
                     self._scan_interval,
                     name=f"Command Line Cover - {self.name}",

@@ -9,9 +9,9 @@ from typing import Any
 
 from dsmr_parser.objects import Telegram
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
 
 from .const import CONF_DSMR_VERSION, PLATFORMS
 
@@ -27,7 +27,7 @@ class DsmrState:
 type DsmrConfigEntry = ConfigEntry[DsmrState]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: DsmrConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: DsmrConfigEntry) -> bool:
     """Set up DSMR from a config entry."""
 
     @callback
@@ -37,16 +37,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: DsmrConfigEntry) -> bool
         """Migrate DSMR entity entry."""
         return async_migrate_entity_entry(entry, entity_entry)
 
-    await er.async_migrate_entries(hass, entry.entry_id, _async_migrate_entity_entry)
+    await er.async_migrate_entries(menuai, entry.entry_id, _async_migrate_entity_entry)
 
     entry.runtime_data = DsmrState()
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: DsmrConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: DsmrConfigEntry) -> bool:
     """Unload a config entry."""
 
     # Cancel the reconnect task
@@ -55,12 +55,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: DsmrConfigEntry) -> boo
         with suppress(CancelledError):
             await task
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_update_options(hass: HomeAssistant, entry: DsmrConfigEntry) -> None:
+async def async_update_options(menuai: menuai, entry: DsmrConfigEntry) -> None:
     """Update options."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 @callback

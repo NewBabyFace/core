@@ -1,10 +1,10 @@
 """Define tests for the The Things Network."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
-async def init_integration(hass: HomeAssistant, config_entry) -> None:
+async def init_integration(menuai: menuai, config_entry) -> None:
     """Mock TTNClient."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

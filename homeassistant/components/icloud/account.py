@@ -15,18 +15,18 @@ from pyicloud.exceptions import (
 )
 from pyicloud.services.findmyiphone import AppleDevice
 
-from homeassistant.components.zone import async_active_zone
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import track_point_in_utc_time
-from homeassistant.helpers.storage import Store
-from homeassistant.util import slugify
-from homeassistant.util.async_ import run_callback_threadsafe
-from homeassistant.util.dt import utcnow
-from homeassistant.util.location import distance
+from menuai.components.zone import async_active_zone
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_USERNAME
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.event import track_point_in_utc_time
+from menuai.helpers.storage import Store
+from menuai.util import slugify
+from menuai.util.async_ import run_callback_threadsafe
+from menuai.util.dt import utcnow
+from menuai.util.location import distance
 
 from .const import (
     ATTR_ACCOUNT_FETCH_INTERVAL,
@@ -66,7 +66,7 @@ class IcloudAccount:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         username: str,
         password: str,
         icloud_dir: Store,
@@ -76,7 +76,7 @@ class IcloudAccount:
         config_entry: IcloudConfigEntry,
     ) -> None:
         """Initialize an iCloud account."""
-        self.hass = hass
+        self.menuai = menuai
         self._username = username
         self._password = password
         self._with_family = with_family
@@ -163,7 +163,7 @@ class IcloudAccount:
         except Exception as err:  # noqa: BLE001
             _LOGGER.error("Unknown iCloud error: %s", err)
             self._fetch_interval = 2
-            dispatcher_send(self.hass, self.signal_device_update)
+            dispatcher_send(self.menuai, self.signal_device_update)
             self._schedule_next_fetch()
             return
 
@@ -206,15 +206,15 @@ class IcloudAccount:
             self._fetch_interval = self._determine_interval()
             self._retried_fetch = False
 
-        dispatcher_send(self.hass, self.signal_device_update)
+        dispatcher_send(self.menuai, self.signal_device_update)
         if new_device:
-            dispatcher_send(self.hass, self.signal_device_new)
+            dispatcher_send(self.menuai, self.signal_device_new)
 
         self._schedule_next_fetch()
 
     def _require_reauth(self):
         """Require the user to log in again."""
-        self.hass.add_job(self._config_entry.async_start_reauth, self.hass)
+        self.menuai.add_job(self._config_entry.async_start_reauth, self.menuai)
 
     def _determine_interval(self) -> int:
         """Calculate new interval between two API fetch (in minutes)."""
@@ -225,9 +225,9 @@ class IcloudAccount:
                 continue
 
             current_zone = run_callback_threadsafe(
-                self.hass.loop,
+                self.menuai.loop,
                 async_active_zone,
-                self.hass,
+                self.menuai,
                 device.location[DEVICE_LOCATION_LATITUDE],
                 device.location[DEVICE_LOCATION_LONGITUDE],
                 device.location[DEVICE_LOCATION_HORIZONTAL_ACCURACY],
@@ -238,8 +238,8 @@ class IcloudAccount:
                 continue
 
             zones = (
-                self.hass.states.get(entity_id)
-                for entity_id in sorted(self.hass.states.entity_ids("zone"))
+                self.menuai.states.get(entity_id)
+                for entity_id in sorted(self.menuai.states.entity_ids("zone"))
             )
 
             distances = []
@@ -292,7 +292,7 @@ class IcloudAccount:
     def _schedule_next_fetch(self) -> None:
         if not self._config_entry.pref_disable_polling:
             track_point_in_utc_time(
-                self.hass,
+                self.menuai,
                 self.keep_alive,
                 utcnow() + timedelta(minutes=self._fetch_interval),
             )
@@ -412,7 +412,7 @@ class IcloudDevice:
             ):
                 location = self._status[DEVICE_LOCATION]
                 if self._location is None:
-                    dispatcher_send(self._account.hass, self._account.signal_device_new)
+                    dispatcher_send(self._account.menuai, self._account.signal_device_new)
                 self._location = location
 
     def play_sound(self) -> None:

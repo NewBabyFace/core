@@ -9,14 +9,14 @@ from typing import Any
 import voluptuous as vol
 from volvooncall import Connection
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_PASSWORD,
     CONF_REGION,
     CONF_UNIT_SYSTEM,
     CONF_USERNAME,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_MUTABLE,
@@ -111,7 +111,7 @@ class VolvoOnCallConfigFlow(ConfigFlow, domain=DOMAIN):
     async def is_valid(self, user_input):
         """Check for user input errors."""
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         region: str | None = user_input.get(CONF_REGION)
 
@@ -123,6 +123,6 @@ class VolvoOnCallConfigFlow(ConfigFlow, domain=DOMAIN):
             region=region,
         )
 
-        test_volvo_data = VolvoData(self.hass, connection, user_input)
+        test_volvo_data = VolvoData(self.menuai, connection, user_input)
 
         await test_volvo_data.auth_is_valid()

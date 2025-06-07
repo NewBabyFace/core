@@ -7,17 +7,17 @@ import logging
 # import dovado
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     DEVICE_DEFAULT_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,10 +40,10 @@ CONFIG_SCHEMA = vol.Schema(
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Dovado component."""
 
-    hass.data[DOMAIN] = DovadoData(
+    menuai.data[DOMAIN] = DovadoData(
         dovado.Dovado(
             config[DOMAIN][CONF_USERNAME],
             config[DOMAIN][CONF_PASSWORD],

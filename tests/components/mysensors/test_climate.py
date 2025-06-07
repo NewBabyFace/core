@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, call
 
 from mysensors.sensor import Sensor
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
@@ -20,12 +20,12 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_BATTERY_LEVEL, ATTR_ENTITY_ID
+from menuai.core import menuai
 
 
 async def test_hvac_node_auto(
-    hass: HomeAssistant,
+    menuai: menuai,
     hvac_node_auto: Sensor,
     receive_message: Callable[[str], None],
     transport_write: MagicMock,
@@ -33,7 +33,7 @@ async def test_hvac_node_auto(
     """Test a hvac auto node."""
     entity_id = "climate.hvac_node_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF
@@ -42,7 +42,7 @@ async def test_hvac_node_auto(
     assert state.attributes["supported_features"] == 394
 
     # Test set hvac mode auto
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.AUTO},
@@ -53,9 +53,9 @@ async def test_hvac_node_auto(
     assert transport_write.call_args == call("1;1;1;1;21;AutoChangeOver\n")
 
     receive_message("1;1;1;0;21;AutoChangeOver\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.AUTO
@@ -67,7 +67,7 @@ async def test_hvac_node_auto(
     transport_write.reset_mock()
 
     # Test set low/high target temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -84,9 +84,9 @@ async def test_hvac_node_auto(
 
     receive_message("1;1;1;0;45;20.0\n")
     receive_message("1;1;1;0;44;22.0\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.AUTO
@@ -97,7 +97,7 @@ async def test_hvac_node_auto(
     transport_write.reset_mock()
 
     # Test set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {
@@ -111,9 +111,9 @@ async def test_hvac_node_auto(
     assert transport_write.call_args == call("1;1;1;1;22;Max\n")
 
     receive_message("1;1;1;0;22;Max\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.AUTO
@@ -122,7 +122,7 @@ async def test_hvac_node_auto(
     transport_write.reset_mock()
 
     # Test set hvac mode off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.OFF},
@@ -133,16 +133,16 @@ async def test_hvac_node_auto(
     assert transport_write.call_args == call("1;1;1;1;21;Off\n")
 
     receive_message("1;1;1;0;21;Off\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF
 
 
 async def test_hvac_node_heat(
-    hass: HomeAssistant,
+    menuai: menuai,
     hvac_node_heat: Sensor,
     receive_message: Callable[[str], None],
     transport_write: MagicMock,
@@ -150,7 +150,7 @@ async def test_hvac_node_heat(
     """Test a hvac heat node."""
     entity_id = "climate.hvac_node_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF
@@ -159,7 +159,7 @@ async def test_hvac_node_heat(
     assert state.attributes["supported_features"] == 393
 
     # Test set hvac mode heat
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.HEAT},
@@ -170,9 +170,9 @@ async def test_hvac_node_heat(
     assert transport_write.call_args == call("1;1;1;1;21;HeatOn\n")
 
     receive_message("1;1;1;0;21;HeatOn\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -183,7 +183,7 @@ async def test_hvac_node_heat(
     transport_write.reset_mock()
 
     # Test set low/high target temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -197,9 +197,9 @@ async def test_hvac_node_heat(
     assert transport_write.call_args == call("1;1;1;1;45;20.0\n")
 
     receive_message("1;1;1;0;45;20.0\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -209,7 +209,7 @@ async def test_hvac_node_heat(
     transport_write.reset_mock()
 
     # Test set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {
@@ -223,9 +223,9 @@ async def test_hvac_node_heat(
     assert transport_write.call_args == call("1;1;1;1;22;Min\n")
 
     receive_message("1;1;1;0;22;Min\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -234,7 +234,7 @@ async def test_hvac_node_heat(
     transport_write.reset_mock()
 
     # Test set hvac mode off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.OFF},
@@ -245,16 +245,16 @@ async def test_hvac_node_heat(
     assert transport_write.call_args == call("1;1;1;1;21;Off\n")
 
     receive_message("1;1;1;0;21;Off\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF
 
 
 async def test_hvac_node_cool(
-    hass: HomeAssistant,
+    menuai: menuai,
     hvac_node_cool: Sensor,
     receive_message: Callable[[str], None],
     transport_write: MagicMock,
@@ -262,7 +262,7 @@ async def test_hvac_node_cool(
     """Test a hvac cool node."""
     entity_id = "climate.hvac_node_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF
@@ -271,7 +271,7 @@ async def test_hvac_node_cool(
     assert state.attributes["supported_features"] == 393
 
     # Test set hvac mode cool
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.COOL},
@@ -282,9 +282,9 @@ async def test_hvac_node_cool(
     assert transport_write.call_args == call("1;1;1;1;21;CoolOn\n")
 
     receive_message("1;1;1;0;21;CoolOn\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.COOL
@@ -295,7 +295,7 @@ async def test_hvac_node_cool(
     transport_write.reset_mock()
 
     # Test set low/high target temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -309,9 +309,9 @@ async def test_hvac_node_cool(
     assert transport_write.call_args == call("1;1;1;1;44;20.0\n")
 
     receive_message("1;1;1;0;44;20.0\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.COOL
@@ -321,7 +321,7 @@ async def test_hvac_node_cool(
     transport_write.reset_mock()
 
     # Test set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {
@@ -335,9 +335,9 @@ async def test_hvac_node_cool(
     assert transport_write.call_args == call("1;1;1;1;22;Auto\n")
 
     receive_message("1;1;1;0;22;Auto\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.COOL
@@ -346,7 +346,7 @@ async def test_hvac_node_cool(
     transport_write.reset_mock()
 
     # Test set hvac mode off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.OFF},
@@ -357,16 +357,16 @@ async def test_hvac_node_cool(
     assert transport_write.call_args == call("1;1;1;1;21;Off\n")
 
     receive_message("1;1;1;0;21;Off\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF
 
 
 async def test_hvac_node_only_hvac(
-    hass: HomeAssistant,
+    menuai: menuai,
     hvac_node_only_hvac: Sensor,
     receive_message: Callable[[str], None],
     transport_write: MagicMock,
@@ -374,7 +374,7 @@ async def test_hvac_node_only_hvac(
     """Test a hvac only hvac node."""
     entity_id = "climate.hvac_node_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF
@@ -382,7 +382,7 @@ async def test_hvac_node_only_hvac(
     assert state.attributes["supported_features"] == 384
 
     # Test set hvac mode heat
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.HEAT},
@@ -393,9 +393,9 @@ async def test_hvac_node_only_hvac(
     assert transport_write.call_args == call("1;1;1;1;21;HeatOn\n")
 
     receive_message("1;1;1;0;21;HeatOn\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -404,7 +404,7 @@ async def test_hvac_node_only_hvac(
     transport_write.reset_mock()
 
     # Test set hvac mode cool
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.COOL},
@@ -415,9 +415,9 @@ async def test_hvac_node_only_hvac(
     assert transport_write.call_args == call("1;1;1;1;21;CoolOn\n")
 
     receive_message("1;1;1;0;21;CoolOn\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.COOL
@@ -426,7 +426,7 @@ async def test_hvac_node_only_hvac(
     transport_write.reset_mock()
 
     # Test set hvac mode off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.OFF},
@@ -437,9 +437,9 @@ async def test_hvac_node_only_hvac(
     assert transport_write.call_args == call("1;1;1;1;21;Off\n")
 
     receive_message("1;1;1;0;21;Off\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == HVACMode.OFF

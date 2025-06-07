@@ -11,9 +11,9 @@ from python_overseerr import (
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.components.webhook import async_generate_id
-from homeassistant.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.components.webhook import async_generate_id
+from menuai.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
@@ -21,7 +21,7 @@ from homeassistant.const import (
     CONF_URL,
     CONF_WEBHOOK_ID,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -38,7 +38,7 @@ class OverseerrConfigFlow(ConfigFlow, domain=DOMAIN):
             port,
             api_key,
             ssl=ssl,
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         try:
             await client.get_request_count()

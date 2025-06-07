@@ -9,8 +9,8 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from . import setup_integration
 from .conftest import (
@@ -33,7 +33,7 @@ TESTDATA_IDS = [f.stem for f in TESTDATA_FILES]
 
 @respx.mock
 async def test_empty_calendar(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     get_events: GetEventsFn,
 ) -> None:
@@ -50,11 +50,11 @@ async def test_empty_calendar(
             ),
         )
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
     events = await get_events("1997-07-14T00:00:00", "1997-07-16T00:00:00")
     assert len(events) == 0
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == FRIENDLY_NAME
     assert state.state == STATE_OFF
@@ -118,7 +118,7 @@ async def test_empty_calendar(
 @respx.mock
 async def test_api_date_time_event(
     get_events: GetEventsFn,
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     ics_content: str,
 ) -> None:
@@ -129,7 +129,7 @@ async def test_api_date_time_event(
             text=ics_content,
         )
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
     events = await get_events("1997-07-14T00:00:00Z", "1997-07-16T00:00:00Z")
     assert list(map(event_fields, events)) == [
         {
@@ -165,7 +165,7 @@ async def test_api_date_time_event(
 @respx.mock
 async def test_api_date_event(
     get_events: GetEventsFn,
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test an event with a start/end date all day event."""
@@ -186,7 +186,7 @@ async def test_api_date_event(
             ),
         )
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
     events = await get_events("2007-06-20T00:00:00", "2007-07-20T00:00:00")
     assert list(map(event_fields, events)) == [
         {
@@ -215,7 +215,7 @@ async def test_api_date_event(
 @respx.mock
 async def test_active_event(
     get_events: GetEventsFn,
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test an event with a start/end date time."""
@@ -237,8 +237,8 @@ async def test_active_event(
             ),
         )
     )
-    await setup_integration(hass, config_entry)
-    state = hass.states.get(TEST_ENTITY)
+    await setup_integration(menuai, config_entry)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == FRIENDLY_NAME
     assert state.state == STATE_ON
@@ -257,7 +257,7 @@ async def test_active_event(
 @respx.mock
 async def test_upcoming_event(
     get_events: GetEventsFn,
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test an event with a start/end date time."""
@@ -279,8 +279,8 @@ async def test_upcoming_event(
             ),
         )
     )
-    await setup_integration(hass, config_entry)
-    state = hass.states.get(TEST_ENTITY)
+    await setup_integration(menuai, config_entry)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == FRIENDLY_NAME
     assert state.state == STATE_OFF
@@ -298,7 +298,7 @@ async def test_upcoming_event(
 @respx.mock
 async def test_recurring_event(
     get_events: GetEventsFn,
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test an event with a recurrence rule."""
@@ -319,7 +319,7 @@ async def test_recurring_event(
             ),
         )
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
     events = await get_events("2022-08-20T00:00:00", "2022-09-20T00:00:00")
     assert list(map(event_fields, events)) == [
@@ -362,7 +362,7 @@ async def test_recurring_event(
 )
 async def test_all_day_iter_order(
     get_events: GetEventsFn,
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     event_order: list[str],
 ) -> None:
@@ -397,7 +397,7 @@ async def test_all_day_iter_order(
             ),
         )
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
     events = await get_events("2022-10-06T00:00:00Z", "2022-10-09T00:00:00Z")
     assert [event["summary"] for event in events] == event_order
@@ -406,7 +406,7 @@ async def test_all_day_iter_order(
 @respx.mock
 @pytest.mark.parametrize("ics_filename", TESTDATA_FILES, ids=TESTDATA_IDS)
 async def test_calendar_examples(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     get_events: GetEventsFn,
     ics_filename: pathlib.Path,
@@ -419,6 +419,6 @@ async def test_calendar_examples(
             text=ics_filename.read_text(),
         )
     )
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
     events = await get_events("1997-07-14T00:00:00", "2025-07-01T00:00:00")
     assert events == snapshot

@@ -6,15 +6,15 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from technove import TechnoVEConnectionError, TechnoVEError
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import setup_with_selected_platforms
 
@@ -23,14 +23,14 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "mock_technove")
 async def test_numbers(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the creation and values of the TechnoVE numbers."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.NUMBER])
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.NUMBER])
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -45,17 +45,17 @@ async def test_numbers(
 )
 @pytest.mark.usefixtures("init_integration")
 async def test_number_expected_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_technove: MagicMock,
     entity_id: str,
     method: str,
     called_with_value: dict[str, bool | int],
 ) -> None:
     """Test set value services with valid values."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     method_mock = getattr(mock_technove, method)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_VALUE: called_with_value["max_current"]},
@@ -81,33 +81,33 @@ async def test_number_expected_value(
 )
 @pytest.mark.usefixtures("init_integration")
 async def test_number_out_of_bound(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     value: float,
 ) -> None:
     """Test set value services with out of bound values."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     with pytest.raises(ServiceValidationError, match="is outside valid range"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_VALUE: value},
             blocking=True,
         )
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state != STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("init_integration")
 async def test_set_max_current_sharing_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_technove: MagicMock,
 ) -> None:
     """Test failure to set the max current when the station is in sharing mode."""
     entity_id = "number.technove_station_maximum_current"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     # Enable power sharing mode
     device = mock_technove.update.return_value
@@ -117,7 +117,7 @@ async def test_set_max_current_sharing_mode(
         ServiceValidationError,
         match="power sharing mode is enabled",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -127,7 +127,7 @@ async def test_set_max_current_sharing_mode(
             blocking=True,
         )
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state != STATE_UNAVAILABLE
 
 
@@ -142,18 +142,18 @@ async def test_set_max_current_sharing_mode(
 )
 @pytest.mark.usefixtures("init_integration")
 async def test_invalid_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_technove: MagicMock,
     entity_id: str,
     method: str,
 ) -> None:
     """Test invalid response, not becoming unavailable."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     method_mock = getattr(mock_technove, method)
 
     method_mock.side_effect = TechnoVEError
-    with pytest.raises(HomeAssistantError, match="Invalid response from TechnoVE API"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Invalid response from TechnoVE API"):
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_VALUE: 10},
@@ -161,7 +161,7 @@ async def test_invalid_response(
         )
 
     assert method_mock.call_count == 1
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state != STATE_UNAVAILABLE
 
 
@@ -176,20 +176,20 @@ async def test_invalid_response(
 )
 @pytest.mark.usefixtures("init_integration")
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_technove: MagicMock,
     entity_id: str,
     method: str,
 ) -> None:
     """Test connection error, leading to becoming unavailable."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     method_mock = getattr(mock_technove, method)
 
     method_mock.side_effect = TechnoVEConnectionError
     with pytest.raises(
-        HomeAssistantError, match="Error communicating with TechnoVE API"
+        menuaiError, match="Error communicating with TechnoVE API"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_VALUE: 10},
@@ -197,5 +197,5 @@ async def test_connection_error(
         )
 
     assert method_mock.call_count == 1
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == STATE_UNAVAILABLE

@@ -9,21 +9,21 @@ from typing import Final
 
 from fyta_cli.fyta_models import Plant
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfConductivity,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .coordinator import FytaConfigEntry, FytaCoordinator
 from .entity import FytaPlantEntity
@@ -154,7 +154,7 @@ SENSORS: Final[list[FytaSensorEntityDescription]] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FytaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

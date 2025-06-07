@@ -14,13 +14,13 @@ from crownstone_sse import CrownstoneSSEAsync
 from crownstone_uart import CrownstoneUart, UartEventBus
 from crownstone_uart.Exceptions import UartException
 
-from homeassistant.components import persistent_notification
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.components import persistent_notification
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import aiohttp_client
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_USB_PATH,
@@ -46,10 +46,10 @@ class CrownstoneEntryManager:
     sse: CrownstoneSSEAsync
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: CrownstoneConfigEntry
+        self, menuai: menuai, config_entry: CrownstoneConfigEntry
     ) -> None:
         """Initialize the hub."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.listeners: dict[str, Any] = {}
         self.usb_sphere_id: str | None = None
@@ -65,7 +65,7 @@ class CrownstoneEntryManager:
         self.cloud = CrownstoneCloud(
             email=email,
             password=password,
-            clientsession=aiohttp_client.async_get_clientsession(self.hass),
+            clientsession=aiohttp_client.async_get_clientsession(self.menuai),
         )
         # Login & sync all user data
         try:
@@ -86,12 +86,12 @@ class CrownstoneEntryManager:
             email=email,
             password=password,
             access_token=self.cloud.access_token,
-            websession=aiohttp_client.async_create_clientsession(self.hass),
+            websession=aiohttp_client.async_create_clientsession(self.menuai),
             project_name=PROJECT_NAME,
         )
         # Listen for events in the background, without task tracking
         self.config_entry.async_create_background_task(
-            self.hass, self.async_process_events(self.sse), "crownstone-sse"
+            self.menuai, self.async_process_events(self.sse), "crownstone-sse"
         )
         setup_sse_listeners(self)
 
@@ -110,12 +110,12 @@ class CrownstoneEntryManager:
         async with sse_client as client:
             async for event in client:
                 if event is not None:
-                    async_dispatcher_send(self.hass, f"{DOMAIN}_{event.type}", event)
+                    async_dispatcher_send(self.menuai, f"{DOMAIN}_{event.type}", event)
 
     async def async_setup_usb(self) -> None:
         """Attempt setup of a Crownstone usb dongle."""
         # Trace by-id symlink back to the serial port
-        serial_port = await self.hass.async_add_executor_job(
+        serial_port = await self.menuai.async_add_executor_job(
             get_port, self.config_entry.options[CONF_USB_PATH]
         )
         if serial_port is None:
@@ -132,12 +132,12 @@ class CrownstoneEntryManager:
             updated_options[CONF_USB_PATH] = None
             updated_options[CONF_USB_SPHERE] = None
             # Ensure that the user can configure an USB again from options
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, options=updated_options
             )
             # Show notification to ensure the user knows the cloud is now used
             persistent_notification.async_create(
-                self.hass,
+                self.menuai,
                 (
                     "Setup of Crownstone USB dongle was unsuccessful on port"
                     f" {serial_port}.\n Crownstone Cloud will be used"

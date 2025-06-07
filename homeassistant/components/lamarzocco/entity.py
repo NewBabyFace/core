@@ -5,14 +5,14 @@ from dataclasses import dataclass
 
 from pylamarzocco.const import FirmwareType
 
-from homeassistant.const import CONF_ADDRESS, CONF_MAC
-from homeassistant.helpers.device_registry import (
+from menuai.const import CONF_ADDRESS, CONF_MAC
+from menuai.helpers.device_registry import (
     CONNECTION_BLUETOOTH,
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
 )
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LaMarzoccoUpdateCoordinator

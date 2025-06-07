@@ -8,14 +8,14 @@ from typing import Any, Literal, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import messages
-from homeassistant.core import HomeAssistant, callback, valid_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import json_bytes
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_conversion import (
+from menuai.components import websocket_api
+from menuai.components.websocket_api import messages
+from menuai.core import menuai, callback, valid_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import json_bytes
+from menuai.util import dt as dt_util
+from menuai.util.unit_conversion import (
     AreaConverter,
     BloodGlucoseConcentrationConverter,
     ConductivityConverter,
@@ -89,23 +89,23 @@ UNIT_SCHEMA = vol.Schema(
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the recorder websocket API."""
-    websocket_api.async_register_command(hass, ws_adjust_sum_statistics)
-    websocket_api.async_register_command(hass, ws_change_statistics_unit)
-    websocket_api.async_register_command(hass, ws_clear_statistics)
-    websocket_api.async_register_command(hass, ws_get_statistic_during_period)
-    websocket_api.async_register_command(hass, ws_get_statistics_during_period)
-    websocket_api.async_register_command(hass, ws_get_statistics_metadata)
-    websocket_api.async_register_command(hass, ws_list_statistic_ids)
-    websocket_api.async_register_command(hass, ws_import_statistics)
-    websocket_api.async_register_command(hass, ws_update_statistics_issues)
-    websocket_api.async_register_command(hass, ws_update_statistics_metadata)
-    websocket_api.async_register_command(hass, ws_validate_statistics)
+    websocket_api.async_register_command(menuai, ws_adjust_sum_statistics)
+    websocket_api.async_register_command(menuai, ws_change_statistics_unit)
+    websocket_api.async_register_command(menuai, ws_clear_statistics)
+    websocket_api.async_register_command(menuai, ws_get_statistic_during_period)
+    websocket_api.async_register_command(menuai, ws_get_statistics_during_period)
+    websocket_api.async_register_command(menuai, ws_get_statistics_metadata)
+    websocket_api.async_register_command(menuai, ws_list_statistic_ids)
+    websocket_api.async_register_command(menuai, ws_import_statistics)
+    websocket_api.async_register_command(menuai, ws_update_statistics_issues)
+    websocket_api.async_register_command(menuai, ws_update_statistics_metadata)
+    websocket_api.async_register_command(menuai, ws_validate_statistics)
 
 
 def _ws_get_statistic_during_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     msg_id: int,
     start_time: dt | None,
     end_time: dt | None,
@@ -118,7 +118,7 @@ def _ws_get_statistic_during_period(
         messages.result_message(
             msg_id,
             statistic_during_period(
-                hass, start_time, end_time, statistic_id, types, units=units
+                menuai, start_time, end_time, statistic_id, types, units=units
             ),
         )
     )
@@ -137,20 +137,20 @@ def _ws_get_statistic_during_period(
 )
 @websocket_api.async_response
 async def ws_get_statistic_during_period(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle statistics websocket command."""
     if ("start_time" in msg or "end_time" in msg) and "duration" in msg:
-        raise HomeAssistantError
+        raise menuaiError
     if "offset" in msg and "duration" not in msg:
-        raise HomeAssistantError
+        raise menuaiError
 
     start_time, end_time = resolve_period(cast(StatisticPeriod, msg))
 
     connection.send_message(
-        await get_instance(hass).async_add_executor_job(
+        await get_instance(menuai).async_add_executor_job(
             _ws_get_statistic_during_period,
-            hass,
+            menuai,
             msg["id"],
             start_time,
             end_time,
@@ -162,7 +162,7 @@ async def ws_get_statistic_during_period(
 
 
 def _ws_get_statistics_during_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     msg_id: int,
     start_time: dt,
     end_time: dt | None,
@@ -173,7 +173,7 @@ def _ws_get_statistics_during_period(
 ) -> bytes:
     """Fetch statistics and convert them to json in the executor."""
     result = statistics_during_period(
-        hass,
+        menuai,
         start_time,
         end_time,
         statistic_ids,
@@ -192,7 +192,7 @@ def _ws_get_statistics_during_period(
 
 
 async def ws_handle_get_statistics_during_period(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Handle statistics websocket command."""
     start_time_str = msg["start_time"]
@@ -216,9 +216,9 @@ async def ws_handle_get_statistics_during_period(
     if (types := msg.get("types")) is None:
         types = {"change", "last_reset", "max", "mean", "min", "state", "sum"}
     connection.send_message(
-        await get_instance(hass).async_add_executor_job(
+        await get_instance(menuai).async_add_executor_job(
             _ws_get_statistics_during_period,
-            hass,
+            menuai,
             msg["id"],
             start_time,
             end_time,
@@ -246,14 +246,14 @@ async def ws_handle_get_statistics_during_period(
 )
 @websocket_api.async_response
 async def ws_get_statistics_during_period(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle statistics websocket command."""
-    await ws_handle_get_statistics_during_period(hass, connection, msg)
+    await ws_handle_get_statistics_during_period(menuai, connection, msg)
 
 
 def _ws_get_list_statistic_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     msg_id: int,
     statistic_type: Literal["mean", "sum"] | None = None,
 ) -> bytes:
@@ -262,18 +262,18 @@ def _ws_get_list_statistic_ids(
     Runs in the executor.
     """
     return json_bytes(
-        messages.result_message(msg_id, list_statistic_ids(hass, None, statistic_type))
+        messages.result_message(msg_id, list_statistic_ids(menuai, None, statistic_type))
     )
 
 
 async def ws_handle_list_statistic_ids(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Fetch a list of available statistic_id."""
     connection.send_message(
-        await get_instance(hass).async_add_executor_job(
+        await get_instance(menuai).async_add_executor_job(
             _ws_get_list_statistic_ids,
-            hass,
+            menuai,
             msg["id"],
             msg.get("statistic_type"),
         )
@@ -288,10 +288,10 @@ async def ws_handle_list_statistic_ids(
 )
 @websocket_api.async_response
 async def ws_list_statistic_ids(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Fetch a list of available statistic_id."""
-    await ws_handle_list_statistic_ids(hass, connection, msg)
+    await ws_handle_list_statistic_ids(menuai, connection, msg)
 
 
 @websocket_api.websocket_command(
@@ -301,13 +301,13 @@ async def ws_list_statistic_ids(
 )
 @websocket_api.async_response
 async def ws_validate_statistics(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Validate statistics and return issues found."""
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     validation_issues = await instance.async_add_executor_job(
         validate_statistics,
-        hass,
+        menuai,
     )
     connection.send_result(msg["id"], validation_issues)
 
@@ -319,13 +319,13 @@ async def ws_validate_statistics(
 )
 @websocket_api.async_response
 async def ws_update_statistics_issues(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Update statistics issues."""
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     await instance.async_add_executor_job(
         update_statistics_issues,
-        hass,
+        menuai,
     )
     connection.send_result(msg["id"])
 
@@ -339,7 +339,7 @@ async def ws_update_statistics_issues(
 )
 @websocket_api.async_response
 async def ws_clear_statistics(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Clear statistics for a list of statistic_ids.
 
@@ -349,9 +349,9 @@ async def ws_clear_statistics(
     done_event = asyncio.Event()
 
     def clear_statistics_done() -> None:
-        hass.loop.call_soon_threadsafe(done_event.set)
+        menuai.loop.call_soon_threadsafe(done_event.set)
 
-    get_instance(hass).async_clear_statistics(
+    get_instance(menuai).async_clear_statistics(
         msg["statistic_ids"], on_done=clear_statistics_done
     )
     try:
@@ -374,12 +374,12 @@ async def ws_clear_statistics(
 )
 @websocket_api.async_response
 async def ws_get_statistics_metadata(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Get metadata for a list of statistic_ids."""
     statistic_ids = msg.get("statistic_ids")
     statistic_ids_set_or_none = set(statistic_ids) if statistic_ids else None
-    metadata = await async_list_statistic_ids(hass, statistic_ids_set_or_none)
+    metadata = await async_list_statistic_ids(menuai, statistic_ids_set_or_none)
     connection.send_result(msg["id"], metadata)
 
 
@@ -393,7 +393,7 @@ async def ws_get_statistics_metadata(
 )
 @websocket_api.async_response
 async def ws_update_statistics_metadata(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Update statistics metadata for a statistic_id.
 
@@ -402,9 +402,9 @@ async def ws_update_statistics_metadata(
     done_event = asyncio.Event()
 
     def update_statistics_metadata_done() -> None:
-        hass.loop.call_soon_threadsafe(done_event.set)
+        menuai.loop.call_soon_threadsafe(done_event.set)
 
-    get_instance(hass).async_update_statistics_metadata(
+    get_instance(menuai).async_update_statistics_metadata(
         msg["statistic_id"],
         new_unit_of_measurement=msg["unit_of_measurement"],
         on_done=update_statistics_metadata_done,
@@ -432,14 +432,14 @@ async def ws_update_statistics_metadata(
 )
 @callback
 def ws_change_statistics_unit(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Change the unit_of_measurement for a statistic_id.
 
     All existing statistics will be converted to the new unit.
     """
     async_change_statistics_unit(
-        hass,
+        menuai,
         msg["statistic_id"],
         new_unit_of_measurement=msg["new_unit_of_measurement"],
         old_unit_of_measurement=msg["old_unit_of_measurement"],
@@ -459,7 +459,7 @@ def ws_change_statistics_unit(
 )
 @websocket_api.async_response
 async def ws_adjust_sum_statistics(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Adjust sum statistics.
 
@@ -474,9 +474,9 @@ async def ws_adjust_sum_statistics(
         connection.send_error(msg["id"], "invalid_start_time", "Invalid start time")
         return
 
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     metadatas = await instance.async_add_executor_job(
-        list_statistic_ids, hass, {msg["statistic_id"]}
+        list_statistic_ids, menuai, {msg["statistic_id"]}
     )
     if not metadatas:
         connection.send_error(msg["id"], "unknown_statistic_id", "Unknown statistic ID")
@@ -501,7 +501,7 @@ async def ws_adjust_sum_statistics(
         )
         return
 
-    get_instance(hass).async_adjust_statistics(
+    get_instance(menuai).async_adjust_statistics(
         msg["statistic_id"], start_time, msg["adjustment"], adjustment_unit
     )
     connection.send_result(msg["id"])
@@ -534,7 +534,7 @@ async def ws_adjust_sum_statistics(
 )
 @callback
 def ws_import_statistics(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Import statistics."""
     metadata = msg["metadata"]
@@ -545,7 +545,7 @@ def ws_import_statistics(
     stats = msg["stats"]
 
     if valid_entity_id(metadata["statistic_id"]):
-        async_import_statistics(hass, metadata, stats)
+        async_import_statistics(menuai, metadata, stats)
     else:
-        async_add_external_statistics(hass, metadata, stats)
+        async_add_external_statistics(menuai, metadata, stats)
     connection.send_result(msg["id"])

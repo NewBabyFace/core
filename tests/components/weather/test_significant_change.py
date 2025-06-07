@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.weather.const import (
+from menuai.components.weather.const import (
     ATTR_WEATHER_APPARENT_TEMPERATURE,
     ATTR_WEATHER_CLOUD_COVERAGE,
     ATTR_WEATHER_DEW_POINT,
@@ -20,10 +20,10 @@ from homeassistant.components.weather.const import (
     ATTR_WEATHER_WIND_SPEED,
     ATTR_WEATHER_WIND_SPEED_UNIT,
 )
-from homeassistant.components.weather.significant_change import (
+from menuai.components.weather.significant_change import (
     async_check_significant_change,
 )
-from homeassistant.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
+from menuai.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
 
 
 async def test_significant_state_change() -> None:

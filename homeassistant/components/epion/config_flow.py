@@ -8,8 +8,8 @@ from typing import Any
 from epion import Epion, EpionAuthenticationError, EpionConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
 
 from .const import DOMAIN
 
@@ -29,7 +29,7 @@ class EpionConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input:
             api = Epion(user_input[CONF_API_KEY])
             try:
-                api_data = await self.hass.async_add_executor_job(api.get_current)
+                api_data = await self.menuai.async_add_executor_job(api.get_current)
             except EpionAuthenticationError:
                 errors["base"] = "invalid_auth"
             except EpionConnectionError:

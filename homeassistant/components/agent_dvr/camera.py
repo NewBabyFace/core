@@ -5,11 +5,11 @@ import logging
 
 from agent import AgentError
 
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.mjpeg import MjpegCamera, filter_urllib3_logging
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.mjpeg import MjpegCamera, filter_urllib3_logging
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
@@ -37,7 +37,7 @@ CAMERA_SERVICES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AgentDVRConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

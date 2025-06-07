@@ -6,30 +6,30 @@ from typing import Any
 
 from aioskybell.helpers.const import BRIGHTNESS, RGB_COLOR
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_RGB_COLOR,
     ColorMode,
     LightEntity,
     LightEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import SkybellEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Skybell switch."""
     async_add_entities(
         SkybellLight(coordinator, LightEntityDescription(key="light"))
-        for coordinator in hass.data[DOMAIN][entry.entry_id]
+        for coordinator in menuai.data[DOMAIN][entry.entry_id]
     )
 
 

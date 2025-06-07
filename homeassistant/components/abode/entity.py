@@ -3,8 +3,8 @@
 from jaraco.abode.automation import Automation as AbodeAuto
 from jaraco.abode.devices.base import Device as AbodeDev
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from . import AbodeSystem
 from .const import ATTRIBUTION, DOMAIN
@@ -21,19 +21,19 @@ class AbodeEntity(Entity):
         self._data = data
         self._attr_should_poll = data.polling
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to Abode connection status updates."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._data.abode.events.add_connection_status_callback,
             self.unique_id,
             self._update_connection_status,
         )
 
-        self.hass.data[DOMAIN].entity_ids.add(self.entity_id)
+        self.menuai.data[DOMAIN].entity_ids.add(self.entity_id)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from Abode connection status updates."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._data.abode.events.remove_connection_status_callback, self.unique_id
         )
 
@@ -52,19 +52,19 @@ class AbodeDevice(AbodeEntity):
         self._device = device
         self._attr_unique_id = device.uuid
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to device events."""
-        await super().async_added_to_hass()
-        await self.hass.async_add_executor_job(
+        await super().async_added_to_menuai()
+        await self.menuai.async_add_executor_job(
             self._data.abode.events.add_device_callback,
             self._device.id,
             self._update_callback,
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from device events."""
-        await super().async_will_remove_from_hass()
-        await self.hass.async_add_executor_job(
+        await super().async_will_remove_from_menuai()
+        await self.menuai.async_add_executor_job(
             self._data.abode.events.remove_all_device_callbacks, self._device.id
         )
 

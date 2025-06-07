@@ -10,8 +10,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import climate
-from homeassistant.components.climate import (
+from menuai.components import climate
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -29,8 +29,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_NAME,
     CONF_OPTIMISTIC,
@@ -43,13 +43,13 @@ from homeassistant.const import (
     PRECISION_WHOLE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util.unit_conversion import TemperatureConverter
 
 from . import subscription
 from .config import DEFAULT_RETAIN, MQTT_BASE_SCHEMA
@@ -369,13 +369,13 @@ DISCOVERY_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT climate through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttClimate,
         climate.DOMAIN,
@@ -473,7 +473,7 @@ class MqttTemperatureControlEntity(MqttEntity, ABC):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     async def _publish(self, topic: str, payload: PublishPayloadType) -> None:
         if self._topic[topic] is not None:
@@ -554,7 +554,7 @@ class MqttClimate(MqttTemperatureControlEntity, ClimateEntity):
         self._attr_hvac_modes = config[CONF_MODE_LIST]
         # Make sure the min an max temp is converted to the correct when not set
         self._attr_temperature_unit = config.get(
-            CONF_TEMPERATURE_UNIT, self.hass.config.units.temperature_unit
+            CONF_TEMPERATURE_UNIT, self.menuai.config.units.temperature_unit
         )
         if (min_temp := config.get(CONF_TEMP_MIN)) is not None:
             self._attr_min_temp = min_temp

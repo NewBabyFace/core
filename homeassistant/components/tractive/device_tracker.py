@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.device_tracker import SourceType, TrackerEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import SourceType, TrackerEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import Trackables, TractiveClient, TractiveConfigEntry
 from .const import (
@@ -19,7 +19,7 @@ from .entity import TractiveEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TractiveConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -80,15 +80,15 @@ class TractiveDeviceTracker(TractiveEntity, TrackerEntity):
         self._attr_available = True
         self.async_write_ha_state()
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         if not self._client.subscribed:
             self._client.subscribe()
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._dispatcher_signal,
                 self._handle_hardware_status_update,
             )
@@ -96,7 +96,7 @@ class TractiveDeviceTracker(TractiveEntity, TrackerEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{TRACKER_POSITION_UPDATED}-{self._tracker_id}",
                 self._handle_position_update,
             )
@@ -104,7 +104,7 @@ class TractiveDeviceTracker(TractiveEntity, TrackerEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SERVER_UNAVAILABLE}-{self._user_id}",
                 self.handle_server_unavailable,
             )

@@ -1,4 +1,4 @@
-"""API for fitbit bound to Home Assistant OAuth."""
+"""API for fitbit bound to MenuAI OAuth."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -9,10 +9,10 @@ from fitbit import Fitbit
 from fitbit.exceptions import HTTPException, HTTPUnauthorized
 from requests.exceptions import ConnectionError as RequestsConnectionError
 
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import FitbitUnitSystem
 from .exceptions import FitbitApiException, FitbitAuthException
@@ -33,11 +33,11 @@ class FitbitApi(ABC):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         unit_system: FitbitUnitSystem | None = None,
     ) -> None:
         """Initialize Fitbit auth."""
-        self._hass = hass
+        self._menuai = menuai
         self._profile: FitbitProfile | None = None
         self._unit_system = unit_system
 
@@ -47,7 +47,7 @@ class FitbitApi(ABC):
 
     async def _async_get_client(self) -> Fitbit:
         """Get synchronous client library, called before each client request."""
-        # Always rely on Home Assistant's token update mechanism which refreshes
+        # Always rely on MenuAI's token update mechanism which refreshes
         # the data in the configuration entry.
         token = await self.async_get_access_token()
         return Fitbit(
@@ -77,7 +77,7 @@ class FitbitApi(ABC):
 
         This is used in a couple ways. The first is to determine the request
         header to use when talking to the fitbit API which changes the
-        units returned by the API. The second is to tell Home Assistant the
+        units returned by the API. The second is to tell MenuAI the
         units set in sensor values for the values returned by the API.
         """
         if (
@@ -86,11 +86,11 @@ class FitbitApi(ABC):
         ):
             return self._unit_system
         # Use units consistent with the account user profile or fallback to the
-        # home assistant unit settings.
+        # MenuAI unit settings.
         profile = await self.async_get_user_profile()
         if profile.locale == FitbitUnitSystem.EN_GB:
             return FitbitUnitSystem.EN_GB
-        if self._hass.config.units is METRIC_SYSTEM:
+        if self._menuai.config.units is METRIC_SYSTEM:
             return FitbitUnitSystem.METRIC
         return FitbitUnitSystem.EN_US
 
@@ -129,7 +129,7 @@ class FitbitApi(ABC):
     async def _run[_T](self, func: Callable[[], _T]) -> _T:
         """Run client command."""
         try:
-            return await self._hass.async_add_executor_job(func)
+            return await self._menuai.async_add_executor_job(func)
         except RequestsConnectionError as err:
             _LOGGER.debug("Connection error to fitbit API: %s", err)
             raise FitbitApiException("Connection error to fitbit API") from err
@@ -146,12 +146,12 @@ class OAuthFitbitApi(FitbitApi):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         oauth_session: config_entry_oauth2_flow.OAuth2Session,
         unit_system: FitbitUnitSystem | None = None,
     ) -> None:
         """Initialize OAuthFitbitApi."""
-        super().__init__(hass, unit_system)
+        super().__init__(menuai, unit_system)
         self._oauth_session = oauth_session
 
     async def async_get_access_token(self) -> dict[str, Any]:
@@ -168,11 +168,11 @@ class ConfigFlowFitbitApi(FitbitApi):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         token: dict[str, Any],
     ) -> None:
         """Initialize ConfigFlowFitbitApi."""
-        super().__init__(hass)
+        super().__init__(menuai)
         self._token = token
 
     async def async_get_access_token(self) -> dict[str, Any]:

@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from panasonic_viera import TV_TYPE_ENCRYPTED, TV_TYPE_NONENCRYPTED
 import pytest
 
-from homeassistant.components.panasonic_viera.const import (
+from menuai.components.panasonic_viera.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_MANUFACTURER,
     ATTR_MODEL_NUMBER,
@@ -19,9 +19,9 @@ from homeassistant.components.panasonic_viera.const import (
     DEFAULT_PORT,
     DOMAIN,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from tests.common import MockConfigEntry
 
@@ -96,14 +96,14 @@ def mock_remote_fixture():
     mock_remote = get_mock_remote()
 
     with patch(
-        "homeassistant.components.panasonic_viera.RemoteControl",
+        "menuai.components.panasonic_viera.RemoteControl",
         return_value=mock_remote,
     ):
         yield mock_remote
 
 
 @pytest.fixture
-async def init_integration(hass: HomeAssistant, mock_remote: Mock) -> MockConfigEntry:
+async def init_integration(menuai: menuai, mock_remote: Mock) -> MockConfigEntry:
     """Set up the Panasonic Viera integration for testing."""
 
     mock_entry = MockConfigEntry(
@@ -112,9 +112,9 @@ async def init_integration(hass: HomeAssistant, mock_remote: Mock) -> MockConfig
         data={**MOCK_CONFIG_DATA, **MOCK_ENCRYPTION_DATA, **MOCK_DEVICE_INFO},
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_entry

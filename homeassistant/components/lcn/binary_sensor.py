@@ -5,22 +5,22 @@ from functools import partial
 
 import pypck
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.binary_sensor import (
+from menuai.components.automation import automations_with_entity
+from menuai.components.binary_sensor import (
     DOMAIN as DOMAIN_BINARY_SENSOR,
     BinarySensorEntity,
 )
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DOMAIN, CONF_ENTITIES, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import (
+from menuai.components.script import scripts_with_entity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DOMAIN, CONF_ENTITIES, CONF_SOURCE
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ADD_ENTITIES_CALLBACKS,
@@ -52,7 +52,7 @@ def add_lcn_entities(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,7 +63,7 @@ async def async_setup_entry(
         async_add_entities,
     )
 
-    hass.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
+    menuai.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
         {DOMAIN_BINARY_SENSOR: add_entities}
     )
 
@@ -87,20 +87,20 @@ class LcnRegulatorLockSensor(LcnEntity, BinarySensorEntity):
             config[CONF_DOMAIN_DATA][CONF_SOURCE]
         ]
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(
                 self.setpoint_variable
             )
 
-        entity_automations = automations_with_entity(self.hass, self.entity_id)
-        entity_scripts = scripts_with_entity(self.hass, self.entity_id)
+        entity_automations = automations_with_entity(self.menuai, self.entity_id)
+        entity_scripts = scripts_with_entity(self.menuai, self.entity_id)
         if entity_automations + entity_scripts:
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"deprecated_binary_sensor_{self.entity_id}",
                 breaks_in_ha_version="2025.5.0",
@@ -112,15 +112,15 @@ class LcnRegulatorLockSensor(LcnEntity, BinarySensorEntity):
                 },
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(
                 self.setpoint_variable
             )
         async_delete_issue(
-            self.hass, DOMAIN, f"deprecated_binary_sensor_{self.entity_id}"
+            self.menuai, DOMAIN, f"deprecated_binary_sensor_{self.entity_id}"
         )
 
     def input_received(self, input_obj: InputType) -> None:
@@ -146,17 +146,17 @@ class LcnBinarySensor(LcnEntity, BinarySensorEntity):
             config[CONF_DOMAIN_DATA][CONF_SOURCE]
         ]
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(
                 self.bin_sensor_port
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(
                 self.bin_sensor_port
@@ -180,18 +180,18 @@ class LcnLockKeysSensor(LcnEntity, BinarySensorEntity):
 
         self.source = pypck.lcn_defs.Key[config[CONF_DOMAIN_DATA][CONF_SOURCE]]
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(self.source)
 
-        entity_automations = automations_with_entity(self.hass, self.entity_id)
-        entity_scripts = scripts_with_entity(self.hass, self.entity_id)
+        entity_automations = automations_with_entity(self.menuai, self.entity_id)
+        entity_scripts = scripts_with_entity(self.menuai, self.entity_id)
         if entity_automations + entity_scripts:
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"deprecated_binary_sensor_{self.entity_id}",
                 breaks_in_ha_version="2025.5.0",
@@ -203,13 +203,13 @@ class LcnLockKeysSensor(LcnEntity, BinarySensorEntity):
                 },
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(self.source)
         async_delete_issue(
-            self.hass, DOMAIN, f"deprecated_binary_sensor_{self.entity_id}"
+            self.menuai, DOMAIN, f"deprecated_binary_sensor_{self.entity_id}"
         )
 
     def input_received(self, input_obj: InputType) -> None:

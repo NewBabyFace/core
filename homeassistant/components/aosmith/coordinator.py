@@ -12,10 +12,10 @@ from py_aosmith import (
 )
 from py_aosmith.models import Device as AOSmithDevice
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, ENERGY_USAGE_INTERVAL, FAST_INTERVAL, REGULAR_INTERVAL
 
@@ -40,13 +40,13 @@ class AOSmithStatusCoordinator(DataUpdateCoordinator[dict[str, AOSmithDevice]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AOSmithConfigEntry,
         client: AOSmithAPIClient,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -83,14 +83,14 @@ class AOSmithEnergyCoordinator(DataUpdateCoordinator[dict[str, float]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AOSmithConfigEntry,
         client: AOSmithAPIClient,
         junction_ids: list[str],
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

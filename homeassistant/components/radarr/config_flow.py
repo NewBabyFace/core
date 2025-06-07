@@ -12,10 +12,10 @@ from aiopyarr.radarr_client import RadarrClient
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_NAME, DEFAULT_URL, DOMAIN
 
@@ -55,7 +55,7 @@ class RadarrConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input[CONF_URL] = f"{url.scheme}://{url.host}:{url.port}{url.path}"
 
             try:
-                if result := await validate_input(self.hass, user_input):
+                if result := await validate_input(self.menuai, user_input):
                     user_input[CONF_API_KEY] = result[1]
             except exceptions.ArrAuthenticationException:
                 errors = {"base": "invalid_auth"}
@@ -102,7 +102,7 @@ class RadarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 async def validate_input(
-    hass: HomeAssistant, data: dict[str, Any]
+    menuai: menuai, data: dict[str, Any]
 ) -> tuple[str, str, str] | None:
     """Validate the user input allows us to connect."""
     host_configuration = PyArrHostConfiguration(
@@ -112,7 +112,7 @@ async def validate_input(
     )
     radarr = RadarrClient(
         host_configuration=host_configuration,
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
     if CONF_API_KEY not in data:
         return await radarr.async_try_zeroconf()

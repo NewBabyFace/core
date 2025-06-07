@@ -5,12 +5,12 @@ import logging
 from denonavr import DenonAVR
 from denonavr.exceptions import AvrNetworkError, AvrTimoutError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import entity_registry as er
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import (
     CONF_SHOW_ALL_SOURCES,
@@ -34,7 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 type DenonavrConfigEntry = ConfigEntry[DenonAVR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: DenonavrConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: DenonavrConfigEntry) -> bool:
     """Set up the denonavr components from a config entry."""
     # Connect to receiver
     connect_denonavr = ConnectDenonAVR(
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DenonavrConfigEntry) -> 
         entry.options.get(CONF_ZONE3, DEFAULT_ZONE3),
         entry.options.get(CONF_USE_TELNET, DEFAULT_USE_TELNET),
         entry.options.get(CONF_UPDATE_AUDYSSEY, DEFAULT_UPDATE_AUDYSSEY),
-        lambda: get_async_client(hass),
+        lambda: get_async_client(menuai),
     )
     try:
         await connect_denonavr.async_connect_receiver()
@@ -57,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DenonavrConfigEntry) -> 
 
     entry.runtime_data = receiver
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     use_telnet = entry.options.get(CONF_USE_TELNET, DEFAULT_USE_TELNET)
 
     async def _async_disconnect(event: Event) -> None:
@@ -67,17 +67,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: DenonavrConfigEntry) -> 
 
     if use_telnet:
         entry.async_on_unload(
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_disconnect)
+            menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_disconnect)
         )
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: DenonavrConfigEntry
+    menuai: menuai, config_entry: DenonavrConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
 
@@ -86,7 +86,7 @@ async def async_unload_entry(
         await receiver.async_telnet_disconnect()
 
     # Remove zone2 and zone3 entities if needed
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entries = er.async_entries_for_config_entry(entity_registry, config_entry.entry_id)
     unique_id = config_entry.unique_id or config_entry.entry_id
     zone2_id = f"{unique_id}-Zone2"
@@ -103,7 +103,7 @@ async def async_unload_entry(
 
 
 async def update_listener(
-    hass: HomeAssistant, config_entry: DenonavrConfigEntry
+    menuai: menuai, config_entry: DenonavrConfigEntry
 ) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)

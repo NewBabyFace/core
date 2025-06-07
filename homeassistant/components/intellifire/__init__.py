@@ -8,7 +8,7 @@ from intellifire4py import UnifiedFireplace
 from intellifire4py.cloud_interface import IntelliFireCloudInterface
 from intellifire4py.model import IntelliFireCommonFireplaceData
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_IP_ADDRESS,
@@ -16,8 +16,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .const import (
     CONF_AUTH_COOKIE,
@@ -61,7 +61,7 @@ def _construct_common_data(
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: IntellifireConfigEntry
+    menuai: menuai, config_entry: IntellifireConfigEntry
 ) -> bool:
     """Migrate entries."""
     LOGGER.debug(
@@ -94,7 +94,7 @@ async def async_migrate_entry(
             new[CONF_IP_ADDRESS] = new_data.ip_address
             new[CONF_SERIAL] = new_data.serial
 
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 config_entry,
                 data=new,
                 options={CONF_READ_MODE: "local", CONF_CONTROL_MODE: "local"},
@@ -107,7 +107,7 @@ async def async_migrate_entry(
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: IntellifireConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: IntellifireConfigEntry) -> bool:
     """Set up IntelliFire from a config entry."""
 
     if CONF_USERNAME not in entry.data:
@@ -130,14 +130,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: IntellifireConfigEntry) 
         ) from err
 
     # Construct coordinator
-    data_update_coordinator = IntellifireDataUpdateCoordinator(hass, entry, fireplace)
+    data_update_coordinator = IntellifireDataUpdateCoordinator(menuai, entry, fireplace)
 
     LOGGER.debug("Fireplace to Initialized - Awaiting first refresh")
     await data_update_coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = data_update_coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
@@ -154,7 +154,7 @@ async def _async_wait_for_initialization(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: IntellifireConfigEntry
+    menuai: menuai, entry: IntellifireConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

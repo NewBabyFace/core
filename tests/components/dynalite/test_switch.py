@@ -5,8 +5,8 @@ from unittest.mock import Mock
 from dynalite_devices_lib.switch import DynalitePresetSwitchDevice
 import pytest
 
-from homeassistant.const import ATTR_FRIENDLY_NAME, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, State
+from menuai.const import ATTR_FRIENDLY_NAME, STATE_OFF, STATE_ON
+from menuai.core import menuai, State
 
 from .common import (
     ATTR_METHOD,
@@ -32,14 +32,14 @@ def mock_device():
     return mock_dev
 
 
-async def test_switch_setup(hass: HomeAssistant, mock_device) -> None:
+async def test_switch_setup(menuai: menuai, mock_device) -> None:
     """Test a successful setup."""
-    await create_entity_from_device(hass, mock_device)
-    entity_state = hass.states.get("switch.name")
+    await create_entity_from_device(menuai, mock_device)
+    entity_state = menuai.states.get("switch.name")
     assert entity_state.attributes[ATTR_FRIENDLY_NAME] == mock_device.name
     assert entity_state.state == STATE_OFF
     await run_service_tests(
-        hass,
+        menuai,
         mock_device,
         "switch",
         [
@@ -51,11 +51,11 @@ async def test_switch_setup(hass: HomeAssistant, mock_device) -> None:
 
 @pytest.mark.parametrize(("saved_state", "level"), [(STATE_ON, 1), (STATE_OFF, 0)])
 async def test_switch_restore_state(
-    hass: HomeAssistant, mock_device, saved_state, level
+    menuai: menuai, mock_device, saved_state, level
 ) -> None:
     """Test restore from cache."""
     mock_restore_cache(
-        hass,
+        menuai,
         [
             State(
                 "switch.name",
@@ -63,7 +63,7 @@ async def test_switch_restore_state(
             )
         ],
     )
-    await create_entity_from_device(hass, mock_device)
+    await create_entity_from_device(menuai, mock_device)
     mock_device.init_level.assert_called_once_with(level)
-    entity_state = hass.states.get("switch.name")
+    entity_state = menuai.states.get("switch.name")
     assert entity_state.state == saved_state

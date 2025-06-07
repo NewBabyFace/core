@@ -9,13 +9,13 @@ from urllib.error import HTTPError, URLError
 from panasonic_viera import EncryptionRequired, Keys, RemoteControl, SOAPError
 import voluptuous as vol
 
-from homeassistant.components.media_player import MediaPlayerState, MediaType
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.script import Script
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.media_player import MediaPlayerState, MediaType
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
+from menuai.core import Context, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.script import Script
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_DEVICE_INFO,
@@ -53,14 +53,14 @@ CONFIG_SCHEMA = vol.Schema(
 PLATFORMS = [Platform.MEDIA_PLAYER, Platform.REMOTE]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Panasonic Viera from configuration.yaml."""
     if DOMAIN not in config:
         return True
 
     for conf in config[DOMAIN]:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": SOURCE_IMPORT}, data=conf
             )
         )
@@ -68,9 +68,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up Panasonic Viera from a config entry."""
-    panasonic_viera_data = hass.data.setdefault(DOMAIN, {})
+    panasonic_viera_data = menuai.data.setdefault(DOMAIN, {})
 
     config = config_entry.data
 
@@ -78,14 +78,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     port = config[CONF_PORT]
 
     if (on_action := config[CONF_ON_ACTION]) is not None:
-        on_action = Script(hass, on_action, config[CONF_NAME], DOMAIN)
+        on_action = Script(menuai, on_action, config[CONF_NAME], DOMAIN)
 
     params = {}
     if CONF_APP_ID in config and CONF_ENCRYPTION_KEY in config:
         params["app_id"] = config[CONF_APP_ID]
         params["encryption_key"] = config[CONF_ENCRYPTION_KEY]
 
-    remote = Remote(hass, host, port, on_action, **params)
+    remote = Remote(menuai, host, port, on_action, **params)
     await remote.async_create_remote_control(during_setup=True)
 
     panasonic_viera_data[config_entry.entry_id] = {ATTR_REMOTE: remote}
@@ -96,29 +96,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         unique_id = config_entry.unique_id
         if device_info is None:
             _LOGGER.error(
-                "Couldn't gather device info; Please restart Home Assistant with your"
+                "Couldn't gather device info; Please restart MenuAI with your"
                 " TV turned on and connected to your network"
             )
         else:
             unique_id = device_info[ATTR_UDN]
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry,
             unique_id=unique_id,
             data={**config, ATTR_DEVICE_INFO: device_info},
         )
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
     if unload_ok:
-        hass.data[DOMAIN].pop(config_entry.entry_id)
+        menuai.data[DOMAIN].pop(config_entry.entry_id)
 
     return unload_ok
 
@@ -128,7 +128,7 @@ class Remote:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         host: str,
         port: int,
         on_action: Script | None = None,
@@ -136,7 +136,7 @@ class Remote:
         encryption_key: str | None = None,
     ) -> None:
         """Initialize the Remote class."""
-        self._hass = hass
+        self._menuai = menuai
 
         self._host = host
         self._port = port
@@ -161,7 +161,7 @@ class Remote:
                 params["app_id"] = self._app_id
                 params["encryption_key"] = self._encryption_key
 
-            self._control = await self._hass.async_add_executor_job(
+            self._control = await self._menuai.async_add_executor_job(
                 partial(RemoteControl, self._host, self._port, **params)
             )
 
@@ -248,7 +248,7 @@ class Remote:
     ) -> _R | None:
         """Handle errors from func, set available and reconnect if needed."""
         try:
-            result = await self._hass.async_add_executor_job(func, *args)
+            result = await self._menuai.async_add_executor_job(func, *args)
         except EncryptionRequired:
             _LOGGER.error(
                 "The connection couldn't be encrypted. Please reconfigure your TV"

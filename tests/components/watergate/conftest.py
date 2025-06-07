@@ -4,8 +4,8 @@ from collections.abc import Generator
 
 import pytest
 
-from homeassistant.components.watergate.const import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS
+from menuai.components.watergate.const import DOMAIN
+from menuai.const import CONF_IP_ADDRESS
 
 from .const import (
     DEFAULT_DEVICE_STATE,
@@ -24,11 +24,11 @@ def mock_watergate_client() -> Generator[AsyncMock]:
     """Fixture to mock WatergateLocalApiClient."""
     with (
         patch(
-            "homeassistant.components.watergate.WatergateLocalApiClient",
+            "menuai.components.watergate.WatergateLocalApiClient",
             autospec=True,
         ) as mock_client_main,
         patch(
-            "homeassistant.components.watergate.config_flow.WatergateLocalApiClient",
+            "menuai.components.watergate.config_flow.WatergateLocalApiClient",
             new=mock_client_main,
         ),
     ):
@@ -50,7 +50,7 @@ def mock_watergate_client() -> Generator[AsyncMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.watergate.async_setup_entry", return_value=True
+        "menuai.components.watergate.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -59,7 +59,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_webhook_id_generation() -> Generator[None]:
     """Fixture to mock webhook_id generation."""
     with patch(
-        "homeassistant.components.watergate.config_flow.webhook_generate_id",
+        "menuai.components.watergate.config_flow.webhook_generate_id",
         return_value=MOCK_WEBHOOK_ID,
     ):
         yield

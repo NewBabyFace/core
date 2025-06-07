@@ -8,10 +8,10 @@ import logging
 
 from soco.core import SoCo
 
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import DATA_SONOS, DOMAIN, SONOS_FALLBACK_POLL, SONOS_STATE_UPDATED
 from .exception import SonosUpdateError
@@ -30,27 +30,27 @@ class SonosEntity(Entity):
         """Initialize a SonosEntity."""
         self.speaker = speaker
 
-    async def async_added_to_hass(self) -> None:
-        """Handle common setup when added to hass."""
-        self.hass.data[DATA_SONOS].entity_id_mappings[self.entity_id] = self.speaker
+    async def async_added_to_menuai(self) -> None:
+        """Handle common setup when added to menuai."""
+        self.menuai.data[DATA_SONOS].entity_id_mappings[self.entity_id] = self.speaker
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SONOS_FALLBACK_POLL}-{self.soco.uid}",
                 self.async_fallback_poll,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SONOS_STATE_UPDATED}-{self.soco.uid}",
                 self.async_write_ha_state,
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Clean up when entity is removed."""
-        del self.hass.data[DATA_SONOS].entity_id_mappings[self.entity_id]
+        del self.menuai.data[DATA_SONOS].entity_id_mappings[self.entity_id]
 
     async def async_fallback_poll(self, now: datetime.datetime) -> None:
         """Poll the entity if subscriptions fail."""

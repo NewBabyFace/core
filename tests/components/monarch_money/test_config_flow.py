@@ -4,24 +4,24 @@ from unittest.mock import AsyncMock
 
 from monarchmoney import LoginFailedException, RequireMFAException
 
-from homeassistant.components.monarch_money.const import CONF_MFA_CODE, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.monarch_money.const import CONF_MFA_CODE, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 async def test_form_simple(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_config_api: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_config_api: AsyncMock
 ) -> None:
     """Test simple case (no MFA / no errors)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-username",
@@ -39,21 +39,21 @@ async def test_form_simple(
 
 
 async def test_add_duplicate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry,
     mock_setup_entry: AsyncMock,
     mock_config_api: AsyncMock,
 ) -> None:
     """Test a duplicate error config flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-username",
@@ -66,10 +66,10 @@ async def test_add_duplicate_entry(
 
 
 async def test_form_invalid_auth(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_config_api: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_config_api: AsyncMock
 ) -> None:
     """Test config flow with a login error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -80,7 +80,7 @@ async def test_form_invalid_auth(
         "Invalid Auth"
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-username",
@@ -92,7 +92,7 @@ async def test_form_invalid_auth(
     assert result["errors"] == {"base": "invalid_auth"}
 
     mock_config_api.return_value.login.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-username",
@@ -110,10 +110,10 @@ async def test_form_invalid_auth(
 
 
 async def test_form_mfa(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_config_api: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_config_api: AsyncMock
 ) -> None:
     """Test MFA enabled on account configuration."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -122,7 +122,7 @@ async def test_form_mfa(
     # Change the login mock to raise an MFA required error
     mock_config_api.return_value.login.side_effect = RequireMFAException("mfa_required")
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-username",
@@ -136,7 +136,7 @@ async def test_form_mfa(
 
     # Add a bad MFA Code response
     mock_config_api.return_value.multi_factor_authenticate.side_effect = KeyError
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_MFA_CODE: "123456",
@@ -149,7 +149,7 @@ async def test_form_mfa(
 
     # Use a good MFA Code - Clear mock
     mock_config_api.return_value.multi_factor_authenticate.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_MFA_CODE: "123456",

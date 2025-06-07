@@ -14,7 +14,7 @@
         }
       },
       "discovery_confirm": {
-        "description": "Do you want to add the Music Assistant server `{url}` to Home Assistant?",
+        "description": "Do you want to add the Music Assistant server `{url}` to MenuAI?",
         "title": "Discovered Music Assistant server"
       }
     },

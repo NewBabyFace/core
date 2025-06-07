@@ -8,10 +8,10 @@ import logging
 from python_snoo.exceptions import InvalidSnooAuth, SnooAuthException, SnooDeviceError
 from python_snoo.snoo import Snoo
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import SnooConfigEntry, SnooCoordinator
 
@@ -26,13 +26,13 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SnooConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SnooConfigEntry) -> bool:
     """Set up Happiest Baby Snoo from a config entry."""
 
     snoo = Snoo(
         email=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
-        clientsession=async_get_clientsession(hass),
+        clientsession=async_get_clientsession(menuai),
     )
 
     try:
@@ -46,16 +46,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: SnooConfigEntry) -> bool
     coordinators: dict[str, SnooCoordinator] = {}
     tasks = []
     for device in devices:
-        coordinators[device.serialNumber] = SnooCoordinator(hass, device, snoo)
+        coordinators[device.serialNumber] = SnooCoordinator(menuai, device, snoo)
         tasks.append(coordinators[device.serialNumber].setup())
     await asyncio.gather(*tasks)
     entry.runtime_data = coordinators
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SnooConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SnooConfigEntry) -> bool:
     """Unload a config entry."""
     disconnects = await asyncio.gather(
         *(coordinator.snoo.disconnect() for coordinator in entry.runtime_data.values()),
@@ -66,4 +66,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: SnooConfigEntry) -> boo
             _LOGGER.warning(
                 "Failed to disconnect a logger with exception: %s", disconnect
             )
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

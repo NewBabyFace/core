@@ -3,7 +3,7 @@
 from collections import deque
 import logging
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
 class FixedSizeQueueLogHandler(logging.Handler):
@@ -20,7 +20,7 @@ class FixedSizeQueueLogHandler(logging.Handler):
         """Store log message."""
         self._records.append(record)
 
-    async def get_logs(self, hass: HomeAssistant) -> list[str]:
+    async def get_logs(self, menuai: menuai) -> list[str]:
         """Get stored logs."""
 
         def _get_logs() -> list[str]:
@@ -28,4 +28,4 @@ class FixedSizeQueueLogHandler(logging.Handler):
             records = self._records.copy()
             return [self.format(record) for record in records]
 
-        return await hass.async_add_executor_job(_get_logs)
+        return await menuai.async_add_executor_job(_get_logs)

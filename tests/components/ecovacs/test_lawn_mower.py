@@ -9,18 +9,18 @@ from deebot_client.models import CleanAction, State
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.controller import EcovacsController
-from homeassistant.components.lawn_mower import (
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.controller import EcovacsController
+from menuai.components.lawn_mower import (
     DOMAIN as PLATFORM_DOMAIN,
     SERVICE_DOCK,
     SERVICE_PAUSE,
     SERVICE_START_MOWING,
     LawnMowerActivity,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .util import notify_and_wait
 
@@ -40,7 +40,7 @@ def platforms() -> Platform | list[Platform]:
     ],
 )
 async def test_lawn_mower(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -48,7 +48,7 @@ async def test_lawn_mower(
 ) -> None:
     """Test lawn mower states."""
     entity_id = "lawn_mower.goat_g1"
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -61,15 +61,15 @@ async def test_lawn_mower(
     assert device_entry.identifiers == {(DOMAIN, device.device_info["did"])}
 
     event_bus = device.events
-    await notify_and_wait(hass, event_bus, StateEvent(State.CLEANING))
+    await notify_and_wait(menuai, event_bus, StateEvent(State.CLEANING))
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert entity_entry == snapshot(name=f"{entity_id}-state")
     assert state.state == LawnMowerActivity.MOWING
 
-    await notify_and_wait(hass, event_bus, StateEvent(State.DOCKED))
+    await notify_and_wait(menuai, event_bus, StateEvent(State.DOCKED))
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == LawnMowerActivity.DOCKED
 
 
@@ -97,7 +97,7 @@ class MowerTestCase:
     ids=["5xu9h3"],
 )
 async def test_mover_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     controller: EcovacsController,
     entity_id: list[str],
     tests: list[MowerTestCase],
@@ -107,7 +107,7 @@ async def test_mover_services(
 
     for test in tests:
         device._execute_command.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM_DOMAIN,
             test.service_name,
             {ATTR_ENTITY_ID: entity_id},

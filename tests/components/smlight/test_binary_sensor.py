@@ -8,10 +8,10 @@ from pysmlight.sse import MessageEvent
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.smlight.const import SCAN_INTERNET_INTERVAL
-from homeassistant.const import STATE_ON, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.smlight.const import SCAN_INTERNET_INTERVAL
+from menuai.const import STATE_ON, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import get_mock_event_function
 from .conftest import setup_integration
@@ -41,29 +41,29 @@ def platforms() -> list[Platform]:
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_all_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the SMLIGHT binary sensors."""
-    entry = await setup_integration(hass, mock_config_entry)
+    entry = await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
 
 async def test_disabled_by_default_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test wifi sensor is disabled by default ."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     for sensor in ("wi_fi", "vpn"):
-        assert not hass.states.get(f"binary_sensor.mock_title_{sensor}")
+        assert not menuai.states.get(f"binary_sensor.mock_title_{sensor}")
 
         assert (
             entry := entity_registry.async_get(f"binary_sensor.mock_title_{sensor}")
@@ -73,15 +73,15 @@ async def test_disabled_by_default_sensors(
 
 
 async def test_internet_sensor_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
     """Test internet sensor event."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("binary_sensor.mock_title_internet")
+    state = menuai.states.get("binary_sensor.mock_title_internet")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
@@ -89,8 +89,8 @@ async def test_internet_sensor_event(
     mock_smlight_client.get_param.assert_called_with("inetState")
 
     freezer.tick(SCAN_INTERNET_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(mock_smlight_client.get_param.mock_calls) == 2
     mock_smlight_client.get_param.assert_called_with("inetState")
@@ -100,8 +100,8 @@ async def test_internet_sensor_event(
     )
 
     event_function(MOCK_INET_STATE)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.mock_title_internet")
+    state = menuai.states.get("binary_sensor.mock_title_internet")
     assert state is not None
     assert state.state == STATE_ON

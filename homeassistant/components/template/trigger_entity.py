@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.const import CONF_STATE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.template import _SENTINEL
-from homeassistant.helpers.trigger_template_entity import TriggerBaseEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_STATE
+from menuai.core import menuai, callback
+from menuai.helpers.template import _SENTINEL
+from menuai.helpers.trigger_template_entity import TriggerBaseEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import TriggerUpdateCoordinator
 from .entity import AbstractTemplateEntity
 
 
-class TriggerEntity(  # pylint: disable=hass-enforce-class-module
+class TriggerEntity(  # pylint: disable=menuai-enforce-class-module
     TriggerBaseEntity,
     CoordinatorEntity[TriggerUpdateCoordinator],
     AbstractTemplateEntity,
@@ -23,20 +23,20 @@ class TriggerEntity(  # pylint: disable=hass-enforce-class-module
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: TriggerUpdateCoordinator,
         config: dict,
     ) -> None:
         """Initialize the entity."""
         CoordinatorEntity.__init__(self, coordinator)
-        TriggerBaseEntity.__init__(self, hass, config)
-        AbstractTemplateEntity.__init__(self, hass)
+        TriggerBaseEntity.__init__(self, menuai, config)
+        AbstractTemplateEntity.__init__(self, menuai)
 
         self._state_render_error = False
 
-    async def async_added_to_hass(self) -> None:
-        """Handle being added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle being added to MenuAI."""
+        await super().async_added_to_menuai()
         if self.coordinator.data is not None:
             self._process_data()
 

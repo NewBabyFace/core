@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import Event, HomeAssistant, callback
+from menuai.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import Event, menuai, callback
 
 from .const import (
     ATTR_ACTION,
@@ -26,7 +26,7 @@ from .device_trigger import (
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[[str, str, Callable[[Event], dict[str, str]]], None],
 ) -> None:
     """Describe logbook events."""
@@ -43,7 +43,7 @@ def async_describe_events(
         keypad_button_names_to_leap: dict[int, dict[str, int]] = {}
         keypad_id: int = -1
 
-        if lutron_data := get_lutron_data_by_dr_id(hass, dr_device_id):
+        if lutron_data := get_lutron_data_by_dr_id(menuai, dr_device_id):
             keypad_data = lutron_data.keypad_data
             keypad = keypad_data.dr_device_id_to_keypad.get(dr_device_id)
             keypad_id = keypad["lutron_device_id"]

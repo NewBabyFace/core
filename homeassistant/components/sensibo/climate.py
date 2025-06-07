@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
     ATTR_SWING_MODE,
@@ -15,18 +15,18 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_MODE,
     ATTR_STATE,
     ATTR_TEMPERATURE,
     PRECISION_TENTHS,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.core import menuai, SupportsResponse
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_conversion import TemperatureConverter
 
 from . import SensiboConfigEntry
 from .const import DOMAIN
@@ -136,7 +136,7 @@ def _find_valid_target_temp(target: float, valid_targets: list[int]) -> int:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SensiboConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -357,7 +357,7 @@ class SensiboClimate(SensiboDeviceBaseEntity, ClimateEntity):
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
         if fan_mode not in AVAILABLE_FAN_MODES:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="fan_mode_not_supported",
                 translation_placeholders={"fan_mode": fan_mode},
@@ -402,7 +402,7 @@ class SensiboClimate(SensiboDeviceBaseEntity, ClimateEntity):
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing operation."""
         if swing_mode not in AVAILABLE_SWING_MODES:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="swing_not_supported",
                 translation_placeholders={"swing_mode": swing_mode},
@@ -420,7 +420,7 @@ class SensiboClimate(SensiboDeviceBaseEntity, ClimateEntity):
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
         if swing_horizontal_mode not in AVAILABLE_HORIZONTAL_SWING_MODES:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="horizontal_swing_not_supported",
                 translation_placeholders={

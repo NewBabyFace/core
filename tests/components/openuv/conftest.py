@@ -7,14 +7,14 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.openuv import CONF_FROM_WINDOW, CONF_TO_WINDOW, DOMAIN
-from homeassistant.const import (
+from menuai.components.openuv import CONF_FROM_WINDOW, CONF_TO_WINDOW, DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_ELEVATION,
     CONF_LATITUDE,
     CONF_LONGITUDE,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -28,7 +28,7 @@ TEST_LONGITUDE = -0.3817765
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.openuv.async_setup_entry", return_value=True
+        "menuai.components.openuv.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -44,7 +44,7 @@ def client_fixture(data_protection_window, data_uv_index):
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     entry = MockConfigEntry(
@@ -53,7 +53,7 @@ def config_entry_fixture(
         data=config,
         options={CONF_FROM_WINDOW: 3.5, CONF_TO_WINDOW: 3.5},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -85,17 +85,17 @@ async def mock_pyopenuv_fixture(client):
     """Define a fixture to patch pyopenuv."""
     with (
         patch(
-            "homeassistant.components.openuv.config_flow.Client", return_value=client
+            "menuai.components.openuv.config_flow.Client", return_value=client
         ),
-        patch("homeassistant.components.openuv.Client", return_value=client),
+        patch("menuai.components.openuv.Client", return_value=client),
     ):
         yield
 
 
 @pytest.fixture(name="setup_config_entry")
 async def setup_config_entry_fixture(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_pyopenuv: None
+    menuai: menuai, config_entry: MockConfigEntry, mock_pyopenuv: None
 ) -> None:
     """Define a fixture to set up openuv."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

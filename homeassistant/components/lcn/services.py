@@ -5,20 +5,20 @@ from enum import StrEnum, auto
 import pypck
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_BRIGHTNESS,
     CONF_DEVICE_ID,
     CONF_STATE,
     CONF_UNIT_OF_MEASUREMENT,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, device_registry as dr
 
 from .const import (
     CONF_KEYS,
@@ -61,14 +61,14 @@ class LcnServiceCall:
     )
     supports_response = SupportsResponse.NONE
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize service call."""
-        self.hass = hass
+        self.menuai = menuai
 
     def get_device_connection(self, service: ServiceCall) -> DeviceConnectionType:
         """Get address connection object."""
         device_id = service.data[CONF_DEVICE_ID]
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         if not (device := device_registry.async_get(device_id)):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
@@ -76,7 +76,7 @@ class LcnServiceCall:
                 translation_placeholders={"device_id": device_id},
             )
 
-        return self.hass.data[DOMAIN][device.primary_config_entry][DEVICE_CONNECTIONS][
+        return self.menuai.data[DOMAIN][device.primary_config_entry][DEVICE_CONNECTIONS][
             device_id
         ]
 
@@ -438,9 +438,9 @@ SERVICES = (
 )
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register services for LCN."""
     for service_name, service in SERVICES:
-        hass.services.async_register(
-            DOMAIN, service_name, service(hass).async_call_service, service.schema
+        menuai.services.async_register(
+            DOMAIN, service_name, service(menuai).async_call_service, service.schema
         )

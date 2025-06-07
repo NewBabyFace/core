@@ -6,11 +6,11 @@ from typing import Any
 
 from pyvesync import VeSync
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import REDACTED
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import DOMAIN, VS_MANAGER
 from .entity import VeSyncBaseDevice
@@ -19,10 +19,10 @@ KEYS_TO_REDACT = {"manager", "uuid", "mac_id"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    manager: VeSync = hass.data[DOMAIN][VS_MANAGER]
+    manager: VeSync = menuai.data[DOMAIN][VS_MANAGER]
 
     return {
         DOMAIN: {
@@ -42,10 +42,10 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: ConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device entry."""
-    manager: VeSync = hass.data[DOMAIN][VS_MANAGER]
+    manager: VeSync = menuai.data[DOMAIN][VS_MANAGER]
     device_dict = _build_device_dict(manager)
     vesync_device_id = next(iden[1] for iden in device.identifiers if iden[0] == DOMAIN)
 
@@ -60,16 +60,16 @@ async def async_get_device_diagnostics(
         "entities": [],
     }
 
-    # Gather information how this VeSync device is represented in Home Assistant
-    entity_registry = er.async_get(hass)
-    hass_entities = er.async_entries_for_device(
+    # Gather information how this VeSync device is represented in MenuAI
+    entity_registry = er.async_get(menuai)
+    menuai_entities = er.async_entries_for_device(
         entity_registry,
         device_id=device.id,
         include_disabled_entities=True,
     )
 
-    for entity_entry in hass_entities:
-        state = hass.states.get(entity_entry.entity_id)
+    for entity_entry in menuai_entities:
+        state = menuai.states.get(entity_entry.entity_id)
         state_dict = None
         if state:
             state_dict = dict(state.as_dict())

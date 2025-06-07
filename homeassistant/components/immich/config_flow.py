@@ -13,8 +13,8 @@ from aioimmich.users.models import ImmichUser
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
@@ -22,10 +22,10 @@ from homeassistant.const import (
     CONF_URL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -34,7 +34,7 @@ from homeassistant.helpers.selector import (
 from .const import DEFAULT_VERIFY_SSL, DOMAIN
 
 
-class InvalidUrl(HomeAssistantError):
+class InvalidUrl(menuaiError):
     """Error to indicate invalid URL."""
 
 
@@ -66,10 +66,10 @@ def _parse_url(url: str) -> tuple[str, int, bool]:
 
 
 async def check_user_info(
-    hass: HomeAssistant, host: str, port: int, ssl: bool, verify_ssl: bool, api_key: str
+    menuai: menuai, host: str, port: int, ssl: bool, verify_ssl: bool, api_key: str
 ) -> ImmichUser:
     """Test connection and fetch own user info."""
-    session = async_get_clientsession(hass, verify_ssl)
+    session = async_get_clientsession(menuai, verify_ssl)
     immich = Immich(session, api_key, host, port, ssl)
     return await immich.users.async_get_my_user()
 
@@ -95,7 +95,7 @@ class ImmichConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 try:
                     my_user_info = await check_user_info(
-                        self.hass,
+                        self.menuai,
                         host,
                         port,
                         ssl,
@@ -145,7 +145,7 @@ class ImmichConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 my_user_info = await check_user_info(
-                    self.hass,
+                    self.menuai,
                     self._current_data[CONF_HOST],
                     self._current_data[CONF_PORT],
                     self._current_data[CONF_SSL],

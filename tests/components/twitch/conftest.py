@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from twitchAPI.object.api import FollowedChannel, Stream, TwitchUser, UserSubscription
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.twitch.const import DOMAIN, OAUTH2_TOKEN, OAUTH_SCOPES
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.twitch.const import DOMAIN, OAUTH2_TOKEN, OAUTH_SCOPES
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import TwitchIterObject, get_generator
 
@@ -29,7 +29,7 @@ TITLE = "Test"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.twitch.async_setup_entry", return_value=True
+        "menuai.components.twitch.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -41,11 +41,11 @@ def mock_scopes() -> list[str]:
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
         DOMAIN,
@@ -60,7 +60,7 @@ def mock_expires_at() -> int:
 
 @pytest.fixture(name="config_entry")
 def mock_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
-    """Create Twitch entry in Home Assistant."""
+    """Create Twitch entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title=TITLE,
@@ -93,26 +93,26 @@ def mock_connection(aioclient_mock: AiohttpClientMocker) -> None:
 
 
 @pytest.fixture
-def twitch_mock(hass: HomeAssistant) -> Generator[AsyncMock]:
+def twitch_mock(menuai: menuai) -> Generator[AsyncMock]:
     """Return as fixture to inject other mocks."""
     with (
         patch(
-            "homeassistant.components.twitch.Twitch",
+            "menuai.components.twitch.Twitch",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.twitch.config_flow.Twitch",
+            "menuai.components.twitch.config_flow.Twitch",
             new=mock_client,
         ),
     ):
         mock_client.return_value.get_users = lambda *args, **kwargs: get_generator(
-            hass, "get_users.json", TwitchUser
+            menuai, "get_users.json", TwitchUser
         )
         mock_client.return_value.get_followed_channels.return_value = TwitchIterObject(
-            hass, "get_followed_channels.json", FollowedChannel
+            menuai, "get_followed_channels.json", FollowedChannel
         )
         mock_client.return_value.get_followed_streams.return_value = get_generator(
-            hass, "get_followed_streams.json", Stream
+            menuai, "get_followed_streams.json", Stream
         )
         mock_client.return_value.check_user_subscription.return_value = (
             UserSubscription(

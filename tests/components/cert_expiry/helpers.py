@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 
 def static_datetime():

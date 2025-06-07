@@ -10,25 +10,25 @@ from typing import TYPE_CHECKING, Any
 from pysqueezebox import Server, async_discover
 import voluptuous as vol
 
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.config_entries import (
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import (
     CONF_BROWSE_LIMIT,
@@ -121,7 +121,7 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.debug("Discovered server: %s", self.discovery_info)
                 discovery_event.set()
 
-        discovery_task = self.hass.async_create_task(
+        discovery_task = self.menuai.async_create_task(
             async_discover(_discovery_callback)
         )
 
@@ -137,7 +137,7 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
         Retrieve unique id and abort if already configured.
         """
         server = Server(
-            async_get_clientsession(self.hass),
+            async_get_clientsession(self.menuai),
             data[CONF_HOST],
             data[CONF_PORT],
             data.get(CONF_USERNAME),
@@ -237,7 +237,7 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
 
         _LOGGER.debug("Configuring dhcp player with unique id: %s", self.unique_id)
 
-        registry = er.async_get(self.hass)
+        registry = er.async_get(self.menuai)
 
         if TYPE_CHECKING:
             assert self.unique_id

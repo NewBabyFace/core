@@ -1,28 +1,28 @@
-"""Test Home Assistant Cast."""
+"""Test MenuAI Cast."""
 
 from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.cast import DOMAIN, home_assistant_cast
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.cast import DOMAIN, home_assistant_cast
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry, async_mock_signal
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_service_show_view(hass: HomeAssistant) -> None:
+async def test_service_show_view(menuai: menuai) -> None:
     """Test showing a view."""
     entry = MockConfigEntry(domain=DOMAIN)
-    entry.add_to_hass(hass)
-    await home_assistant_cast.async_setup_ha_cast(hass, entry)
-    calls = async_mock_signal(hass, home_assistant_cast.SIGNAL_HASS_CAST_SHOW_VIEW)
+    entry.add_to_menuai(menuai)
+    await home_assistant_cast.async_setup_ha_cast(menuai, entry)
+    calls = async_mock_signal(menuai, home_assistant_cast.SIGNAL_menuai_CAST_SHOW_VIEW)
 
     # No valid URL
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "cast",
             "show_lovelace_view",
             {"entity_id": "media_player.kitchen", "view_path": "mock_path"},
@@ -31,10 +31,10 @@ async def test_service_show_view(hass: HomeAssistant) -> None:
 
     # Set valid URL
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"external_url": "https://example.com"},
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cast",
         "show_lovelace_view",
         {"entity_id": "media_player.kitchen", "view_path": "mock_path"},
@@ -43,7 +43,7 @@ async def test_service_show_view(hass: HomeAssistant) -> None:
 
     assert len(calls) == 1
     controller_data, entity_id, view_path, url_path = calls[0]
-    assert controller_data["hass_url"] == "https://example.com"
+    assert controller_data["menuai_url"] == "https://example.com"
     assert controller_data["client_id"] is None
     # Verify user did not accidentally submit their dev app id
     assert "supporting_app_id" not in controller_data
@@ -53,18 +53,18 @@ async def test_service_show_view(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_service_show_view_dashboard(hass: HomeAssistant) -> None:
+async def test_service_show_view_dashboard(menuai: menuai) -> None:
     """Test casting a specific dashboard."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"external_url": "https://example.com"},
     )
     entry = MockConfigEntry(domain=DOMAIN)
-    entry.add_to_hass(hass)
-    await home_assistant_cast.async_setup_ha_cast(hass, entry)
-    calls = async_mock_signal(hass, home_assistant_cast.SIGNAL_HASS_CAST_SHOW_VIEW)
+    entry.add_to_menuai(menuai)
+    await home_assistant_cast.async_setup_ha_cast(menuai, entry)
+    calls = async_mock_signal(menuai, home_assistant_cast.SIGNAL_menuai_CAST_SHOW_VIEW)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cast",
         "show_lovelace_view",
         {
@@ -83,24 +83,24 @@ async def test_service_show_view_dashboard(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_use_cloud_url(hass: HomeAssistant) -> None:
+async def test_use_cloud_url(menuai: menuai) -> None:
     """Test that we fall back to cloud url."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
-    hass.config.components.add("cloud")
+    menuai.config.components.add("cloud")
 
     entry = MockConfigEntry(domain=DOMAIN)
-    entry.add_to_hass(hass)
-    await home_assistant_cast.async_setup_ha_cast(hass, entry)
-    calls = async_mock_signal(hass, home_assistant_cast.SIGNAL_HASS_CAST_SHOW_VIEW)
+    entry.add_to_menuai(menuai)
+    await home_assistant_cast.async_setup_ha_cast(menuai, entry)
+    calls = async_mock_signal(menuai, home_assistant_cast.SIGNAL_menuai_CAST_SHOW_VIEW)
 
     with patch(
-        "homeassistant.components.cloud.async_remote_ui_url",
+        "menuai.components.cloud.async_remote_ui_url",
         return_value="https://something.nabu.casa",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "cast",
             "show_lovelace_view",
             {"entity_id": "media_player.kitchen", "view_path": "mock_path"},
@@ -109,11 +109,11 @@ async def test_use_cloud_url(hass: HomeAssistant) -> None:
 
     assert len(calls) == 1
     controller_data = calls[0][0]
-    assert controller_data["hass_url"] == "https://something.nabu.casa"
+    assert controller_data["menuai_url"] == "https://something.nabu.casa"
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_remove_entry(hass: HomeAssistant) -> None:
+async def test_remove_entry(menuai: menuai) -> None:
     """Test removing config entry removes user."""
     entry = MockConfigEntry(
         data={},
@@ -121,18 +121,18 @@ async def test_remove_entry(hass: HomeAssistant) -> None:
         title="Google Cast",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch("pychromecast.discovery.discover_chromecasts", return_value=(True, None)),
         patch("pychromecast.discovery.stop_discovery"),
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-    assert "cast" in hass.config.components
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
+    assert "cast" in menuai.config.components
 
     user_id = entry.data.get("user_id")
-    assert await hass.auth.async_get_user(user_id)
+    assert await menuai.auth.async_get_user(user_id)
 
-    assert await hass.config_entries.async_remove(entry.entry_id)
-    assert not await hass.auth.async_get_user(user_id)
+    assert await menuai.config_entries.async_remove(entry.entry_id)
+    assert not await menuai.auth.async_get_user(user_id)

@@ -7,17 +7,17 @@ from unittest.mock import patch
 from pykoplenti import ApiClient, SettingsData
 import pytest
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_MAX,
     ATTR_MIN,
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -26,7 +26,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 def mock_plenticore_client() -> Generator[ApiClient]:
     """Return a patched ExtendedApiClient."""
     with patch(
-        "homeassistant.components.kostal_plenticore.coordinator.ExtendedApiClient",
+        "menuai.components.kostal_plenticore.coordinator.ExtendedApiClient",
         autospec=True,
     ) as plenticore_client_class:
         yield plenticore_client_class.return_value
@@ -94,7 +94,7 @@ def mock_get_setting_values(mock_plenticore_client: ApiClient) -> list:
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setup_all_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_plenticore_client: ApiClient,
@@ -102,10 +102,10 @@ async def test_setup_all_entries(
 ) -> None:
     """Test if all available entries are setup."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get("number.scb_battery_min_soc") is not None
     assert (
@@ -115,7 +115,7 @@ async def test_setup_all_entries(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setup_no_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_plenticore_client: ApiClient,
@@ -138,10 +138,10 @@ async def test_setup_no_entries(
         ],
     }
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get("number.scb_battery_min_soc") is None
     assert entity_registry.async_get("number.scb_battery_min_home_consumption") is None
@@ -149,7 +149,7 @@ async def test_setup_no_entries(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_number_has_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_plenticore_client: ApiClient,
     mock_get_setting_values: list,
@@ -158,15 +158,15 @@ async def test_number_has_value(
 
     mock_get_setting_values.append({"devices:local": {"Battery:MinSoc": "42"}})
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=3))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("number.scb_battery_min_soc")
+    state = menuai.states.get("number.scb_battery_min_soc")
     assert state.state == "42"
     assert state.attributes[ATTR_MIN] == 5
     assert state.attributes[ATTR_MAX] == 100
@@ -174,28 +174,28 @@ async def test_number_has_value(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_number_is_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_plenticore_client: ApiClient,
     mock_get_setting_values: list,
 ) -> None:
     """Test if number is unavailable if no data is provided on update."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=3))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("number.scb_battery_min_soc")
+    state = menuai.states.get("number.scb_battery_min_soc")
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_plenticore_client: ApiClient,
     mock_get_setting_values: list,
@@ -204,15 +204,15 @@ async def test_set_value(
 
     mock_get_setting_values.append({"devices:local": {"Battery:MinSoc": "42"}})
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=3))
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {

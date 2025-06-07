@@ -12,15 +12,15 @@ from scsgate.tasks import (
 )
 import voluptuous as vol
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     PLATFORM_SCHEMA as COVER_PLATFORM_SCHEMA,
     CoverEntity,
 )
-from homeassistant.const import CONF_DEVICES, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_DEVICES, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_SCS_ID, DOMAIN, SCSGATE_SCHEMA
 
@@ -30,7 +30,7 @@ PLATFORM_SCHEMA = COVER_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -39,7 +39,7 @@ def setup_platform(
     devices = config.get(CONF_DEVICES)
     covers = []
     logger = logging.getLogger(__name__)
-    scsgate = hass.data[DOMAIN]
+    scsgate = menuai.data[DOMAIN]
 
     if devices:
         for entity_info in devices.values():

@@ -7,10 +7,10 @@ import logging
 
 from airthings import Airthings
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ID, Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_SECRET
 from .coordinator import AirthingsDataUpdateCoordinator
@@ -23,25 +23,25 @@ SCAN_INTERVAL = timedelta(minutes=6)
 type AirthingsConfigEntry = ConfigEntry[AirthingsDataUpdateCoordinator]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AirthingsConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AirthingsConfigEntry) -> bool:
     """Set up Airthings from a config entry."""
     airthings = Airthings(
         entry.data[CONF_ID],
         entry.data[CONF_SECRET],
-        async_get_clientsession(hass),
+        async_get_clientsession(menuai),
     )
 
-    coordinator = AirthingsDataUpdateCoordinator(hass, airthings)
+    coordinator = AirthingsDataUpdateCoordinator(menuai, airthings)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AirthingsConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AirthingsConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

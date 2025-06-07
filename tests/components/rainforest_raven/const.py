@@ -12,8 +12,8 @@ from aioraven.data import (
 )
 from iso4217 import Currency
 
-from homeassistant.components import usb
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.components import usb
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 DISCOVERY_INFO = UsbServiceInfo(
     device="/dev/ttyACM0",

@@ -7,11 +7,11 @@ from aioraven.device import RAVEnConnectionError
 import pytest
 from serial.tools.list_ports_common import ListPortInfo
 
-from homeassistant.components.rainforest_raven.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USB, SOURCE_USER
-from homeassistant.const import CONF_DEVICE, CONF_MAC, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.rainforest_raven.const import DOMAIN
+from menuai.config_entries import SOURCE_USB, SOURCE_USER
+from menuai.const import CONF_DEVICE, CONF_MAC, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import create_mock_device
 from .const import DEVICE_NAME, DISCOVERY_INFO, METER_LIST
@@ -24,7 +24,7 @@ def mock_device() -> Generator[AsyncMock]:
     """Mock a functioning RAVEn device."""
     device = create_mock_device()
     with patch(
-        "homeassistant.components.rainforest_raven.config_flow.RAVEnSerialDevice",
+        "menuai.components.rainforest_raven.config_flow.RAVEnSerialDevice",
         return_value=device,
     ):
         yield device
@@ -70,9 +70,9 @@ def mock_comports() -> Generator[list[ListPortInfo]]:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device")
-async def test_flow_usb(hass: HomeAssistant) -> None:
+async def test_flow_usb(menuai: menuai) -> None:
     """Test usb flow connection."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USB}, data=DISCOVERY_INFO
     )
     assert result
@@ -81,7 +81,7 @@ async def test_flow_usb(hass: HomeAssistant) -> None:
     assert result.get("flow_id")
     assert result.get("step_id") == "meters"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_MAC: [METER_LIST.meter_mac_ids[0].hex()]}
     )
     assert result
@@ -89,9 +89,9 @@ async def test_flow_usb(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device_no_open")
-async def test_flow_usb_cannot_connect(hass: HomeAssistant) -> None:
+async def test_flow_usb_cannot_connect(menuai: menuai) -> None:
     """Test usb flow connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USB}, data=DISCOVERY_INFO
     )
     assert result
@@ -100,9 +100,9 @@ async def test_flow_usb_cannot_connect(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device_timeout")
-async def test_flow_usb_timeout_connect(hass: HomeAssistant) -> None:
+async def test_flow_usb_timeout_connect(menuai: menuai) -> None:
     """Test usb flow connection timeout."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USB}, data=DISCOVERY_INFO
     )
     assert result
@@ -111,9 +111,9 @@ async def test_flow_usb_timeout_connect(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device_comm_error")
-async def test_flow_usb_comm_error(hass: HomeAssistant) -> None:
+async def test_flow_usb_comm_error(menuai: menuai) -> None:
     """Test usb flow connection failure to communicate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USB}, data=DISCOVERY_INFO
     )
     assert result
@@ -122,9 +122,9 @@ async def test_flow_usb_comm_error(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device")
-async def test_flow_user(hass: HomeAssistant) -> None:
+async def test_flow_user(menuai: menuai) -> None:
     """Test user flow connection."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
     )
@@ -134,7 +134,7 @@ async def test_flow_user(hass: HomeAssistant) -> None:
     assert result.get("flow_id")
     assert result.get("step_id") == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_DEVICE: DEVICE_NAME,
@@ -146,7 +146,7 @@ async def test_flow_user(hass: HomeAssistant) -> None:
     assert result.get("flow_id")
     assert result.get("step_id") == "meters"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_MAC: [METER_LIST.meter_mac_ids[0].hex()]}
     )
     assert result
@@ -154,14 +154,14 @@ async def test_flow_user(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports")
-async def test_flow_user_no_available_devices(hass: HomeAssistant) -> None:
+async def test_flow_user_no_available_devices(menuai: menuai) -> None:
     """Test user flow with no available devices."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_DEVICE: DISCOVERY_INFO.device},
     )
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
     )
@@ -171,9 +171,9 @@ async def test_flow_user_no_available_devices(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports")
-async def test_flow_user_in_progress(hass: HomeAssistant) -> None:
+async def test_flow_user_in_progress(menuai: menuai) -> None:
     """Test user flow with no available devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
     )
@@ -183,7 +183,7 @@ async def test_flow_user_in_progress(hass: HomeAssistant) -> None:
     assert result.get("flow_id")
     assert result.get("step_id") == "user"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
     )
@@ -193,9 +193,9 @@ async def test_flow_user_in_progress(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device_no_open")
-async def test_flow_user_cannot_connect(hass: HomeAssistant) -> None:
+async def test_flow_user_cannot_connect(menuai: menuai) -> None:
     """Test user flow connection failure to communicate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
         data={
@@ -208,9 +208,9 @@ async def test_flow_user_cannot_connect(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device_timeout")
-async def test_flow_user_timeout_connect(hass: HomeAssistant) -> None:
+async def test_flow_user_timeout_connect(menuai: menuai) -> None:
     """Test user flow connection failure to communicate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
         data={
@@ -223,9 +223,9 @@ async def test_flow_user_timeout_connect(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_comports", "mock_device_comm_error")
-async def test_flow_user_comm_error(hass: HomeAssistant) -> None:
+async def test_flow_user_comm_error(menuai: menuai) -> None:
     """Test user flow connection failure to communicate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
         data={

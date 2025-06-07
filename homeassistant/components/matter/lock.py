@@ -7,15 +7,15 @@ from typing import Any
 
 from chip.clusters import Objects as clusters
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     LockEntity,
     LockEntityDescription,
     LockEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_CODE, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_CODE, Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import LOGGER
 from .entity import MatterEntity
@@ -26,12 +26,12 @@ DoorLockFeature = clusters.DoorLock.Bitmaps.Feature
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter lock from Config Entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     matter.register_platform_handler(Platform.LOCK, async_add_entities)
 
 
@@ -70,7 +70,7 @@ class MatterLock(MatterEntity, LockEntity):
             self.async_write_ha_state()
             # the lock should acknowledge the command with an attribute update
             # but bad things may happen, so guard against it with a timer.
-            self._optimistic_timer = self.hass.loop.call_later(
+            self._optimistic_timer = self.menuai.loop.call_later(
                 30, self._reset_optimistic_state
             )
         code: str | None = kwargs.get(ATTR_CODE)
@@ -88,7 +88,7 @@ class MatterLock(MatterEntity, LockEntity):
             self.async_write_ha_state()
             # the lock should acknowledge the command with an attribute update
             # but bad things may happen, so guard against it with a timer.
-            self._optimistic_timer = self.hass.loop.call_later(
+            self._optimistic_timer = self.menuai.loop.call_later(
                 30, self._reset_optimistic_state
             )
         code: str | None = kwargs.get(ATTR_CODE)
@@ -114,7 +114,7 @@ class MatterLock(MatterEntity, LockEntity):
         self.async_write_ha_state()
         # the lock should acknowledge the command with an attribute update
         # but bad things may happen, so guard against it with a timer.
-        self._optimistic_timer = self.hass.loop.call_later(
+        self._optimistic_timer = self.menuai.loop.call_later(
             30 if self._attr_is_locked else 5, self._reset_optimistic_state
         )
         code: str | None = kwargs.get(ATTR_CODE)

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
@@ -16,7 +16,7 @@ from homeassistant.components.update import (
     SERVICE_INSTALL,
     UpdateDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_ENTITY_PICTURE,
@@ -24,33 +24,33 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, callback
+from menuai.helpers.event import async_track_state_change_event
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture
 async def update_only() -> None:
     """Enable only the update platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.UPDATE],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_demo_update(hass: HomeAssistant, update_only) -> None:
+async def setup_demo_update(menuai: menuai, update_only) -> None:
     """Initialize setup demo update entity."""
     assert await async_setup_component(
-        hass, UPDATE_DOMAIN, {"update": {"platform": "demo"}}
+        menuai, UPDATE_DOMAIN, {"update": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-def test_setup_params(hass: HomeAssistant) -> None:
+def test_setup_params(menuai: menuai) -> None:
     """Test the initial parameters."""
-    state = hass.states.get("update.demo_update_no_install")
+    state = menuai.states.get("update.demo_update_no_install")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_TITLE] == "Awesomesoft Inc."
@@ -65,7 +65,7 @@ def test_setup_params(hass: HomeAssistant) -> None:
         == "https://brands.home-assistant.io/_/demo/icon.png"
     )
 
-    state = hass.states.get("update.demo_no_update")
+    state = menuai.states.get("update.demo_no_update")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_TITLE] == "AdGuard Home"
@@ -78,7 +78,7 @@ def test_setup_params(hass: HomeAssistant) -> None:
         == "https://brands.home-assistant.io/_/demo/icon.png"
     )
 
-    state = hass.states.get("update.demo_add_on")
+    state = menuai.states.get("update.demo_add_on")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_TITLE] == "AdGuard Home"
@@ -93,7 +93,7 @@ def test_setup_params(hass: HomeAssistant) -> None:
         == "https://brands.home-assistant.io/_/demo/icon.png"
     )
 
-    state = hass.states.get("update.demo_living_room_bulb_update")
+    state = menuai.states.get("update.demo_living_room_bulb_update")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_TITLE] == "Philips Lamps Firmware"
@@ -109,7 +109,7 @@ def test_setup_params(hass: HomeAssistant) -> None:
         == "https://brands.home-assistant.io/_/demo/icon.png"
     )
 
-    state = hass.states.get("update.demo_update_with_progress")
+    state = menuai.states.get("update.demo_update_with_progress")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_TITLE] == "Philips Lamps Firmware"
@@ -134,10 +134,10 @@ def test_setup_params(hass: HomeAssistant) -> None:
     ],
 )
 async def test_update_with_progress(
-    hass: HomeAssistant, entity_id: str, steps: int
+    menuai: menuai, entity_id: str, steps: int
 ) -> None:
     """Test update with progress."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_IN_PROGRESS] is False
@@ -145,14 +145,14 @@ async def test_update_with_progress(
 
     events = []
     async_track_state_change_event(
-        hass,
+        menuai,
         entity_id,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
     )
 
-    with patch("homeassistant.components.demo.update.FAKE_INSTALL_SLEEP_TIME", new=0):
-        await hass.services.async_call(
+    with patch("menuai.components.demo.update.FAKE_INSTALL_SLEEP_TIME", new=0):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: entity_id},
@@ -180,10 +180,10 @@ async def test_update_with_progress(
     ],
 )
 async def test_update_with_progress_raising(
-    hass: HomeAssistant, entity_id: str, steps: int
+    menuai: menuai, entity_id: str, steps: int
 ) -> None:
     """Test update with progress failing to install."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_IN_PROGRESS] is False
@@ -191,7 +191,7 @@ async def test_update_with_progress_raising(
 
     events = []
     async_track_state_change_event(
-        hass,
+        menuai,
         entity_id,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
@@ -199,18 +199,18 @@ async def test_update_with_progress_raising(
 
     with (
         patch(
-            "homeassistant.components.demo.update._fake_install",
+            "menuai.components.demo.update._fake_install",
             side_effect=[None, None, None, None, RuntimeError],
         ) as fake_sleep,
         pytest.raises(RuntimeError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: entity_id},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert fake_sleep.call_count == 5
     assert len(events) == 6

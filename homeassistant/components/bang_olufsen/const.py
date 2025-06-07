@@ -7,7 +7,7 @@ from typing import Final
 
 from mozart_api.models import Source, SourceArray, SourceTypeEnum
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerState,
     MediaType,
     RepeatMode,
@@ -23,7 +23,7 @@ class BangOlufsenSource:
 
 
 BANG_OLUFSEN_STATES: dict[str, MediaPlayerState] = {
-    # Dict used for translating device states to Home Assistant states.
+    # Dict used for translating device states to MenuAI states.
     "started": MediaPlayerState.PLAYING,
     "buffering": MediaPlayerState.PLAYING,
     "idle": MediaPlayerState.IDLE,
@@ -35,13 +35,13 @@ BANG_OLUFSEN_STATES: dict[str, MediaPlayerState] = {
     "unknown": MediaPlayerState.IDLE,
 }
 
-# Dict used for translating Home Assistant settings to device repeat settings.
+# Dict used for translating MenuAI settings to device repeat settings.
 BANG_OLUFSEN_REPEAT_FROM_HA: dict[RepeatMode, str] = {
     RepeatMode.ALL: "all",
     RepeatMode.ONE: "track",
     RepeatMode.OFF: "none",
 }
-# Dict used for translating device repeat settings to Home Assistant settings.
+# Dict used for translating device repeat settings to MenuAI settings.
 BANG_OLUFSEN_REPEAT_TO_HA: dict[str, RepeatMode] = {
     value: key for key, value in BANG_OLUFSEN_REPEAT_FROM_HA.items()
 }

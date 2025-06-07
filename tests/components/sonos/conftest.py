@@ -18,15 +18,15 @@ from soco.data_structures import (
 )
 from soco.events_base import Event as SonosEvent
 
-from homeassistant.components import ssdp
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.components.sonos import DOMAIN
-from homeassistant.components.sonos.const import SONOS_SHARE
-from homeassistant.const import CONF_HOSTS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.setup import async_setup_component
+from menuai.components import ssdp
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.components.sonos import DOMAIN
+from menuai.components.sonos.const import SONOS_SHARE
+from menuai.const import CONF_HOSTS
+from menuai.core import menuai
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture, load_json_value_fixture
 
@@ -130,18 +130,18 @@ async def async_autosetup_sonos(async_setup_sonos):
 
 @pytest.fixture
 def async_setup_sonos(
-    hass: HomeAssistant, config_entry: MockConfigEntry, fire_zgs_event
+    menuai: menuai, config_entry: MockConfigEntry, fire_zgs_event
 ) -> Callable[[], Coroutine[Any, Any, None]]:
     """Return a coroutine to set up a Sonos integration instance on demand."""
 
     async def _wrapper():
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
         sonos_alarms = Alarms()
         sonos_alarms.last_alarm_list_version = "RINCON_test:0"
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         await fire_zgs_event()
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     return _wrapper
 
@@ -266,7 +266,7 @@ def patch_gethostbyname(host: str) -> str:
 @pytest.fixture(name="soco_sharelink")
 def soco_sharelink():
     """Fixture to mock soco.plugins.sharelink.ShareLinkPlugin."""
-    with patch("homeassistant.components.sonos.speaker.ShareLinkPlugin") as mock_share:
+    with patch("menuai.components.sonos.speaker.ShareLinkPlugin") as mock_share:
         mock_instance = MagicMock()
         mock_instance.is_share_link.return_value = True
         mock_instance.add_share_link_to_queue.return_value = 10
@@ -278,7 +278,7 @@ def soco_sharelink():
 def sonos_websocket():
     """Fixture to mock SonosWebSocket."""
     with patch(
-        "homeassistant.components.sonos.speaker.SonosWebsocket"
+        "menuai.components.sonos.speaker.SonosWebsocket"
     ) as mock_sonos_ws:
         mock_instance = AsyncMock()
         mock_instance.play_clip = AsyncMock()
@@ -309,9 +309,9 @@ def soco_factory(
         sonos_queue=sonos_queue,
     )
     with (
-        patch("homeassistant.components.sonos.SoCo", new=factory.get_mock),
+        patch("menuai.components.sonos.SoCo", new=factory.get_mock),
         patch("socket.gethostbyname", side_effect=patch_gethostbyname),
-        patch("homeassistant.components.sonos.ZGS_SUBSCRIPTION_TIMEOUT", 0),
+        patch("menuai.components.sonos.ZGS_SUBSCRIPTION_TIMEOUT", 0),
     ):
         yield factory
 
@@ -326,14 +326,14 @@ def soco_fixture(soco_factory):
 def silent_ssdp_scanner() -> Generator[None]:
     """Start SSDP component and get Scanner, prevent actual SSDP traffic."""
     with (
-        patch("homeassistant.components.ssdp.Scanner._async_start_ssdp_listeners"),
-        patch("homeassistant.components.ssdp.Scanner._async_stop_ssdp_listeners"),
-        patch("homeassistant.components.ssdp.Scanner.async_scan"),
+        patch("menuai.components.ssdp.Scanner._async_start_ssdp_listeners"),
+        patch("menuai.components.ssdp.Scanner._async_stop_ssdp_listeners"),
+        patch("menuai.components.ssdp.Scanner.async_scan"),
         patch(
-            "homeassistant.components.ssdp.Server._async_start_upnp_servers",
+            "menuai.components.ssdp.Server._async_start_upnp_servers",
         ),
         patch(
-            "homeassistant.components.ssdp.Server._async_stop_upnp_servers",
+            "menuai.components.ssdp.Server._async_stop_upnp_servers",
         ),
     ):
         yield
@@ -344,7 +344,7 @@ def discover_fixture(soco):
     """Create a mock soco discover fixture."""
 
     def do_callback(
-        hass: HomeAssistant,
+        menuai: menuai,
         callback: Callable[
             [SsdpServiceInfo, ssdp.SsdpChange], Coroutine[Any, Any, None] | None
         ],
@@ -364,14 +364,14 @@ def discover_fixture(soco):
         return MagicMock()
 
     with patch(
-        "homeassistant.components.ssdp.async_register_callback", side_effect=do_callback
+        "menuai.components.ssdp.async_register_callback", side_effect=do_callback
     ) as mock:
         yield mock
 
 
 @pytest.fixture(name="config")
 def config_fixture():
-    """Create hass config fixture."""
+    """Create menuai config fixture."""
     return {DOMAIN: {MP_DOMAIN: {CONF_HOSTS: ["192.168.42.2"]}}}
 
 
@@ -772,7 +772,7 @@ def zgs_discovery_fixture():
 
 @pytest.fixture(name="fire_zgs_event")
 def zgs_event_fixture(
-    hass: HomeAssistant, soco: SoCo, zgs_discovery: str
+    menuai: menuai, soco: SoCo, zgs_discovery: str
 ) -> Callable[[], Coroutine[Any, Any, None]]:
     """Create alarm_event fixture."""
     variables = {"ZoneGroupState": zgs_discovery}
@@ -782,20 +782,20 @@ def zgs_event_fixture(
         subscription: SonosMockSubscribe = soco.zoneGroupTopology.subscribe.return_value
         sub_callback = await subscription.wait_for_callback_to_be_set()
         sub_callback(event)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     return _wrapper
 
 
 @pytest.fixture(name="sonos_setup_two_speakers")
 async def sonos_setup_two_speakers(
-    hass: HomeAssistant, soco_factory: SoCoMockFactory
+    menuai: menuai, soco_factory: SoCoMockFactory
 ) -> list[MockSoCo]:
-    """Set up home assistant with two Sonos Speakers."""
+    """Set up MenuAI with two Sonos Speakers."""
     soco_lr = soco_factory.cache_mock(MockSoCo(), "10.10.10.1", "Living Room")
     soco_br = soco_factory.cache_mock(MockSoCo(), "10.10.10.2", "Bedroom")
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -806,5 +806,5 @@ async def sonos_setup_two_speakers(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return [soco_lr, soco_br]

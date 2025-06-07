@@ -1,4 +1,4 @@
-"""Home Assistant integration to control a sky box using the remote platform."""
+"""MenuAI integration to control a sky box using the remote platform."""
 
 from collections.abc import Iterable
 import logging
@@ -6,11 +6,11 @@ from typing import Any
 
 from skyboxremote import VALID_KEYS, RemoteControl
 
-from homeassistant.components.remote import RemoteEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.remote import RemoteEntity
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SkyRemoteConfigEntry
 from .const import DOMAIN
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: SkyRemoteConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -11,10 +11,10 @@ from airly import Airly
 from airly.exceptions import AirlyError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_USE_NEAREST, DOMAIN, NO_AIRLY_SENSORS
 
@@ -31,7 +31,7 @@ class AirlyFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
         use_nearest = False
 
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
 
         if user_input is not None:
             await self.async_set_unique_id(
@@ -74,13 +74,13 @@ class AirlyFlowHandler(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_API_KEY): str,
                     vol.Optional(
-                        CONF_LATITUDE, default=self.hass.config.latitude
+                        CONF_LATITUDE, default=self.menuai.config.latitude
                     ): cv.latitude,
                     vol.Optional(
-                        CONF_LONGITUDE, default=self.hass.config.longitude
+                        CONF_LONGITUDE, default=self.menuai.config.longitude
                     ): cv.longitude,
                     vol.Optional(
-                        CONF_NAME, default=self.hass.config.location_name
+                        CONF_NAME, default=self.menuai.config.location_name
                     ): str,
                 }
             ),

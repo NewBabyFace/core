@@ -12,7 +12,7 @@ from maxcube.device import (
     MAX_DEVICE_MODE_VACATION,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_BOOST,
     PRESET_COMFORT,
@@ -23,10 +23,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_KEY
 
@@ -48,7 +48,7 @@ MAX_TEMPERATURE = 30.0
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -57,7 +57,7 @@ def setup_platform(
 
     add_entities(
         MaxCubeClimate(handler, device)
-        for handler in hass.data[DATA_KEY].values()
+        for handler in menuai.data[DATA_KEY].values()
         for device in handler.cube.devices
         if device.is_thermostat() or device.is_wallthermostat()
     )
@@ -96,7 +96,7 @@ class MaxCubeClimate(ClimateEntity):
     def min_temp(self) -> float:
         """Return the minimum temperature."""
         temp = self._device.min_temperature or MIN_TEMPERATURE
-        # OFF_TEMPERATURE (always off) a is valid temperature to maxcube but not to Home Assistant.
+        # OFF_TEMPERATURE (always off) a is valid temperature to maxcube but not to MenuAI.
         # We use HVACMode.OFF instead to represent a turned off thermostat.
         return max(temp, MIN_TEMPERATURE)
 

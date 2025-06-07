@@ -6,7 +6,7 @@ from typing import Any
 
 from env_canada import ECWeather
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_FOG,
@@ -29,20 +29,20 @@ from homeassistant.components.weather import (
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     UnitOfLength,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.helpers import entity_platform, entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers import entity_platform, entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, SERVICE_ENVIRONMENT_CANADA_FORECASTS
 from .coordinator import ECConfigEntry, ECDataUpdateCoordinator
@@ -66,12 +66,12 @@ ICON_CONDITION_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ECConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add a weather entity from a config_entry."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     # Remove hourly entity from legacy config entries
     if hourly_entity_id := entity_registry.async_get_entity_id(

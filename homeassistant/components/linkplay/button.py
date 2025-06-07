@@ -9,14 +9,14 @@ from typing import Any
 
 from linkplay.bridge import LinkPlayBridge
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import LinkPlayConfigEntry
 from .entity import LinkPlayBaseEntity, exception_wrap
@@ -48,7 +48,7 @@ BUTTON_TYPES: tuple[LinkPlayButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: LinkPlayConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

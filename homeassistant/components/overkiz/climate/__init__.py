@@ -7,10 +7,10 @@ from enum import StrEnum, unique
 from pyoverkiz.enums import Protocol
 from pyoverkiz.enums.ui import UIWidget
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .. import OverkizDataConfigEntry
 from .atlantic_electrical_heater import AtlanticElectricalHeater
@@ -80,7 +80,7 @@ WIDGET_AND_PROTOCOL_TO_CLIMATE_ENTITY = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: OverkizDataConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

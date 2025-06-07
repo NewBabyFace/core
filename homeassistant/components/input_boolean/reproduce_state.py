@@ -7,14 +7,14 @@ from collections.abc import Iterable
 import logging
 from typing import Any
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.core import Context, menuai, State
 
 from . import DOMAIN
 
@@ -22,14 +22,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def _async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: State,
     *,
     context: Context | None = None,
     reproduce_options: dict[str, Any] | None = None,
 ) -> None:
     """Reproduce input boolean states."""
-    if (cur_state := hass.states.get(state.entity_id)) is None:
+    if (cur_state := menuai.states.get(state.entity_id)) is None:
         _LOGGER.warning("Unable to find entity %s", state.entity_id)
         return
 
@@ -44,7 +44,7 @@ async def _async_reproduce_states(
 
     service = SERVICE_TURN_ON if state.state == STATE_ON else SERVICE_TURN_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         service,
         {ATTR_ENTITY_ID: state.entity_id},
@@ -54,7 +54,7 @@ async def _async_reproduce_states(
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -64,7 +64,7 @@ async def async_reproduce_states(
     await asyncio.gather(
         *(
             _async_reproduce_states(
-                hass, state, context=context, reproduce_options=reproduce_options
+                menuai, state, context=context, reproduce_options=reproduce_options
             )
             for state in states
         )

@@ -7,10 +7,10 @@ from typing import Any
 from surepy.entities import SurepyEntity
 from surepy.enums import EntityType, LockState as SurepyLockState
 
-from homeassistant.components.lock import LockEntity, LockState
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity, LockState
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SurePetcareDataCoordinator
@@ -18,13 +18,13 @@ from .entity import SurePetcareEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Sure PetCare locks on a config entry."""
 
-    coordinator: SurePetcareDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SurePetcareDataCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         SurePetcareLock(surepy_entity.id, coordinator, lock_state)

@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 import voluptuous as vol
 
-from homeassistant.helpers import selector
-from homeassistant.util import yaml as yaml_util
+from menuai.helpers import selector
+from menuai.util import yaml as yaml_util
 
 FAKE_UUID = "a266a680b608c32770e6c45bfe6b8411"
 
@@ -980,7 +980,7 @@ def test_datetime_selector_schema(schema, valid_selections, invalid_selections) 
     ("schema", "valid_selections", "invalid_selections"),
     [({}, ("abc123", "{{ now() }}"), (None, "{{ incomplete }", "{% if True %}Hi!"))],
 )
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 def test_template_selector_schema(schema, valid_selections, invalid_selections) -> None:
     """Test template selector."""
     _test_selector("template", schema, valid_selections, invalid_selections)

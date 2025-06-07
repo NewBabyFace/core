@@ -8,8 +8,8 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components import bluetooth
-from homeassistant.core import HomeAssistant
+from menuai.components import bluetooth
+from menuai.core import menuai
 
 from .common import MockDashboardRefresh
 from .conftest import MockESPHomeDevice, MockESPHomeDeviceType
@@ -21,22 +21,22 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     init_integration: MockConfigEntry,
     mock_dashboard: dict[str, Any],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics for config entry."""
-    result = await get_diagnostics_for_config_entry(hass, hass_client, init_integration)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, init_integration)
 
     assert result == snapshot(exclude=props("created_at", "modified_at"))
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_diagnostics_with_dashboard_data(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_esphome_device: MockESPHomeDeviceType,
     mock_dashboard: dict[str, Any],
     mock_client: APIClient,
@@ -53,25 +53,25 @@ async def test_diagnostics_with_dashboard_data(
     mock_device = await mock_esphome_device(
         mock_client=mock_client,
     )
-    await MockDashboardRefresh(hass).async_refresh()
+    await MockDashboardRefresh(menuai).async_refresh()
     result = await get_diagnostics_for_config_entry(
-        hass, hass_client, mock_device.entry
+        menuai, menuai_client, mock_device.entry
     )
 
     assert result == snapshot(exclude=props("entry_id", "created_at", "modified_at"))
 
 
 async def test_diagnostics_with_bluetooth(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_bluetooth_entry_with_raw_adv: MockESPHomeDevice,
 ) -> None:
     """Test diagnostics for config entry with Bluetooth."""
-    scanner = bluetooth.async_scanner_by_source(hass, "AA:BB:CC:DD:EE:FC")
+    scanner = bluetooth.async_scanner_by_source(menuai, "AA:BB:CC:DD:EE:FC")
     assert scanner is not None
     assert scanner.connectable is True
     entry = mock_bluetooth_entry_with_raw_adv.entry
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
     assert result == {
         "dashboard": {
             "configured": False,

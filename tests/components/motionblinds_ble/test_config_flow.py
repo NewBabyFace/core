@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, Mock, patch
 from motionblindsble.const import MotionBlindType
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.bluetooth.models import BluetoothServiceInfoBleak
-from homeassistant.components.motionblinds_ble import const
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.bluetooth.models import BluetoothServiceInfoBleak
+from menuai.components.motionblinds_ble import const
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -18,7 +18,7 @@ from tests.common import MockConfigEntry
 @pytest.mark.usefixtures("motionblinds_ble_connect")
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_config_flow_manual_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     blind_type: MotionBlindType,
     mac_code: str,
     address: str,
@@ -26,21 +26,21 @@ async def test_config_flow_manual_success(
     display_name: str,
 ) -> None:
     """Successful flow manually initialized by the user."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MAC_CODE: mac_code},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_BLIND_TYPE: blind_type.name.lower()},
     )
@@ -58,7 +58,7 @@ async def test_config_flow_manual_success(
 @pytest.mark.usefixtures("motionblinds_ble_connect")
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_config_flow_manual_error_invalid_mac(
-    hass: HomeAssistant,
+    menuai: menuai,
     mac_code: str,
     address: str,
     local_name: str,
@@ -68,7 +68,7 @@ async def test_config_flow_manual_error_invalid_mac(
     """Invalid MAC code error flow manually initialized by the user."""
 
     # Initialize
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -76,7 +76,7 @@ async def test_config_flow_manual_error_invalid_mac(
     assert result["errors"] == {}
 
     # Try invalid MAC code
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MAC_CODE: "AABBCC"},  # A MAC code should be 4 characters
     )
@@ -85,7 +85,7 @@ async def test_config_flow_manual_error_invalid_mac(
     assert result["errors"] == {"base": const.ERROR_INVALID_MAC_CODE}
 
     # Recover
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MAC_CODE: mac_code},
     )
@@ -93,7 +93,7 @@ async def test_config_flow_manual_error_invalid_mac(
     assert result["step_id"] == "confirm"
 
     # Finish flow
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_BLIND_TYPE: blind_type.name.lower()},
     )
@@ -110,24 +110,24 @@ async def test_config_flow_manual_error_invalid_mac(
 
 @pytest.mark.usefixtures("motionblinds_ble_connect")
 async def test_config_flow_manual_error_no_bluetooth_adapter(
-    hass: HomeAssistant,
+    menuai: menuai,
     mac_code: str,
 ) -> None:
     """No Bluetooth adapter error flow manually initialized by the user."""
 
     # Try step_user with zero Bluetooth adapters
     with patch(
-        "homeassistant.components.motionblinds_ble.config_flow.bluetooth.async_scanner_count",
+        "menuai.components.motionblinds_ble.config_flow.bluetooth.async_scanner_count",
         return_value=0,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == const.ERROR_NO_BLUETOOTH_ADAPTER
 
     # Try discovery with zero Bluetooth adapters
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -135,10 +135,10 @@ async def test_config_flow_manual_error_no_bluetooth_adapter(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.motionblinds_ble.config_flow.bluetooth.async_scanner_count",
+        "menuai.components.motionblinds_ble.config_flow.bluetooth.async_scanner_count",
         return_value=0,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {const.CONF_MAC_CODE: mac_code},
         )
@@ -148,7 +148,7 @@ async def test_config_flow_manual_error_no_bluetooth_adapter(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_config_flow_manual_error_could_not_find_motor(
-    hass: HomeAssistant,
+    menuai: menuai,
     motionblinds_ble_connect: tuple[AsyncMock, Mock],
     mac_code: str,
     local_name: str,
@@ -159,7 +159,7 @@ async def test_config_flow_manual_error_could_not_find_motor(
     """Could not find motor error flow manually initialized by the user."""
 
     # Initialize
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -168,7 +168,7 @@ async def test_config_flow_manual_error_could_not_find_motor(
 
     # Try with MAC code that cannot be found
     motionblinds_ble_connect[1].name = "WRONG_NAME"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MAC_CODE: mac_code},
     )
@@ -178,7 +178,7 @@ async def test_config_flow_manual_error_could_not_find_motor(
 
     # Recover
     motionblinds_ble_connect[1].name = local_name
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MAC_CODE: mac_code},
     )
@@ -186,7 +186,7 @@ async def test_config_flow_manual_error_could_not_find_motor(
     assert result["step_id"] == "confirm"
 
     # Finish flow
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_BLIND_TYPE: blind_type.name.lower()},
     )
@@ -202,14 +202,14 @@ async def test_config_flow_manual_error_could_not_find_motor(
 
 
 async def test_config_flow_manual_error_no_devices_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     motionblinds_ble_connect: tuple[AsyncMock, Mock],
     mac_code: str,
 ) -> None:
     """No devices found error flow manually initialized by the user."""
 
     # Initialize
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -218,7 +218,7 @@ async def test_config_flow_manual_error_no_devices_found(
 
     # Try with zero found bluetooth devices
     motionblinds_ble_connect[0].discover.return_value = []
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_MAC_CODE: mac_code},
     )
@@ -228,7 +228,7 @@ async def test_config_flow_manual_error_no_devices_found(
 
 @pytest.mark.usefixtures("motionblinds_ble_connect")
 async def test_config_flow_bluetooth_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mac_code: str,
     service_info: BluetoothServiceInfoBleak,
     address: str,
@@ -237,7 +237,7 @@ async def test_config_flow_bluetooth_success(
     blind_type: MotionBlindType,
 ) -> None:
     """Successful bluetooth discovery flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=service_info,
@@ -246,7 +246,7 @@ async def test_config_flow_bluetooth_success(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_BLIND_TYPE: blind_type.name.lower()},
     )
@@ -264,21 +264,21 @@ async def test_config_flow_bluetooth_success(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the options flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             const.OPTION_PERMANENT_CONNECTION: True,

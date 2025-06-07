@@ -6,7 +6,7 @@ from typing import Any
 from webmin_xmlrpc.client import WebminInstance
 from yarl import URL
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -14,12 +14,12 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_create_clientsession
 
 
 def get_instance_from_options(
-    hass: HomeAssistant, options: Mapping[str, Any]
+    menuai: menuai, options: Mapping[str, Any]
 ) -> tuple[WebminInstance, URL]:
     """Retrieve a Webmin instance and the base URL from config options."""
 
@@ -33,7 +33,7 @@ def get_instance_from_options(
 
     return WebminInstance(
         session=async_create_clientsession(
-            hass,
+            menuai,
             verify_ssl=options[CONF_VERIFY_SSL],
             base_url=base_url,
         )

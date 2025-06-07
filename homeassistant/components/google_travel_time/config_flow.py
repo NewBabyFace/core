@@ -6,22 +6,22 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_LANGUAGE, CONF_MODE, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY, CONF_LANGUAGE, CONF_MODE, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
     TimeSelector,
 )
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (
     ALL_LANGUAGES,
@@ -141,12 +141,12 @@ OPTIONS_SCHEMA = vol.Schema(
 )
 
 
-def default_options(hass: HomeAssistant) -> dict[str, str]:
+def default_options(menuai: menuai) -> dict[str, str]:
     """Get the default options."""
     return {
         CONF_MODE: "driving",
         CONF_UNITS: (
-            UNITS_IMPERIAL if hass.config.units is US_CUSTOMARY_SYSTEM else UNITS_METRIC
+            UNITS_IMPERIAL if menuai.config.units is US_CUSTOMARY_SYSTEM else UNITS_METRIC
         ),
     }
 
@@ -183,12 +183,12 @@ class GoogleOptionsFlow(OptionsFlow):
 
 
 async def validate_input(
-    hass: HomeAssistant, user_input: dict[str, Any]
+    menuai: menuai, user_input: dict[str, Any]
 ) -> dict[str, str] | None:
     """Validate the user input allows us to connect."""
     try:
         await validate_config_entry(
-            hass,
+            menuai,
             user_input[CONF_API_KEY],
             user_input[CONF_ORIGIN],
             user_input[CONF_DESTINATION],
@@ -223,12 +223,12 @@ class GoogleTravelTimeConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] | None = None
         user_input = user_input or {}
         if user_input:
-            errors = await validate_input(self.hass, user_input)
+            errors = await validate_input(self.menuai, user_input)
             if not errors:
                 return self.async_create_entry(
                     title=user_input.get(CONF_NAME, DEFAULT_NAME),
                     data=user_input,
-                    options=default_options(self.hass),
+                    options=default_options(self.menuai),
                 )
 
         return self.async_show_form(
@@ -243,7 +243,7 @@ class GoogleTravelTimeConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle reconfiguration."""
         errors: dict[str, str] | None = None
         if user_input is not None:
-            errors = await validate_input(self.hass, user_input)
+            errors = await validate_input(self.menuai, user_input)
             if not errors:
                 return self.async_update_reload_and_abort(
                     self._get_reconfigure_entry(), data=user_input

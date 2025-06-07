@@ -10,11 +10,11 @@ from livisi import LivisiEvent, Websocket
 from livisi.aiolivisi import AioLivisi
 from livisi.errors import TokenExpiredException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     AVATAR,
@@ -33,17 +33,17 @@ class LivisiDataUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, aiolivisi: AioLivisi
+        self, menuai: menuai, config_entry: ConfigEntry, aiolivisi: AioLivisi
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="Livisi devices",
             update_interval=timedelta(seconds=DEVICE_POLLING_DELAY),
         )
-        self.hass = hass
+        self.menuai = menuai
         self.aiolivisi = aiolivisi
         self.websocket = Websocket(aiolivisi)
         self.devices: set[str] = set()
@@ -65,7 +65,7 @@ class LivisiDataUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
     def _async_dispatcher_send(self, event: str, source: str, data: Any) -> None:
         if data is not None:
-            async_dispatcher_send(self.hass, f"{event}_{source}", data)
+            async_dispatcher_send(self.menuai, f"{event}_{source}", data)
 
     async def async_setup(self) -> None:
         """Set up the Livisi Smart Home Controller."""

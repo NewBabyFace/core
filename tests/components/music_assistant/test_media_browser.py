@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
@@ -13,8 +13,8 @@ from homeassistant.components.media_player import (
     SearchMedia,
     SearchMediaQuery,
 )
-from homeassistant.components.music_assistant.const import DOMAIN
-from homeassistant.components.music_assistant.media_browser import (
+from menuai.components.music_assistant.const import DOMAIN
+from menuai.components.music_assistant.media_browser import (
     LIBRARY_ALBUMS,
     LIBRARY_ARTISTS,
     LIBRARY_AUDIOBOOKS,
@@ -27,7 +27,7 @@ from homeassistant.components.music_assistant.media_browser import (
     async_browse_media,
     async_search_media,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import setup_integration_from_fixtures
 
@@ -49,35 +49,35 @@ from .common import setup_integration_from_fixtures
     ],
 )
 async def test_browse_media_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
     media_content_id: str,
     media_content_type: str,
     expected: str,
 ) -> None:
     """Test the async_browse_media method."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     browse_item: BrowseMedia = await async_browse_media(
-        hass, music_assistant_client, media_content_id, media_content_type
+        menuai, music_assistant_client, media_content_id, media_content_type
     )
     assert browse_item.children[0].media_content_id == expected
 
 
 async def test_browse_media_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test the async_browse_media method when media is not found."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     with pytest.raises(BrowseError, match="Media not found: unknown / unknown"):
-        await async_browse_media(hass, music_assistant_client, "unknown", "unknown")
+        await async_browse_media(menuai, music_assistant_client, "unknown", "unknown")
 
 
 class MockSearchResults:
@@ -146,14 +146,14 @@ class MockSearchResults:
     ],
 )
 async def test_search_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
     search_query: str,
     media_content_type: str,
     expected_items: int,
 ) -> None:
     """Test the async_search_media method with different content types."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
 
     # Create mock search results
     media_types = []
@@ -226,14 +226,14 @@ async def test_search_media(
     ],
 )
 async def test_search_media_with_filter_classes(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
     search_query: str,
     media_filter_classes: set[MediaClass],
     expected_media_types: list[str],
 ) -> None:
     """Test the async_search_media method with different media filter classes."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
 
     # Create mock search results
     mock_results = MockSearchResults(expected_media_types)
@@ -258,11 +258,11 @@ async def test_search_media_with_filter_classes(
 
 
 async def test_search_media_within_album(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test searching within an album context."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
 
     # Mock album and tracks
     album = MagicMock()
@@ -306,11 +306,11 @@ async def test_search_media_within_album(
 
 
 async def test_search_media_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test that search errors are properly handled."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
 
     # Use patch to cause an exception
     with patch.object(

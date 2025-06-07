@@ -1,32 +1,32 @@
 """The tests for Google Assistant logbook."""
 
-from homeassistant.components.google_assistant.const import (
+from menuai.components.google_assistant.const import (
     DOMAIN,
     EVENT_COMMAND_RECEIVED,
     SOURCE_CLOUD,
     SOURCE_LOCAL,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, ATTR_FRIENDLY_NAME
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.components.logbook.common import MockRow, mock_humanify
 
 
-async def test_humanify_command_received(hass: HomeAssistant) -> None:
+async def test_humanify_command_received(menuai: menuai) -> None:
     """Test humanifying command event."""
-    hass.config.components.add("recorder")
-    hass.config.components.add("frontend")
-    hass.config.components.add("google_assistant")
-    assert await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("recorder")
+    menuai.config.components.add("frontend")
+    menuai.config.components.add("google_assistant")
+    assert await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.kitchen", "on", {ATTR_FRIENDLY_NAME: "The Kitchen Lights"}
     )
 
     events = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 EVENT_COMMAND_RECEIVED,

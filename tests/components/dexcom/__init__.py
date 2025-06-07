@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 from pydexcom import GlucoseReading
 
-from homeassistant.components.dexcom.const import CONF_SERVER, DOMAIN, SERVER_US
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.dexcom.const import CONF_SERVER, DOMAIN, SERVER_US
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -22,9 +22,9 @@ GLUCOSE_READING = GlucoseReading(json.loads(load_fixture("data.json", "dexcom"))
 
 
 async def init_integration(
-    hass: HomeAssistant, options: dict[str, Any] | None = None
+    menuai: menuai, options: dict[str, Any] | None = None
 ) -> MockConfigEntry:
-    """Set up the Dexcom integration in Home Assistant."""
+    """Set up the Dexcom integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="test_username",
@@ -34,16 +34,16 @@ async def init_integration(
     )
     with (
         patch(
-            "homeassistant.components.dexcom.Dexcom.get_current_glucose_reading",
+            "menuai.components.dexcom.Dexcom.get_current_glucose_reading",
             return_value=GLUCOSE_READING,
         ),
         patch(
-            "homeassistant.components.dexcom.Dexcom.create_session",
+            "menuai.components.dexcom.Dexcom.create_session",
             return_value="test_session_id",
         ),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

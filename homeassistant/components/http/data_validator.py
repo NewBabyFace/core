@@ -11,9 +11,9 @@ from typing import Any, Concatenate
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
-from .view import HomeAssistantView
+from .view import menuaiView
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,21 +37,21 @@ class RequestDataValidator:
         self._schema = schema
         self._allow_empty = allow_empty
 
-    def __call__[_HassViewT: HomeAssistantView, **_P](
+    def __call__[_menuaiViewT: menuaiView, **_P](
         self,
         method: Callable[
-            Concatenate[_HassViewT, web.Request, dict[str, Any], _P],
+            Concatenate[_menuaiViewT, web.Request, dict[str, Any], _P],
             Awaitable[web.Response],
         ],
     ) -> Callable[
-        Concatenate[_HassViewT, web.Request, _P],
+        Concatenate[_menuaiViewT, web.Request, _P],
         Coroutine[Any, Any, web.Response],
     ]:
         """Decorate a function."""
 
         @wraps(method)
         async def wrapper(
-            view: _HassViewT, request: web.Request, *args: _P.args, **kwargs: _P.kwargs
+            view: _menuaiViewT, request: web.Request, *args: _P.args, **kwargs: _P.kwargs
         ) -> web.Response:
             """Wrap a request handler with data validation."""
             raw_data = None

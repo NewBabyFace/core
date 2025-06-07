@@ -4,10 +4,10 @@ import logging
 
 from pypoint import Device, PointSession
 
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import as_local
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util.dt import as_local
 
 from .const import DOMAIN
 from .coordinator import PointDataUpdateCoordinator

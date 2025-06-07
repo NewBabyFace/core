@@ -7,9 +7,9 @@ from tesla_fleet_api.const import Scope
 from tesla_fleet_api.tesla.energysite import EnergySite
 from tesla_fleet_api.tesla.vehicle.fleet import VehicleFleet
 
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import (

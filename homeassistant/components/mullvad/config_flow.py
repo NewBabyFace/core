@@ -5,7 +5,7 @@ from typing import Any
 
 from mullvad_api import MullvadAPI, MullvadAPIError
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import DOMAIN
 
@@ -24,7 +24,7 @@ class MullvadConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                await self.hass.async_add_executor_job(MullvadAPI)
+                await self.menuai.async_add_executor_job(MullvadAPI)
             except MullvadAPIError:
                 errors["base"] = "cannot_connect"
             except Exception:

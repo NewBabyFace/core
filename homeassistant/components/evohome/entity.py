@@ -8,9 +8,9 @@ from typing import Any
 import evohomeasync2 as evo
 from evohomeasync2.schemas.typedefs import DayOfWeekDhwT
 
-from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, EvoService
 from .coordinator import EvoDataUpdateCoordinator
@@ -68,11 +68,11 @@ class EvoEntity(CoordinatorEntity[EvoDataUpdateCoordinator]):
         """Return the evohome-specific state attributes."""
         return {"status": self._device_state_attrs}
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
-        async_dispatcher_connect(self.hass, DOMAIN, self.process_signal)
+        async_dispatcher_connect(self.menuai, DOMAIN, self.process_signal)
 
     @callback
     def _handle_coordinator_update(self) -> None:

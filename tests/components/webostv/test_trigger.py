@@ -4,13 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.components.webostv import DOMAIN
-from homeassistant.const import SERVICE_RELOAD
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.webostv import DOMAIN
+from menuai.const import SERVICE_RELOAD
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import setup_webostv
 from .const import ENTITY_ID, FAKE_UUID
@@ -19,18 +19,18 @@ from tests.common import MockEntity, MockEntityPlatform
 
 
 async def test_webostv_turn_on_trigger_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     client,
 ) -> None:
     """Test for turn_on triggers by device_id firing."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, FAKE_UUID)})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -51,7 +51,7 @@ async def test_webostv_turn_on_trigger_device_id(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "turn_on",
         {"entity_id": ENTITY_ID},
@@ -62,13 +62,13 @@ async def test_webostv_turn_on_trigger_device_id(
     assert service_calls[1].data["some"] == device.id
     assert service_calls[1].data["id"] == 0
 
-    with patch("homeassistant.config.load_yaml_dict", return_value={}):
-        await hass.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
+    with patch("menuai.config.load_yaml_dict", return_value={}):
+        await menuai.services.async_call(automation.DOMAIN, SERVICE_RELOAD, blocking=True)
 
     service_calls.clear()
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "media_player",
             "turn_on",
             {"entity_id": ENTITY_ID},
@@ -79,13 +79,13 @@ async def test_webostv_turn_on_trigger_device_id(
 
 
 async def test_webostv_turn_on_trigger_entity_id(
-    hass: HomeAssistant, service_calls: list[ServiceCall], client
+    menuai: menuai, service_calls: list[ServiceCall], client
 ) -> None:
     """Test for turn_on triggers by entity_id firing."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -106,7 +106,7 @@ async def test_webostv_turn_on_trigger_entity_id(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "turn_on",
         {"entity_id": ENTITY_ID},
@@ -119,13 +119,13 @@ async def test_webostv_turn_on_trigger_entity_id(
 
 
 async def test_unknown_trigger_platform_type(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, client
+    menuai: menuai, caplog: pytest.LogCaptureFixture, client
 ) -> None:
     """Test unknown trigger platform type."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
     await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -150,18 +150,18 @@ async def test_unknown_trigger_platform_type(
 
 
 async def test_trigger_invalid_entity_id(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, client
+    menuai: menuai, caplog: pytest.LogCaptureFixture, client
 ) -> None:
     """Test turn on trigger using invalid entity_id."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
 
     invalid_entity = f"{DOMAIN}.invalid"
     await platform.async_add_entities([MockEntity(name=invalid_entity)])
 
     await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [

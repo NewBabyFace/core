@@ -5,9 +5,9 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_OFF, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import STATE_OFF, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     TEST_DATA_ALERT,
@@ -96,7 +96,7 @@ from tests.typing import MqttMockHAClient
     ],
 )
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -106,13 +106,13 @@ async def test_sensors(
     data: str,
 ) -> None:
     """Test DROP sensors."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.drop_connect.PLATFORMS", [Platform.BINARY_SENSOR]
+        "menuai.components.drop_connect.PLATFORMS", [Platform.BINARY_SENSOR]
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_entries = er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id
@@ -120,10 +120,10 @@ async def test_sensors(
 
     assert entity_entries
     for entity_entry in entity_entries:
-        assert hass.states.get(entity_entry.entity_id).state == STATE_OFF
+        assert menuai.states.get(entity_entry.entity_id).state == STATE_OFF
 
-    async_fire_mqtt_message(hass, topic, reset)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, topic, reset)
+    await menuai.async_block_till_done()
 
     entity_entries = er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id
@@ -131,10 +131,10 @@ async def test_sensors(
 
     assert entity_entries
     for entity_entry in entity_entries:
-        assert hass.states.get(entity_entry.entity_id).state == STATE_OFF
+        assert menuai.states.get(entity_entry.entity_id).state == STATE_OFF
 
-    async_fire_mqtt_message(hass, topic, data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, topic, data)
+    await menuai.async_block_till_done()
 
     entity_entries = er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id
@@ -142,6 +142,6 @@ async def test_sensors(
     assert entity_entries
     for entity_entry in entity_entries:
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
-        assert hass.states.get(entity_entry.entity_id) == snapshot(
+        assert menuai.states.get(entity_entry.entity_id) == snapshot(
             name=f"{entity_entry.entity_id}-state"
         )

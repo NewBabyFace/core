@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.counter import (
+from menuai.components.counter import (
     ATTR_EDITABLE,
     ATTR_INITIAL,
     ATTR_MAXIMUM,
@@ -24,10 +24,10 @@ from homeassistant.components.counter import (
     SERVICE_SET_VALUE,
     VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_NAME
-from homeassistant.core import Context, CoreState, HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, ATTR_FRIENDLY_NAME, ATTR_ICON, ATTR_NAME
+from menuai.core import Context, CoreState, menuai, State
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .common import async_decrement, async_increment, async_reset
 
@@ -38,12 +38,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
+def storage_setup(menuai: menuai, menuai_storage: dict[str, Any]):
     """Storage setup."""
 
     async def _storage(items=None, config=None):
         if items is None:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "data": {
@@ -61,31 +61,31 @@ def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
                 },
             }
         else:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "data": {"items": items},
             }
         if config is None:
             config = {DOMAIN: {}}
-        return await async_setup_component(hass, DOMAIN, config)
+        return await async_setup_component(menuai, DOMAIN, config)
 
     return _storage
 
 
-async def test_config(hass: HomeAssistant) -> None:
+async def test_config(menuai: menuai) -> None:
     """Test config."""
     invalid_configs = [None, 1, {}, {"name with space": None}]
 
     for cfg in invalid_configs:
-        assert not await async_setup_component(hass, DOMAIN, {DOMAIN: cfg})
+        assert not await async_setup_component(menuai, DOMAIN, {DOMAIN: cfg})
 
 
-async def test_config_options(hass: HomeAssistant) -> None:
+async def test_config_options(menuai: menuai) -> None:
     """Test configuration options."""
-    count_start = len(hass.states.async_entity_ids())
+    count_start = len(menuai.states.async_entity_ids())
 
-    _LOGGER.debug("ENTITIES @ start: %s", hass.states.async_entity_ids())
+    _LOGGER.debug("ENTITIES @ start: %s", menuai.states.async_entity_ids())
 
     config = {
         DOMAIN: {
@@ -101,17 +101,17 @@ async def test_config_options(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "counter", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "counter", config)
+    await menuai.async_block_till_done()
 
-    _LOGGER.debug("ENTITIES: %s", hass.states.async_entity_ids())
+    _LOGGER.debug("ENTITIES: %s", menuai.states.async_entity_ids())
 
-    assert count_start + 3 == len(hass.states.async_entity_ids())
-    await hass.async_block_till_done()
+    assert count_start + 3 == len(menuai.states.async_entity_ids())
+    await menuai.async_block_till_done()
 
-    state_1 = hass.states.get("counter.test_1")
-    state_2 = hass.states.get("counter.test_2")
-    state_3 = hass.states.get("counter.test_3")
+    state_1 = menuai.states.get("counter.test_1")
+    state_2 = menuai.states.get("counter.test_2")
+    state_3 = menuai.states.get("counter.test_3")
 
     assert state_1 is not None
     assert state_2 is not None
@@ -129,42 +129,42 @@ async def test_config_options(hass: HomeAssistant) -> None:
     assert state_3.attributes.get(ATTR_STEP) == DEFAULT_STEP
 
 
-async def test_methods(hass: HomeAssistant) -> None:
+async def test_methods(menuai: menuai) -> None:
     """Test increment, decrement, set value, and reset methods."""
     config = {DOMAIN: {"test_1": {}}}
 
-    assert await async_setup_component(hass, "counter", config)
+    assert await async_setup_component(menuai, "counter", config)
 
     entity_id = "counter.test_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 0
 
-    async_increment(hass, entity_id)
-    await hass.async_block_till_done()
+    async_increment(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 1
 
-    async_increment(hass, entity_id)
-    await hass.async_block_till_done()
+    async_increment(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 2
 
-    async_decrement(hass, entity_id)
-    await hass.async_block_till_done()
+    async_decrement(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 1
 
-    async_reset(hass, entity_id)
-    await hass.async_block_till_done()
+    async_reset(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -173,11 +173,11 @@ async def test_methods(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "5"
 
 
-async def test_methods_with_config(hass: HomeAssistant) -> None:
+async def test_methods_with_config(menuai: menuai) -> None:
     """Test increment, decrement, and reset methods with configuration."""
     config = {
         DOMAIN: {
@@ -191,32 +191,32 @@ async def test_methods_with_config(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "counter", config)
+    assert await async_setup_component(menuai, "counter", config)
 
     entity_id = "counter.test"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 10
 
-    async_increment(hass, entity_id)
-    await hass.async_block_till_done()
+    async_increment(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 15
 
-    async_increment(hass, entity_id)
-    await hass.async_block_till_done()
+    async_increment(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 20
 
-    async_decrement(hass, entity_id)
-    await hass.async_block_till_done()
+    async_decrement(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert int(state.state) == 15
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -225,13 +225,13 @@ async def test_methods_with_config(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "5"
 
     with pytest.raises(
         ValueError, match=r"Value 25 for counter.test exceeding the maximum value of 20"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -241,13 +241,13 @@ async def test_methods_with_config(hass: HomeAssistant) -> None:
             blocking=True,
         )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "5"
 
     with pytest.raises(
         ValueError, match=r"Value 0 for counter.test exceeding the minimum value of 5"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -257,14 +257,14 @@ async def test_methods_with_config(hass: HomeAssistant) -> None:
             blocking=True,
         )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "5"
 
     with pytest.raises(
         ValueError,
         match=r"Value 6 for counter.test is not a multiple of the step size 5",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -274,20 +274,20 @@ async def test_methods_with_config(hass: HomeAssistant) -> None:
             blocking=True,
         )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "5"
 
 
-async def test_initial_state_overrules_restore_state(hass: HomeAssistant) -> None:
+async def test_initial_state_overrules_restore_state(menuai: menuai) -> None:
     """Ensure states are restored on startup."""
     mock_restore_cache(
-        hass, (State("counter.test1", "11"), State("counter.test2", "-22"))
+        menuai, (State("counter.test1", "11"), State("counter.test2", "-22"))
     )
 
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -297,153 +297,153 @@ async def test_initial_state_overrules_restore_state(hass: HomeAssistant) -> Non
         },
     )
 
-    state = hass.states.get("counter.test1")
+    state = menuai.states.get("counter.test1")
     assert state
     assert int(state.state) == 0
 
-    state = hass.states.get("counter.test2")
+    state = menuai.states.get("counter.test2")
     assert state
     assert int(state.state) == 10
 
 
-async def test_restore_state_overrules_initial_state(hass: HomeAssistant) -> None:
+async def test_restore_state_overrules_initial_state(menuai: menuai) -> None:
     """Ensure states are restored on startup."""
 
     mock_restore_cache(
-        hass,
+        menuai,
         (
             State("counter.test1", "11"),
             State("counter.test2", "-22"),
         ),
     )
 
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
     await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {"test1": {}, "test2": {CONF_INITIAL: 10}, "test3": {}}}
+        menuai, DOMAIN, {DOMAIN: {"test1": {}, "test2": {CONF_INITIAL: 10}, "test3": {}}}
     )
 
-    state = hass.states.get("counter.test1")
+    state = menuai.states.get("counter.test1")
     assert state
     assert int(state.state) == 11
 
-    state = hass.states.get("counter.test2")
+    state = menuai.states.get("counter.test2")
     assert state
     assert int(state.state) == -22
 
 
-async def test_no_initial_state_and_no_restore_state(hass: HomeAssistant) -> None:
+async def test_no_initial_state_and_no_restore_state(menuai: menuai) -> None:
     """Ensure that entity is create without initial and restore feature."""
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {"test1": {CONF_STEP: 5}}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {"test1": {CONF_STEP: 5}}})
 
-    state = hass.states.get("counter.test1")
+    state = menuai.states.get("counter.test1")
     assert state
     assert int(state.state) == 0
 
 
-async def test_counter_context(hass: HomeAssistant, hass_admin_user: MockUser) -> None:
+async def test_counter_context(menuai: menuai, menuai_admin_user: MockUser) -> None:
     """Test that counter context works."""
-    assert await async_setup_component(hass, "counter", {"counter": {"test": {}}})
+    assert await async_setup_component(menuai, "counter", {"counter": {"test": {}}})
 
-    state = hass.states.get("counter.test")
+    state = menuai.states.get("counter.test")
     assert state is not None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "counter",
         "increment",
         {"entity_id": state.entity_id},
         True,
-        Context(user_id=hass_admin_user.id),
+        Context(user_id=menuai_admin_user.id),
     )
 
-    state2 = hass.states.get("counter.test")
+    state2 = menuai.states.get("counter.test")
     assert state2 is not None
     assert state.state != state2.state
-    assert state2.context.user_id == hass_admin_user.id
+    assert state2.context.user_id == menuai_admin_user.id
 
 
-async def test_counter_min(hass: HomeAssistant, hass_admin_user: MockUser) -> None:
+async def test_counter_min(menuai: menuai, menuai_admin_user: MockUser) -> None:
     """Test that min works."""
     assert await async_setup_component(
-        hass, "counter", {"counter": {"test": {"minimum": "0", "initial": "0"}}}
+        menuai, "counter", {"counter": {"test": {"minimum": "0", "initial": "0"}}}
     )
 
-    state = hass.states.get("counter.test")
+    state = menuai.states.get("counter.test")
     assert state is not None
     assert state.state == "0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "counter",
         "decrement",
         {"entity_id": state.entity_id},
         True,
-        Context(user_id=hass_admin_user.id),
+        Context(user_id=menuai_admin_user.id),
     )
 
-    state2 = hass.states.get("counter.test")
+    state2 = menuai.states.get("counter.test")
     assert state2 is not None
     assert state2.state == "0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "counter",
         "increment",
         {"entity_id": state.entity_id},
         True,
-        Context(user_id=hass_admin_user.id),
+        Context(user_id=menuai_admin_user.id),
     )
 
-    state2 = hass.states.get("counter.test")
+    state2 = menuai.states.get("counter.test")
     assert state2 is not None
     assert state2.state == "1"
 
 
-async def test_counter_max(hass: HomeAssistant, hass_admin_user: MockUser) -> None:
+async def test_counter_max(menuai: menuai, menuai_admin_user: MockUser) -> None:
     """Test that max works."""
     assert await async_setup_component(
-        hass, "counter", {"counter": {"test": {"maximum": "0", "initial": "0"}}}
+        menuai, "counter", {"counter": {"test": {"maximum": "0", "initial": "0"}}}
     )
 
-    state = hass.states.get("counter.test")
+    state = menuai.states.get("counter.test")
     assert state is not None
     assert state.state == "0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "counter",
         "increment",
         {"entity_id": state.entity_id},
         True,
-        Context(user_id=hass_admin_user.id),
+        Context(user_id=menuai_admin_user.id),
     )
 
-    state2 = hass.states.get("counter.test")
+    state2 = menuai.states.get("counter.test")
     assert state2 is not None
     assert state2.state == "0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "counter",
         "decrement",
         {"entity_id": state.entity_id},
         True,
-        Context(user_id=hass_admin_user.id),
+        Context(user_id=menuai_admin_user.id),
     )
 
-    state2 = hass.states.get("counter.test")
+    state2 = menuai.states.get("counter.test")
     assert state2 is not None
     assert state2.state == "-1"
 
 
-async def test_load_from_storage(hass: HomeAssistant, storage_setup) -> None:
+async def test_load_from_storage(menuai: menuai, storage_setup) -> None:
     """Test set up from storage."""
     assert await storage_setup()
-    state = hass.states.get(f"{DOMAIN}.from_storage")
+    state = menuai.states.get(f"{DOMAIN}.from_storage")
     assert int(state.state) == 10
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "from storage"
     assert state.attributes.get(ATTR_EDITABLE)
 
 
-async def test_editable_state_attribute(hass: HomeAssistant, storage_setup) -> None:
+async def test_editable_state_attribute(menuai: menuai, storage_setup) -> None:
     """Test editable attribute."""
     assert await storage_setup(
         config={
@@ -459,18 +459,18 @@ async def test_editable_state_attribute(hass: HomeAssistant, storage_setup) -> N
         }
     )
 
-    state = hass.states.get(f"{DOMAIN}.from_storage")
+    state = menuai.states.get(f"{DOMAIN}.from_storage")
     assert int(state.state) == 10
     assert state.attributes[ATTR_FRIENDLY_NAME] == "from storage"
     assert state.attributes[ATTR_EDITABLE] is True
 
-    state = hass.states.get(f"{DOMAIN}.from_yaml")
+    state = menuai.states.get(f"{DOMAIN}.from_yaml")
     assert int(state.state) == 5
     assert state.attributes[ATTR_EDITABLE] is False
 
 
 async def test_ws_list(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, storage_setup
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, storage_setup
 ) -> None:
     """Test listing via WS."""
     assert await storage_setup(
@@ -487,7 +487,7 @@ async def test_ws_list(
         }
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 6, "type": f"{DOMAIN}/list"})
     resp = await client.receive_json()
@@ -504,8 +504,8 @@ async def test_ws_list(
 
 
 async def test_ws_delete(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     storage_setup,
 ) -> None:
@@ -515,11 +515,11 @@ async def test_ws_delete(
     input_id = "from_storage"
     input_entity_id = f"{DOMAIN}.{input_id}"
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state is not None
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, input_id) is not None
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 6, "type": f"{DOMAIN}/delete", f"{DOMAIN}_id": f"{input_id}"}
@@ -527,14 +527,14 @@ async def test_ws_delete(
     resp = await client.receive_json()
     assert resp["success"]
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state is None
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, input_id) is None
 
 
 async def test_update_min_max(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     storage_setup,
 ) -> None:
@@ -554,7 +554,7 @@ async def test_update_min_max(
     input_id = "from_storage"
     input_entity_id = f"{DOMAIN}.{input_id}"
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state is not None
     assert int(state.state) == 15
     assert state.attributes[ATTR_MAXIMUM] == 100
@@ -562,7 +562,7 @@ async def test_update_min_max(
     assert state.attributes[ATTR_STEP] == 3
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, input_id) is not None
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     updated_settings = settings | {"minimum": 19}
     await client.send_json(
@@ -577,7 +577,7 @@ async def test_update_min_max(
     assert resp["success"]
     assert resp["result"] == {"id": "from_storage"} | updated_settings
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert int(state.state) == 19
     assert state.attributes[ATTR_MINIMUM] == 19
     assert state.attributes[ATTR_MAXIMUM] == 100
@@ -596,7 +596,7 @@ async def test_update_min_max(
     assert resp["success"]
     assert resp["result"] == {"id": "from_storage"} | updated_settings
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert int(state.state) == 5
     assert state.attributes[ATTR_MINIMUM] == 2
     assert state.attributes[ATTR_MAXIMUM] == 5
@@ -615,7 +615,7 @@ async def test_update_min_max(
     assert resp["success"]
     assert resp["result"] == {"id": "from_storage"} | updated_settings
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert int(state.state) == 5
     assert ATTR_MINIMUM not in state.attributes
     assert ATTR_MAXIMUM not in state.attributes
@@ -623,8 +623,8 @@ async def test_update_min_max(
 
 
 async def test_create(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     storage_setup,
 ) -> None:
@@ -637,17 +637,17 @@ async def test_create(
     counter_id = "new_counter"
     input_entity_id = f"{DOMAIN}.{counter_id}"
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state is None
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, counter_id) is None
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 6, "type": f"{DOMAIN}/create", "name": "new counter"})
     resp = await client.receive_json()
     assert resp["success"]
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert int(state.state) == 0
     assert ATTR_MINIMUM not in state.attributes
     assert ATTR_MAXIMUM not in state.attributes

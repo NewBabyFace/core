@@ -6,7 +6,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from xknx.io import DEFAULT_MCAST_GRP, DEFAULT_MCAST_PORT
 
-from homeassistant.components.knx.const import (
+from menuai.components.knx.const import (
     CONF_KNX_AUTOMATIC,
     CONF_KNX_CONNECTION_TYPE,
     CONF_KNX_DEFAULT_RATE_LIMIT,
@@ -23,7 +23,7 @@ from homeassistant.components.knx.const import (
     DEFAULT_ROUTING_IA,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
@@ -32,11 +32,11 @@ from tests.components.diagnostics import get_diagnostics_for_config_entry
 from tests.typing import ClientSessionGenerator
 
 
-@pytest.mark.parametrize("hass_config", [{}])
-@pytest.mark.usefixtures("mock_hass_config")
+@pytest.mark.parametrize("menuai_config", [{}])
+@pytest.mark.usefixtures("mock_menuai_config")
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_config_entry: MockConfigEntry,
     knx: KNXTestKit,
     snapshot: SnapshotAssertion,
@@ -47,16 +47,16 @@ async def test_diagnostics(
     # Overwrite the version for this test since we don't want to change this with every library bump
     knx.xknx.version = "0.0.0"
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
         == snapshot
     )
 
 
-@pytest.mark.parametrize("hass_config", [{"knx": {"wrong_key": {}}}])
-@pytest.mark.usefixtures("mock_hass_config")
+@pytest.mark.parametrize("menuai_config", [{"knx": {"wrong_key": {}}}])
+@pytest.mark.usefixtures("mock_menuai_config")
 async def test_diagnostic_config_error(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_config_entry: MockConfigEntry,
     knx: KNXTestKit,
     snapshot: SnapshotAssertion,
@@ -68,17 +68,17 @@ async def test_diagnostic_config_error(
     knx.xknx.version = "0.0.0"
     # the snapshot will contain 'configuration_error' key with the voluptuous error message
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
         == snapshot
     )
 
 
-@pytest.mark.parametrize("hass_config", [{}])
-@pytest.mark.usefixtures("mock_hass_config")
+@pytest.mark.parametrize("menuai_config", [{}])
+@pytest.mark.usefixtures("mock_menuai_config")
 async def test_diagnostic_redact(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_storage: dict[str, Any],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics redacting data."""
@@ -98,22 +98,22 @@ async def test_diagnostic_redact(
             CONF_KNX_ROUTING_BACKBONE_KEY: "bbaacc44bbaacc44bbaacc44bbaacc44",
         },
     )
-    knx: KNXTestKit = KNXTestKit(hass, mock_config_entry, hass_storage)
+    knx: KNXTestKit = KNXTestKit(menuai, mock_config_entry, menuai_storage)
     await knx.setup_integration()
 
     # Overwrite the version for this test since we don't want to change this with every library bump
     knx.xknx.version = "0.0.0"
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
         == snapshot
     )
 
 
-@pytest.mark.parametrize("hass_config", [{}])
-@pytest.mark.usefixtures("mock_hass_config")
+@pytest.mark.parametrize("menuai_config", [{}])
+@pytest.mark.usefixtures("mock_menuai_config")
 async def test_diagnostics_project(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_config_entry: MockConfigEntry,
     knx: KNXTestKit,
     load_knxproj: None,
@@ -124,6 +124,6 @@ async def test_diagnostics_project(
     knx.xknx.version = "0.0.0"
     # snapshot will contain project specific fields in `project_info`
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
         == snapshot
     )

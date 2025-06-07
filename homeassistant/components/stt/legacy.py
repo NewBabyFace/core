@@ -7,11 +7,11 @@ from collections.abc import AsyncIterable, Coroutine
 import logging
 from typing import Any
 
-from homeassistant.config import config_per_platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import discovery
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.setup import (
+from menuai.config import config_per_platform
+from menuai.core import menuai, callback
+from menuai.helpers import discovery
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.setup import (
     SetupPhases,
     async_prepare_setup_platform,
     async_start_setup,
@@ -32,31 +32,31 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_default_provider(hass: HomeAssistant) -> str | None:
+def async_default_provider(menuai: menuai) -> str | None:
     """Return the domain of the default provider."""
-    providers = hass.data[DATA_PROVIDERS]
+    providers = menuai.data[DATA_PROVIDERS]
     return next(iter(providers), None)
 
 
 @callback
 def async_get_provider(
-    hass: HomeAssistant, domain: str | None = None
+    menuai: menuai, domain: str | None = None
 ) -> Provider | None:
     """Return provider."""
-    providers = hass.data[DATA_PROVIDERS]
+    providers = menuai.data[DATA_PROVIDERS]
     if domain:
         return providers.get(domain)
 
-    provider = async_default_provider(hass)
+    provider = async_default_provider(menuai)
     return providers[provider] if provider is not None else None
 
 
 @callback
 def async_setup_legacy(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> list[Coroutine[Any, Any, None]]:
     """Set up legacy speech-to-text providers."""
-    providers = hass.data[DATA_PROVIDERS] = {}
+    providers = menuai.data[DATA_PROVIDERS] = {}
 
     async def async_setup_platform(
         p_type: str,
@@ -67,24 +67,24 @@ def async_setup_legacy(
         if p_config is None:
             p_config = {}
 
-        platform = await async_prepare_setup_platform(hass, config, DOMAIN, p_type)
+        platform = await async_prepare_setup_platform(menuai, config, DOMAIN, p_type)
         if platform is None:
             _LOGGER.error("Unknown speech-to-text platform specified")
             return
 
         try:
             with async_start_setup(
-                hass,
+                menuai,
                 integration=p_type,
                 group=str(id(p_config)),
                 phase=SetupPhases.PLATFORM_SETUP,
             ):
                 provider = await platform.async_get_engine(
-                    hass, p_config, discovery_info
+                    menuai, p_config, discovery_info
                 )
 
                 provider.name = p_type
-                provider.hass = hass
+                provider.menuai = menuai
 
                 providers[provider.name] = provider
         except Exception:
@@ -98,7 +98,7 @@ def async_setup_legacy(
         """Handle for discovered platform."""
         await async_setup_platform(platform, discovery_info=info)
 
-    discovery.async_listen_platform(hass, DOMAIN, async_platform_discovered)
+    discovery.async_listen_platform(menuai, DOMAIN, async_platform_discovered)
 
     return [
         async_setup_platform(p_type, p_config)
@@ -110,7 +110,7 @@ def async_setup_legacy(
 class Provider(ABC):
     """Represent a single STT provider."""
 
-    hass: HomeAssistant | None = None
+    menuai: menuai | None = None
     name: str | None = None
 
     @property

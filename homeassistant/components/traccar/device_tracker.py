@@ -5,14 +5,14 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from homeassistant.components.device_tracker import TrackerEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.device_tracker import TrackerEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import DOMAIN, TRACKER_UPDATE
 from .const import (
@@ -69,7 +69,7 @@ EVENTS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -78,21 +78,21 @@ async def async_setup_entry(
     @callback
     def _receive_data(device, latitude, longitude, battery, accuracy, attrs):
         """Receive set location."""
-        if device in hass.data[DOMAIN]["devices"]:
+        if device in menuai.data[DOMAIN]["devices"]:
             return
 
-        hass.data[DOMAIN]["devices"].add(device)
+        menuai.data[DOMAIN]["devices"].add(device)
 
         async_add_entities(
             [TraccarEntity(device, latitude, longitude, battery, accuracy, attrs)]
         )
 
-    hass.data[DOMAIN]["unsub_device_tracker"][entry.entry_id] = (
-        async_dispatcher_connect(hass, TRACKER_UPDATE, _receive_data)
+    menuai.data[DOMAIN]["unsub_device_tracker"][entry.entry_id] = (
+        async_dispatcher_connect(menuai, TRACKER_UPDATE, _receive_data)
     )
 
     # Restore previously loaded devices
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     dev_ids = {
         identifier[1]
         for device in dev_reg.devices.get_devices_for_config_entry_id(entry.entry_id)
@@ -103,7 +103,7 @@ async def async_setup_entry(
 
     entities = []
     for dev_id in dev_ids:
-        hass.data[DOMAIN]["devices"].add(dev_id)
+        menuai.data[DOMAIN]["devices"].add(dev_id)
         entity = TraccarEntity(dev_id, None, None, None, None, None)
         entities.append(entity)
 
@@ -136,11 +136,11 @@ class TraccarEntity(TrackerEntity, RestoreEntity):
         """Return battery value of the device."""
         return self._battery
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._unsub_dispatcher = async_dispatcher_connect(
-            self.hass, TRACKER_UPDATE, self._async_receive_data
+            self.menuai, TRACKER_UPDATE, self._async_receive_data
         )
 
         # don't restore if we got created with data
@@ -170,9 +170,9 @@ class TraccarEntity(TrackerEntity, RestoreEntity):
         }
         self._battery = attr.get(ATTR_BATTERY)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Clean up after entity before removal."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._unsub_dispatcher()
 
     @callback

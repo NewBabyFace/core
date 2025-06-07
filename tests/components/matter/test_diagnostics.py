@@ -11,10 +11,10 @@ from matter_server.common.helpers.util import dataclass_from_dict
 from matter_server.common.models import ServerDiagnostics
 import pytest
 
-from homeassistant.components.matter.const import DOMAIN
-from homeassistant.components.matter.diagnostics import redact_matter_attributes
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.matter.const import DOMAIN
+from menuai.components.matter.diagnostics import redact_matter_attributes
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.components.diagnostics import (
@@ -57,8 +57,8 @@ async def test_matter_attribute_redact(device_diagnostics: dict[str, Any]) -> No
 
 
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     matter_client: MagicMock,
     integration: MockConfigEntry,
     config_entry_diagnostics: dict[str, Any],
@@ -69,15 +69,15 @@ async def test_config_entry_diagnostics(
         ServerDiagnostics, config_entry_diagnostics
     )
 
-    diagnostics = await get_diagnostics_for_config_entry(hass, hass_client, integration)
+    diagnostics = await get_diagnostics_for_config_entry(menuai, menuai_client, integration)
 
     assert diagnostics == config_entry_diagnostics_redacted
 
 
 @pytest.mark.parametrize("node_fixture", ["device_diagnostics"])
 async def test_device_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     matter_client: MagicMock,
     config_entry_diagnostics: dict[str, Any],
@@ -99,13 +99,13 @@ async def test_device_diagnostics(
         ServerDiagnostics, server_diagnostics_response
     )
     matter_client.get_diagnostics.return_value = server_diagnostics
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     device = dr.async_entries_for_config_entry(device_registry, config_entry.entry_id)[
         0
     ]
     assert device
 
     diagnostics = await get_diagnostics_for_device(
-        hass, hass_client, config_entry, device
+        menuai, menuai_client, config_entry, device
     )
     assert diagnostics == device_diagnostics_redacted

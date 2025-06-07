@@ -11,7 +11,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from ttls.client import TwinklyError
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
@@ -19,8 +19,8 @@ from homeassistant.components.light import (
     DOMAIN as LIGHT_DOMAIN,
     LightEntityFeature,
 )
-from homeassistant.components.twinkly import DOMAIN
-from homeassistant.const import (
+from menuai.components.twinkly import DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_TURN_OFF,
@@ -29,8 +29,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import setup_integration
 from .const import TEST_MAC
@@ -40,31 +40,31 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 
 @pytest.mark.usefixtures("mock_twinkly_client")
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the created entities."""
-    with patch("homeassistant.components.twinkly.PLATFORMS", [Platform.LIGHT]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.twinkly.PLATFORMS", [Platform.LIGHT]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
     """Test support of the light.turn_on service."""
     mock_twinkly_client.is_on.return_value = False
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("light.tree_1").state == STATE_OFF
+    assert menuai.states.get("light.tree_1").state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={ATTR_ENTITY_ID: "light.tree_1"},
@@ -75,16 +75,16 @@ async def test_turn_on_off(
 
 
 async def test_turn_on_with_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
     """Test support of the light.turn_on service with a brightness parameter."""
     mock_twinkly_client.is_on.return_value = False
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={ATTR_ENTITY_ID: "light.tree_1", ATTR_BRIGHTNESS: 255},
@@ -96,14 +96,14 @@ async def test_turn_on_with_brightness(
 
 
 async def test_brightness_to_zero(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
     """Test support of the light.turn_on service with a brightness parameter."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={ATTR_ENTITY_ID: "light.tree_1", ATTR_BRIGHTNESS: 1},
@@ -115,7 +115,7 @@ async def test_brightness_to_zero(
 
 
 async def test_turn_on_with_color_rgbw(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
@@ -123,13 +123,13 @@ async def test_turn_on_with_color_rgbw(
     mock_twinkly_client.is_on.return_value = False
     mock_twinkly_client.get_details.return_value["led_profile"] = "RGBW"
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert (
         LightEntityFeature.EFFECT
-        & hass.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
+        & menuai.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={
@@ -146,7 +146,7 @@ async def test_turn_on_with_color_rgbw(
 
 
 async def test_turn_on_with_color_rgb(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
@@ -154,13 +154,13 @@ async def test_turn_on_with_color_rgb(
     mock_twinkly_client.is_on.return_value = False
     mock_twinkly_client.get_details.return_value["led_profile"] = "RGB"
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert (
         LightEntityFeature.EFFECT
-        & hass.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
+        & menuai.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={ATTR_ENTITY_ID: "light.tree_1", ATTR_RGB_COLOR: (128, 64, 32)},
@@ -174,7 +174,7 @@ async def test_turn_on_with_color_rgb(
 
 
 async def test_turn_on_with_effect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
@@ -182,13 +182,13 @@ async def test_turn_on_with_effect(
     mock_twinkly_client.is_on.return_value = False
     mock_twinkly_client.get_details.return_value["led_profile"] = "RGB"
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert (
         LightEntityFeature.EFFECT
-        & hass.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
+        & menuai.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={ATTR_ENTITY_ID: "light.tree_1", ATTR_EFFECT: "2 Rainbow"},
@@ -209,7 +209,7 @@ async def test_turn_on_with_effect(
     ],
 )
 async def test_turn_on_with_missing_effect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
     data: dict[str, Any],
@@ -218,13 +218,13 @@ async def test_turn_on_with_missing_effect(
     mock_twinkly_client.is_on.return_value = False
     mock_twinkly_client.get_firmware_version.return_value["version"] = "2.7.0"
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert (
         LightEntityFeature.EFFECT
-        ^ hass.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
+        ^ menuai.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={ATTR_ENTITY_ID: "light.tree_1"} | data,
@@ -239,7 +239,7 @@ async def test_turn_on_with_missing_effect(
 
 
 async def test_turn_on_with_color_rgbw_and_missing_effect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
@@ -247,13 +247,13 @@ async def test_turn_on_with_color_rgbw_and_missing_effect(
     mock_twinkly_client.is_on.return_value = False
     mock_twinkly_client.get_firmware_version.return_value["version"] = "2.7.0"
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert (
         LightEntityFeature.EFFECT
-        ^ hass.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
+        ^ menuai.states.get("light.tree_1").attributes[ATTR_SUPPORTED_FEATURES]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         service_data={ATTR_ENTITY_ID: "light.tree_1", ATTR_EFFECT: "2 Rainbow"},
@@ -264,14 +264,14 @@ async def test_turn_on_with_color_rgbw_and_missing_effect(
 
 
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
 ) -> None:
     """Test support of the light.turn_off service."""
 
-    await setup_integration(hass, mock_config_entry)
-    await hass.services.async_call(
+    await setup_integration(menuai, mock_config_entry)
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         service_data={ATTR_ENTITY_ID: "light.tree_1"},
@@ -281,29 +281,29 @@ async def test_turn_off(
 
 
 async def test_no_current_movie(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twinkly_client: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test handling of missing current movie data."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("light.tree_1").attributes[ATTR_EFFECT] == "1 Rainbow"
+    assert menuai.states.get("light.tree_1").attributes[ATTR_EFFECT] == "1 Rainbow"
 
     mock_twinkly_client.get_current_movie.side_effect = TwinklyError
 
     freezer.tick(timedelta(seconds=30))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("light.tree_1").state != STATE_UNAVAILABLE
-    assert hass.states.get("light.tree_1").attributes[ATTR_EFFECT] is None
+    assert menuai.states.get("light.tree_1").state != STATE_UNAVAILABLE
+    assert menuai.states.get("light.tree_1").attributes[ATTR_EFFECT] is None
 
 
 async def test_update_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
@@ -316,7 +316,7 @@ async def test_update_name(
     so it can be restored when starting HA while Twinkly is offline.
     """
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     dev_entry = device_registry.async_get_device({(DOMAIN, TEST_MAC)})
 
@@ -325,8 +325,8 @@ async def test_update_name(
     mock_twinkly_client.get_details.return_value["device_name"] = "new_device_name"
 
     freezer.tick(timedelta(seconds=30))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     dev_entry = device_registry.async_get_device({(DOMAIN, TEST_MAC)})
 

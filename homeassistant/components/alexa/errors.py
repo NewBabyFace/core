@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import API_TEMP_UNITS
 
 
-class UnsupportedProperty(HomeAssistantError):
+class UnsupportedProperty(menuaiError):
     """Does not support the requested Smart Home API property."""
 
 
-class NoTokenAvailable(HomeAssistantError):
+class NoTokenAvailable(menuaiError):
     """There is no access token available."""
 
 
@@ -105,10 +105,10 @@ class AlexaTempRangeError(AlexaError):
     error_type = "TEMPERATURE_VALUE_OUT_OF_RANGE"
 
     def __init__(
-        self, hass: HomeAssistant, temp: float, min_temp: float, max_temp: float
+        self, menuai: menuai, temp: float, min_temp: float, max_temp: float
     ) -> None:
         """Initialize TempRange error."""
-        unit = hass.config.units.temperature_unit
+        unit = menuai.config.units.temperature_unit
         temp_range = {
             "minimumValue": {"value": min_temp, "scale": API_TEMP_UNITS[unit]},
             "maximumValue": {"value": max_temp, "scale": API_TEMP_UNITS[unit]},

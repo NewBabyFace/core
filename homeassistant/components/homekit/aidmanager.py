@@ -16,9 +16,9 @@ import random
 
 from fnv_hash_fast import fnv1a_32
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.storage import Store
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.storage import Store
 
 from .util import get_aid_storage_filename_for_entry_id
 
@@ -66,19 +66,19 @@ class AccessoryAidStorage:
     persist over reboots.
     """
 
-    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+    def __init__(self, menuai: menuai, entry_id: str) -> None:
         """Create a new entity map store."""
-        self.hass = hass
+        self.menuai = menuai
         self.allocations: dict[str, int] = {}
         self.allocated_aids: set[int] = set()
         self._entry_id = entry_id
         self.store: Store | None = None
-        self._entity_registry = er.async_get(hass)
+        self._entity_registry = er.async_get(menuai)
 
     async def async_initialize(self) -> None:
         """Load the latest AID data."""
         aidstore = get_aid_storage_filename_for_entry_id(self._entry_id)
-        self.store = Store(self.hass, AID_MANAGER_STORAGE_VERSION, aidstore)
+        self.store = Store(self.menuai, AID_MANAGER_STORAGE_VERSION, aidstore)
 
         if not (raw_storage := await self.store.async_load()):
             # There is no data about aid allocations yet

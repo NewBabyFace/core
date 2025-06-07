@@ -2,10 +2,10 @@
 
 from pywemo import Insight, Maker, StandbyState
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import async_wemo_dispatcher_connect
 from .coordinator import DeviceCoordinator
@@ -13,7 +13,7 @@ from .entity import WemoBinaryStateEntity, WemoEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     _config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -28,7 +28,7 @@ async def async_setup_entry(
         else:
             async_add_entities([WemoBinarySensor(coordinator)])
 
-    await async_wemo_dispatcher_connect(hass, _discovered_wemo)
+    await async_wemo_dispatcher_connect(menuai, _discovered_wemo)
 
 
 class WemoBinarySensor(WemoBinaryStateEntity, BinarySensorEntity):

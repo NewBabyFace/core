@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 from vallox_websocket_api import MetricData
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -19,21 +19,21 @@ def set_tz(request: pytest.FixtureRequest) -> Any:
 
 
 @pytest.fixture
-async def utc(hass: HomeAssistant) -> None:
+async def utc(menuai: menuai) -> None:
     """Set the default TZ to UTC."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
 
 
 @pytest.fixture
-async def helsinki(hass: HomeAssistant) -> None:
+async def helsinki(menuai: menuai) -> None:
     """Set the default TZ to Europe/Helsinki."""
-    await hass.config.async_set_time_zone("Europe/Helsinki")
+    await menuai.config.async_set_time_zone("Europe/Helsinki")
 
 
 @pytest.fixture
-async def new_york(hass: HomeAssistant) -> None:
+async def new_york(menuai: menuai) -> None:
     """Set the default TZ to America/New_York."""
-    await hass.config.async_set_time_zone("America/New_York")
+    await menuai.config.async_set_time_zone("America/New_York")
 
 
 def _sensor_to_datetime(sensor):
@@ -45,7 +45,7 @@ def _now_at_13():
 
 
 async def test_remaining_time_for_filter_none_returned_from_vallox(
-    mock_entry: MockConfigEntry, hass: HomeAssistant, setup_fetch_metric_data_mock
+    mock_entry: MockConfigEntry, menuai: menuai, setup_fetch_metric_data_mock
 ) -> None:
     """Test that the remaining time for filter sensor returns 'unknown' when Vallox returns None."""
 
@@ -57,11 +57,11 @@ async def test_remaining_time_for_filter_none_returned_from_vallox(
     # Arrange
     setup_fetch_metric_data_mock(metric_data_class=MockMetricData)
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
-    sensor = hass.states.get("sensor.vallox_remaining_time_for_filter")
+    sensor = menuai.states.get("sensor.vallox_remaining_time_for_filter")
     assert sensor.state == "unknown"
 
 
@@ -80,7 +80,7 @@ async def test_remaining_time_for_filter(
     remaining_days,
     set_tz: tzinfo,
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test remaining time for filter when Vallox returns different dates."""
@@ -95,11 +95,11 @@ async def test_remaining_time_for_filter(
     setup_fetch_metric_data_mock(metric_data_class=MockMetricData)
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
-    sensor = hass.states.get("sensor.vallox_remaining_time_for_filter")
+    sensor = menuai.states.get("sensor.vallox_remaining_time_for_filter")
     assert sensor.attributes["device_class"] == "timestamp"
     assert _sensor_to_datetime(sensor) == datetime.combine(
         mocked_filter_end_date,
@@ -121,7 +121,7 @@ async def test_cell_state_sensor(
     metrics,
     expected_state,
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test cell state sensor in different states."""
@@ -129,11 +129,11 @@ async def test_cell_state_sensor(
     setup_fetch_metric_data_mock(metrics=metrics)
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
-    sensor = hass.states.get("sensor.vallox_cell_state")
+    sensor = menuai.states.get("sensor.vallox_cell_state")
     assert sensor.state == expected_state
 
 
@@ -166,7 +166,7 @@ async def test_profile_duration_sensor(
     metrics,
     expected_state,
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test profile sensor in different states."""
@@ -174,9 +174,9 @@ async def test_profile_duration_sensor(
     setup_fetch_metric_data_mock(metrics=metrics)
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
-    sensor = hass.states.get("sensor.vallox_profile_duration")
+    sensor = menuai.states.get("sensor.vallox_profile_duration")
     assert sensor.state == expected_state

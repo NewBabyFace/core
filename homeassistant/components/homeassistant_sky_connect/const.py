@@ -1,10 +1,10 @@
-"""Constants for the Home Assistant SkyConnect integration."""
+"""Constants for the MenuAI SkyConnect integration."""
 
 import dataclasses
 import enum
 from typing import Self
 
-DOMAIN = "homeassistant_sky_connect"
+DOMAIN = "menuai_sky_connect"
 DOCS_WEB_FLASHER_URL = "https://skyconnect.home-assistant.io/firmware-update/"
 
 NABU_CASA_FIRMWARE_RELEASES_URL = (
@@ -37,13 +37,13 @@ class HardwareVariant(VariantInfo, enum.Enum):
     SKYCONNECT = (
         "SkyConnect v1.0",
         "SkyConnect",
-        "Home Assistant SkyConnect",
+        "MenuAI SkyConnect",
     )
 
     CONNECT_ZBT1 = (
-        "Home Assistant Connect ZBT-1",
+        "MenuAI Connect ZBT-1",
         "Connect ZBT-1",
-        "Home Assistant Connect ZBT-1",
+        "MenuAI Connect ZBT-1",
     )
 
     @classmethod

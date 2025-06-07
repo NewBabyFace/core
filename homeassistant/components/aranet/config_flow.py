@@ -8,13 +8,13 @@ from aranet4.client import Aranet4Advertisement, Version as AranetVersion
 from bluetooth_data_tools import human_readable_name
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.data_entry_flow import AbortFlow
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
+from menuai.data_entry_flow import AbortFlow
 
 from .const import DOMAIN
 
@@ -93,7 +93,7 @@ class AranetConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         current_addresses = self._async_current_ids(include_ignore=False)
-        for discovery_info in async_discovered_service_info(self.hass, False):
+        for discovery_info in async_discovered_service_info(self.menuai, False):
             address = discovery_info.address
             if address in current_addresses or address in self._discovered_devices:
                 continue

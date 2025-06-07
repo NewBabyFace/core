@@ -6,9 +6,9 @@ from typing import Any, Concatenate
 from linkplay.bridge import LinkPlayBridge
 from linkplay.manufacturers import MANUFACTURER_GENERIC, get_info_from_project
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import Entity
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity import Entity
 
 from . import DOMAIN, LinkPlayRequestException
 
@@ -16,13 +16,13 @@ from . import DOMAIN, LinkPlayRequestException
 def exception_wrap[_LinkPlayEntityT: LinkPlayBaseEntity, **_P, _R](
     func: Callable[Concatenate[_LinkPlayEntityT, _P], Coroutine[Any, Any, _R]],
 ) -> Callable[Concatenate[_LinkPlayEntityT, _P], Coroutine[Any, Any, _R]]:
-    """Define a wrapper to catch exceptions and raise HomeAssistant errors."""
+    """Define a wrapper to catch exceptions and raise menuai errors."""
 
     async def _wrap(self: _LinkPlayEntityT, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         try:
             return await func(self, *args, **kwargs)
         except LinkPlayRequestException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Exception occurred when communicating with API {func}: {err}"
             ) from err
 

@@ -5,12 +5,12 @@ from __future__ import annotations
 from libpyvivotek import VivotekCamera
 import voluptuous as vol
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
     Camera,
     CameraEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_IP_ADDRESS,
     CONF_NAME,
@@ -21,10 +21,10 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 CONF_FRAMERATE = "framerate"
 CONF_SECURITY_LEVEL = "security_level"
@@ -55,7 +55,7 @@ PLATFORM_SCHEMA = CAMERA_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,

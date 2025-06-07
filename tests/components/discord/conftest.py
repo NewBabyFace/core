@@ -4,8 +4,8 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.components.discord.notify import DiscordNotificationService
-from homeassistant.core import HomeAssistant
+from menuai.components.discord.notify import DiscordNotificationService
+from menuai.core import menuai
 
 from tests.test_util.aiohttp import AiohttpClientMocker
 
@@ -16,10 +16,10 @@ TARGET = "1234567890"
 
 
 @pytest.fixture
-def discord_notification_service(hass: HomeAssistant) -> DiscordNotificationService:
+def discord_notification_service(menuai: menuai) -> DiscordNotificationService:
     """Set up discord notification service."""
-    hass.config.allowlist_external_urls.add(URL_ATTACHMENT)
-    return DiscordNotificationService(hass, "token")
+    menuai.config.allowlist_external_urls.add(URL_ATTACHMENT)
+    return DiscordNotificationService(menuai, "token")
 
 
 @pytest.fixture

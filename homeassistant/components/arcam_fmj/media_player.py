@@ -10,7 +10,7 @@ from typing import Any
 from arcam.fmj import ConnectionFailed, SourceCodes
 from arcam.fmj.state import State
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
@@ -19,12 +19,12 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ArcamFmjConfigEntry
 from .const import (
@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ArcamFmjConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,14 +63,14 @@ async def async_setup_entry(
 def convert_exception[**_P, _R](
     func: Callable[_P, Coroutine[Any, Any, _R]],
 ) -> Callable[_P, Coroutine[Any, Any, _R]]:
-    """Return decorator to convert a connection error into a home assistant error."""
+    """Return decorator to convert a connection error into a MenuAI error."""
 
     @functools.wraps(func)
     async def _convert_exception(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         try:
             return await func(*args, **kwargs)
         except ConnectionFailed as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Connection failed to device during {func}"
             ) from exception
 
@@ -122,7 +122,7 @@ class ArcamFmj(MediaPlayerEntity):
             return MediaPlayerState.ON
         return MediaPlayerState.OFF
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Once registered, add listener for events."""
         await self._state.start()
         try:
@@ -146,15 +146,15 @@ class ArcamFmj(MediaPlayerEntity):
                 self.async_schedule_update_ha_state(force_refresh=True)
 
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_CLIENT_DATA, _data)
+            async_dispatcher_connect(self.menuai, SIGNAL_CLIENT_DATA, _data)
         )
 
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_CLIENT_STARTED, _started)
+            async_dispatcher_connect(self.menuai, SIGNAL_CLIENT_STARTED, _started)
         )
 
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_CLIENT_STOPPED, _stopped)
+            async_dispatcher_connect(self.menuai, SIGNAL_CLIENT_STOPPED, _stopped)
         )
 
     async def async_update(self) -> None:
@@ -189,7 +189,7 @@ class ArcamFmj(MediaPlayerEntity):
         try:
             await self._state.set_decode_mode(sound_mode)
         except (KeyError, ValueError) as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unsupported sound_mode {sound_mode}"
             ) from exception
 
@@ -221,7 +221,7 @@ class ArcamFmj(MediaPlayerEntity):
             await self._state.set_power(True)
         else:
             _LOGGER.debug("Firing event to turn on device")
-            self.hass.bus.async_fire(EVENT_TURN_ON, {ATTR_ENTITY_ID: self.entity_id})
+            self.menuai.bus.async_fire(EVENT_TURN_ON, {ATTR_ENTITY_ID: self.entity_id})
 
     @convert_exception
     async def async_turn_off(self) -> None:

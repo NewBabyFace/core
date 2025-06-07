@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
@@ -12,14 +12,14 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.trigger import (
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.trigger import (
     PluggableAction,
     TriggerActionType,
     TriggerInfo,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from ..const import DOMAIN
 from ..helpers import (
@@ -56,7 +56,7 @@ def async_get_turn_on_trigger(device_id: str) -> dict[str, str]:
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -71,7 +71,7 @@ async def async_attach_trigger(
     if ATTR_ENTITY_ID in config:
         device_ids.update(
             {
-                async_get_device_id_from_entity_id(hass, entity_id)
+                async_get_device_id_from_entity_id(menuai, entity_id)
                 for entity_id in config.get(ATTR_ENTITY_ID, [])
             }
         )
@@ -81,7 +81,7 @@ async def async_attach_trigger(
     unsubs = []
 
     for device_id in device_ids:
-        device = async_get_device_entry_by_device_id(hass, device_id)
+        device = async_get_device_entry_by_device_id(menuai, device_id)
         device_name = device.name_by_user or device.name
 
         variables = {
@@ -95,7 +95,7 @@ async def async_attach_trigger(
 
         unsubs.append(
             PluggableAction.async_attach_trigger(
-                hass, turn_on_trigger, action, {"trigger": variables}
+                menuai, turn_on_trigger, action, {"trigger": variables}
             )
         )
 

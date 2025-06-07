@@ -12,50 +12,50 @@ from freezegun import freeze_time
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant import loader
-from homeassistant.components.recorder import (
+from menuai import loader
+from menuai.components.recorder import (
     CONF_COMMIT_INTERVAL,
     DOMAIN as RECORDER_DOMAIN,
     Recorder,
     history,
 )
-from homeassistant.components.recorder.db_schema import (
+from menuai.components.recorder.db_schema import (
     StateAttributes,
     States,
     StatesMeta,
     StatisticsMeta,
 )
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
     process_timestamp,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     DEG_TO_RAD,
     RAD_TO_DEG,
     async_import_statistics,
     get_metadata,
     list_statistic_ids,
 )
-from homeassistant.components.recorder.util import get_instance, session_scope
-from homeassistant.components.sensor import (
+from menuai.components.recorder.util import get_instance, session_scope
+from menuai.components.sensor import (
     ATTR_OPTIONS,
     DOMAIN,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.components.sensor.recorder import (
+from menuai.components.sensor.recorder import (
     MEAN_TYPE_CHANGED_ISSUE,
     STATE_CLASS_REMOVED_ISSUE,
     UNITS_CHANGED_ISSUE,
 )
-from homeassistant.const import ATTR_FRIENDLY_NAME, DEGREE, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.const import ATTR_FRIENDLY_NAME, DEGREE, STATE_UNAVAILABLE
+from menuai.core import menuai, State
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from .common import MockSensor
 
@@ -122,7 +122,7 @@ TEMP_STATES_SEQ = [-10, 15, 30, 60]
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder patches."""
@@ -137,28 +137,28 @@ def setup_recorder(recorder_mock: Recorder) -> Recorder:
 def disable_mariadb_issue() -> None:
     """Disable creating issue about outdated MariaDB version."""
     with patch(
-        "homeassistant.components.recorder.util._async_create_mariadb_range_index_regression_issue"
+        "menuai.components.recorder.util._async_create_mariadb_range_index_regression_issue"
     ):
         yield
 
 
 async def async_list_statistic_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     statistic_ids: set[str] | None = None,
     statistic_type: Literal["mean", "sum"] | None = None,
 ) -> list[dict]:
     """Return all statistic_ids and unit of measurement."""
-    return await hass.async_add_executor_job(
-        list_statistic_ids, hass, statistic_ids, statistic_type
+    return await menuai.async_add_executor_job(
+        list_statistic_ids, menuai, statistic_ids, statistic_type
     )
 
 
 async def assert_statistic_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_result: list[dict[str, Any]],
 ) -> None:
     """Assert statistic ids."""
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(StatisticsMeta))
         assert len(db_states) == len(expected_result)
         for i, db_state in enumerate(db_states):
@@ -170,11 +170,11 @@ async def assert_statistic_ids(
 
 
 def assert_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_issues: dict[str, dict[str, Any]],
 ) -> None:
     """Assert statistics issues."""
-    issue_registry = ir.async_get(hass)
+    issue_registry = ir.async_get(menuai)
     assert len(issue_registry.issues) == len(expected_issues)
     for issue_id, expected_issue_data in expected_issues.items():
         expected_translation_placeholders = dict(expected_issue_data)
@@ -200,7 +200,7 @@ def assert_issues(
 
 
 async def assert_validation_result(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MockHAClientWebSocket,
     expected_validation_result: dict[str, list[dict[str, Any]]],
     expected_issues: Iterable[str],
@@ -210,7 +210,7 @@ async def assert_validation_result(
     response = await client.receive_json()
     assert response["success"]
     assert response["result"] == expected_validation_result
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check we get corresponding issues
     await client.send_json_auto_id({"type": "recorder/update_statistics_issues"})
@@ -223,7 +223,7 @@ async def assert_validation_result(
         if issue["type"] in expected_issues
     }
 
-    assert_issues(hass, expected_issue_registry_issues)
+    assert_issues(menuai, expected_issue_registry_issues)
 
 
 @pytest.mark.parametrize(
@@ -263,7 +263,7 @@ async def assert_validation_result(
     ],
 )
 async def test_compile_hourly_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -276,9 +276,9 @@ async def test_compile_hourly_statistics(
 ) -> None:
     """Test compiling hourly statistics."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -286,17 +286,17 @@ async def test_compile_hourly_statistics(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -310,7 +310,7 @@ async def test_compile_hourly_statistics(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -329,32 +329,32 @@ async def test_compile_hourly_statistics(
 
 
 async def test_compile_hourly_statistics_angle(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test compiling hourly statistics for measurement_angle."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass,
+            menuai,
             freezer,
             zero,
             "sensor.test1",
             WIND_DIRECTION_ATTRIBUTES,
             seq=WIND_DIRECTION_STATES_SEQ,
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -368,7 +368,7 @@ async def test_compile_hourly_statistics_angle(
             "unit_class": None,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -403,7 +403,7 @@ async def test_compile_hourly_statistics_angle(
     ],
 )
 async def test_compile_hourly_statistics_with_some_same_last_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -419,9 +419,9 @@ async def test_compile_hourly_statistics_with_some_same_last_updated(
     If the last updated value is the same we will have a zero duration.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     entity_id = "sensor.test1"
     attributes = {
         "device_class": device_class,
@@ -433,9 +433,9 @@ async def test_compile_hourly_statistics_with_some_same_last_updated(
 
     async def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        await async_wait_recording_done(hass)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        await async_wait_recording_done(menuai)
+        return menuai.states.get(entity_id)
 
     one = zero + timedelta(seconds=1 * 5)
     two = one + timedelta(seconds=10 * 5)
@@ -463,13 +463,13 @@ async def test_compile_hourly_statistics_with_some_same_last_updated(
         )
 
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -483,7 +483,7 @@ async def test_compile_hourly_statistics_with_some_same_last_updated(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -502,7 +502,7 @@ async def test_compile_hourly_statistics_with_some_same_last_updated(
 
 
 async def test_compile_hourly_statistics_with_some_same_last_updated_angle(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test compiling hourly statistics with the some of the same last updated value for measurement_angle.
@@ -510,17 +510,17 @@ async def test_compile_hourly_statistics_with_some_same_last_updated_angle(
     If the last updated value is the same we will have a zero duration.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     entity_id = "sensor.test1"
     seq = [350, 2, 15, 345]
 
     async def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        await async_wait_recording_done(hass)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        await async_wait_recording_done(menuai)
+        return menuai.states.get(entity_id)
 
     one = zero + timedelta(seconds=1 * 5)
     two = one + timedelta(seconds=10 * 5)
@@ -556,13 +556,13 @@ async def test_compile_hourly_statistics_with_some_same_last_updated_angle(
         )
 
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -576,7 +576,7 @@ async def test_compile_hourly_statistics_with_some_same_last_updated_angle(
             "unit_class": None,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -651,7 +651,7 @@ async def test_compile_hourly_statistics_with_some_same_last_updated_angle(
     ],
 )
 async def test_compile_hourly_statistics_with_all_same_last_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     attributes: dict[str, Any],
     display_unit: str,
@@ -668,16 +668,16 @@ async def test_compile_hourly_statistics_with_all_same_last_updated(
     If the last updated value is the same we will have a zero duration.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     entity_id = "sensor.test1"
 
     async def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        await async_wait_recording_done(hass)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        await async_wait_recording_done(menuai)
+        return menuai.states.get(entity_id)
 
     one = zero + timedelta(seconds=1 * 5)
     two = one + timedelta(seconds=10 * 5)
@@ -700,13 +700,13 @@ async def test_compile_hourly_statistics_with_all_same_last_updated(
         )
 
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -720,7 +720,7 @@ async def test_compile_hourly_statistics_with_all_same_last_updated(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -795,7 +795,7 @@ async def test_compile_hourly_statistics_with_all_same_last_updated(
     ],
 )
 async def test_compile_hourly_statistics_only_state_is_at_end_of_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     attributes: dict[str, Any],
     display_unit: str,
@@ -809,16 +809,16 @@ async def test_compile_hourly_statistics_only_state_is_at_end_of_period(
 ) -> None:
     """Test compiling hourly statistics when the only states are at end of period."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     entity_id = "sensor.test1"
 
     async def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        await async_wait_recording_done(hass)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        await async_wait_recording_done(menuai)
+        return menuai.states.get(entity_id)
 
     one = zero + timedelta(seconds=1 * 5)
     two = one + timedelta(seconds=10 * 5)
@@ -842,14 +842,14 @@ async def test_compile_hourly_statistics_only_state_is_at_end_of_period(
         )
 
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=5))
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=5))
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -863,7 +863,7 @@ async def test_compile_hourly_statistics_only_state_is_at_end_of_period(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -888,7 +888,7 @@ async def test_compile_hourly_statistics_only_state_is_at_end_of_period(
     ],
 )
 async def test_compile_hourly_statistics_purged_state_changes(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -901,9 +901,9 @@ async def test_compile_hourly_statistics_purged_state_changes(
     This tests statistics falls back to the state machine when states are purged.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -911,11 +911,11 @@ async def test_compile_hourly_statistics_purged_state_changes(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
@@ -923,17 +923,17 @@ async def test_compile_hourly_statistics_purged_state_changes(
 
     # Purge all states from the database
     with freeze_time(four):
-        await hass.services.async_call("recorder", "purge", {"keep_days": 0})
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
+        await menuai.services.async_call("recorder", "purge", {"keep_days": 0})
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert not hist
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -947,7 +947,7 @@ async def test_compile_hourly_statistics_purged_state_changes(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -981,7 +981,7 @@ async def test_compile_hourly_statistics_purged_state_changes(
     ],
 )
 async def test_compile_hourly_statistics_ignore_future_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -999,9 +999,9 @@ async def test_compile_hourly_statistics_ignore_future_state(
     """
     zero = get_start_time(dt_util.utcnow() + timedelta(minutes=5))
     previous_period = zero - timedelta(minutes=5)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -1009,18 +1009,18 @@ async def test_compile_hourly_statistics_ignore_future_state(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=previous_period)
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=previous_period)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -1034,7 +1034,7 @@ async def test_compile_hourly_statistics_ignore_future_state(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, previous_period, period="5minute")
+    stats = statistics_during_period(menuai, previous_period, period="5minute")
     # Check we get no stats from the previous period
     assert stats == {
         "sensor.test1": [
@@ -1055,65 +1055,65 @@ async def test_compile_hourly_statistics_ignore_future_state(
 
 @pytest.mark.parametrize("attributes", [TEMPERATURE_SENSOR_ATTRIBUTES])
 async def test_compile_hourly_statistics_wrong_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     attributes,
 ) -> None:
     """Test compiling hourly statistics for sensor with unit not matching device class."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
 
         attributes_tmp = dict(attributes)
         attributes_tmp["unit_of_measurement"] = "invalid"
         _, _states = await async_record_states(
-            hass, freezer, zero, "sensor.test2", attributes_tmp
+            menuai, freezer, zero, "sensor.test2", attributes_tmp
         )
         states = {**states, **_states}
         attributes_tmp.pop("unit_of_measurement")
         _, _states = await async_record_states(
-            hass, freezer, zero, "sensor.test3", attributes_tmp
+            menuai, freezer, zero, "sensor.test3", attributes_tmp
         )
         states = {**states, **_states}
 
         attributes_tmp = dict(attributes)
         attributes_tmp["state_class"] = "invalid"
         _, _states = await async_record_states(
-            hass, freezer, zero, "sensor.test4", attributes_tmp
+            menuai, freezer, zero, "sensor.test4", attributes_tmp
         )
         states = {**states, **_states}
         attributes_tmp.pop("state_class")
         _, _states = await async_record_states(
-            hass, freezer, zero, "sensor.test5", attributes_tmp
+            menuai, freezer, zero, "sensor.test5", attributes_tmp
         )
         states = {**states, **_states}
 
         attributes_tmp = dict(attributes)
         attributes_tmp["device_class"] = "invalid"
         _, _states = await async_record_states(
-            hass, freezer, zero, "sensor.test6", attributes_tmp
+            menuai, freezer, zero, "sensor.test6", attributes_tmp
         )
         states = {**states, **_states}
         attributes_tmp.pop("device_class")
         _, _states = await async_record_states(
-            hass, freezer, zero, "sensor.test7", attributes_tmp
+            menuai, freezer, zero, "sensor.test7", attributes_tmp
         )
         states = {**states, **_states}
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -1171,7 +1171,7 @@ async def test_compile_hourly_statistics_wrong_unit(
             "unit_class": "temperature",
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -1280,8 +1280,8 @@ async def test_compile_hourly_statistics_wrong_unit(
     ],
 )
 async def test_compile_hourly_sum_statistics_amount(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     units,
     state_class,
@@ -1297,10 +1297,10 @@ async def test_compile_hourly_sum_statistics_amount(
     period0_end = period1 = period0 + timedelta(minutes=5)
     period1_end = period2 = period0 + timedelta(minutes=10)
     period2_end = period0 + timedelta(minutes=15)
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": state_class,
@@ -1310,26 +1310,26 @@ async def test_compile_hourly_sum_statistics_amount(
     seq = [10, 15, 20, 10, 30, 40, 50, 60, 70]
     with freeze_time(period0) as freezer:
         four, eight, states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test1", attributes, seq
+            menuai, freezer, period0, "sensor.test1", attributes, seq
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass,
+        menuai,
         period0 - timedelta.resolution,
         eight + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=period0)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period1)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period2)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=period0)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period1)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period2)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -1343,7 +1343,7 @@ async def test_compile_hourly_sum_statistics_amount(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     expected_stats = {
         "sensor.test1": [
             {
@@ -1382,19 +1382,19 @@ async def test_compile_hourly_sum_statistics_amount(
 
     # With an offset of 1 minute, we expect to get the 2nd and 3rd periods
     stats = statistics_during_period(
-        hass, period0 + timedelta(minutes=1), period="5minute"
+        menuai, period0 + timedelta(minutes=1), period="5minute"
     )
     assert stats == {"sensor.test1": expected_stats["sensor.test1"][1:3]}
 
     # With an offset of 5 minutes, we expect to get the 2nd and 3rd periods
     stats = statistics_during_period(
-        hass, period0 + timedelta(minutes=5), period="5minute"
+        menuai, period0 + timedelta(minutes=5), period="5minute"
     )
     assert stats == {"sensor.test1": expected_stats["sensor.test1"][1:3]}
 
     # With an offset of 6 minutes, we expect to get the 3rd period
     stats = statistics_during_period(
-        hass, period0 + timedelta(minutes=6), period="5minute"
+        menuai, period0 + timedelta(minutes=6), period="5minute"
     )
     assert stats == {"sensor.test1": expected_stats["sensor.test1"][2:3]}
 
@@ -1403,7 +1403,7 @@ async def test_compile_hourly_sum_statistics_amount(
     assert "Compiling initial sum statistics for sensor.test1" in caplog.text
     assert "Detected new cycle for sensor.test1, value dropped" not in caplog.text
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # Adjust the inserted statistics
     await client.send_json(
@@ -1418,11 +1418,11 @@ async def test_compile_hourly_sum_statistics_amount(
     )
     response = await client.receive_json()
     assert response["success"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     expected_stats["sensor.test1"][1]["sum"] = pytest.approx(factor * 40.0 + 100)
     expected_stats["sensor.test1"][2]["sum"] = pytest.approx(factor * 70.0 + 100)
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == expected_stats
 
     # Adjust the inserted statistics
@@ -1438,11 +1438,11 @@ async def test_compile_hourly_sum_statistics_amount(
     )
     response = await client.receive_json()
     assert response["success"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     expected_stats["sensor.test1"][1]["sum"] = pytest.approx(factor * 40.0 + 100)
     expected_stats["sensor.test1"][2]["sum"] = pytest.approx(factor * 70.0 - 300)
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == expected_stats
 
 
@@ -1467,7 +1467,7 @@ async def test_compile_hourly_sum_statistics_amount(
     ],
 )
 async def test_compile_hourly_sum_statistics_amount_reset_every_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     state_class,
     device_class,
@@ -1479,9 +1479,9 @@ async def test_compile_hourly_sum_statistics_amount_reset_every_state_change(
 ) -> None:
     """Test compiling hourly statistics."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": state_class,
@@ -1504,7 +1504,7 @@ async def test_compile_hourly_sum_statistics_amount_reset_every_state_change(
             attributes = dict(attributes)
             attributes["last_reset"] = dt_util.as_local(one).isoformat()
             _states = await async_record_meter_state(
-                hass, freezer, one, "sensor.test1", attributes, seq[i : i + 1]
+                menuai, freezer, one, "sensor.test1", attributes, seq[i : i + 1]
             )
             states["sensor.test1"].extend(_states["sensor.test1"])
 
@@ -1515,26 +1515,26 @@ async def test_compile_hourly_sum_statistics_amount_reset_every_state_change(
             attributes = dict(attributes)
             attributes["last_reset"] = dt_util.as_local(two).isoformat()
             _states = await async_record_meter_state(
-                hass, freezer, two, "sensor.test1", attributes, seq[i : i + 1]
+                menuai, freezer, two, "sensor.test1", attributes, seq[i : i + 1]
             )
             states["sensor.test1"].extend(_states["sensor.test1"])
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         zero - timedelta.resolution,
         two + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
         significant_changes_only=False,
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=zero)
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=5))
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=5))
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -1548,7 +1548,7 @@ async def test_compile_hourly_sum_statistics_amount_reset_every_state_change(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -1591,7 +1591,7 @@ async def test_compile_hourly_sum_statistics_amount_reset_every_state_change(
     ],
 )
 async def test_compile_hourly_sum_statistics_amount_invalid_last_reset(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     state_class,
     device_class,
@@ -1603,9 +1603,9 @@ async def test_compile_hourly_sum_statistics_amount_invalid_last_reset(
 ) -> None:
     """Test compiling hourly statistics."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": state_class,
@@ -1626,25 +1626,25 @@ async def test_compile_hourly_sum_statistics_amount_invalid_last_reset(
             if i == 3:
                 attributes["last_reset"] = "festivus"  # not a valid time
             _states = await async_record_meter_state(
-                hass, freezer, one, "sensor.test1", attributes, seq[i : i + 1]
+                menuai, freezer, one, "sensor.test1", attributes, seq[i : i + 1]
             )
             states["sensor.test1"].extend(_states["sensor.test1"])
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         zero - timedelta.resolution,
         one + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
         significant_changes_only=False,
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -1658,7 +1658,7 @@ async def test_compile_hourly_sum_statistics_amount_invalid_last_reset(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -1692,7 +1692,7 @@ async def test_compile_hourly_sum_statistics_amount_invalid_last_reset(
     ],
 )
 async def test_compile_hourly_sum_statistics_nan_inf_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     state_class,
     device_class,
@@ -1704,9 +1704,9 @@ async def test_compile_hourly_sum_statistics_nan_inf_state(
 ) -> None:
     """Test compiling hourly statistics with nan and inf states."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": state_class,
@@ -1723,25 +1723,25 @@ async def test_compile_hourly_sum_statistics_nan_inf_state(
             attributes = dict(attributes)
             attributes["last_reset"] = dt_util.as_local(one).isoformat()
             _states = await async_record_meter_state(
-                hass, freezer, one, "sensor.test1", attributes, seq[i : i + 1]
+                menuai, freezer, one, "sensor.test1", attributes, seq[i : i + 1]
             )
             states["sensor.test1"].extend(_states["sensor.test1"])
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         zero - timedelta.resolution,
         one + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
         significant_changes_only=False,
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -1755,7 +1755,7 @@ async def test_compile_hourly_sum_statistics_nan_inf_state(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -1825,7 +1825,7 @@ async def test_compile_hourly_sum_statistics_nan_inf_state(
 )
 @pytest.mark.parametrize("state_class", ["total_increasing"])
 async def test_compile_hourly_sum_statistics_negative_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     entity_id,
     warning_1,
@@ -1840,18 +1840,18 @@ async def test_compile_hourly_sum_statistics_negative_state(
 ) -> None:
     """Test compiling hourly statistics with negative states."""
     zero = get_start_time(dt_util.utcnow())
-    hass.data.pop(loader.DATA_CUSTOM_COMPONENTS)
+    menuai.data.pop(loader.DATA_CUSTOM_COMPONENTS)
 
     mocksensor = MockSensor(name="custom_sensor")
     mocksensor._attr_should_poll = False
-    setup_test_component_platform(hass, DOMAIN, [mocksensor], built_in=False)
+    setup_test_component_platform(menuai, DOMAIN, [mocksensor], built_in=False)
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with freeze_time(zero) as freezer:
         await async_setup_component(
-            hass, "sensor", {"sensor": [{"platform": "demo"}, {"platform": "test"}]}
+            menuai, "sensor", {"sensor": [{"platform": "demo"}, {"platform": "test"}]}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     attributes = {
         "device_class": device_class,
         "state_class": state_class,
@@ -1861,7 +1861,7 @@ async def test_compile_hourly_sum_statistics_negative_state(
 
     states = {entity_id: []}
     offending_state = 5
-    if state := hass.states.get(entity_id):
+    if state := menuai.states.get(entity_id):
         states[entity_id].append(state)
         offending_state = 6
     one = zero
@@ -1869,25 +1869,25 @@ async def test_compile_hourly_sum_statistics_negative_state(
         for i in range(len(seq)):
             one = one + timedelta(seconds=5)
             _states = await async_record_meter_state(
-                hass, freezer, one, entity_id, attributes, seq[i : i + 1]
+                menuai, freezer, one, entity_id, attributes, seq[i : i + 1]
             )
             states[entity_id].extend(_states[entity_id])
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         zero - timedelta.resolution,
         one + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
         significant_changes_only=False,
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)[entity_id], dict(hist)[entity_id]
     )
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert {
         "display_unit_of_measurement": display_unit,
         "has_mean": False,
@@ -1899,7 +1899,7 @@ async def test_compile_hourly_sum_statistics_negative_state(
         "statistics_unit_of_measurement": statistics_unit,
         "unit_class": unit_class,
     } in statistic_ids
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats[entity_id] == [
         {
             "start": process_timestamp(zero).timestamp(),
@@ -1943,7 +1943,7 @@ async def test_compile_hourly_sum_statistics_negative_state(
     ],
 )
 async def test_compile_hourly_sum_statistics_total_no_reset(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -1957,9 +1957,9 @@ async def test_compile_hourly_sum_statistics_total_no_reset(
     period0_end = period1 = period0 + timedelta(minutes=5)
     period1_end = period2 = period0 + timedelta(minutes=10)
     period2_end = period0 + timedelta(minutes=15)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "total",
@@ -1968,26 +1968,26 @@ async def test_compile_hourly_sum_statistics_total_no_reset(
     seq = [10, 15, 20, 10, 30, 40, 50, 60, 70]
     with freeze_time(period0) as freezer:
         four, eight, states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test1", attributes, seq
+            menuai, freezer, period0, "sensor.test1", attributes, seq
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass,
+        menuai,
         period0 - timedelta.resolution,
         eight + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=period0)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period1)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period2)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=period0)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period1)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period2)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -2001,7 +2001,7 @@ async def test_compile_hourly_sum_statistics_total_no_reset(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2057,7 +2057,7 @@ async def test_compile_hourly_sum_statistics_total_no_reset(
     ],
 )
 async def test_compile_hourly_sum_statistics_total_increasing(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -2071,9 +2071,9 @@ async def test_compile_hourly_sum_statistics_total_increasing(
     period0_end = period1 = period0 + timedelta(minutes=5)
     period1_end = period2 = period0 + timedelta(minutes=10)
     period2_end = period0 + timedelta(minutes=15)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "total_increasing",
@@ -2082,26 +2082,26 @@ async def test_compile_hourly_sum_statistics_total_increasing(
     seq = [10, 15, 20, 10, 30, 40, 50, 60, 70]
     with freeze_time(period0) as freezer:
         four, eight, states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test1", attributes, seq
+            menuai, freezer, period0, "sensor.test1", attributes, seq
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass,
+        menuai,
         period0 - timedelta.resolution,
         eight + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=period0)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period1)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period2)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=period0)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period1)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period2)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -2115,7 +2115,7 @@ async def test_compile_hourly_sum_statistics_total_increasing(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2171,7 +2171,7 @@ async def test_compile_hourly_sum_statistics_total_increasing(
     ],
 )
 async def test_compile_hourly_sum_statistics_total_increasing_small_dip(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -2185,9 +2185,9 @@ async def test_compile_hourly_sum_statistics_total_increasing_small_dip(
     period0_end = period1 = period0 + timedelta(minutes=5)
     period1_end = period2 = period0 + timedelta(minutes=10)
     period2_end = period0 + timedelta(minutes=15)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "total_increasing",
@@ -2196,29 +2196,29 @@ async def test_compile_hourly_sum_statistics_total_increasing_small_dip(
     seq = [10, 15, 20, 19, 30, 40, 39, 60, 70]
     with freeze_time(period0) as freezer:
         four, eight, states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test1", attributes, seq
+            menuai, freezer, period0, "sensor.test1", attributes, seq
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass,
+        menuai,
         period0 - timedelta.resolution,
         eight + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=period0)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period1)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=period0)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period1)
+    await async_wait_recording_done(menuai)
     assert (
         "Entity sensor.test1 has state class total_increasing, but its state is not "
         "strictly increasing."
     ) not in caplog.text
-    do_adhoc_statistics(hass, start=period2)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=period2)
+    await async_wait_recording_done(menuai)
     state = states["sensor.test1"][6].state
     previous_state = float(states["sensor.test1"][5].state)
     last_updated = states["sensor.test1"][6].last_updated.isoformat()
@@ -2228,7 +2228,7 @@ async def test_compile_hourly_sum_statistics_total_increasing_small_dip(
         f"last_updated set to {last_updated}. Please create a bug report at "
         "https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue"
     ) in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -2242,7 +2242,7 @@ async def test_compile_hourly_sum_statistics_total_increasing_small_dip(
             "unit_class": unit_class,
         }
     ]
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2281,16 +2281,16 @@ async def test_compile_hourly_sum_statistics_total_increasing_small_dip(
 
 
 async def test_compile_hourly_energy_statistics_unsupported(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test compiling hourly statistics."""
     period0 = get_start_time(dt_util.utcnow())
     period0_end = period1 = period0 + timedelta(minutes=5)
     period1_end = period2 = period0 + timedelta(minutes=10)
     period2_end = period0 + timedelta(minutes=15)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     sns1_attr = {
         "device_class": "energy",
         "state_class": "total",
@@ -2305,35 +2305,35 @@ async def test_compile_hourly_energy_statistics_unsupported(
 
     with freeze_time(period0) as freezer:
         four, eight, states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test1", sns1_attr, seq1
+            menuai, freezer, period0, "sensor.test1", sns1_attr, seq1
         )
         _, _, _states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test2", sns2_attr, seq2
+            menuai, freezer, period0, "sensor.test2", sns2_attr, seq2
         )
         states = {**states, **_states}
         _, _, _states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test3", sns3_attr, seq3
+            menuai, freezer, period0, "sensor.test3", sns3_attr, seq3
         )
     states = {**states, **_states}
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         period0 - timedelta.resolution,
         eight + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=period0)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period1)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period2)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=period0)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period1)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period2)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -2347,7 +2347,7 @@ async def test_compile_hourly_energy_statistics_unsupported(
             "unit_class": "energy",
         }
     ]
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2386,16 +2386,16 @@ async def test_compile_hourly_energy_statistics_unsupported(
 
 
 async def test_compile_hourly_energy_statistics_multiple(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test compiling multiple hourly statistics."""
     period0 = get_start_time(dt_util.utcnow())
     period0_end = period1 = period0 + timedelta(minutes=5)
     period1_end = period2 = period0 + timedelta(minutes=10)
     period2_end = period0 + timedelta(minutes=15)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     sns1_attr = {**ENERGY_SENSOR_ATTRIBUTES, "last_reset": None}
     sns2_attr = {**ENERGY_SENSOR_ATTRIBUTES, "last_reset": None}
     sns3_attr = {
@@ -2409,34 +2409,34 @@ async def test_compile_hourly_energy_statistics_multiple(
 
     with freeze_time(period0) as freezer:
         four, eight, states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test1", sns1_attr, seq1
+            menuai, freezer, period0, "sensor.test1", sns1_attr, seq1
         )
         _, _, _states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test2", sns2_attr, seq2
+            menuai, freezer, period0, "sensor.test2", sns2_attr, seq2
         )
         states = {**states, **_states}
         _, _, _states = await async_record_meter_states(
-            hass, freezer, period0, "sensor.test3", sns3_attr, seq3
+            menuai, freezer, period0, "sensor.test3", sns3_attr, seq3
         )
     states = {**states, **_states}
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass,
+        menuai,
         period0 - timedelta.resolution,
         eight + timedelta.resolution,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
     )
     assert_multiple_states_equal_without_context_and_last_changed(
         dict(states)["sensor.test1"], dict(hist)["sensor.test1"]
     )
 
-    do_adhoc_statistics(hass, start=period0)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period1)
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period2)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=period0)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period1)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period2)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -2472,7 +2472,7 @@ async def test_compile_hourly_energy_statistics_multiple(
             "unit_class": "energy",
         },
     ]
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2601,7 +2601,7 @@ async def test_compile_hourly_energy_statistics_multiple(
     ],
 )
 async def test_compile_hourly_statistics_unchanged(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -2609,9 +2609,9 @@ async def test_compile_hourly_statistics_unchanged(
 ) -> None:
     """Test compiling hourly statistics, with no changes during the hour."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -2619,17 +2619,17 @@ async def test_compile_hourly_statistics_unchanged(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=four)
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, four, period="5minute")
+    do_adhoc_statistics(menuai, start=four)
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, four, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2648,32 +2648,32 @@ async def test_compile_hourly_statistics_unchanged(
 
 
 async def test_compile_hourly_statistics_unchanged_angle(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test compiling hourly statistics, with no changes during the hour for measurement_angle."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass,
+            menuai,
             freezer,
             zero,
             "sensor.test1",
             WIND_DIRECTION_ATTRIBUTES,
             seq=WIND_DIRECTION_STATES_SEQ,
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=four)
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, four, period="5minute")
+    do_adhoc_statistics(menuai, start=four)
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, four, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2699,7 +2699,7 @@ async def test_compile_hourly_statistics_unchanged_angle(
     ],
 )
 async def test_compile_hourly_statistics_partially_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     attributes: dict,
     expected_mean: float,
@@ -2708,21 +2708,21 @@ async def test_compile_hourly_statistics_partially_unavailable(
 ) -> None:
     """Test compiling hourly statistics, with the sensor being partially unavailable."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     four, states = await async_record_states_partially_unavailable(
-        hass, zero, "sensor.test1", attributes
+        menuai, zero, "sensor.test1", attributes
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="5minute")
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -2767,7 +2767,7 @@ async def test_compile_hourly_statistics_partially_unavailable(
     ],
 )
 async def test_compile_hourly_statistics_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -2779,31 +2779,31 @@ async def test_compile_hourly_statistics_unavailable(
     sensor.test2 should have statistics generated
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
         "unit_of_measurement": state_unit,
     }
     four, states = await async_record_states_partially_unavailable(
-        hass, zero, "sensor.test1", attributes
+        menuai, zero, "sensor.test1", attributes
     )
     with freeze_time(zero) as freezer:
         _, _states = await async_record_states(
-            hass, freezer, zero, "sensor.test2", attributes
+            menuai, freezer, zero, "sensor.test2", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states = {**states, **_states}
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=four)
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, four, period="5minute")
+    do_adhoc_statistics(menuai, start=four)
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, four, period="5minute")
     assert stats == {
         "sensor.test2": [
             {
@@ -2822,7 +2822,7 @@ async def test_compile_hourly_statistics_unavailable(
 
 
 async def test_compile_hourly_statistics_unavailable_angle(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test compiling hourly statistics, with one sensor being unavailable for measurement_angle.
@@ -2831,31 +2831,31 @@ async def test_compile_hourly_statistics_unavailable_angle(
     sensor.test2 should have statistics generated
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     four, states = await async_record_states_partially_unavailable(
-        hass, zero, "sensor.test1", WIND_DIRECTION_ATTRIBUTES
+        menuai, zero, "sensor.test1", WIND_DIRECTION_ATTRIBUTES
     )
     with freeze_time(zero) as freezer:
         _, _states = await async_record_states(
-            hass,
+            menuai,
             freezer,
             zero,
             "sensor.test2",
             WIND_DIRECTION_ATTRIBUTES,
             seq=WIND_DIRECTION_STATES_SEQ,
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states = {**states, **_states}
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=four)
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, four, period="5minute")
+    do_adhoc_statistics(menuai, start=four)
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, four, period="5minute")
     assert stats == {
         "sensor.test2": [
             {
@@ -2874,19 +2874,19 @@ async def test_compile_hourly_statistics_unavailable_angle(
 
 
 async def test_compile_hourly_statistics_fails(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test compiling hourly statistics throws."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     with patch(
-        "homeassistant.components.sensor.recorder.compile_statistics",
+        "menuai.components.sensor.recorder.compile_statistics",
         side_effect=Exception,
     ):
-        do_adhoc_statistics(hass, start=zero)
-        await async_wait_recording_done(hass)
+        do_adhoc_statistics(menuai, start=zero)
+        await async_wait_recording_done(menuai)
     assert "Error while processing event StatisticsTask" in caplog.text
 
 
@@ -3154,7 +3154,7 @@ async def test_compile_hourly_statistics_fails(
     ],
 )
 async def test_list_statistic_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     state_class: str | SensorStateClass,
     device_class: str | SensorDeviceClass,
     state_unit: str,
@@ -3164,17 +3164,17 @@ async def test_list_statistic_ids(
     statistic_type: str | StatisticMeanType,
 ) -> None:
     """Test listing future statistic ids."""
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "last_reset": 0,
         "state_class": state_class,
         "unit_of_measurement": state_unit,
     }
-    hass.states.async_set("sensor.test1", 0, attributes=attributes)
-    statistic_ids = await async_list_statistic_ids(hass)
+    menuai.states.async_set("sensor.test1", 0, attributes=attributes)
+    statistic_ids = await async_list_statistic_ids(menuai)
     mean_type = (
         statistic_type
         if isinstance(statistic_type, StatisticMeanType)
@@ -3198,7 +3198,7 @@ async def test_list_statistic_ids(
     ]
 
     for stat_type in ("mean", "sum", "dogs"):
-        statistic_ids = await async_list_statistic_ids(hass, statistic_type=stat_type)
+        statistic_ids = await async_list_statistic_ids(menuai, statistic_type=stat_type)
         if statistic_type == stat_type:
             assert statistic_ids == [
                 {
@@ -3222,29 +3222,29 @@ async def test_list_statistic_ids(
     [{**ENERGY_SENSOR_ATTRIBUTES, "last_reset": 0}, TEMPERATURE_SENSOR_ATTRIBUTES],
 )
 async def test_list_statistic_ids_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     energy_attributes: dict[str, Any],
 ) -> None:
     """Test listing future statistic ids for unsupported sensor."""
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = dict(energy_attributes)
-    hass.states.async_set("sensor.test1", 0, attributes=attributes)
+    menuai.states.async_set("sensor.test1", 0, attributes=attributes)
     if "last_reset" in attributes:
         attributes.pop("unit_of_measurement")
-        hass.states.async_set("last_reset.test2", 0, attributes=attributes)
+        menuai.states.async_set("last_reset.test2", 0, attributes=attributes)
     attributes = dict(energy_attributes)
     if "unit_of_measurement" in attributes:
         attributes["unit_of_measurement"] = "invalid"
-        hass.states.async_set("sensor.test3", 0, attributes=attributes)
+        menuai.states.async_set("sensor.test3", 0, attributes=attributes)
         attributes.pop("unit_of_measurement")
-        hass.states.async_set("sensor.test4", 0, attributes=attributes)
+        menuai.states.async_set("sensor.test4", 0, attributes=attributes)
     attributes = dict(energy_attributes)
     attributes["state_class"] = "invalid"
-    hass.states.async_set("sensor.test5", 0, attributes=attributes)
+    menuai.states.async_set("sensor.test5", 0, attributes=attributes)
     attributes.pop("state_class")
-    hass.states.async_set("sensor.test6", 0, attributes=attributes)
+    menuai.states.async_set("sensor.test6", 0, attributes=attributes)
 
 
 @pytest.mark.parametrize(
@@ -3262,7 +3262,7 @@ async def test_list_statistic_ids_unsupported(
     ],
 )
 async def test_compile_hourly_statistics_changing_units_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -3277,9 +3277,9 @@ async def test_compile_hourly_statistics_changing_units_1(
     This tests the case where the recorder cannot convert between the units.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -3287,27 +3287,27 @@ async def test_compile_hourly_statistics_changing_units_1(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
         attributes["unit_of_measurement"] = state_unit2
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     assert "cannot be converted to the unit of previously" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3321,7 +3321,7 @@ async def test_compile_hourly_statistics_changing_units_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3337,13 +3337,13 @@ async def test_compile_hourly_statistics_changing_units_1(
         ]
     }
 
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=10))
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=10))
+    await async_wait_recording_done(menuai)
     assert (
         f"The unit of sensor.test1 ({state_unit2}) cannot be converted to the unit of "
         f"previously compiled statistics ({state_unit})" in caplog.text
     )
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3357,7 +3357,7 @@ async def test_compile_hourly_statistics_changing_units_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3391,7 +3391,7 @@ async def test_compile_hourly_statistics_changing_units_1(
     ],
 )
 async def test_compile_hourly_statistics_changing_units_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -3408,9 +3408,9 @@ async def test_compile_hourly_statistics_changing_units_2(
     converter.
     """
     zero = get_start_time(dt_util.utcnow()) - timedelta(seconds=30 * 5)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -3418,24 +3418,24 @@ async def test_compile_hourly_statistics_changing_units_2(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
         attributes["unit_of_measurement"] = "cats"
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero + timedelta(seconds=30 * 5))
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(seconds=30 * 5))
+    await async_wait_recording_done(menuai)
     assert "The unit of sensor.test1 is changing" in caplog.text
     assert "and matches the unit of already compiled statistics" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3449,7 +3449,7 @@ async def test_compile_hourly_statistics_changing_units_2(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {}
 
     assert "Error while processing event StatisticsTask" not in caplog.text
@@ -3471,7 +3471,7 @@ async def test_compile_hourly_statistics_changing_units_2(
     ],
 )
 async def test_compile_hourly_statistics_changing_units_3(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -3488,9 +3488,9 @@ async def test_compile_hourly_statistics_changing_units_3(
     converter.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -3498,27 +3498,27 @@ async def test_compile_hourly_statistics_changing_units_3(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
         attributes["unit_of_measurement"] = "cats"
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     assert "does not match the unit of already compiled" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3532,7 +3532,7 @@ async def test_compile_hourly_statistics_changing_units_3(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3548,13 +3548,13 @@ async def test_compile_hourly_statistics_changing_units_3(
         ]
     }
 
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=10))
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=10))
+    await async_wait_recording_done(menuai)
     assert "The unit of sensor.test1 is changing" in caplog.text
     assert (
         f"matches the unit of already compiled statistics ({state_unit})" in caplog.text
     )
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3568,7 +3568,7 @@ async def test_compile_hourly_statistics_changing_units_3(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3596,7 +3596,7 @@ async def test_compile_hourly_statistics_changing_units_3(
     ],
 )
 async def test_compile_hourly_statistics_convert_units_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     state_unit_1,
     state_unit_2,
@@ -3611,9 +3611,9 @@ async def test_compile_hourly_statistics_convert_units_1(
     This tests the case where the recorder can convert between the units.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": None,
         "state_class": "measurement",
@@ -3621,23 +3621,23 @@ async def test_compile_hourly_statistics_convert_units_1(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
         four, _states = await async_record_states(
-            hass,
+            menuai,
             freezer,
             zero + timedelta(minutes=5),
             "sensor.test1",
             attributes,
             seq=[0, 1, None],
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     assert "does not match the unit of already compiled" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3651,7 +3651,7 @@ async def test_compile_hourly_statistics_convert_units_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3670,22 +3670,22 @@ async def test_compile_hourly_statistics_convert_units_1(
     attributes["unit_of_measurement"] = state_unit_2
     with freeze_time(four) as freezer:
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=10))
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=10))
+    await async_wait_recording_done(menuai)
     assert "The unit of sensor.test1 is changing" not in caplog.text
     assert (
         f"matches the unit of already compiled statistics ({state_unit_1})"
         not in caplog.text
     )
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3699,7 +3699,7 @@ async def test_compile_hourly_statistics_convert_units_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3758,7 +3758,7 @@ async def test_compile_hourly_statistics_convert_units_1(
     ],
 )
 async def test_compile_hourly_statistics_equivalent_units_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -3772,9 +3772,9 @@ async def test_compile_hourly_statistics_equivalent_units_1(
 ) -> None:
     """Test compiling hourly statistics where units change from one hour to the next."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -3782,27 +3782,27 @@ async def test_compile_hourly_statistics_equivalent_units_1(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
         attributes["unit_of_measurement"] = state_unit2
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     assert "cannot be converted to the unit of previously" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3816,7 +3816,7 @@ async def test_compile_hourly_statistics_equivalent_units_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3832,9 +3832,9 @@ async def test_compile_hourly_statistics_equivalent_units_1(
         ]
     }
 
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=10))
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=10))
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3848,7 +3848,7 @@ async def test_compile_hourly_statistics_equivalent_units_1(
             "unit_class": unit_class2,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3887,7 +3887,7 @@ async def test_compile_hourly_statistics_equivalent_units_1(
     ],
 )
 async def test_compile_hourly_statistics_equivalent_units_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -3899,9 +3899,9 @@ async def test_compile_hourly_statistics_equivalent_units_2(
 ) -> None:
     """Test compiling hourly statistics where units change during an hour."""
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -3909,24 +3909,24 @@ async def test_compile_hourly_statistics_equivalent_units_2(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
         attributes["unit_of_measurement"] = state_unit2
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=zero + timedelta(seconds=30 * 10))
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(seconds=30 * 10))
+    await async_wait_recording_done(menuai)
     assert "The unit of sensor.test1 is changing" not in caplog.text
     assert "and matches the unit of already compiled statistics" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -3940,7 +3940,7 @@ async def test_compile_hourly_statistics_equivalent_units_2(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -3977,7 +3977,7 @@ async def test_compile_hourly_statistics_equivalent_units_2(
     ],
 )
 async def test_compile_hourly_statistics_changing_device_class_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -3993,9 +3993,9 @@ async def test_compile_hourly_statistics_changing_device_class_1(
     Device class is ignored, meaning changing device class should not influence the statistics.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     # Record some states for an initial period, the entity has no device class
     attributes = {
@@ -4004,14 +4004,14 @@ async def test_compile_hourly_statistics_changing_device_class_1(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     assert "does not match the unit of already compiled" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4025,7 +4025,7 @@ async def test_compile_hourly_statistics_changing_device_class_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -4045,23 +4045,23 @@ async def test_compile_hourly_statistics_changing_device_class_1(
     attributes["device_class"] = device_class
     with freeze_time(zero) as freezer:
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
     # Run statistics again, additional statistics is generated
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=10))
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=10))
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4075,7 +4075,7 @@ async def test_compile_hourly_statistics_changing_device_class_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -4105,23 +4105,23 @@ async def test_compile_hourly_statistics_changing_device_class_1(
     attributes["unit_of_measurement"] = statistic_unit
     with freeze_time(zero) as freezer:
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=15), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=15), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=20), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=20), "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
     # Run statistics again, additional statistics is generated
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=20))
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=20))
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4135,7 +4135,7 @@ async def test_compile_hourly_statistics_changing_device_class_1(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -4190,7 +4190,7 @@ async def test_compile_hourly_statistics_changing_device_class_1(
     ],
 )
 async def test_compile_hourly_statistics_changing_device_class_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -4207,9 +4207,9 @@ async def test_compile_hourly_statistics_changing_device_class_2(
     Device class is ignored, meaning changing device class should not influence the statistics.
     """
     zero = get_start_time(dt_util.utcnow())
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     # Record some states for an initial period, the entity has a device class
     attributes = {
@@ -4219,14 +4219,14 @@ async def test_compile_hourly_statistics_changing_device_class_2(
     }
     with freeze_time(zero) as freezer:
         four, states = await async_record_states(
-            hass, freezer, zero, "sensor.test1", attributes
+            menuai, freezer, zero, "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     assert "does not match the unit of already compiled" not in caplog.text
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4240,7 +4240,7 @@ async def test_compile_hourly_statistics_changing_device_class_2(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -4260,23 +4260,23 @@ async def test_compile_hourly_statistics_changing_device_class_2(
     attributes.pop("device_class")
     with freeze_time(zero) as freezer:
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=5), "sensor.test1", attributes
         )
         states["sensor.test1"] += _states["sensor.test1"]
         four, _states = await async_record_states(
-            hass, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
+            menuai, freezer, zero + timedelta(minutes=10), "sensor.test1", attributes
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
     hist = history.get_significant_states(
-        hass, zero, four, hass.states.async_entity_ids()
+        menuai, zero, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
     # Run statistics again, additional statistics is generated
-    do_adhoc_statistics(hass, start=zero + timedelta(minutes=10))
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=zero + timedelta(minutes=10))
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4290,7 +4290,7 @@ async def test_compile_hourly_statistics_changing_device_class_2(
             "unit_class": unit_class,
         },
     ]
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -4332,7 +4332,7 @@ async def test_compile_hourly_statistics_changing_device_class_2(
     ],
 )
 async def test_compile_hourly_statistics_changing_state_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_unit,
@@ -4345,9 +4345,9 @@ async def test_compile_hourly_statistics_changing_state_class(
     period0 = get_start_time(dt_util.utcnow())
     period0_end = period1 = period0 + timedelta(minutes=5)
     period1_end = period0 + timedelta(minutes=10)
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes_1 = {
         "device_class": device_class,
         "state_class": "measurement",
@@ -4360,12 +4360,12 @@ async def test_compile_hourly_statistics_changing_state_class(
     }
     with freeze_time(period0) as freezer:
         four, states = await async_record_states(
-            hass, freezer, period0, "sensor.test1", attributes_1
+            menuai, freezer, period0, "sensor.test1", attributes_1
         )
-    await async_wait_recording_done(hass)
-    do_adhoc_statistics(hass, start=period0)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    await async_wait_recording_done(menuai)
+    do_adhoc_statistics(menuai, start=period0)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4379,7 +4379,7 @@ async def test_compile_hourly_statistics_changing_state_class(
             "unit_class": unit_class,
         },
     ]
-    metadata = get_metadata(hass, statistic_ids={"sensor.test1"})
+    metadata = get_metadata(menuai, statistic_ids={"sensor.test1"})
     assert metadata == {
         "sensor.test1": (
             1,
@@ -4398,18 +4398,18 @@ async def test_compile_hourly_statistics_changing_state_class(
     # Add more states, with changed state class
     with freeze_time(period1) as freezer:
         four, _states = await async_record_states(
-            hass, freezer, period1, "sensor.test1", attributes_2
+            menuai, freezer, period1, "sensor.test1", attributes_2
         )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     states["sensor.test1"] += _states["sensor.test1"]
     hist = history.get_significant_states(
-        hass, period0, four, hass.states.async_entity_ids()
+        menuai, period0, four, menuai.states.async_entity_ids()
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    do_adhoc_statistics(hass, start=period1)
-    await async_wait_recording_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    do_adhoc_statistics(menuai, start=period1)
+    await async_wait_recording_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4423,7 +4423,7 @@ async def test_compile_hourly_statistics_changing_state_class(
             "unit_class": unit_class,
         },
     ]
-    metadata = get_metadata(hass, statistic_ids={"sensor.test1"})
+    metadata = get_metadata(menuai, statistic_ids={"sensor.test1"})
     assert metadata == {
         "sensor.test1": (
             1,
@@ -4438,7 +4438,7 @@ async def test_compile_hourly_statistics_changing_state_class(
             },
         )
     }
-    stats = statistics_during_period(hass, period0, period="5minute")
+    stats = statistics_during_period(menuai, period0, period="5minute")
     assert stats == {
         "sensor.test1": [
             {
@@ -4471,7 +4471,7 @@ async def test_compile_hourly_statistics_changing_state_class(
 @pytest.mark.parametrize("recorder_config", [{CONF_COMMIT_INTERVAL: 3600 * 4}])
 @pytest.mark.freeze_time("2021-09-01 05:00")  # August 31st, 23:00 local time
 async def test_compile_statistics_hourly_daily_monthly_summary(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -4479,10 +4479,10 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
     dt_util.set_default_time_zone(dt_util.get_time_zone("America/Regina"))
 
     zero = dt_util.utcnow()
-    instance = get_instance(hass)
-    await async_setup_component(hass, "sensor", {})
+    instance = get_instance(menuai)
+    await async_setup_component(menuai, "sensor", {})
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     attributes = {
         "device_class": None,
         "state_class": "measurement",
@@ -4567,7 +4567,7 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
         seq = [-10, 15, 30]
         # test1 has same value in every period
         four, _states = await async_record_states(
-            hass, freezer, start, "sensor.test1", attributes, seq
+            menuai, freezer, start, "sensor.test1", attributes, seq
         )
         states["sensor.test1"] += _states["sensor.test1"]
         last_state = last_states["sensor.test1"]
@@ -4578,7 +4578,7 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
         # test2 values change: min/max at the last state
         seq = [-10 * (i + 1), 15 * (i + 1), 30 * (i + 1)]
         four, _states = await async_record_states(
-            hass, freezer, start, "sensor.test2", attributes, seq
+            menuai, freezer, start, "sensor.test2", attributes, seq
         )
         states["sensor.test2"] += _states["sensor.test2"]
         last_state = last_states["sensor.test2"]
@@ -4589,7 +4589,7 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
         # test3 values change: min/max at the first state
         seq = [-10 * (23 - i + 1), 15 * (23 - i + 1), 30 * (23 - i + 1)]
         four, _states = await async_record_states(
-            hass, freezer, start, "sensor.test3", attributes, seq
+            menuai, freezer, start, "sensor.test3", attributes, seq
         )
         states["sensor.test3"] += _states["sensor.test3"]
         last_state = last_states["sensor.test3"]
@@ -4602,7 +4602,7 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
         start_meter = start
         for j in range(len(seq)):
             _states = await async_record_meter_state(
-                hass,
+                menuai,
                 freezer,
                 start_meter,
                 "sensor.test4",
@@ -4621,7 +4621,7 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
         # test5 circular mean
         seq = [350 - i, 0 + (i / 2.0), 15 + i]
         four, _states = await async_record_states(
-            hass, freezer, start, "sensor.test5", WIND_DIRECTION_ATTRIBUTES, seq
+            menuai, freezer, start, "sensor.test5", WIND_DIRECTION_ATTRIBUTES, seq
         )
         states["sensor.test5"] += _states["sensor.test5"]
         values = [(seq, durations[j]) for j, seq in enumerate(seq)]
@@ -4631,25 +4631,25 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
         last_states["sensor.test5"] = seq[-1]
 
         start += timedelta(minutes=5)
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     hist = history.get_significant_states(
-        hass,
+        menuai,
         zero - timedelta.resolution,
         four,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
         significant_changes_only=False,
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     # Generate 5-minute statistics for two hours
     start = zero
     for _ in range(24):
-        do_adhoc_statistics(hass, start=start)
-        await async_wait_recording_done(hass)
+        do_adhoc_statistics(menuai, start=start)
+        await async_wait_recording_done(menuai)
         start += timedelta(minutes=5)
 
-    statistic_ids = await async_list_statistic_ids(hass)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.test1",
@@ -4716,9 +4716,9 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
     instance.async_adjust_statistics(
         "sensor.test4", sum_adjustement_start, sum_adjustment, "EUR"
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     expected_stats = {
         "sensor.test1": [],
         "sensor.test2": [],
@@ -4774,7 +4774,7 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
         start: datetime,
         next_datetime: Callable[[datetime], datetime],
     ) -> None:
-        stats = statistics_during_period(hass, zero, period=period)
+        stats = statistics_during_period(menuai, zero, period=period)
         expected_stats = {
             "sensor.test1": [],
             "sensor.test2": [],
@@ -4846,7 +4846,7 @@ async def test_compile_statistics_hourly_daily_monthly_summary(
 
 
 async def async_record_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     zero: datetime,
     entity_id: str,
@@ -4863,8 +4863,8 @@ async def async_record_states(
 
     def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        return menuai.states.get(entity_id)
 
     one = zero + timedelta(seconds=1 * 5)
     two = one + timedelta(seconds=10 * 5)
@@ -4920,8 +4920,8 @@ async def async_record_states(
     ],
 )
 async def test_validate_unit_change_convertible(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -4939,44 +4939,44 @@ async def test_validate_unit_change_convertible(
 
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, unit in state matching device class - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         10,
         attributes={**attributes, "unit_of_measurement": unit},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, unit in state not matching device class - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         11,
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Statistics has run, incompatible unit - expect error
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now)
-    hass.states.async_set(
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now)
+    menuai.states.async_set(
         "sensor.test",
         12,
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     expected = {
         "sensor.test": [
             {
@@ -4990,60 +4990,60 @@ async def test_validate_unit_change_convertible(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {UNITS_CHANGED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {UNITS_CHANGED_ISSUE})
 
     # Unavailable state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         "unavailable",
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Unknown state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         "unknown",
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         13,
         attributes={**attributes, "unit_of_measurement": unit},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state, statistic runs again - empty response
-    do_adhoc_statistics(hass, start=now + timedelta(hours=1))
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=1))
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state in compatible unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         13,
         attributes={**attributes, "unit_of_measurement": unit2},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state, statistic runs again - empty response
-    do_adhoc_statistics(hass, start=now + timedelta(hours=2))
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=2))
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Remove the state - expect error about missing state
-    hass.states.async_remove("sensor.test")
+    menuai.states.async_remove("sensor.test")
     expected = {
         "sensor.test": [
             {
@@ -5052,7 +5052,7 @@ async def test_validate_unit_change_convertible(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {})
+    await assert_validation_result(menuai, client, expected, {})
 
 
 @pytest.mark.parametrize(
@@ -5062,8 +5062,8 @@ async def test_validate_unit_change_convertible(
     ],
 )
 async def test_validate_statistics_unit_ignore_device_class(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
 ) -> None:
@@ -5073,33 +5073,33 @@ async def test_validate_statistics_unit_ignore_device_class(
     """
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, no device class - empty response
     initial_attributes = {"state_class": "measurement", "unit_of_measurement": "dogs"}
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=initial_attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
-    await assert_validation_result(hass, client, {}, {})
+    await menuai.async_block_till_done()
+    await assert_validation_result(menuai, client, {}, {})
 
     # Statistics has run, device class set not matching unit - empty response
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test",
         12,
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await hass.async_block_till_done()
-    await assert_validation_result(hass, client, {}, {})
+    await menuai.async_block_till_done()
+    await assert_validation_result(menuai, client, {}, {})
 
 
 @pytest.mark.parametrize(
@@ -5145,8 +5145,8 @@ async def test_validate_statistics_unit_ignore_device_class(
     ],
 )
 async def test_validate_statistics_unit_change_no_device_class(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -5164,44 +5164,44 @@ async def test_validate_statistics_unit_change_no_device_class(
 
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, sensor state set - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         10,
         attributes={**attributes, "unit_of_measurement": unit},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, sensor state set to an incompatible unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         11,
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Statistics has run, incompatible unit - expect error
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now)
-    hass.states.async_set(
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now)
+    menuai.states.async_set(
         "sensor.test",
         12,
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     expected = {
         "sensor.test": [
             {
@@ -5215,60 +5215,60 @@ async def test_validate_statistics_unit_change_no_device_class(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {UNITS_CHANGED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {UNITS_CHANGED_ISSUE})
 
     # Unavailable state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         "unavailable",
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Unknown state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         "unknown",
         attributes={**attributes, "unit_of_measurement": "dogs"},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         13,
         attributes={**attributes, "unit_of_measurement": unit},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state, statistic runs again - empty response
-    do_adhoc_statistics(hass, start=now + timedelta(hours=1))
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=1))
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state in compatible unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         13,
         attributes={**attributes, "unit_of_measurement": unit2},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state, statistic runs again - empty response
-    do_adhoc_statistics(hass, start=now + timedelta(hours=2))
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=2))
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Remove the state - expect error about missing state
-    hass.states.async_remove("sensor.test")
+    menuai.states.async_remove("sensor.test")
     expected = {
         "sensor.test": [
             {
@@ -5277,7 +5277,7 @@ async def test_validate_statistics_unit_change_no_device_class(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {})
+    await assert_validation_result(menuai, client, expected, {})
 
 
 @pytest.mark.parametrize(
@@ -5287,8 +5287,8 @@ async def test_validate_statistics_unit_change_no_device_class(
     ],
 )
 async def test_validate_statistics_state_class_removed(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -5296,33 +5296,33 @@ async def test_validate_statistics_state_class_removed(
     """Test validate_statistics."""
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, valid state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
-    await assert_validation_result(hass, client, {}, {})
+    await menuai.async_block_till_done()
+    await assert_validation_result(menuai, client, {}, {})
 
     # Statistics has run, empty response
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # State update with invalid state class, expect error
     _attributes = dict(attributes)
     _attributes.pop("state_class")
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 12, attributes=_attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     expected = {
         "sensor.test": [
             {
@@ -5331,21 +5331,21 @@ async def test_validate_statistics_state_class_removed(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {STATE_CLASS_REMOVED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {STATE_CLASS_REMOVED_ISSUE})
 
     # Unavailable state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", "unavailable", attributes=_attributes, timestamp=now.timestamp()
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Unknown state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", "unknown", attributes=_attributes, timestamp=now.timestamp()
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
 
 @pytest.mark.parametrize(
@@ -5355,8 +5355,8 @@ async def test_validate_statistics_state_class_removed(
     ],
 )
 async def test_validate_statistics_state_class_removed_issue_cleaned_up(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -5364,33 +5364,33 @@ async def test_validate_statistics_state_class_removed_issue_cleaned_up(
     """Test validate_statistics."""
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, valid state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
-    await assert_validation_result(hass, client, {}, {})
+    await menuai.async_block_till_done()
+    await assert_validation_result(menuai, client, {}, {})
 
     # Statistics has run, empty response
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # State update with invalid state class, expect error
     _attributes = dict(attributes)
     _attributes.pop("state_class")
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 12, attributes=_attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     expected = {
         "sensor.test": [
             {
@@ -5399,12 +5399,12 @@ async def test_validate_statistics_state_class_removed_issue_cleaned_up(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {STATE_CLASS_REMOVED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {STATE_CLASS_REMOVED_ISSUE})
 
     # Remove the statistics - empty response
-    get_instance(hass).async_clear_statistics(["sensor.test"])
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    get_instance(menuai).async_clear_statistics(["sensor.test"])
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
 
 @pytest.mark.parametrize(
@@ -5414,8 +5414,8 @@ async def test_validate_statistics_state_class_removed_issue_cleaned_up(
     ],
 )
 async def test_validate_statistics_sensor_no_longer_recorded(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -5423,25 +5423,25 @@ async def test_validate_statistics_sensor_no_longer_recorded(
     """Test validate_statistics."""
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, valid state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
-    await assert_validation_result(hass, client, {}, {})
+    await menuai.async_block_till_done()
+    await assert_validation_result(menuai, client, {}, {})
 
     # Statistics has run, empty response
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Sensor no longer recorded, expect error
     expected = {
@@ -5452,13 +5452,13 @@ async def test_validate_statistics_sensor_no_longer_recorded(
             }
         ],
     }
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     with patch.object(
         instance,
         "entity_filter",
         return_value=False,
     ):
-        await assert_validation_result(hass, client, expected, {})
+        await assert_validation_result(menuai, client, expected, {})
 
 
 @pytest.mark.parametrize(
@@ -5468,8 +5468,8 @@ async def test_validate_statistics_sensor_no_longer_recorded(
     ],
 )
 async def test_validate_statistics_sensor_not_recorded(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -5477,13 +5477,13 @@ async def test_validate_statistics_sensor_not_recorded(
     """Test validate_statistics."""
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Sensor not recorded, expect error
     expected = {
@@ -5494,22 +5494,22 @@ async def test_validate_statistics_sensor_not_recorded(
             }
         ],
     }
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     with patch.object(
         instance,
         "entity_filter",
         return_value=False,
     ):
-        hass.states.async_set(
+        menuai.states.async_set(
             "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
         )
-        await hass.async_block_till_done()
-        await assert_validation_result(hass, client, expected, {})
+        await menuai.async_block_till_done()
+        await assert_validation_result(menuai, client, expected, {})
 
         # Statistics has run, expect same error
-        do_adhoc_statistics(hass, start=now)
-        await async_recorder_block_till_done(hass)
-        await assert_validation_result(hass, client, expected, {})
+        do_adhoc_statistics(menuai, start=now)
+        await async_recorder_block_till_done(menuai)
+        await assert_validation_result(menuai, client, expected, {})
 
 
 @pytest.mark.parametrize(
@@ -5519,8 +5519,8 @@ async def test_validate_statistics_sensor_not_recorded(
     ],
 )
 async def test_validate_statistics_sensor_removed(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -5528,28 +5528,28 @@ async def test_validate_statistics_sensor_removed(
     """Test validate_statistics."""
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, valid state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
-    await assert_validation_result(hass, client, {}, {})
+    await menuai.async_block_till_done()
+    await assert_validation_result(menuai, client, {}, {})
 
     # Statistics has run, empty response
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Sensor removed, expect error
-    hass.states.async_remove("sensor.test")
+    menuai.states.async_remove("sensor.test")
     expected = {
         "sensor.test": [
             {
@@ -5558,7 +5558,7 @@ async def test_validate_statistics_sensor_removed(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {})
+    await assert_validation_result(menuai, client, expected, {})
 
 
 @pytest.mark.parametrize(
@@ -5569,8 +5569,8 @@ async def test_validate_statistics_sensor_removed(
     ],
 )
 async def test_validate_statistics_unit_change_no_conversion(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     attributes,
     unit1,
     unit2,
@@ -5578,63 +5578,63 @@ async def test_validate_statistics_unit_change_no_conversion(
     """Test validate_statistics."""
     now = get_start_time(dt_util.utcnow())
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, original unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         10,
         attributes={**attributes, "unit_of_measurement": unit1},
         timestamp=now.timestamp(),
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, changed unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         11,
         attributes={**attributes, "unit_of_measurement": unit2},
         timestamp=now.timestamp(),
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Run statistics, no statistics will be generated because of conflicting units
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    await assert_statistic_ids(hass, [])
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    await assert_statistic_ids(menuai, [])
 
     # No statistics, original unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         12,
         attributes={**attributes, "unit_of_measurement": unit1},
         timestamp=now.timestamp(),
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Run statistics one hour later, only the state with unit1 will be considered
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now + timedelta(hours=1))
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=1))
+    await async_recorder_block_till_done(menuai)
     await assert_statistic_ids(
-        hass, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
+        menuai, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Change unit - expect error
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         13,
         attributes={**attributes, "unit_of_measurement": unit2},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     expected = {
         "sensor.test": [
             {
@@ -5648,46 +5648,46 @@ async def test_validate_statistics_unit_change_no_conversion(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {UNITS_CHANGED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {UNITS_CHANGED_ISSUE})
 
     # Unavailable state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         "unavailable",
         attributes={**attributes, "unit_of_measurement": unit2},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Unknown state - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         "unknown",
         attributes={**attributes, "unit_of_measurement": unit2},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Original unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         14,
         attributes={**attributes, "unit_of_measurement": unit1},
         timestamp=now.timestamp(),
     )
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Valid state, statistic runs again - empty response
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now + timedelta(hours=2))
-    await async_recorder_block_till_done(hass)
-    await assert_validation_result(hass, client, {}, {})
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=2))
+    await async_recorder_block_till_done(menuai)
+    await assert_validation_result(menuai, client, {}, {})
 
     # Remove the state - expect error
-    hass.states.async_remove("sensor.test")
+    menuai.states.async_remove("sensor.test")
     expected = {
         "sensor.test": [
             {
@@ -5696,7 +5696,7 @@ async def test_validate_statistics_unit_change_no_conversion(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {})
+    await assert_validation_result(menuai, client, expected, {})
 
 
 @pytest.mark.parametrize(
@@ -5708,8 +5708,8 @@ async def test_validate_statistics_unit_change_no_conversion(
     ],
 )
 async def test_validate_statistics_unit_change_equivalent_units(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     attributes,
     unit1,
     unit2,
@@ -5721,47 +5721,47 @@ async def test_validate_statistics_unit_change_equivalent_units(
     """
     now = get_start_time(dt_util.utcnow())
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, original unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         10,
         attributes={**attributes, "unit_of_measurement": unit1},
         timestamp=now.timestamp(),
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Run statistics
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
     await assert_statistic_ids(
-        hass, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
+        menuai, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
     )
 
     # Units changed to an equivalent unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         12,
         attributes={**attributes, "unit_of_measurement": unit2},
         timestamp=now.timestamp() + 1,
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Run statistics one hour later, metadata will be updated
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now + timedelta(hours=1))
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=1))
+    await async_recorder_block_till_done(menuai)
     await assert_statistic_ids(
-        hass, [{"statistic_id": "sensor.test", "unit_of_measurement": unit2}]
+        menuai, [{"statistic_id": "sensor.test", "unit_of_measurement": unit2}]
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
 
 @pytest.mark.parametrize(
@@ -5771,8 +5771,8 @@ async def test_validate_statistics_unit_change_equivalent_units(
     ],
 )
 async def test_validate_statistics_unit_change_equivalent_units_2(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     attributes,
     unit1,
     unit2,
@@ -5785,32 +5785,32 @@ async def test_validate_statistics_unit_change_equivalent_units_2(
     """
     now = get_start_time(dt_util.utcnow())
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, original unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         10,
         attributes={**attributes, "unit_of_measurement": unit1},
         timestamp=now.timestamp(),
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Run statistics
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
     await assert_statistic_ids(
-        hass, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
+        menuai, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
     )
 
     # Units changed to an equivalent unit which is not known by the unit converters
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         12,
         attributes={**attributes, "unit_of_measurement": unit2},
@@ -5829,25 +5829,25 @@ async def test_validate_statistics_unit_change_equivalent_units_2(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {UNITS_CHANGED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {UNITS_CHANGED_ISSUE})
 
     # Run statistics one hour later, metadata will not be updated
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now + timedelta(hours=1))
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=1))
+    await async_recorder_block_till_done(menuai)
     await assert_statistic_ids(
-        hass, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
+        menuai, [{"statistic_id": "sensor.test", "unit_of_measurement": unit1}]
     )
-    await assert_validation_result(hass, client, expected, {UNITS_CHANGED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {UNITS_CHANGED_ISSUE})
 
 
 async def test_validate_statistics_other_domain(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test sensor does not raise issues for statistics for other domains."""
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # Create statistics for another domain
     metadata: StatisticMetaData = {
@@ -5867,11 +5867,11 @@ async def test_validate_statistics_other_domain(
         "state": None,
         "sum": None,
     }
-    async_import_statistics(hass, metadata, (statistics,))
-    await async_recorder_block_till_done(hass)
+    async_import_statistics(menuai, metadata, (statistics,))
+    await async_recorder_block_till_done(menuai)
 
     # We should not get complains about the missing number entity
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
 
 @pytest.mark.parametrize(
@@ -5881,7 +5881,7 @@ async def test_validate_statistics_other_domain(
     ],
 )
 async def test_update_statistics_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     units,
     attributes,
     unit,
@@ -5891,37 +5891,37 @@ async def test_update_statistics_issues(
     async def one_hour_stats(start: datetime) -> datetime:
         """Generate 5-minute statistics for one hour."""
         for _ in range(12):
-            do_adhoc_statistics(hass, start=start)
-            await async_wait_recording_done(hass)
+            do_adhoc_statistics(menuai, start=start)
+            await async_wait_recording_done(menuai)
             start += timedelta(minutes=5)
         return start
 
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     # No statistics, no state - no issues
     now = await one_hour_stats(now)
-    assert_issues(hass, {})
+    assert_issues(menuai, {})
 
     # Statistics, valid state - no issues
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     now = await one_hour_stats(now)
-    assert_issues(hass, {})
+    assert_issues(menuai, {})
 
     # State update with invalid state class, statistics did not run again
     _attributes = dict(attributes)
     _attributes.pop("state_class")
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 12, attributes=_attributes, timestamp=now.timestamp()
     )
-    await hass.async_block_till_done()
-    assert_issues(hass, {})
+    await menuai.async_block_till_done()
+    assert_issues(menuai, {})
 
     # Let statistics run for one hour, expect issue
     now = await one_hour_stats(now)
@@ -5931,11 +5931,11 @@ async def test_update_statistics_issues(
             "statistic_id": "sensor.test",
         }
     }
-    assert_issues(hass, expected)
+    assert_issues(menuai, expected)
 
 
 async def async_record_meter_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     zero: datetime,
     entity_id: str,
@@ -5949,8 +5949,8 @@ async def async_record_meter_states(
 
     def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        return menuai.states.get(entity_id)
 
     one = zero + timedelta(seconds=15 * 5)  # 00:01:15
     two = one + timedelta(seconds=30 * 5)  # 00:03:45
@@ -6002,7 +6002,7 @@ async def async_record_meter_states(
 
 
 async def async_record_meter_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     zero: datetime,
     entity_id: str,
@@ -6016,8 +6016,8 @@ async def async_record_meter_state(
 
     def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        return menuai.states.get(entity_id)
 
     states = {entity_id: []}
     freezer.move_to(zero)
@@ -6027,7 +6027,7 @@ async def async_record_meter_state(
 
 
 async def async_record_states_partially_unavailable(
-    hass: HomeAssistant, zero: datetime, entity_id: str, attributes: dict[str, Any]
+    menuai: menuai, zero: datetime, entity_id: str, attributes: dict[str, Any]
 ) -> tuple[datetime, dict[str, list[State]]]:
     """Record some test states.
 
@@ -6036,8 +6036,8 @@ async def async_record_states_partially_unavailable(
 
     def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        return menuai.states.get(entity_id)
 
     one = zero + timedelta(seconds=1 * 5)
     two = one + timedelta(seconds=15 * 5)
@@ -6060,7 +6060,7 @@ async def async_record_states_partially_unavailable(
 
 
 @pytest.mark.usefixtures("enable_custom_integrations")
-async def test_exclude_attributes(hass: HomeAssistant) -> None:
+async def test_exclude_attributes(menuai: menuai) -> None:
     """Test sensor attributes to be excluded."""
     entity0 = MockSensor(
         has_entity_name=True,
@@ -6070,13 +6070,13 @@ async def test_exclude_attributes(hass: HomeAssistant) -> None:
         device_class=SensorDeviceClass.ENUM,
         options=["option1", "option2"],
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
     def _fetch_states() -> list[State]:
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             native_states = []
             for db_state, db_state_attributes, db_states_meta in (
                 session.query(States, StateAttributes, StatesMeta)
@@ -6092,7 +6092,7 @@ async def test_exclude_attributes(hass: HomeAssistant) -> None:
                 native_states.append(state)
             return native_states
 
-    states: list[State] = await hass.async_add_executor_job(_fetch_states)
+    states: list[State] = await menuai.async_add_executor_job(_fetch_states)
     assert len(states) == 1
     assert ATTR_OPTIONS not in states[0].attributes
     assert ATTR_FRIENDLY_NAME in states[0].attributes
@@ -6109,17 +6109,17 @@ async def test_exclude_attributes(hass: HomeAssistant) -> None:
     ],
 )
 async def test_clean_up_repairs(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test cleaning up repairs."""
-    await async_setup_component(hass, "sensor", {})
-    issue_registry = ir.async_get(hass)
-    client = await hass_ws_client()
+    await async_setup_component(menuai, "sensor", {})
+    issue_registry = ir.async_get(menuai)
+    client = await menuai_ws_client()
 
     # Create some issues
     def create_issue(domain: str, issue_id: str, data: dict | None) -> None:
         ir.async_create_issue(
-            hass,
+            menuai,
             domain,
             issue_id,
             data=data,
@@ -6159,8 +6159,8 @@ async def test_clean_up_repairs(
 
 
 async def test_validate_statistics_mean_type_changed(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test validate_statistics.
@@ -6169,27 +6169,27 @@ async def test_validate_statistics_mean_type_changed(
     """
     now = get_start_time(dt_util.utcnow())
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     # No statistics, no state - empty response
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # No statistics, original unit - empty response
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.wind_direction",
         10,
         attributes=WIND_DIRECTION_ATTRIBUTES,
         timestamp=now.timestamp(),
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Run statistics
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.wind_direction",
@@ -6205,7 +6205,7 @@ async def test_validate_statistics_mean_type_changed(
     ]
 
     expected_log_entry = (
-        "homeassistant.components.sensor.recorder",
+        "menuai.components.sensor.recorder",
         logging.WARNING,
         (
             "The statistics mean algorithm for sensor.wind_direction have changed from"
@@ -6219,7 +6219,7 @@ async def test_validate_statistics_mean_type_changed(
     assert expected_log_entry not in caplog.record_tuples
 
     # State class changed
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.wind_direction",
         5,
         attributes={
@@ -6240,13 +6240,13 @@ async def test_validate_statistics_mean_type_changed(
             }
         ],
     }
-    await assert_validation_result(hass, client, expected, {MEAN_TYPE_CHANGED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {MEAN_TYPE_CHANGED_ISSUE})
 
     # Run statistics one hour later, metadata will not be updated
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now + timedelta(hours=1))
-    await async_recorder_block_till_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now + timedelta(hours=1))
+    await async_recorder_block_till_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.wind_direction",
@@ -6260,23 +6260,23 @@ async def test_validate_statistics_mean_type_changed(
             "unit_class": None,
         }
     ]
-    await assert_validation_result(hass, client, expected, {MEAN_TYPE_CHANGED_ISSUE})
+    await assert_validation_result(menuai, client, expected, {MEAN_TYPE_CHANGED_ISSUE})
     assert expected_log_entry in caplog.record_tuples
 
     # State class changed back
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.wind_direction",
         350,
         attributes=WIND_DIRECTION_ATTRIBUTES,
         timestamp=now.timestamp(),
     )
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})
 
     # Run statistics
-    await async_recorder_block_till_done(hass)
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
-    statistic_ids = await async_list_statistic_ids(hass)
+    await async_recorder_block_till_done(menuai)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
+    statistic_ids = await async_list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "statistic_id": "sensor.wind_direction",
@@ -6292,4 +6292,4 @@ async def test_validate_statistics_mean_type_changed(
     ]
 
     # Issue should be resolved
-    await assert_validation_result(hass, client, {}, {})
+    await assert_validation_result(menuai, client, {}, {})

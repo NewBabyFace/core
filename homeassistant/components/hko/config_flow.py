@@ -9,10 +9,10 @@ from typing import Any
 from hko import HKO, LOCATIONS, HKOError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LOCATION
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LOCATION
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import SelectSelector, SelectSelectorConfig
 
 from .const import API_RHRREAD, DEFAULT_LOCATION, DOMAIN, KEY_LOCATION
 
@@ -50,7 +50,7 @@ class HKOConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            websession = async_get_clientsession(self.hass)
+            websession = async_get_clientsession(self.menuai)
             hko = HKO(websession)
             async with timeout(60):
                 await hko.weather(API_RHRREAD)

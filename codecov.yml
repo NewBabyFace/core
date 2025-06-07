@@ -10,17 +10,17 @@ coverage:
         target: auto
         threshold: 1
         paths:
-          - homeassistant/components/*/config_flow.py
-          - homeassistant/components/*/device_action.py
-          - homeassistant/components/*/device_condition.py
-          - homeassistant/components/*/device_trigger.py
-          - homeassistant/components/*/diagnostics.py
-          - homeassistant/components/*/group.py
-          - homeassistant/components/*/intent.py
-          - homeassistant/components/*/logbook.py
-          - homeassistant/components/*/media_source.py
-          - homeassistant/components/*/recorder.py
-          - homeassistant/components/*/scene.py
+          - menuai/components/*/config_flow.py
+          - menuai/components/*/device_action.py
+          - menuai/components/*/device_condition.py
+          - menuai/components/*/device_trigger.py
+          - menuai/components/*/diagnostics.py
+          - menuai/components/*/group.py
+          - menuai/components/*/intent.py
+          - menuai/components/*/logbook.py
+          - menuai/components/*/media_source.py
+          - menuai/components/*/recorder.py
+          - menuai/components/*/scene.py
     patch:
       default:
         target: auto
@@ -28,17 +28,17 @@ coverage:
         target: 100
         threshold: 0
         paths:
-          - homeassistant/components/*/config_flow.py
-          - homeassistant/components/*/device_action.py
-          - homeassistant/components/*/device_condition.py
-          - homeassistant/components/*/device_trigger.py
-          - homeassistant/components/*/diagnostics.py
-          - homeassistant/components/*/group.py
-          - homeassistant/components/*/intent.py
-          - homeassistant/components/*/logbook.py
-          - homeassistant/components/*/media_source.py
-          - homeassistant/components/*/recorder.py
-          - homeassistant/components/*/scene.py
+          - menuai/components/*/config_flow.py
+          - menuai/components/*/device_action.py
+          - menuai/components/*/device_condition.py
+          - menuai/components/*/device_trigger.py
+          - menuai/components/*/diagnostics.py
+          - menuai/components/*/group.py
+          - menuai/components/*/intent.py
+          - menuai/components/*/logbook.py
+          - menuai/components/*/media_source.py
+          - menuai/components/*/recorder.py
+          - menuai/components/*/scene.py
 comment: false
 
 # To make partial tests possible,

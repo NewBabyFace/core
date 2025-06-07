@@ -8,19 +8,19 @@ from typing import Any
 
 import pyzerproc
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.util import color as color_util
 
 from .const import DATA_ADDRESSES, DATA_DISCOVERY_SUBSCRIPTION, DOMAIN
 
@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 DISCOVERY_INTERVAL = timedelta(seconds=60)
 
 
-async def discover_entities(hass: HomeAssistant) -> list[ZerprocLight]:
+async def discover_entities(menuai: menuai) -> list[ZerprocLight]:
     """Attempt to discover new lights."""
     lights = await pyzerproc.discover()
 
@@ -37,19 +37,19 @@ async def discover_entities(hass: HomeAssistant) -> list[ZerprocLight]:
     new_lights = [
         light
         for light in lights
-        if light.address not in hass.data[DOMAIN][DATA_ADDRESSES]
+        if light.address not in menuai.data[DOMAIN][DATA_ADDRESSES]
     ]
 
     entities = []
     for light in new_lights:
-        hass.data[DOMAIN][DATA_ADDRESSES].add(light.address)
+        menuai.data[DOMAIN][DATA_ADDRESSES].add(light.address)
         entities.append(ZerprocLight(light))
 
     return entities
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,7 +60,7 @@ async def async_setup_entry(
         """Wrap discovery to include params."""
         nonlocal warned
         try:
-            entities = await discover_entities(hass)
+            entities = await discover_entities(menuai)
             async_add_entities(entities, update_before_add=True)
             warned = False
         except pyzerproc.ZerprocException:
@@ -69,11 +69,11 @@ async def async_setup_entry(
                 warned = True
 
     # Initial discovery
-    hass.async_create_task(discover())
+    menuai.async_create_task(discover())
 
     # Perform recurring discovery of new devices
-    hass.data[DOMAIN][DATA_DISCOVERY_SUBSCRIPTION] = async_track_time_interval(
-        hass, discover, DISCOVERY_INTERVAL
+    menuai.data[DOMAIN][DATA_DISCOVERY_SUBSCRIPTION] = async_track_time_interval(
+        menuai, discover, DISCOVERY_INTERVAL
     )
 
 
@@ -96,18 +96,18 @@ class ZerprocLight(LightEntity):
             name=light.name,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self.async_on_remove(
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._hass_stop)
+            self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self._menuai_stop)
         )
 
-    async def _hass_stop(self, event: Event) -> None:
-        """Run on EVENT_HOMEASSISTANT_STOP."""
-        await self.async_will_remove_from_hass()
+    async def _menuai_stop(self, event: Event) -> None:
+        """Run on EVENT_menuai_STOP."""
+        await self.async_will_remove_from_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         try:
             await self._light.disconnect()
         except pyzerproc.ZerprocException:

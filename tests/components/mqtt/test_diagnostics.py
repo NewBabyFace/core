@@ -5,10 +5,10 @@ from unittest.mock import ANY
 
 import pytest
 
-from homeassistant.components import mqtt
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components import mqtt
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import async_fire_mqtt_message
 from tests.components.diagnostics import (
@@ -26,18 +26,18 @@ default_entry_options = {
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test config entry diagnostics."""
     mqtt_mock = await mqtt_mock_entry()
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     mqtt_mock.connected = True
 
-    await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
-    assert await get_diagnostics_for_config_entry(hass, hass_client, config_entry) == {
+    await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry) == {
         "connected": True,
         "devices": [],
         "mqtt_config": {"data": default_entry_data, "options": default_entry_options},
@@ -62,11 +62,11 @@ async def test_entry_diagnostics(
     data_sensor = json.dumps(config_sensor)
     data_trigger = json.dumps(config_trigger)
 
-    async_fire_mqtt_message(hass, "homeassistant/sensor/bla/config", data_sensor)
+    async_fire_mqtt_message(menuai, "menuai/sensor/bla/config", data_sensor)
     async_fire_mqtt_message(
-        hass, "homeassistant/device_automation/bla/config", data_trigger
+        menuai, "menuai/device_automation/bla/config", data_trigger
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
@@ -77,7 +77,7 @@ async def test_entry_diagnostics(
                 "subscriptions": [{"topic": "foobar/sensor", "messages": []}],
                 "discovery_data": {
                     "payload": config_sensor,
-                    "topic": "homeassistant/sensor/bla/config",
+                    "topic": "menuai/sensor/bla/config",
                 },
                 "transmitted": [],
             }
@@ -86,7 +86,7 @@ async def test_entry_diagnostics(
             {
                 "discovery_data": {
                     "payload": config_trigger,
-                    "topic": "homeassistant/device_automation/bla/config",
+                    "topic": "menuai/device_automation/bla/config",
                 },
                 "trigger_key": ["device_automation", "bla"],
             }
@@ -122,7 +122,7 @@ async def test_entry_diagnostics(
         "name_by_user": None,
     }
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, config_entry) == {
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry) == {
         "connected": True,
         "devices": [expected_device],
         "mqtt_config": {"data": default_entry_data, "options": default_entry_options},
@@ -130,7 +130,7 @@ async def test_entry_diagnostics(
     }
 
     assert await get_diagnostics_for_device(
-        hass, hass_client, config_entry, device_entry
+        menuai, menuai_client, config_entry, device_entry
     ) == {
         "connected": True,
         "device": expected_device,
@@ -155,10 +155,10 @@ async def test_entry_diagnostics(
     ],
 )
 async def test_redact_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test redacting diagnostics."""
@@ -170,7 +170,7 @@ async def test_redact_diagnostics(
     expected_config["data"]["password"] = "**REDACTED**"
     expected_config["data"]["username"] = "**REDACTED**"
 
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     mqtt_mock.connected = True
 
     # Discover a device with a device tracker
@@ -184,13 +184,13 @@ async def test_redact_diagnostics(
     data_tracker = json.dumps(config_tracker)
 
     async_fire_mqtt_message(
-        hass, "homeassistant/device_tracker/bla/config", data_tracker
+        menuai, "menuai/device_tracker/bla/config", data_tracker
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     location_data = '{"latitude":32.87336,"longitude": -117.22743, "gps_accuracy":1.5}'
-    async_fire_mqtt_message(hass, "attributes-topic", location_data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "attributes-topic", location_data)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
@@ -215,7 +215,7 @@ async def test_redact_diagnostics(
                 ],
                 "discovery_data": {
                     "payload": config_tracker,
-                    "topic": "homeassistant/device_tracker/bla/config",
+                    "topic": "menuai/device_tracker/bla/config",
                 },
                 "transmitted": [],
             }
@@ -257,8 +257,8 @@ async def test_redact_diagnostics(
         "name_by_user": None,
     }
 
-    await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
-    assert await get_diagnostics_for_config_entry(hass, hass_client, config_entry) == {
+    await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry) == {
         "connected": True,
         "devices": [expected_device],
         "mqtt_config": expected_config,
@@ -266,7 +266,7 @@ async def test_redact_diagnostics(
     }
 
     assert await get_diagnostics_for_device(
-        hass, hass_client, config_entry, device_entry
+        menuai, menuai_client, config_entry, device_entry
     ) == {
         "connected": True,
         "device": expected_device,
@@ -281,11 +281,11 @@ async def test_redact_diagnostics(
     entity_registry.async_update_entity(
         device_tracker_entry.entity_id, disabled_by=er.RegistryEntryDisabler.USER
     )
-    hass.states.async_remove(device_tracker_entry.entity_id)
+    menuai.states.async_remove(device_tracker_entry.entity_id)
 
     # Assert disabled entries are filtered
     assert await get_diagnostics_for_device(
-        hass, hass_client, config_entry, device_entry
+        menuai, menuai_client, config_entry, device_entry
     ) == {
         "connected": True,
         "device": {

@@ -11,13 +11,13 @@ from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from requests.exceptions import HTTPError, Timeout
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_NAME,
     CONF_PASSWORD,
@@ -26,8 +26,8 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .const import CONF_MJPEG_URL, CONF_STILL_IMAGE_URL, DOMAIN, LOGGER
 
@@ -104,7 +104,7 @@ def validate_url(
 
 
 async def async_validate_input(
-    hass: HomeAssistant, user_input: dict[str, Any]
+    menuai: menuai, user_input: dict[str, Any]
 ) -> tuple[dict[str, str], str]:
     """Manage MJPEG IP Camera options."""
     errors = {}
@@ -114,7 +114,7 @@ async def async_validate_input(
         for field in (CONF_MJPEG_URL, CONF_STILL_IMAGE_URL):
             if not (url := user_input.get(field)):
                 continue
-            authentication = await hass.async_add_executor_job(
+            authentication = await menuai.async_add_executor_job(
                 validate_url,
                 url,
                 user_input.get(CONF_USERNAME),
@@ -150,7 +150,7 @@ class MJPEGFlowHandler(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            errors, authentication = await async_validate_input(self.hass, user_input)
+            errors, authentication = await async_validate_input(self.menuai, user_input)
             if not errors:
                 self._async_abort_entries_match(
                     {CONF_MJPEG_URL: user_input[CONF_MJPEG_URL]}
@@ -190,9 +190,9 @@ class MJPEGOptionsFlowHandler(OptionsFlow):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            errors, authentication = await async_validate_input(self.hass, user_input)
+            errors, authentication = await async_validate_input(self.menuai, user_input)
             if not errors:
-                for entry in self.hass.config_entries.async_entries(DOMAIN):
+                for entry in self.menuai.config_entries.async_entries(DOMAIN):
                     if (
                         entry.entry_id != self.config_entry.entry_id
                         and entry.options[CONF_MJPEG_URL] == user_input[CONF_MJPEG_URL]
@@ -221,5 +221,5 @@ class MJPEGOptionsFlowHandler(OptionsFlow):
         )
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

@@ -4,9 +4,9 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
 
 from . import api
 from .const import DOMAIN, OAUTH_SCOPES
@@ -67,7 +67,7 @@ class OAuth2FlowHandler(
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Create an entry for the flow, or update existing entry."""
 
-        client = api.ConfigFlowFitbitApi(self.hass, data[CONF_TOKEN])
+        client = api.ConfigFlowFitbitApi(self.menuai, data[CONF_TOKEN])
         try:
             profile = await client.async_get_user_profile()
         except FitbitAuthException as err:

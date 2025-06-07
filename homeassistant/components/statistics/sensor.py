@@ -14,9 +14,9 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.recorder import get_instance, history
-from homeassistant.components.sensor import (
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.recorder import get_instance, history
+from menuai.components.sensor import (
     DEVICE_CLASS_STATE_CLASSES,
     DEVICE_CLASS_UNITS,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
@@ -24,8 +24,8 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_ENTITY_ID,
@@ -35,31 +35,31 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
     EventStateReportedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
     split_entity_id,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_point_in_utc_time,
     async_track_state_change_event,
     async_track_state_report_event,
 )
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.enum import try_parse_enum
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
+from menuai.util.enum import try_parse_enum
 
 from . import DOMAIN, PLATFORMS
 
@@ -589,19 +589,19 @@ PLATFORM_SCHEMA = vol.All(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Statistics sensor."""
 
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    await async_setup_reload_service(menuai, DOMAIN, PLATFORMS)
 
     async_add_entities(
         new_entities=[
             StatisticsSensor(
-                hass=hass,
+                menuai=menuai,
                 source_entity_id=config[CONF_ENTITY_ID],
                 name=config[CONF_NAME],
                 unique_id=config.get(CONF_UNIQUE_ID),
@@ -618,7 +618,7 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -634,7 +634,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             StatisticsSensor(
-                hass=hass,
+                menuai=menuai,
                 source_entity_id=entry.options[CONF_ENTITY_ID],
                 name=entry.options[CONF_NAME],
                 unique_id=entry.entry_id,
@@ -658,7 +658,7 @@ class StatisticsSensor(SensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         source_entity_id: str,
         name: str,
         unique_id: str | None,
@@ -674,7 +674,7 @@ class StatisticsSensor(SensorEntity):
         self._attr_unique_id: str | None = unique_id
         self._source_entity_id: str = source_entity_id
         self._attr_device_info = async_device_info_to_link_from_entity(
-            hass,
+            menuai,
             source_entity_id,
         )
         self.is_binary: bool = (
@@ -762,24 +762,24 @@ class StatisticsSensor(SensorEntity):
         This is needed to ensure that the buffer is properly sorted by time.
         """
         _LOGGER.debug("Startup for %s", self.entity_id)
-        if "recorder" in self.hass.config.components:
+        if "recorder" in self.menuai.config.components:
             await self._initialize_from_database()
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass,
+                self.menuai,
                 [self._source_entity_id],
                 self._async_stats_sensor_state_change_listener,
             )
         )
         self.async_on_remove(
             async_track_state_report_event(
-                self.hass,
+                self.menuai,
                 [self._source_entity_id],
                 self._async_stats_sensor_state_report_listener,
             )
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         await self._async_stats_sensor_startup()
 
@@ -997,7 +997,7 @@ class StatisticsSensor(SensorEntity):
                 )
             self._async_cancel_update_listener()
             self._update_listener = async_track_point_in_utc_time(
-                self.hass,
+                self.menuai,
                 self._async_scheduled_update,
                 dt_util.utc_from_timestamp(timestamp),
             )
@@ -1038,7 +1038,7 @@ class StatisticsSensor(SensorEntity):
             start_date = datetime.fromtimestamp(0, tz=dt_util.UTC)
             _LOGGER.debug("%s: retrieving all records", self.entity_id)
         return history.state_changes_during_period(
-            self.hass,
+            self.menuai,
             start_date,
             entity_id=lower_entity_id,
             descending=True,
@@ -1056,7 +1056,7 @@ class StatisticsSensor(SensorEntity):
         If MaxAge is provided then query will restrict to entries younger then
         current datetime - MaxAge.
         """
-        if states := await get_instance(self.hass).async_add_executor_job(
+        if states := await get_instance(self.menuai).async_add_executor_job(
             self._fetch_states_from_database
         ):
             for state in reversed(states):

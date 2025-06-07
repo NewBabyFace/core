@@ -5,17 +5,17 @@ import logging
 from lightwave.lightwave import LWLink
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_LIGHTS,
     CONF_NAME,
     CONF_SWITCHES,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
 
 CONF_SERIAL = "serial"
 CONF_PROXY_IP = "proxy_ip"
@@ -68,20 +68,20 @@ CONFIG_SCHEMA = vol.Schema(
 PLATFORMS = (Platform.CLIMATE, Platform.SENSOR)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Try to start embedded Lightwave broker."""
     host = config[DOMAIN][CONF_HOST]
     lwlink = LWLink(host)
-    hass.data[LIGHTWAVE_LINK] = lwlink
+    menuai.data[LIGHTWAVE_LINK] = lwlink
 
     if lights := config[DOMAIN][CONF_LIGHTS]:
-        hass.async_create_task(
-            async_load_platform(hass, Platform.LIGHT, DOMAIN, lights, config)
+        menuai.async_create_task(
+            async_load_platform(menuai, Platform.LIGHT, DOMAIN, lights, config)
         )
 
     if switches := config[DOMAIN][CONF_SWITCHES]:
-        hass.async_create_task(
-            async_load_platform(hass, Platform.SWITCH, DOMAIN, switches, config)
+        menuai.async_create_task(
+            async_load_platform(menuai, Platform.SWITCH, DOMAIN, switches, config)
         )
 
     if trv := config[DOMAIN][CONF_TRV]:
@@ -97,8 +97,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
 
         for platform in PLATFORMS:
-            hass.async_create_task(
-                async_load_platform(hass, platform, DOMAIN, trvs, config)
+            menuai.async_create_task(
+                async_load_platform(menuai, platform, DOMAIN, trvs, config)
             )
 
     return True

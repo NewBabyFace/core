@@ -18,13 +18,13 @@ from freebox_api.api.home import Home
 from freebox_api.api.wifi import Wifi
 from freebox_api.exceptions import HttpRequestError, NotOpenError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.storage import Store
-from homeassistant.util import slugify
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.storage import Store
+from menuai.util import slugify
 
 from .const import (
     API_VERSION,
@@ -55,12 +55,12 @@ def is_json(json_str: str) -> bool:
     return True
 
 
-async def get_api(hass: HomeAssistant, host: str) -> Freepybox:
+async def get_api(menuai: menuai, host: str) -> Freepybox:
     """Get the Freebox API."""
-    freebox_path = Store(hass, STORAGE_VERSION, STORAGE_KEY).path
+    freebox_path = Store(menuai, STORAGE_VERSION, STORAGE_KEY).path
 
     if not os.path.exists(freebox_path):
-        await hass.async_add_executor_job(os.makedirs, freebox_path)
+        await menuai.async_add_executor_job(os.makedirs, freebox_path)
 
     token_file = Path(f"{freebox_path}/{slugify(host)}.conf")
 
@@ -103,13 +103,13 @@ class FreeboxRouter:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: FreeboxConfigEntry,
         api: Freepybox,
         freebox_config: Mapping[str, Any],
     ) -> None:
         """Initialize a Freebox router."""
-        self.hass = hass
+        self.menuai = menuai
         self._host = entry.data[CONF_HOST]
         self._port = entry.data[CONF_PORT]
 
@@ -169,10 +169,10 @@ class FreeboxRouter:
 
             self.devices[device_mac] = fbx_device
 
-        async_dispatcher_send(self.hass, self.signal_device_update)
+        async_dispatcher_send(self.menuai, self.signal_device_update)
 
         if new_device:
-            async_dispatcher_send(self.hass, self.signal_device_new)
+            async_dispatcher_send(self.menuai, self.signal_device_new)
 
     async def update_sensors(self) -> None:
         """Update Freebox sensors."""
@@ -206,7 +206,7 @@ class FreeboxRouter:
         await self._update_disks_sensors()
         await self._update_raids_sensors()
 
-        async_dispatcher_send(self.hass, self.signal_sensor_update)
+        async_dispatcher_send(self.menuai, self.signal_sensor_update)
 
     async def _update_disks_sensors(self) -> None:
         """Update Freebox disks."""
@@ -259,10 +259,10 @@ class FreeboxRouter:
                     new_device = True
                 self.home_devices[home_node["id"]] = home_node
 
-        async_dispatcher_send(self.hass, self.signal_home_device_update)
+        async_dispatcher_send(self.menuai, self.signal_home_device_update)
 
         if new_device:
-            async_dispatcher_send(self.hass, self.signal_home_device_new)
+            async_dispatcher_send(self.menuai, self.signal_home_device_new)
 
     async def reboot(self) -> None:
         """Reboot the Freebox."""

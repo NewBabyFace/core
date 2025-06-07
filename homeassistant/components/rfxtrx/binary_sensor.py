@@ -7,17 +7,17 @@ from typing import Any
 
 import RFXtrx as rfxtrxmod
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_COMMAND_OFF, CONF_COMMAND_ON, STATE_ON
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import event as evt
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_COMMAND_OFF, CONF_COMMAND_ON, STATE_ON
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import event as evt
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeviceTuple, async_setup_platform_entry, get_pt2262_cmd
 from .const import (
@@ -89,7 +89,7 @@ def supported(event: rfxtrxmod.RFXtrxEvent) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -120,7 +120,7 @@ async def async_setup_entry(
         ]
 
     await async_setup_platform_entry(
-        hass, config_entry, async_add_entities, supported, _constructor
+        menuai, config_entry, async_add_entities, supported, _constructor
     )
 
 
@@ -154,9 +154,9 @@ class RfxtrxBinarySensor(RfxtrxEntity, BinarySensorEntity):
         self._cmd_on = cmd_on
         self._cmd_off = cmd_off
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore device state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if self._event is None:
             old_state = await self.async_get_last_state()
@@ -231,5 +231,5 @@ class RfxtrxBinarySensor(RfxtrxEntity, BinarySensorEntity):
                 self.async_write_ha_state()
 
             self._delay_listener = evt.async_call_later(
-                self.hass, self._off_delay, off_delay_listener
+                self.menuai, self._off_delay, off_delay_listener
             )

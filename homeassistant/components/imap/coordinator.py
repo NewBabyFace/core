@@ -14,24 +14,24 @@ from typing import TYPE_CHECKING, Any
 
 from aioimaplib import AUTH, IMAP4_SSL, NONAUTH, SELECTED, AioImapException
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
     CONTENT_TYPE_TEXT_PLAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     TemplateError,
 )
-from homeassistant.helpers.json import json_bytes
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
-from homeassistant.util.ssl import (
+from menuai.helpers.json import json_bytes
+from menuai.helpers.template import Template
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
+from menuai.util.ssl import (
     SSLCipherList,
     client_context,
     create_no_verify_ssl_context,
@@ -217,7 +217,7 @@ class ImapDataUpdateCoordinator(DataUpdateCoordinator[int | None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         imap_client: IMAP4_SSL,
         entry: ImapConfigEntry,
         update_interval: timedelta | None,
@@ -237,9 +237,9 @@ class ImapDataUpdateCoordinator(DataUpdateCoordinator[int | None]):
         )
         _custom_event_template = entry.data.get(CONF_CUSTOM_EVENT_DATA_TEMPLATE)
         if _custom_event_template is not None:
-            self.custom_event_template = Template(_custom_event_template, hass=hass)
+            self.custom_event_template = Template(_custom_event_template, menuai=menuai)
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -313,7 +313,7 @@ class ImapDataUpdateCoordinator(DataUpdateCoordinator[int | None]):
                 )
                 return
 
-            self.hass.bus.fire(EVENT_IMAP, data)
+            self.menuai.bus.fire(EVENT_IMAP, data)
             _LOGGER.debug(
                 "Message with id %s (%s) processed, sender: %s, subject: %s, initial: %s",
                 last_message_uid,
@@ -404,13 +404,13 @@ class ImapPollingDataUpdateCoordinator(ImapDataUpdateCoordinator):
     """Class for imap client."""
 
     def __init__(
-        self, hass: HomeAssistant, imap_client: IMAP4_SSL, entry: ImapConfigEntry
+        self, menuai: menuai, imap_client: IMAP4_SSL, entry: ImapConfigEntry
     ) -> None:
         """Initiate imap client."""
         _LOGGER.debug(
             "Connected to server %s using IMAP polling", entry.data[CONF_SERVER]
         )
-        super().__init__(hass, imap_client, entry, timedelta(seconds=10))
+        super().__init__(menuai, imap_client, entry, timedelta(seconds=10))
 
     async def _async_update_data(self) -> int | None:
         """Update the number of unread emails."""
@@ -438,7 +438,7 @@ class ImapPollingDataUpdateCoordinator(ImapDataUpdateCoordinator):
                 _LOGGER.warning(
                     "Username or password incorrect, starting reauthentication"
                 )
-                self.config_entry.async_start_reauth(self.hass)
+                self.config_entry.async_start_reauth(self.menuai)
             self.async_set_update_error(ex)
             raise ConfigEntryAuthFailed from ex
 
@@ -450,11 +450,11 @@ class ImapPushDataUpdateCoordinator(ImapDataUpdateCoordinator):
     """Class for imap client."""
 
     def __init__(
-        self, hass: HomeAssistant, imap_client: IMAP4_SSL, entry: ImapConfigEntry
+        self, menuai: menuai, imap_client: IMAP4_SSL, entry: ImapConfigEntry
     ) -> None:
         """Initiate imap client."""
         _LOGGER.debug("Connected to server %s using IMAP push", entry.data[CONF_SERVER])
-        super().__init__(hass, imap_client, entry, None)
+        super().__init__(menuai, imap_client, entry, None)
         self._push_wait_task: asyncio.Task[None] | None = None
         self.number_of_messages: int | None = None
 
@@ -465,7 +465,7 @@ class ImapPushDataUpdateCoordinator(ImapDataUpdateCoordinator):
 
     async def async_start(self) -> None:
         """Start coordinator."""
-        self._push_wait_task = self.hass.async_create_background_task(
+        self._push_wait_task = self.menuai.async_create_background_task(
             self._async_wait_push_loop(), "Wait for IMAP data push"
         )
 
@@ -483,7 +483,7 @@ class ImapPushDataUpdateCoordinator(ImapDataUpdateCoordinator):
                     _LOGGER.warning(
                         "Username or password incorrect, starting reauthentication"
                     )
-                    self.config_entry.async_start_reauth(self.hass)
+                    self.config_entry.async_start_reauth(self.menuai)
                 self.async_set_update_error(ex)
                 await asyncio.sleep(BACKOFF_TIME)
             except InvalidFolder as ex:

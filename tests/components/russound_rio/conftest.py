@@ -8,9 +8,9 @@ from aiorussound.rio import ZoneControlSurface
 from aiorussound.util import controller_device_str, zone_device_str
 import pytest
 
-from homeassistant.components.russound_rio.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.russound_rio.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from .const import API_VERSION, HARDWARE_MAC, MOCK_CONFIG, MODEL
 
@@ -21,13 +21,13 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry():
     """Prevent setup."""
     with patch(
-        "homeassistant.components.russound_rio.async_setup_entry", return_value=True
+        "menuai.components.russound_rio.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Mock a Russound RIO config entry."""
     return MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, unique_id=HARDWARE_MAC, title=MODEL
@@ -39,10 +39,10 @@ def mock_russound_client() -> Generator[AsyncMock]:
     """Mock the Russound RIO client."""
     with (
         patch(
-            "homeassistant.components.russound_rio.RussoundClient", autospec=True
+            "menuai.components.russound_rio.RussoundClient", autospec=True
         ) as mock_client,
         patch(
-            "homeassistant.components.russound_rio.config_flow.RussoundClient",
+            "menuai.components.russound_rio.config_flow.RussoundClient",
             new=mock_client,
         ),
     ):

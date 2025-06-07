@@ -9,10 +9,10 @@ from async_upnp_client.aiohttp import AiohttpNotifyServer
 from async_upnp_client.event_handler import UpnpEventHandler
 import pytest
 
-from homeassistant.components.dlna_dmr.const import DOMAIN
-from homeassistant.components.dlna_dmr.data import EventListenAddr, get_domain_data
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
+from menuai.components.dlna_dmr.const import DOMAIN
+from menuai.components.dlna_dmr.data import EventListenAddr, get_domain_data
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import Event, menuai
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def aiohttp_notify_servers_mock() -> Generator[Mock]:
     This fixture provides a list of the constructed servers.
     """
     with patch(
-        "homeassistant.components.dlna_dmr.data.AiohttpNotifyServer"
+        "menuai.components.dlna_dmr.data.AiohttpNotifyServer"
     ) as mock_constructor:
         servers = []
 
@@ -44,22 +44,22 @@ def aiohttp_notify_servers_mock() -> Generator[Mock]:
             )
 
 
-async def test_get_domain_data(hass: HomeAssistant) -> None:
+async def test_get_domain_data(menuai: menuai) -> None:
     """Test the get_domain_data function returns the same data every time."""
-    assert DOMAIN not in hass.data
-    domain_data = get_domain_data(hass)
+    assert DOMAIN not in menuai.data
+    domain_data = get_domain_data(menuai)
     assert domain_data is not None
-    assert get_domain_data(hass) is domain_data
+    assert get_domain_data(menuai) is domain_data
 
 
 async def test_event_notifier(
-    hass: HomeAssistant, aiohttp_notify_servers_mock: Mock
+    menuai: menuai, aiohttp_notify_servers_mock: Mock
 ) -> None:
     """Test getting and releasing event notifiers."""
-    domain_data = get_domain_data(hass)
+    domain_data = get_domain_data(menuai)
 
     listen_addr = EventListenAddr(None, 0, None)
-    event_notifier = await domain_data.async_get_event_notifier(listen_addr, hass)
+    event_notifier = await domain_data.async_get_event_notifier(listen_addr, menuai)
     assert event_notifier is not None
 
     # Check that the parameters were passed through to the AiohttpNotifyServer
@@ -69,14 +69,14 @@ async def test_event_notifier(
 
     # Same address should give same notifier
     listen_addr_2 = EventListenAddr(None, 0, None)
-    event_notifier_2 = await domain_data.async_get_event_notifier(listen_addr_2, hass)
+    event_notifier_2 = await domain_data.async_get_event_notifier(listen_addr_2, menuai)
     assert event_notifier_2 is event_notifier
 
     # Different address should give different notifier
     listen_addr_3 = EventListenAddr(
         "198.51.100.4", 9999, "http://198.51.100.4:9999/notify"
     )
-    event_notifier_3 = await domain_data.async_get_event_notifier(listen_addr_3, hass)
+    event_notifier_3 = await domain_data.async_get_event_notifier(listen_addr_3, menuai)
     assert event_notifier_3 is not None
     assert event_notifier_3 is not event_notifier
 
@@ -111,16 +111,16 @@ async def test_event_notifier(
 
 
 async def test_cleanup_event_notifiers(
-    hass: HomeAssistant, aiohttp_notify_servers_mock: Mock
+    menuai: menuai, aiohttp_notify_servers_mock: Mock
 ) -> None:
     """Test cleanup function clears all event notifiers."""
-    domain_data = get_domain_data(hass)
-    await domain_data.async_get_event_notifier(EventListenAddr(None, 0, None), hass)
+    domain_data = get_domain_data(menuai)
+    await domain_data.async_get_event_notifier(EventListenAddr(None, 0, None), menuai)
     await domain_data.async_get_event_notifier(
-        EventListenAddr(None, 0, "different"), hass
+        EventListenAddr(None, 0, "different"), menuai
     )
 
-    await domain_data.async_cleanup_event_notifiers(Event(EVENT_HOMEASSISTANT_STOP))
+    await domain_data.async_cleanup_event_notifiers(Event(EVENT_menuai_STOP))
 
     assert not domain_data.event_notifiers
     assert not domain_data.event_notifier_refs

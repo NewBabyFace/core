@@ -6,13 +6,13 @@ from typing import Any
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
@@ -41,9 +41,9 @@ async def test_sensor(
 
     json = await reg_resp.json()
     assert json == {"success": True}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("binary_sensor.test_1_is_charging")
+    entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert entity is not None
 
     assert entity.attributes["device_class"] == "plug"
@@ -79,28 +79,28 @@ async def test_sensor(
     json = await update_resp.json()
     assert json["invalid_state"]["success"] is False
 
-    updated_entity = hass.states.get("binary_sensor.test_1_is_charging")
+    updated_entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert updated_entity.state == "off"
     assert "foo" not in updated_entity.attributes
 
     assert len(device_registry.devices) == len(create_registrations)
 
     # Reload to verify state is restored
-    config_entry = hass.config_entries.async_entries("mobile_app")[1]
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
-    unloaded_entity = hass.states.get("binary_sensor.test_1_is_charging")
+    config_entry = menuai.config_entries.async_entries("mobile_app")[1]
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    unloaded_entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert unloaded_entity.state == "unavailable"
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    restored_entity = hass.states.get("binary_sensor.test_1_is_charging")
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    restored_entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert restored_entity.state == updated_entity.state
     assert restored_entity.attributes == updated_entity.attributes
 
 
 async def test_sensor_must_register(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -125,7 +125,7 @@ async def test_sensor_must_register(
 
 
 async def test_sensor_id_no_dupes(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
     caplog: pytest.LogCaptureFixture,
@@ -153,11 +153,11 @@ async def test_sensor_id_no_dupes(
 
     reg_json = await reg_resp.json()
     assert reg_json == {"success": True}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Re-register" not in caplog.text
 
-    entity = hass.states.get("binary_sensor.test_1_is_charging")
+    entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert entity is not None
 
     assert entity.attributes["device_class"] == "plug"
@@ -173,11 +173,11 @@ async def test_sensor_id_no_dupes(
     assert dupe_resp.status == HTTPStatus.CREATED
     dupe_reg_json = await dupe_resp.json()
     assert dupe_reg_json == {"success": True}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Re-register" in caplog.text
 
-    entity = hass.states.get("binary_sensor.test_1_is_charging")
+    entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert entity is not None
 
     assert entity.attributes["device_class"] == "plug"
@@ -189,7 +189,7 @@ async def test_sensor_id_no_dupes(
 
 
 async def test_register_sensor_no_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -214,9 +214,9 @@ async def test_register_sensor_no_state(
 
     json = await reg_resp.json()
     assert json == {"success": True}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("binary_sensor.test_1_is_charging")
+    entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert entity is not None
 
     assert entity.domain == "binary_sensor"
@@ -239,9 +239,9 @@ async def test_register_sensor_no_state(
 
     json = await reg_resp.json()
     assert json == {"success": True}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("binary_sensor.test_1_backup_is_charging")
+    entity = menuai.states.get("binary_sensor.test_1_backup_is_charging")
     assert entity
 
     assert entity.domain == "binary_sensor"
@@ -250,7 +250,7 @@ async def test_register_sensor_no_state(
 
 
 async def test_update_sensor_no_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -275,9 +275,9 @@ async def test_update_sensor_no_state(
 
     json = await reg_resp.json()
     assert json == {"success": True}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("binary_sensor.test_1_is_charging")
+    entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert entity is not None
     assert entity.state == "on"
 
@@ -296,5 +296,5 @@ async def test_update_sensor_no_state(
     json = await update_resp.json()
     assert json == {"is_charging": {"success": True}}
 
-    updated_entity = hass.states.get("binary_sensor.test_1_is_charging")
+    updated_entity = menuai.states.get("binary_sensor.test_1_is_charging")
     assert updated_entity.state == STATE_UNKNOWN

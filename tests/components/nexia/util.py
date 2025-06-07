@@ -5,22 +5,22 @@ import uuid
 
 from nexia.home import NexiaHome
 
-from homeassistant.components.nexia.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.nexia.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_fixture
 from tests.test_util.aiohttp import mock_aiohttp_client
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     skip_setup: bool = False,
     exception: Exception | None = None,
     *,
     house_fixture="mobile_houses_123456.json",
 ) -> MockConfigEntry:
-    """Set up the nexia integration in Home Assistant."""
+    """Set up the nexia integration in MenuAI."""
 
     session_fixture = "session_123456.json"
     sign_in_fixture = "sign_in.json"
@@ -41,19 +41,19 @@ async def async_init_integration(
         else:
             mock_session.post(
                 nexia.API_MOBILE_SESSION_URL,
-                text=await async_load_fixture(hass, session_fixture, DOMAIN),
+                text=await async_load_fixture(menuai, session_fixture, DOMAIN),
             )
         mock_session.get(
             nexia.API_MOBILE_HOUSES_URL.format(house_id=123456),
-            text=await async_load_fixture(hass, house_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, house_fixture, DOMAIN),
         )
         mock_session.post(
             nexia.API_MOBILE_ACCOUNTS_SIGN_IN_URL,
-            text=await async_load_fixture(hass, sign_in_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, sign_in_fixture, DOMAIN),
         )
         mock_session.post(
             "https://www.mynexia.com/mobile/xxl_thermostats/2293892/fan_speed",
-            text=await async_load_fixture(hass, set_fan_speed_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, set_fan_speed_fixture, DOMAIN),
         )
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -61,10 +61,10 @@ async def async_init_integration(
             minor_version=2,
             unique_id="123456",
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
         if not skip_setup:
-            await hass.config_entries.async_setup(entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(entry.entry_id)
+            await menuai.async_block_till_done()
 
     return entry

@@ -10,15 +10,15 @@ from typing import Final
 
 from fyta_cli.fyta_models import Plant
 
-from homeassistant.components.image import (
+from menuai.components.image import (
     Image,
     ImageEntity,
     ImageEntityDescription,
     valid_image_content_type,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import FytaConfigEntry, FytaCoordinator
 from .entity import FytaPlantEntity
@@ -49,7 +49,7 @@ IMAGES: Final[list[FytaImageEntityDescription]] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FytaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ class FytaPlantImageEntity(FytaPlantEntity, ImageEntity):
     ) -> None:
         """Initialize Fyta Image entity."""
         super().__init__(coordinator, entry, description, plant_id)
-        ImageEntity.__init__(self, coordinator.hass)
+        ImageEntity.__init__(self, coordinator.menuai)
 
     async def async_image(self) -> bytes | None:
         """Return bytes of image."""

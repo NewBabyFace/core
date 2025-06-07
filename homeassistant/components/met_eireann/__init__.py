@@ -7,12 +7,12 @@ from typing import Any, Self
 
 import meteireann
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE, Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -23,12 +23,12 @@ UPDATE_INTERVAL = timedelta(minutes=60)
 PLATFORMS = [Platform.WEATHER]
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up Met Éireann as config entry."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     raw_weather_data = meteireann.WeatherData(
-        async_get_clientsession(hass),
+        async_get_clientsession(menuai),
         latitude=config_entry.data[CONF_LATITUDE],
         longitude=config_entry.data[CONF_LONGITUDE],
         altitude=config_entry.data[CONF_ELEVATION],
@@ -44,7 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             raise UpdateFailed(f"Update failed: {err}") from err
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=config_entry,
         name=DOMAIN,
@@ -53,19 +53,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
     await coordinator.async_refresh()
 
-    hass.data[DOMAIN][config_entry.entry_id] = coordinator
+    menuai.data[DOMAIN][config_entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
-    hass.data[DOMAIN].pop(config_entry.entry_id)
+    menuai.data[DOMAIN].pop(config_entry.entry_id)
 
     return unload_ok
 

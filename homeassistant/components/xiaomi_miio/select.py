@@ -29,11 +29,11 @@ from miio.integrations.humidifier.zhimi.airhumidifier_miot import (
     LedBrightness as AirhumidifierMiotLedBrightness,
 )
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import CONF_DEVICE, CONF_MODEL, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import CONF_DEVICE, CONF_MODEL, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_FLOW_TYPE,
@@ -202,7 +202,7 @@ SELECTOR_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

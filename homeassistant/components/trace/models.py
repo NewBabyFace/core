@@ -7,16 +7,16 @@ from collections import deque
 import datetime as dt
 from typing import Any
 
-from homeassistant.core import Context
-from homeassistant.helpers.trace import (
+from menuai.core import Context
+from menuai.helpers.trace import (
     TraceElement,
     script_execution_get,
     trace_id_get,
     trace_id_set,
     trace_set_child_id,
 )
-from homeassistant.util import dt as dt_util, uuid as uuid_util
-from homeassistant.util.limited_size_dict import LimitedSizeDict
+from menuai.util import dt as dt_util, uuid as uuid_util
+from menuai.util.limited_size_dict import LimitedSizeDict
 
 type TraceData = dict[str, LimitedSizeDict[str, BaseTrace]]
 

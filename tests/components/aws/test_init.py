@@ -4,8 +4,8 @@ import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, call, patch as async_patch
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
 class MockAioSession:
@@ -39,27 +39,27 @@ class MockAioSession:
         return ["us-east-1", "us-east-2", "us-west-1", "us-west-2"]
 
 
-async def test_empty_config(hass: HomeAssistant) -> None:
+async def test_empty_config(menuai: menuai) -> None:
     """Test a default config will be create for empty config."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
-        await async_setup_component(hass, "aws", {"aws": {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, "aws", {"aws": {}})
+        await menuai.async_block_till_done()
 
     # we don't validate auto-created default profile
     mock_session.get_user.assert_not_awaited()
 
 
-async def test_empty_credential(hass: HomeAssistant) -> None:
+async def test_empty_credential(menuai: menuai) -> None:
     """Test a default config will be create for empty credential section."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -73,23 +73,23 @@ async def test_empty_credential(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "new_lambda_test") is True
-    await hass.services.async_call(
+    assert menuai.services.has_service("notify", "new_lambda_test") is True
+    await menuai.services.async_call(
         "notify", "new_lambda_test", {"message": "test", "target": "ARN"}, blocking=True
     )
     mock_session.invoke.assert_awaited_once()
 
 
-async def test_profile_credential(hass: HomeAssistant) -> None:
+async def test_profile_credential(menuai: menuai) -> None:
     """Test credentials with profile name."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -105,10 +105,10 @@ async def test_profile_credential(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "sns_test") is True
-    await hass.services.async_call(
+    assert menuai.services.has_service("notify", "sns_test") is True
+    await menuai.services.async_call(
         "notify",
         "sns_test",
         {"title": "test", "message": "test", "target": "ARN"},
@@ -117,14 +117,14 @@ async def test_profile_credential(hass: HomeAssistant) -> None:
     mock_session.publish.assert_awaited_once()
 
 
-async def test_access_key_credential(hass: HomeAssistant) -> None:
+async def test_access_key_credential(menuai: menuai) -> None:
     """Test credentials with access key."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -147,10 +147,10 @@ async def test_access_key_credential(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "sns_test") is True
-    await hass.services.async_call(
+    assert menuai.services.has_service("notify", "sns_test") is True
+    await menuai.services.async_call(
         "notify",
         "sns_test",
         {"title": "test", "message": "test", "target": "ARN"},
@@ -159,19 +159,19 @@ async def test_access_key_credential(hass: HomeAssistant) -> None:
     mock_session.publish.assert_awaited_once()
 
 
-async def test_notify_credential(hass: HomeAssistant) -> None:
+async def test_notify_credential(menuai: menuai) -> None:
     """Test notify service can use access key directly."""
     mock_session = MockAioSession()
     with (
         async_patch(
-            "homeassistant.components.aws.AioSession", return_value=mock_session
+            "menuai.components.aws.AioSession", return_value=mock_session
         ),
         async_patch(
-            "homeassistant.components.aws.notify.AioSession", return_value=mock_session
+            "menuai.components.aws.notify.AioSession", return_value=mock_session
         ),
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -188,27 +188,27 @@ async def test_notify_credential(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "sqs_test") is True
-    await hass.services.async_call(
+    assert menuai.services.has_service("notify", "sqs_test") is True
+    await menuai.services.async_call(
         "notify", "sqs_test", {"message": "test", "target": "ARN"}, blocking=True
     )
 
 
-async def test_notify_credential_profile(hass: HomeAssistant) -> None:
+async def test_notify_credential_profile(menuai: menuai) -> None:
     """Test notify service can use profile directly."""
     mock_session = MockAioSession()
     with (
         async_patch(
-            "homeassistant.components.aws.AioSession", return_value=mock_session
+            "menuai.components.aws.AioSession", return_value=mock_session
         ),
         async_patch(
-            "homeassistant.components.aws.notify.AioSession", return_value=mock_session
+            "menuai.components.aws.notify.AioSession", return_value=mock_session
         ),
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -223,22 +223,22 @@ async def test_notify_credential_profile(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "sqs_test") is True
-    await hass.services.async_call(
+    assert menuai.services.has_service("notify", "sqs_test") is True
+    await menuai.services.async_call(
         "notify", "sqs_test", {"message": "test", "target": "ARN"}, blocking=True
     )
 
 
-async def test_credential_skip_validate(hass: HomeAssistant) -> None:
+async def test_credential_skip_validate(menuai: menuai) -> None:
     """Test credential can skip validate."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -253,19 +253,19 @@ async def test_credential_skip_validate(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_session.get_user.assert_not_awaited()
 
 
-async def test_service_call_extra_data(hass: HomeAssistant) -> None:
+async def test_service_call_extra_data(menuai: menuai) -> None:
     """Test service call extra data are parsed properly."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -279,10 +279,10 @@ async def test_service_call_extra_data(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "sns_test") is True
-    await hass.services.async_call(
+    assert menuai.services.has_service("notify", "sns_test") is True
+    await menuai.services.async_call(
         "notify",
         "sns_test",
         {
@@ -295,21 +295,21 @@ async def test_service_call_extra_data(hass: HomeAssistant) -> None:
     mock_session.publish.assert_called_once_with(
         TargetArn="ARN",
         Message="test",
-        Subject="Home Assistant",
+        Subject="MenuAI",
         MessageAttributes={
             "AWS.SNS.SMS.SenderID": {"StringValue": "HA-notify", "DataType": "String"}
         },
     )
 
 
-async def test_events_service_call(hass: HomeAssistant) -> None:
+async def test_events_service_call(menuai: menuai) -> None:
     """Test events service (EventBridge) call works as expected."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -323,15 +323,15 @@ async def test_events_service_call(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "events_test") is True
+    assert menuai.services.has_service("notify", "events_test") is True
 
     mock_session.put_events.return_value = {
         "Entries": [{"EventId": "", "ErrorCode": 0, "ErrorMessage": "test-error"}]
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "notify",
         "events_test",
         {
@@ -348,21 +348,21 @@ async def test_events_service_call(hass: HomeAssistant) -> None:
                 "EventBusName": "ARN",
                 "Detail": json.dumps({"message": "test"}),
                 "DetailType": "",
-                "Source": "homeassistant",
+                "Source": "menuai",
                 "Resources": [],
             }
         ]
     )
 
 
-async def test_events_service_call_10_targets(hass: HomeAssistant) -> None:
+async def test_events_service_call_10_targets(menuai: menuai) -> None:
     """Test events service (EventBridge) call works with more than 10 targets."""
     mock_session = MockAioSession()
     with async_patch(
-        "homeassistant.components.aws.AioSession", return_value=mock_session
+        "menuai.components.aws.AioSession", return_value=mock_session
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "aws",
             {
                 "aws": {
@@ -376,10 +376,10 @@ async def test_events_service_call_10_targets(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service("notify", "events_test") is True
-    await hass.services.async_call(
+    assert menuai.services.has_service("notify", "events_test") is True
+    await menuai.services.async_call(
         "notify",
         "events_test",
         {
@@ -388,7 +388,7 @@ async def test_events_service_call_10_targets(hass: HomeAssistant) -> None:
             "data": {
                 "detail_type": "test_event",
                 "detail": {"eventkey": "eventvalue"},
-                "source": "HomeAssistant-test",
+                "source": "menuai-test",
                 "resources": ["resource1", "resource2"],
             },
         },
@@ -398,7 +398,7 @@ async def test_events_service_call_10_targets(hass: HomeAssistant) -> None:
     entry = {
         "Detail": json.dumps({"eventkey": "eventvalue"}),
         "DetailType": "test_event",
-        "Source": "HomeAssistant-test",
+        "Source": "menuai-test",
         "Resources": ["resource1", "resource2"],
     }
 

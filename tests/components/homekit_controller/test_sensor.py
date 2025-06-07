@@ -9,13 +9,13 @@ from aiohomekit.model.services import Service, ServicesTypes
 from aiohomekit.protocol.statuscodes import HapStatusCode
 import pytest
 
-from homeassistant.components.homekit_controller.sensor import (
+from menuai.components.homekit_controller.sensor import (
     thread_node_capability_to_str,
     thread_status_to_str,
 )
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import TEST_DEVICE_SERVICE_INFO, Helper, setup_test_component
 
@@ -71,11 +71,11 @@ def create_battery_level_sensor(accessory: Accessory) -> Service:
 
 
 async def test_temperature_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test reading the state of a HomeKit temperature sensor accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_temperature_sensor_service, suffix="temperature"
+        menuai, get_next_aid(), create_temperature_sensor_service, suffix="temperature"
     )
 
     state = await helper.async_update(
@@ -99,15 +99,15 @@ async def test_temperature_sensor_read_state(
 
 
 async def test_temperature_sensor_not_added_twice(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """A standalone temperature sensor should not get a characteristic AND a service entity."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_temperature_sensor_service, suffix="temperature"
+        menuai, get_next_aid(), create_temperature_sensor_service, suffix="temperature"
     )
 
     created_sensors = set()
-    for state in hass.states.async_all():
+    for state in menuai.states.async_all():
         if state.attributes.get("device_class") == SensorDeviceClass.TEMPERATURE:
             created_sensors.add(state.entity_id)
 
@@ -115,11 +115,11 @@ async def test_temperature_sensor_not_added_twice(
 
 
 async def test_humidity_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test reading the state of a HomeKit humidity sensor accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_humidity_sensor_service, suffix="humidity"
+        menuai, get_next_aid(), create_humidity_sensor_service, suffix="humidity"
     )
 
     state = await helper.async_update(
@@ -142,11 +142,11 @@ async def test_humidity_sensor_read_state(
 
 
 async def test_light_level_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test reading the state of a HomeKit temperature sensor accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_light_level_sensor_service, suffix="light_level"
+        menuai, get_next_aid(), create_light_level_sensor_service, suffix="light_level"
     )
 
     state = await helper.async_update(
@@ -169,11 +169,11 @@ async def test_light_level_sensor_read_state(
 
 
 async def test_carbon_dioxide_level_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test reading the state of a HomeKit carbon dioxide sensor accessory."""
     helper = await setup_test_component(
-        hass,
+        menuai,
         get_next_aid(),
         create_carbon_dioxide_level_sensor_service,
         suffix="carbon_dioxide",
@@ -197,11 +197,11 @@ async def test_carbon_dioxide_level_sensor_read_state(
 
 
 async def test_battery_level_sensor(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test reading the state of a HomeKit battery level sensor."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_battery_level_sensor, suffix="battery"
+        menuai, get_next_aid(), create_battery_level_sensor, suffix="battery"
     )
 
     state = await helper.async_update(
@@ -226,11 +226,11 @@ async def test_battery_level_sensor(
 
 
 async def test_battery_charging(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test reading the state of a HomeKit battery's charging state."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_battery_level_sensor, suffix="battery"
+        menuai, get_next_aid(), create_battery_level_sensor, suffix="battery"
     )
 
     state = await helper.async_update(
@@ -252,11 +252,11 @@ async def test_battery_charging(
 
 
 async def test_battery_low(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test reading the state of a HomeKit battery's low state."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_battery_level_sensor, suffix="battery"
+        menuai, get_next_aid(), create_battery_level_sensor, suffix="battery"
     )
 
     state = await helper.async_update(
@@ -296,14 +296,14 @@ def create_switch_with_sensor(accessory: Accessory) -> Service:
 
 
 async def test_switch_with_sensor(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test a switch service that has a sensor characteristic is correctly handled."""
-    helper = await setup_test_component(hass, get_next_aid(), create_switch_with_sensor)
+    helper = await setup_test_component(menuai, get_next_aid(), create_switch_with_sensor)
 
     # Helper will be for the primary entity, which is the outlet. Make a helper for the sensor.
     energy_helper = Helper(
-        hass,
+        menuai,
         "sensor.testdevice_power",
         helper.pairing,
         helper.accessory,
@@ -328,10 +328,10 @@ async def test_switch_with_sensor(
 
 
 async def test_sensor_unavailable(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test a sensor becoming unavailable."""
-    helper = await setup_test_component(hass, get_next_aid(), create_switch_with_sensor)
+    helper = await setup_test_component(menuai, get_next_aid(), create_switch_with_sensor)
 
     outlet = helper.accessory.services.first(service_type=ServicesTypes.OUTLET)
     on_char = outlet[CharacteristicsTypes.ON]
@@ -339,7 +339,7 @@ async def test_sensor_unavailable(
 
     # Helper will be for the primary entity, which is the outlet. Make a helper for the sensor.
     energy_helper = Helper(
-        hass,
+        menuai,
         "sensor.testdevice_power",
         helper.pairing,
         helper.accessory,
@@ -411,21 +411,21 @@ def test_thread_status_to_str() -> None:
     "fake_ble_pairing",
 )
 async def test_rssi_sensor(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test an rssi sensor."""
-    inject_bluetooth_service_info(hass, TEST_DEVICE_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, TEST_DEVICE_SERVICE_INFO)
 
     # Any accessory will do for this test, but we need at least
     # one or the rssi sensor will not be created
     await setup_test_component(
-        hass,
+        menuai,
         get_next_aid(),
         create_battery_level_sensor,
         suffix="battery",
         connection="BLE",
     )
-    assert hass.states.get("sensor.testdevice_signal_strength").state == "-56"
+    assert menuai.states.get("sensor.testdevice_signal_strength").state == "-56"
 
 
 @pytest.mark.usefixtures(
@@ -435,7 +435,7 @@ async def test_rssi_sensor(
     "fake_ble_pairing",
 )
 async def test_migrate_rssi_sensor_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -447,18 +447,18 @@ async def test_migrate_rssi_sensor_unique_id(
         suggested_object_id="renamed_rssi",
     )
 
-    inject_bluetooth_service_info(hass, TEST_DEVICE_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, TEST_DEVICE_SERVICE_INFO)
 
     # Any accessory will do for this test, but we need at least
     # one or the rssi sensor will not be created
     await setup_test_component(
-        hass,
+        menuai,
         get_next_aid(),
         create_battery_level_sensor,
         suffix="battery",
         connection="BLE",
     )
-    assert hass.states.get("sensor.renamed_rssi").state == "-56"
+    assert menuai.states.get("sensor.renamed_rssi").state == "-56"
 
     assert (
         entity_registry.async_get(rssi_sensor.entity_id).unique_id

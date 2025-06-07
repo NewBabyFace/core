@@ -11,10 +11,10 @@ from aioflo.api import API
 from aioflo.errors import RequestError
 from orjson import JSONDecodeError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, LOGGER
 
@@ -37,14 +37,14 @@ class FloDeviceDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         api_client: API,
         location_id: str,
         device_id: str,
     ) -> None:
         """Initialize the device."""
-        self.hass: HomeAssistant = hass
+        self.menuai: menuai = menuai
         self.api_client: API = api_client
         self._flo_location_id: str = location_id
         self._flo_device_id: str = device_id
@@ -52,7 +52,7 @@ class FloDeviceDataUpdateCoordinator(DataUpdateCoordinator):
         self._device_information: dict[str, Any] = {}
         self._water_usage: dict[str, Any] = {}
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}-{device_id}",

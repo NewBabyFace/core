@@ -4,9 +4,9 @@ from typing import Any
 
 from advantage_air import ApiError
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .models import AdvantageAirData
@@ -33,7 +33,7 @@ class AdvantageAirEntity(CoordinatorEntity):
                 if await func(*keys, *values):
                     await self.coordinator.async_request_refresh()
             except ApiError as err:
-                raise HomeAssistantError(err) from err
+                raise menuaiError(err) from err
 
         return update_handle
 

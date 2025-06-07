@@ -12,7 +12,7 @@ def mock_client() -> Generator[AsyncMock]:
     """Mock the SPC client."""
 
     with patch(
-        "homeassistant.components.spc.SpcWebGateway", autospec=True
+        "menuai.components.spc.SpcWebGateway", autospec=True
     ) as mock_client:
         client = mock_client.return_value
         client.async_load_parameters.return_value = True

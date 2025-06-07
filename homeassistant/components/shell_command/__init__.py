@@ -9,16 +9,16 @@ import shlex
 
 import voluptuous as vol
 
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, TemplateError
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.json import JsonObjectType
+from menuai.exceptions import menuaiError, TemplateError
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.typing import ConfigType
+from menuai.util.json import JsonObjectType
 
 DOMAIN = "shell_command"
 
@@ -31,7 +31,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the shell_command component."""
     conf = config.get(DOMAIN, {})
 
@@ -50,7 +50,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             cache[cmd] = prog, args, args_compiled
         else:
             prog, args = cmd.split(" ", 1)
-            args_compiled = template.Template(str(args), hass)
+            args_compiled = template.Template(str(args), menuai)
             cache[cmd] = prog, args, args_compiled
 
         if args_compiled:
@@ -102,7 +102,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     process._transport.close()  # type: ignore[attr-defined]  # noqa: SLF001
                 del process
 
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="timeout",
                 translation_placeholders={
@@ -145,7 +145,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 _LOGGER.exception(
                     "Unable to handle non-utf8 output of command: `%s`", cmd
                 )
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="non_utf8_output",
                     translation_placeholders={"command": cmd},
@@ -154,7 +154,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         return None
 
     for name in conf:
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             name,
             async_service_handler,

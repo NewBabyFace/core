@@ -12,17 +12,17 @@ from pylutron_caseta import BUTTON_STATUS_PRESSED
 from pylutron_caseta.smartbridge import Smartbridge
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.const import ATTR_DEVICE_ID, CONF_HOST, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai import config_entries
+from menuai.const import ATTR_DEVICE_ID, CONF_HOST, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ACTION_PRESS,
@@ -103,13 +103,13 @@ PLATFORMS = [
 ]
 
 
-async def async_setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, base_config: ConfigType) -> bool:
     """Set up the Lutron component."""
     if DOMAIN in base_config:
         bridge_configs = base_config[DOMAIN]
         for config in bridge_configs:
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": config_entries.SOURCE_IMPORT},
                     # extract the config keys one-by-one just to be explicit
@@ -126,11 +126,11 @@ async def async_setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
 
 
 async def _async_migrate_unique_ids(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry
+    menuai: menuai, entry: LutronCasetaConfigEntry
 ) -> None:
     """Migrate entities since the occupancygroup were not actually unique."""
 
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     bridge_unique_id = entry.unique_id
 
     @callback
@@ -149,19 +149,19 @@ async def _async_migrate_unique_ids(
             )
         return {"new_unique_id": f"occupancygroup_{bridge_unique_id}_{sensor_id}"}
 
-    await er.async_migrate_entries(hass, entry.entry_id, _async_migrator)
+    await er.async_migrate_entries(menuai, entry.entry_id, _async_migrator)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry
+    menuai: menuai, entry: LutronCasetaConfigEntry
 ) -> bool:
     """Set up a bridge from a config entry."""
     entry_id = entry.entry_id
     host = entry.data[CONF_HOST]
-    keyfile = hass.config.path(entry.data[CONF_KEYFILE])
-    certfile = hass.config.path(entry.data[CONF_CERTFILE])
-    ca_certs = hass.config.path(entry.data[CONF_CA_CERTS])
-    connected_future: asyncio.Future[None] = hass.loop.create_future()
+    keyfile = menuai.config.path(entry.data[CONF_KEYFILE])
+    certfile = menuai.config.path(entry.data[CONF_CERTFILE])
+    ca_certs = menuai.config.path(entry.data[CONF_CA_CERTS])
+    connected_future: asyncio.Future[None] = menuai.loop.create_future()
 
     def _on_connect() -> None:
         nonlocal connected_future
@@ -180,7 +180,7 @@ async def async_setup_entry(
         _LOGGER.error("Invalid certificate used to connect to bridge at %s", host)
         return False
 
-    connect_task = hass.async_create_task(bridge.connect())
+    connect_task = menuai.async_create_task(bridge.connect())
     for future, name, timeout in (
         (connected_future, "connect", CONNECT_TIMEOUT),
         (connect_task, "configure", CONFIGURE_TIMEOUT),
@@ -197,36 +197,36 @@ async def async_setup_entry(
         raise ConfigEntryNotReady(f"Connection failed to {host}")
 
     _LOGGER.debug("Connected to Lutron Caseta bridge via LEAP at %s", host)
-    await _async_migrate_unique_ids(hass, entry)
+    await _async_migrate_unique_ids(menuai, entry)
 
     bridge_devices = bridge.get_devices()
     bridge_device = bridge_devices[BRIDGE_DEVICE_ID]
 
     if not entry.unique_id:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=serial_to_unique_id(bridge_device["serial"])
         )
 
-    _async_register_bridge_device(hass, entry_id, bridge_device, bridge)
+    _async_register_bridge_device(menuai, entry_id, bridge_device, bridge)
 
-    keypad_data = _async_setup_keypads(hass, entry_id, bridge, bridge_device)
+    keypad_data = _async_setup_keypads(menuai, entry_id, bridge, bridge_device)
 
     # Store this bridge (keyed by entry_id) so it can be retrieved by the
     # platforms we're setting up.
 
     entry.runtime_data = LutronCasetaData(bridge, bridge_device, keypad_data)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 @callback
 def _async_register_bridge_device(
-    hass: HomeAssistant, config_entry_id: str, bridge_device: dict, bridge: Smartbridge
+    menuai: menuai, config_entry_id: str, bridge_device: dict, bridge: Smartbridge
 ) -> None:
     """Register the bridge device in the device registry."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     device_args = DeviceInfo(
         name=bridge_device["name"],
@@ -246,14 +246,14 @@ def _async_register_bridge_device(
 
 @callback
 def _async_setup_keypads(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_id: str,
     bridge: Smartbridge,
     bridge_device: dict[str, str | int],
 ) -> LutronKeypadData:
     """Register keypad devices (Keypads and Pico Remotes) in the device registry."""
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     bridge_devices: dict[str, dict[str, str | int]] = bridge.get_devices()
     bridge_buttons: dict[str, dict[str, str | int]] = bridge.buttons
@@ -313,7 +313,7 @@ def _async_setup_keypads(
     keypad_trigger_schemas = _async_build_trigger_schemas(keypad_button_names_to_leap)
 
     _async_subscribe_keypad_events(
-        hass=hass,
+        menuai=menuai,
         bridge=bridge,
         keypads=keypads,
         keypad_buttons=keypad_buttons,
@@ -431,7 +431,7 @@ def async_get_lip_button(device_type: str, leap_button: int) -> int | None:
 
 @callback
 def _async_subscribe_keypad_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     bridge: Smartbridge,
     keypads: dict[int, LutronKeypad],
     keypad_buttons: dict[int, LutronButton],
@@ -459,7 +459,7 @@ def _async_subscribe_keypad_events(
             keypad_type, leap_to_keypad_button_names[keypad_device_id]
         )[leap_button_number]
 
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             LUTRON_CASETA_BUTTON_EVENT,
             {
                 ATTR_SERIAL: keypad[LUTRON_KEYPAD_SERIAL],
@@ -484,12 +484,12 @@ def _async_subscribe_keypad_events(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry
+    menuai: menuai, entry: LutronCasetaConfigEntry
 ) -> bool:
     """Unload the bridge from a config entry."""
     data = entry.runtime_data
     await data.bridge.close()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 def _id_to_identifier(lutron_id: str) -> tuple[str, str]:
@@ -498,7 +498,7 @@ def _id_to_identifier(lutron_id: str) -> tuple[str, str]:
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, entry: LutronCasetaConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove lutron_caseta config entry from a device."""
     data = entry.runtime_data

@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.onkyo.config_flow import OnkyoConfigFlow
-from homeassistant.components.onkyo.const import (
+from menuai import config_entries
+from menuai.components.onkyo.config_flow import OnkyoConfigFlow
+from menuai.components.onkyo.const import (
     DOMAIN,
     OPTION_INPUT_SOURCES,
     OPTION_LISTENING_MODES,
@@ -14,11 +14,11 @@ from homeassistant.components.onkyo.const import (
     OPTION_MAX_VOLUME_DEFAULT,
     OPTION_VOLUME_RESOLUTION,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType, InvalidData
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType, InvalidData
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     SsdpServiceInfo,
 )
@@ -34,9 +34,9 @@ from . import (
 from tests.common import MockConfigEntry
 
 
-async def test_user_initial_menu(hass: HomeAssistant) -> None:
+async def test_user_initial_menu(menuai: menuai) -> None:
     """Test initial menu."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -46,19 +46,19 @@ async def test_user_initial_menu(hass: HomeAssistant) -> None:
     assert not set(init_result["menu_options"]) ^ {"manual", "eiscp_discovery"}
 
 
-async def test_manual_valid_host(hass: HomeAssistant, default_mock_discovery) -> None:
+async def test_manual_valid_host(menuai: menuai, default_mock_discovery) -> None:
     """Test valid host entered."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    form_result = await hass.config_entries.flow.async_configure(
+    form_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {"next_step_id": "manual"},
     )
 
-    select_result = await hass.config_entries.flow.async_configure(
+    select_result = await menuai.config_entries.flow.async_configure(
         form_result["flow_id"],
         user_input={CONF_HOST: "host 1"},
     )
@@ -67,19 +67,19 @@ async def test_manual_valid_host(hass: HomeAssistant, default_mock_discovery) ->
     assert select_result["description_placeholders"]["name"] == "type 1 (host 1)"
 
 
-async def test_manual_invalid_host(hass: HomeAssistant, stub_mock_discovery) -> None:
+async def test_manual_invalid_host(menuai: menuai, stub_mock_discovery) -> None:
     """Test invalid host entered."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    form_result = await hass.config_entries.flow.async_configure(
+    form_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {"next_step_id": "manual"},
     )
 
-    host_result = await hass.config_entries.flow.async_configure(
+    host_result = await menuai.config_entries.flow.async_configure(
         form_result["flow_id"],
         user_input={CONF_HOST: "sample-host-name"},
     )
@@ -89,21 +89,21 @@ async def test_manual_invalid_host(hass: HomeAssistant, stub_mock_discovery) -> 
 
 
 async def test_manual_valid_host_unexpected_error(
-    hass: HomeAssistant, empty_mock_discovery
+    menuai: menuai, empty_mock_discovery
 ) -> None:
     """Test valid host entered."""
 
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    form_result = await hass.config_entries.flow.async_configure(
+    form_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {"next_step_id": "manual"},
     )
 
-    host_result = await hass.config_entries.flow.async_configure(
+    host_result = await menuai.config_entries.flow.async_configure(
         form_result["flow_id"],
         user_input={CONF_HOST: "sample-host-name"},
     )
@@ -113,15 +113,15 @@ async def test_manual_valid_host_unexpected_error(
 
 
 async def test_discovery_and_no_devices_discovered(
-    hass: HomeAssistant, stub_mock_discovery
+    menuai: menuai, stub_mock_discovery
 ) -> None:
     """Test initial menu."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    form_result = await hass.config_entries.flow.async_configure(
+    form_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {"next_step_id": "eiscp_discovery"},
     )
@@ -131,15 +131,15 @@ async def test_discovery_and_no_devices_discovered(
 
 
 async def test_discovery_with_exception(
-    hass: HomeAssistant, empty_mock_discovery
+    menuai: menuai, empty_mock_discovery
 ) -> None:
     """Test discovery which throws an unexpected exception."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    form_result = await hass.config_entries.flow.async_configure(
+    form_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {"next_step_id": "eiscp_discovery"},
     )
@@ -148,9 +148,9 @@ async def test_discovery_with_exception(
     assert form_result["reason"] == "unknown"
 
 
-async def test_discovery_with_new_and_existing_found(hass: HomeAssistant) -> None:
+async def test_discovery_with_new_and_existing_found(menuai: menuai) -> None:
     """Test discovery with a new and an existing entry."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -164,7 +164,7 @@ async def test_discovery_with_new_and_existing_found(hass: HomeAssistant) -> Non
         # Fake it like the first entry was already added
         patch.object(OnkyoConfigFlow, "_async_current_ids", return_value=["id1"]),
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             {"next_step_id": "eiscp_discovery"},
         )
@@ -177,9 +177,9 @@ async def test_discovery_with_new_and_existing_found(hass: HomeAssistant) -> Non
     assert container == {"id2": "type 2 (host 2)"}
 
 
-async def test_discovery_with_one_selected(hass: HomeAssistant) -> None:
+async def test_discovery_with_one_selected(menuai: menuai) -> None:
     """Test discovery after a selection."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -189,12 +189,12 @@ async def test_discovery_with_one_selected(hass: HomeAssistant) -> None:
         await discovery_callback(create_connection(0))
 
     with patch("pyeiscp.Connection.discover", new=mock_discover):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             {"next_step_id": "eiscp_discovery"},
         )
 
-        select_result = await hass.config_entries.flow.async_configure(
+        select_result = await menuai.config_entries.flow.async_configure(
             form_result["flow_id"],
             user_input={"device": "id42"},
         )
@@ -204,7 +204,7 @@ async def test_discovery_with_one_selected(hass: HomeAssistant) -> None:
 
 
 async def test_ssdp_discovery_success(
-    hass: HomeAssistant, default_mock_discovery
+    menuai: menuai, default_mock_discovery
 ) -> None:
     """Test SSDP discovery with valid host."""
     discovery_info = SsdpServiceInfo(
@@ -215,7 +215,7 @@ async def test_ssdp_discovery_success(
         ssdp_st="mock_st",
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery_info,
@@ -224,7 +224,7 @@ async def test_ssdp_discovery_success(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_receiver"
 
-    select_result = await hass.config_entries.flow.async_configure(
+    select_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             "volume_resolution": 200,
@@ -239,7 +239,7 @@ async def test_ssdp_discovery_success(
 
 
 async def test_ssdp_discovery_already_configured(
-    hass: HomeAssistant, default_mock_discovery
+    menuai: menuai, default_mock_discovery
 ) -> None:
     """Test SSDP discovery with already configured device."""
     config_entry = MockConfigEntry(
@@ -247,7 +247,7 @@ async def test_ssdp_discovery_already_configured(
         data={CONF_HOST: "192.168.1.100"},
         unique_id="id1",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     discovery_info = SsdpServiceInfo(
         ssdp_location="http://192.168.1.100:8080",
@@ -257,7 +257,7 @@ async def test_ssdp_discovery_already_configured(
         ssdp_st="mock_st",
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery_info,
@@ -267,7 +267,7 @@ async def test_ssdp_discovery_already_configured(
     assert result["reason"] == "already_configured"
 
 
-async def test_ssdp_discovery_host_info_error(hass: HomeAssistant) -> None:
+async def test_ssdp_discovery_host_info_error(menuai: menuai) -> None:
     """Test SSDP discovery with host info error."""
     discovery_info = SsdpServiceInfo(
         ssdp_location="http://192.168.1.100:8080",
@@ -277,10 +277,10 @@ async def test_ssdp_discovery_host_info_error(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.onkyo.receiver.pyeiscp.Connection.discover",
+        "menuai.components.onkyo.receiver.pyeiscp.Connection.discover",
         side_effect=OSError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_SSDP},
             data=discovery_info,
@@ -291,7 +291,7 @@ async def test_ssdp_discovery_host_info_error(hass: HomeAssistant) -> None:
 
 
 async def test_ssdp_discovery_host_none_info(
-    hass: HomeAssistant, stub_mock_discovery
+    menuai: menuai, stub_mock_discovery
 ) -> None:
     """Test SSDP discovery with host info error."""
     discovery_info = SsdpServiceInfo(
@@ -301,7 +301,7 @@ async def test_ssdp_discovery_host_none_info(
         ssdp_st="mock_st",
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery_info,
@@ -312,7 +312,7 @@ async def test_ssdp_discovery_host_none_info(
 
 
 async def test_ssdp_discovery_no_location(
-    hass: HomeAssistant, default_mock_discovery
+    menuai: menuai, default_mock_discovery
 ) -> None:
     """Test SSDP discovery with no location."""
     discovery_info = SsdpServiceInfo(
@@ -322,7 +322,7 @@ async def test_ssdp_discovery_no_location(
         ssdp_st="mock_st",
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery_info,
@@ -333,7 +333,7 @@ async def test_ssdp_discovery_no_location(
 
 
 async def test_ssdp_discovery_no_host(
-    hass: HomeAssistant, default_mock_discovery
+    menuai: menuai, default_mock_discovery
 ) -> None:
     """Test SSDP discovery with no host."""
     discovery_info = SsdpServiceInfo(
@@ -343,7 +343,7 @@ async def test_ssdp_discovery_no_host(
         ssdp_st="mock_st",
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery_info,
@@ -354,51 +354,51 @@ async def test_ssdp_discovery_no_host(
 
 
 async def test_configure_no_resolution(
-    hass: HomeAssistant, default_mock_discovery
+    menuai: menuai, default_mock_discovery
 ) -> None:
     """Test receiver configure with no resolution set."""
 
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    form_result = await hass.config_entries.flow.async_configure(
+    form_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {"next_step_id": "manual"},
     )
 
-    select_result = await hass.config_entries.flow.async_configure(
+    select_result = await menuai.config_entries.flow.async_configure(
         form_result["flow_id"],
         user_input={CONF_HOST: "sample-host-name"},
     )
 
     with pytest.raises(InvalidData):
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             select_result["flow_id"],
             user_input={"input_sources": ["TV"]},
         )
 
 
-async def test_configure(hass: HomeAssistant, default_mock_discovery) -> None:
+async def test_configure(menuai: menuai, default_mock_discovery) -> None:
     """Test receiver configure."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "manual"},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "sample-host-name"},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             OPTION_VOLUME_RESOLUTION: 200,
@@ -409,7 +409,7 @@ async def test_configure(hass: HomeAssistant, default_mock_discovery) -> None:
     assert result["step_id"] == "configure_receiver"
     assert result["errors"] == {OPTION_INPUT_SOURCES: "empty_input_source_list"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             OPTION_VOLUME_RESOLUTION: 200,
@@ -420,7 +420,7 @@ async def test_configure(hass: HomeAssistant, default_mock_discovery) -> None:
     assert result["step_id"] == "configure_receiver"
     assert result["errors"] == {OPTION_LISTENING_MODES: "empty_listening_mode_list"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             OPTION_VOLUME_RESOLUTION: 200,
@@ -438,55 +438,55 @@ async def test_configure(hass: HomeAssistant, default_mock_discovery) -> None:
 
 
 async def test_configure_invalid_resolution_set(
-    hass: HomeAssistant, default_mock_discovery
+    menuai: menuai, default_mock_discovery
 ) -> None:
     """Test receiver configure with invalid resolution."""
 
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    form_result = await hass.config_entries.flow.async_configure(
+    form_result = await menuai.config_entries.flow.async_configure(
         init_result["flow_id"],
         {"next_step_id": "manual"},
     )
 
-    select_result = await hass.config_entries.flow.async_configure(
+    select_result = await menuai.config_entries.flow.async_configure(
         form_result["flow_id"],
         user_input={CONF_HOST: "sample-host-name"},
     )
 
     with pytest.raises(InvalidData):
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             select_result["flow_id"],
             user_input={"volume_resolution": 42, "input_sources": ["TV"]},
         )
 
 
-async def test_reconfigure(hass: HomeAssistant, default_mock_discovery) -> None:
+async def test_reconfigure(menuai: menuai, default_mock_discovery) -> None:
     """Test the reconfigure config flow."""
     receiver_info = create_receiver_info(1)
     config_entry = create_config_entry_from_info(receiver_info)
-    await setup_integration(hass, config_entry, receiver_info)
+    await setup_integration(menuai, config_entry, receiver_info)
 
     old_host = config_entry.data[CONF_HOST]
     old_options = config_entry.options
 
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"host": receiver_info.host}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "configure_receiver"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         user_input={OPTION_VOLUME_RESOLUTION: 200},
     )
@@ -502,15 +502,15 @@ async def test_reconfigure(hass: HomeAssistant, default_mock_discovery) -> None:
         assert config_entry.options[option] == option_value
 
 
-async def test_reconfigure_new_device(hass: HomeAssistant) -> None:
+async def test_reconfigure_new_device(menuai: menuai) -> None:
     """Test the reconfigure config flow with new device."""
     receiver_info = create_receiver_info(1)
     config_entry = create_config_entry_from_info(receiver_info)
-    await setup_integration(hass, config_entry, receiver_info)
+    await setup_integration(menuai, config_entry, receiver_info)
 
     old_unique_id = receiver_info.identifier
 
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
 
     mock_connection = create_connection(2)
 
@@ -519,13 +519,13 @@ async def test_reconfigure_new_device(hass: HomeAssistant) -> None:
         await discovery_callback(mock_connection)
 
     with patch(
-        "homeassistant.components.onkyo.receiver.pyeiscp.Connection.discover",
+        "menuai.components.onkyo.receiver.pyeiscp.Connection.discover",
         new=mock_discover,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"host": mock_connection.host}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "unique_id_mismatch"
@@ -545,18 +545,18 @@ async def test_reconfigure_new_device(hass: HomeAssistant) -> None:
         ]
     ],
 )
-async def test_options_flow(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def test_options_flow(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Test options flow."""
 
     receiver_info = create_receiver_info(1)
     config_entry = create_empty_config_entry()
-    await setup_integration(hass, config_entry, receiver_info)
+    await setup_integration(menuai, config_entry, receiver_info)
 
     old_volume_resolution = config_entry.options[OPTION_VOLUME_RESOLUTION]
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             OPTION_MAX_VOLUME: 42,
@@ -569,7 +569,7 @@ async def test_options_flow(hass: HomeAssistant, config_entry: MockConfigEntry) 
     assert result["step_id"] == "init"
     assert result["errors"] == {OPTION_INPUT_SOURCES: "empty_input_source_list"}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             OPTION_MAX_VOLUME: 42,
@@ -582,7 +582,7 @@ async def test_options_flow(hass: HomeAssistant, config_entry: MockConfigEntry) 
     assert result["step_id"] == "init"
     assert result["errors"] == {OPTION_LISTENING_MODES: "empty_listening_mode_list"}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             OPTION_MAX_VOLUME: 42,
@@ -594,7 +594,7 @@ async def test_options_flow(hass: HomeAssistant, config_entry: MockConfigEntry) 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "names"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             OPTION_INPUT_SOURCES: {"TV": "television"},

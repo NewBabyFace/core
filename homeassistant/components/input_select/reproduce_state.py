@@ -7,8 +7,8 @@ from collections.abc import Iterable, Mapping
 import logging
 from typing import Any
 
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_OPTION
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.const import ATTR_ENTITY_ID, ATTR_OPTION
+from menuai.core import Context, menuai, State
 
 from . import ATTR_OPTIONS, DOMAIN, SERVICE_SELECT_OPTION, SERVICE_SET_OPTIONS
 
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def _async_reproduce_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: State,
     *,
     context: Context | None = None,
@@ -26,7 +26,7 @@ async def _async_reproduce_state(
 ) -> None:
     """Reproduce a single state."""
     # Return if we can't find entity
-    if (cur_state := hass.states.get(state.entity_id)) is None:
+    if (cur_state := menuai.states.get(state.entity_id)) is None:
         _LOGGER.warning("Unable to find entity %s", state.entity_id)
         return
 
@@ -45,7 +45,7 @@ async def _async_reproduce_state(
         service = SERVICE_SET_OPTIONS
         service_data[ATTR_OPTIONS] = state.attributes[ATTR_OPTIONS]
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, service, service_data, context=context, blocking=True
         )
 
@@ -56,13 +56,13 @@ async def _async_reproduce_state(
     service = SERVICE_SELECT_OPTION
     service_data[ATTR_OPTION] = state.state
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, context=context, blocking=True
     )
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -73,7 +73,7 @@ async def async_reproduce_states(
     await asyncio.gather(
         *(
             _async_reproduce_state(
-                hass, state, context=context, reproduce_options=reproduce_options
+                menuai, state, context=context, reproduce_options=reproduce_options
             )
             for state in states
         )

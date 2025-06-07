@@ -7,7 +7,7 @@ from collections.abc import Callable, Hashable
 import logging
 import time
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,10 +17,10 @@ class KeyedRateLimit:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> None:
         """Initialize ratelimit tracker."""
-        self.hass = hass
+        self.menuai = menuai
         self._last_triggered: dict[Hashable, float] = {}
         self._rate_limit_timers: dict[Hashable, asyncio.TimerHandle] = {}
 
@@ -90,7 +90,7 @@ class KeyedRateLimit:
         )
 
         if key not in self._rate_limit_timers:
-            self._rate_limit_timers[key] = self.hass.loop.call_later(
+            self._rate_limit_timers[key] = self.menuai.loop.call_later(
                 next_call_time - now,
                 action,
                 *args,

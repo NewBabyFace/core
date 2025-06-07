@@ -5,7 +5,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
+from menuai.components.http import KEY_menuai, menuaiView
 
 from .const import CONNECTION_TEST_DATA
 
@@ -16,7 +16,7 @@ CONNECTION_TEST_FILENAME = "connection_test.mp3"
 CONNECTION_TEST_URL_BASE = "/api/assist_satellite/connection_test"
 
 
-class ConnectionTestView(HomeAssistantView):
+class ConnectionTestView(menuaiView):
     """View to serve an audio sample for connection test."""
 
     requires_auth = False
@@ -27,8 +27,8 @@ class ConnectionTestView(HomeAssistantView):
         """Start a get request."""
         _LOGGER.debug("Request for connection test with id %s", connection_id)
 
-        hass = request.app[KEY_HASS]
-        connection_test_data = hass.data[CONNECTION_TEST_DATA]
+        menuai = request.app[KEY_menuai]
+        connection_test_data = menuai.data[CONNECTION_TEST_DATA]
 
         connection_test_event = connection_test_data.pop(connection_id, None)
 
@@ -38,6 +38,6 @@ class ConnectionTestView(HomeAssistantView):
         connection_test_event.set()
 
         audio_path = Path(__file__).parent / CONNECTION_TEST_FILENAME
-        audio_data = await hass.async_add_executor_job(audio_path.read_bytes)
+        audio_data = await menuai.async_add_executor_job(audio_path.read_bytes)
 
         return web.Response(body=audio_data, content_type=CONNECTION_TEST_CONTENT_TYPE)

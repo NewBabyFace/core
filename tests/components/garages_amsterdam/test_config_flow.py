@@ -6,27 +6,27 @@ from unittest.mock import AsyncMock, patch
 from aiohttp import ClientResponseError
 import pytest
 
-from homeassistant.components.garages_amsterdam.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.garages_amsterdam.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 async def test_full_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_garages_amsterdam: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the full user configuration flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
     assert not result.get("errors")
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"garage_name": "IJDok"},
     )
@@ -49,15 +49,15 @@ async def test_full_user_flow(
     ],
 )
 async def test_error_handling(
-    side_effect: Exception, reason: str, hass: HomeAssistant
+    side_effect: Exception, reason: str, menuai: menuai
 ) -> None:
     """Test error handling in the config flow."""
 
     with patch(
-        "homeassistant.components.garages_amsterdam.config_flow.ODPAmsterdam.all_garages",
+        "menuai.components.garages_amsterdam.config_flow.ODPAmsterdam.all_garages",
         side_effect=side_effect,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
     assert result.get("type") is FlowResultType.ABORT

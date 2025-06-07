@@ -7,8 +7,8 @@ from collections.abc import Iterable
 import logging
 from typing import Any
 
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import Context, menuai, State
 
 from . import (
     ATTR_DURATION,
@@ -27,14 +27,14 @@ VALID_STATES = {STATUS_IDLE, STATUS_ACTIVE, STATUS_PAUSED}
 
 
 async def _async_reproduce_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: State,
     *,
     context: Context | None = None,
     reproduce_options: dict[str, Any] | None = None,
 ) -> None:
     """Reproduce a single state."""
-    if (cur_state := hass.states.get(state.entity_id)) is None:
+    if (cur_state := menuai.states.get(state.entity_id)) is None:
         _LOGGER.warning("Unable to find entity %s", state.entity_id)
         return
 
@@ -61,13 +61,13 @@ async def _async_reproduce_state(
     elif state.state == STATUS_IDLE:
         service = SERVICE_CANCEL
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, context=context, blocking=True
     )
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -77,7 +77,7 @@ async def async_reproduce_states(
     await asyncio.gather(
         *(
             _async_reproduce_state(
-                hass, state, context=context, reproduce_options=reproduce_options
+                menuai, state, context=context, reproduce_options=reproduce_options
             )
             for state in states
         )

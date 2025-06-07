@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from aiohttp import web
 
-from homeassistant.components import cloud, webhook
-from homeassistant.const import CONF_WEBHOOK_ID, URL_API
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.components import cloud, webhook
+from menuai.const import CONF_WEBHOOK_ID, URL_API
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_CLOUDHOOK_URL,
@@ -69,7 +69,7 @@ LISTEN_EVENT_TYPES = [
     "RAIN_SENSOR_DETECTION_EVENT",
     "SCHEDULE_STATUS_EVENT",
 ]
-WEBHOOK_CONST_ID = "homeassistant.rachio:"
+WEBHOOK_CONST_ID = "menuai.rachio:"
 WEBHOOK_PATH = URL_API + DOMAIN
 
 SIGNAL_MAP = {
@@ -82,12 +82,12 @@ SIGNAL_MAP = {
 
 
 @callback
-def async_register_webhook(hass: HomeAssistant, entry: RachioConfigEntry) -> None:
+def async_register_webhook(menuai: menuai, entry: RachioConfigEntry) -> None:
     """Register a webhook."""
     webhook_id: str = entry.data[CONF_WEBHOOK_ID]
 
     async def _async_handle_rachio_webhook(
-        hass: HomeAssistant, webhook_id: str, request: web.Request
+        menuai: menuai, webhook_id: str, request: web.Request
     ) -> web.Response:
         """Handle webhook calls from the server."""
         person = entry.runtime_data
@@ -103,24 +103,24 @@ def async_register_webhook(hass: HomeAssistant, entry: RachioConfigEntry) -> Non
 
         update_type = data[KEY_TYPE]
         if update_type in SIGNAL_MAP:
-            async_dispatcher_send(hass, SIGNAL_MAP[update_type], data)
+            async_dispatcher_send(menuai, SIGNAL_MAP[update_type], data)
 
         return web.Response(status=web.HTTPNoContent.status_code)
 
     webhook.async_register(
-        hass, DOMAIN, "Rachio", webhook_id, _async_handle_rachio_webhook
+        menuai, DOMAIN, "Rachio", webhook_id, _async_handle_rachio_webhook
     )
 
 
 @callback
-def async_unregister_webhook(hass: HomeAssistant, entry: RachioConfigEntry) -> None:
+def async_unregister_webhook(menuai: menuai, entry: RachioConfigEntry) -> None:
     """Unregister a webhook."""
     webhook_id: str = entry.data[CONF_WEBHOOK_ID]
-    webhook.async_unregister(hass, webhook_id)
+    webhook.async_unregister(menuai, webhook_id)
 
 
 async def async_get_or_create_registered_webhook_id_and_url(
-    hass: HomeAssistant, entry: RachioConfigEntry
+    menuai: menuai, entry: RachioConfigEntry
 ) -> str:
     """Generate webhook url."""
     config = entry.data.copy()
@@ -133,17 +133,17 @@ async def async_get_or_create_registered_webhook_id_and_url(
         config[CONF_WEBHOOK_ID] = webhook_id
         updated_config = True
 
-    if cloud.async_active_subscription(hass):
+    if cloud.async_active_subscription(menuai):
         if not (cloudhook_url := config.get(CONF_CLOUDHOOK_URL)):
-            cloudhook_url = await cloud.async_create_cloudhook(hass, webhook_id)
+            cloudhook_url = await cloud.async_create_cloudhook(menuai, webhook_id)
             config[CONF_CLOUDHOOK_URL] = cloudhook_url
             updated_config = True
         webhook_url = cloudhook_url
 
     if not webhook_url:
-        webhook_url = webhook.async_generate_url(hass, webhook_id)
+        webhook_url = webhook.async_generate_url(menuai, webhook_id)
 
     if updated_config:
-        hass.config_entries.async_update_entry(entry, data=config)
+        menuai.config_entries.async_update_entry(entry, data=config)
 
     return webhook_url

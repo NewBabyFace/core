@@ -10,9 +10,9 @@ from typing import Any
 
 import pywemo
 
-from homeassistant.components.homeassistant import DOMAIN as HA_DOMAIN
-from homeassistant.components.wemo.coordinator import async_get_coordinator
-from homeassistant.const import (
+from menuai.components.menuai import DOMAIN as HA_DOMAIN
+from menuai.components.wemo.coordinator import async_get_coordinator
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -20,16 +20,16 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 
 def _perform_registry_callback(coordinator):
     """Return a callable method to trigger a state callback from the device."""
 
     async def async_callback():
-        await coordinator.hass.async_add_executor_job(
+        await coordinator.menuai.async_add_executor_job(
             coordinator.subscription_callback, coordinator.wemo, "", ""
         )
 
@@ -37,7 +37,7 @@ def _perform_registry_callback(coordinator):
 
 
 def _perform_async_update(coordinator):
-    """Return a callable method to cause hass to update the state of the entity."""
+    """Return a callable method to cause menuai to update the state of the entity."""
 
     async def async_callback():
         await coordinator._async_update_data()
@@ -46,7 +46,7 @@ def _perform_async_update(coordinator):
 
 
 async def _async_multiple_call_helper(
-    hass: HomeAssistant,
+    menuai: menuai,
     pywemo_device: pywemo.WeMoDevice,
     call1: Callable[[], Coroutine[Any, Any, None]],
     call2: Callable[[], Coroutine[Any, Any, None]],
@@ -67,11 +67,11 @@ async def _async_multiple_call_helper(
             return
         nonlocal call_count
         call_count += 1
-        hass.loop.call_soon_threadsafe(waiting.set)
+        menuai.loop.call_soon_threadsafe(waiting.set)
         event.wait()
 
     # Danger! Do not use a Mock side_effect here. The test will deadlock. When
-    # called though hass.async_add_executor_job, Mock objects !surprisingly!
+    # called though menuai.async_add_executor_job, Mock objects !surprisingly!
     # run in the same thread as the asyncio event loop.
     # https://github.com/home-assistant/core/blob/1ba5c1c9fb1e380549cb655986b5f4d3873d7352/tests/common.py#L179
     pywemo_device.get_state = get_state
@@ -97,42 +97,42 @@ async def _async_multiple_call_helper(
 
 
 async def test_async_update_locked_callback_and_update(
-    hass: HomeAssistant, pywemo_device: pywemo.WeMoDevice, wemo_entity: er.RegistryEntry
+    menuai: menuai, pywemo_device: pywemo.WeMoDevice, wemo_entity: er.RegistryEntry
 ) -> None:
     """Test that a callback and a state update request can't both happen at the same time.
 
     When a state update is received via a callback from the device at the same time
-    as hass is calling `async_update`, verify that only one of the updates proceeds.
+    as menuai is calling `async_update`, verify that only one of the updates proceeds.
     """
-    coordinator = async_get_coordinator(hass, wemo_entity.device_id)
-    await async_setup_component(hass, HA_DOMAIN, {})
+    coordinator = async_get_coordinator(menuai, wemo_entity.device_id)
+    await async_setup_component(menuai, HA_DOMAIN, {})
     callback = _perform_registry_callback(coordinator)
     update = _perform_async_update(coordinator)
-    await _async_multiple_call_helper(hass, pywemo_device, callback, update)
+    await _async_multiple_call_helper(menuai, pywemo_device, callback, update)
 
 
 async def test_async_update_locked_multiple_updates(
-    hass: HomeAssistant, pywemo_device: pywemo.WeMoDevice, wemo_entity: er.RegistryEntry
+    menuai: menuai, pywemo_device: pywemo.WeMoDevice, wemo_entity: er.RegistryEntry
 ) -> None:
-    """Test that two hass async_update state updates do not proceed at the same time."""
-    coordinator = async_get_coordinator(hass, wemo_entity.device_id)
-    await async_setup_component(hass, HA_DOMAIN, {})
+    """Test that two menuai async_update state updates do not proceed at the same time."""
+    coordinator = async_get_coordinator(menuai, wemo_entity.device_id)
+    await async_setup_component(menuai, HA_DOMAIN, {})
     update = _perform_async_update(coordinator)
-    await _async_multiple_call_helper(hass, pywemo_device, update, update)
+    await _async_multiple_call_helper(menuai, pywemo_device, update, update)
 
 
 async def test_async_update_locked_multiple_callbacks(
-    hass: HomeAssistant, pywemo_device: pywemo.WeMoDevice, wemo_entity: er.RegistryEntry
+    menuai: menuai, pywemo_device: pywemo.WeMoDevice, wemo_entity: er.RegistryEntry
 ) -> None:
     """Test that two device callback state updates do not proceed at the same time."""
-    coordinator = async_get_coordinator(hass, wemo_entity.device_id)
-    await async_setup_component(hass, HA_DOMAIN, {})
+    coordinator = async_get_coordinator(menuai, wemo_entity.device_id)
+    await async_setup_component(menuai, HA_DOMAIN, {})
     callback = _perform_registry_callback(coordinator)
-    await _async_multiple_call_helper(hass, pywemo_device, callback, callback)
+    await _async_multiple_call_helper(menuai, pywemo_device, callback, callback)
 
 
 async def test_avaliable_after_update(
-    hass: HomeAssistant, pywemo_registry, pywemo_device, wemo_entity, domain
+    menuai: menuai, pywemo_registry, pywemo_device, wemo_entity, domain
 ) -> None:
     """Test the availability when an On call fails and after an update.
 
@@ -140,28 +140,28 @@ async def test_avaliable_after_update(
     ActionException when the SERVICE_TURN_ON method is called and that the
     state will be On after the update.
     """
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [wemo_entity.entity_id]},
         blocking=True,
     )
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_UNAVAILABLE
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_UNAVAILABLE
 
     pywemo_registry.callbacks[pywemo_device.name](pywemo_device, "", "")
-    await hass.async_block_till_done()
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_ON
 
 
-async def test_turn_off_state(hass: HomeAssistant, wemo_entity, domain) -> None:
+async def test_turn_off_state(menuai: menuai, wemo_entity, domain) -> None:
     """Test that the device state is updated after turning off."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: [wemo_entity.entity_id]},
         blocking=True,
     )
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_OFF
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_OFF
 
 
 class EntityTestHelpers:
@@ -169,37 +169,37 @@ class EntityTestHelpers:
 
     async def test_async_update_locked_multiple_updates(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         pywemo_device: pywemo.WeMoDevice,
         wemo_entity: er.RegistryEntry,
     ) -> None:
-        """Test that two hass async_update state updates do not proceed at the same time."""
+        """Test that two menuai async_update state updates do not proceed at the same time."""
         await test_async_update_locked_multiple_updates(
-            hass, pywemo_device, wemo_entity
+            menuai, pywemo_device, wemo_entity
         )
 
     async def test_async_update_locked_multiple_callbacks(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         pywemo_device: pywemo.WeMoDevice,
         wemo_entity: er.RegistryEntry,
     ) -> None:
         """Test that two device callback state updates do not proceed at the same time."""
         await test_async_update_locked_multiple_callbacks(
-            hass, pywemo_device, wemo_entity
+            menuai, pywemo_device, wemo_entity
         )
 
     async def test_async_update_locked_callback_and_update(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         pywemo_device: pywemo.WeMoDevice,
         wemo_entity: er.RegistryEntry,
     ) -> None:
         """Test that a callback and a state update request can't both happen at the same time.
 
         When a state update is received via a callback from the device at the same time
-        as hass is calling `async_update`, verify that only one of the updates proceeds.
+        as menuai is calling `async_update`, verify that only one of the updates proceeds.
         """
         await test_async_update_locked_callback_and_update(
-            hass, pywemo_device, wemo_entity
+            menuai, pywemo_device, wemo_entity
         )

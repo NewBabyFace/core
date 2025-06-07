@@ -8,7 +8,7 @@ import threading
 from typing import Any
 import weakref
 
-from homeassistant.util.executor import InterruptibleThreadPoolExecutor
+from menuai.util.executor import InterruptibleThreadPoolExecutor
 
 
 def _worker_with_shutdown_hook(

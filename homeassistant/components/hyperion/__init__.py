@@ -12,12 +12,12 @@ from typing import Any, cast
 from awesomeversion import AwesomeVersion
 from hyperion import client, const as hyperion_const
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
@@ -104,7 +104,7 @@ async def async_create_connect_hyperion_client(
 
 @callback
 def listen_for_instance_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HyperionConfigEntry,
     add_func: Callable[[int, str], None],
     remove_func: Callable[[int], None],
@@ -113,21 +113,21 @@ def listen_for_instance_updates(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             SIGNAL_INSTANCE_ADD.format(entry.entry_id),
             add_func,
         )
     )
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             SIGNAL_INSTANCE_REMOVE.format(entry.entry_id),
             remove_func,
         )
     )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HyperionConfigEntry) -> bool:
     """Set up Hyperion from a config entry."""
     host = entry.data[CONF_HOST]
     port = entry.data[CONF_PORT]
@@ -196,7 +196,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> 
 
     async def async_instances_to_clients_raw(instances: list[dict[str, Any]]) -> None:
         """Convert instances to Hyperion clients."""
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         running_instances: set[int] = set()
         stopped_instances: set[int] = set()
         existing_instances = entry.runtime_data.instance_clients
@@ -204,10 +204,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> 
 
         # In practice, an instance can be in 3 states as seen by this function:
         #
-        #    * Exists, and is running: Should be present in HASS/registry.
+        #    * Exists, and is running: Should be present in menuai/registry.
         #    * Exists, but is not running: Cannot add it yet, but entity may have be
         #      registered from a previous time it was running.
-        #    * No longer exists at all: Should not be present in HASS/registry.
+        #    * No longer exists at all: Should not be present in menuai/registry.
 
         # Add instances that are missing.
         for instance in instances:
@@ -228,7 +228,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> 
             existing_instances[instance_num] = hyperion_client
             instance_name = instance.get(hyperion_const.KEY_FRIENDLY_NAME, DEFAULT_NAME)
             async_dispatcher_send(
-                hass,
+                menuai,
                 SIGNAL_INSTANCE_ADD.format(entry.entry_id),
                 instance_num,
                 instance_name,
@@ -238,7 +238,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> 
         for instance_num in set(existing_instances) - running_instances:
             del existing_instances[instance_num]
             async_dispatcher_send(
-                hass, SIGNAL_INSTANCE_REMOVE.format(entry.entry_id), instance_num
+                menuai, SIGNAL_INSTANCE_REMOVE.format(entry.entry_id), instance_num
             )
 
         # Ensure every device associated with this config entry is still in the list of
@@ -262,7 +262,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> 
         }
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     assert hyperion_client
     if hyperion_client.instances is not None:
         await async_instances_to_clients_raw(hyperion_client.instances)
@@ -271,14 +271,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> 
     return True
 
 
-async def _async_entry_updated(hass: HomeAssistant, entry: HyperionConfigEntry) -> None:
+async def _async_entry_updated(menuai: menuai, entry: HyperionConfigEntry) -> None:
     """Handle entry updates."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HyperionConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: HyperionConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         # Disconnect the shared instance clients.
         await asyncio.gather(

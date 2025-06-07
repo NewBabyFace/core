@@ -8,30 +8,30 @@ from pysabnzbd import SabnzbdApiException
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import (
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import (
     ATTR_ENTITY_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_platform
 
 
-@patch("homeassistant.components.sabnzbd.PLATFORMS", [Platform.BUTTON])
+@patch("menuai.components.sabnzbd.PLATFORMS", [Platform.BUTTON])
 async def test_button_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test button setup."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -40,13 +40,13 @@ async def test_button_setup(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_button_presses(
-    hass: HomeAssistant,
+    menuai: menuai,
     sabnzbd: AsyncMock,
     button: str,
     called_function: str,
 ) -> None:
     """Test the sabnzbd button presses."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {
@@ -65,7 +65,7 @@ async def test_button_presses(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_buttons_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     sabnzbd: AsyncMock,
     button: str,
     called_function: str,
@@ -75,10 +75,10 @@ async def test_buttons_exception(
     function.side_effect = SabnzbdApiException("Boom")
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Unable to send command to SABnzbd due to a connection error, try again later",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -96,21 +96,21 @@ async def test_buttons_exception(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_buttons_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     sabnzbd: AsyncMock,
     button: str,
 ) -> None:
     """Test the button is unavailable when coordinator can't update data."""
-    state = hass.states.get(f"button.sabnzbd_{button}")
+    state = menuai.states.get(f"button.sabnzbd_{button}")
     assert state
     assert state.state == STATE_UNKNOWN
 
     sabnzbd.refresh_data.side_effect = Exception("Boom")
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"button.sabnzbd_{button}")
+    state = menuai.states.get(f"button.sabnzbd_{button}")
     assert state
     assert state.state == STATE_UNAVAILABLE

@@ -5,15 +5,15 @@ import logging
 import voluptuous as vol
 import W800rf32 as w800
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 DATA_W800RF32 = "data_w800rf32"
 DOMAIN = "w800rf32"
@@ -27,7 +27,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the w800rf32 component."""
 
     # Declare the Handle event
@@ -38,10 +38,10 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             return
         _LOGGER.debug("Receive W800rf32 event in handle_receive")
 
-        # Get device_type from device_id in hass.data
+        # Get device_type from device_id in menuai.data
         device_id = event.device.lower()
         signal = W800RF32_DEVICE.format(device_id)
-        dispatcher_send(hass, signal, event)
+        dispatcher_send(menuai, signal, event)
 
     # device --> /dev/ttyUSB0
     device = config[DOMAIN][CONF_DEVICE]
@@ -50,14 +50,14 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def _start_w800rf32(event):
         w800_object.event_callback = handle_receive
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, _start_w800rf32)
+    menuai.bus.listen_once(EVENT_menuai_START, _start_w800rf32)
 
     def _shutdown_w800rf32(event):
         """Close connection with w800rf32."""
         w800_object.close_connection()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown_w800rf32)
+    menuai.bus.listen_once(EVENT_menuai_STOP, _shutdown_w800rf32)
 
-    hass.data[DATA_W800RF32] = w800_object
+    menuai.data[DATA_W800RF32] = w800_object
 
     return True

@@ -8,14 +8,14 @@ from typing import Any
 from mopeka_iot_ble import MopekaIOTBluetoothDeviceData as DeviceData
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components.bluetooth import (
+from menuai import config_entries
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import callback
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
+from menuai.core import callback
 
 from .const import CONF_MEDIUM_TYPE, DEFAULT_MEDIUM_TYPE, DOMAIN, MediumType
 
@@ -112,7 +112,7 @@ class MopekaConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         current_addresses = self._async_current_ids(include_ignore=False)
-        for discovery_info in async_discovered_service_info(self.hass, False):
+        for discovery_info in async_discovered_service_info(self.menuai, False):
             address = discovery_info.address
             if address in current_addresses or address in self._discovered_devices:
                 continue
@@ -148,10 +148,10 @@ class MopekaOptionsFlow(config_entries.OptionsFlow):
                 **self.config_entry.data,
                 CONF_MEDIUM_TYPE: user_input[CONF_MEDIUM_TYPE],
             }
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, data=new_data
             )
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data={})
 
         return self.async_show_form(

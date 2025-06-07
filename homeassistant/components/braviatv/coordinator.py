@@ -18,13 +18,13 @@ from pybravia import (
     BraviaTurnedOff,
 )
 
-from homeassistant.components.media_player import MediaType
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_CLIENT_ID, CONF_PIN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.media_player import MediaType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_CLIENT_ID, CONF_PIN
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_NICKNAME,
@@ -70,7 +70,7 @@ class BraviaTVCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: BraviaTVConfigEntry,
         client: BraviaClient,
     ) -> None:
@@ -100,13 +100,13 @@ class BraviaTVCoordinator(DataUpdateCoordinator[None]):
         self.skipped_updates = 0
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=1.0, immediate=False
+                menuai, _LOGGER, cooldown=1.0, immediate=False
             ),
         )
 

@@ -4,24 +4,24 @@ from unittest.mock import AsyncMock, MagicMock
 
 from bsblan import BSBLANConnectionError
 
-from homeassistant.components.bsblan import config_flow
-from homeassistant.components.bsblan.const import CONF_PASSKEY, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.device_registry import format_mac
+from menuai.components.bsblan import config_flow
+from menuai.components.bsblan.const import CONF_PASSKEY, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.device_registry import format_mac
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_user_flow_implementation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bsblan: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the full manual user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -29,7 +29,7 @@ async def test_full_user_flow_implementation(
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "127.0.0.1",
@@ -56,9 +56,9 @@ async def test_full_user_flow_implementation(
     assert len(mock_bsblan.device.mock_calls) == 1
 
 
-async def test_show_user_form(hass: HomeAssistant) -> None:
+async def test_show_user_form(menuai: menuai) -> None:
     """Test that the user set up form is served."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -68,13 +68,13 @@ async def test_show_user_form(hass: HomeAssistant) -> None:
 
 
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bsblan: MagicMock,
 ) -> None:
     """Test we show user form on BSBLan connection error."""
     mock_bsblan.device.side_effect = BSBLANConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -92,13 +92,13 @@ async def test_connection_error(
 
 
 async def test_user_device_exists_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bsblan: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort flow if BSBLAN device already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={

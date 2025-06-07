@@ -11,33 +11,33 @@ import uuid
 
 import aiohttp
 
-from homeassistant import config as conf_util
-from homeassistant.components import hassio
-from homeassistant.components.api import ATTR_INSTALLATION_TYPE
-from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
-from homeassistant.components.energy import (
+from menuai import config as conf_util
+from menuai.components import menuaiio
+from menuai.components.api import ATTR_INSTALLATION_TYPE
+from menuai.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from menuai.components.energy import (
     DOMAIN as ENERGY_DOMAIN,
     is_configured as energy_is_configured,
 )
-from homeassistant.components.recorder import (
+from menuai.components.recorder import (
     DOMAIN as RECORDER_DOMAIN,
     get_instance as get_recorder_instance,
 )
-from homeassistant.config_entries import SOURCE_IGNORE
-from homeassistant.const import ATTR_DOMAIN, BASE_PLATFORMS, __version__ as HA_VERSION
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.system_info import async_get_system_info
-from homeassistant.loader import (
+from menuai.config_entries import SOURCE_IGNORE
+from menuai.const import ATTR_DOMAIN, BASE_PLATFORMS, __version__ as HA_VERSION
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.storage import Store
+from menuai.helpers.system_info import async_get_system_info
+from menuai.loader import (
     Integration,
     IntegrationNotFound,
     async_get_integrations,
 )
-from homeassistant.setup import async_get_loaded_integrations
+from menuai.setup import async_get_loaded_integrations
 
 from .const import (
     ANALYTICS_ENDPOINT_URL,
@@ -98,12 +98,12 @@ class AnalyticsData:
 class Analytics:
     """Analytics helper class for the analytics integration."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the Analytics class."""
-        self.hass: HomeAssistant = hass
-        self.session = async_get_clientsession(hass)
+        self.menuai: menuai = menuai
+        self.session = async_get_clientsession(menuai)
         self._data = AnalyticsData(False, {}, None)
-        self._store = Store[dict[str, Any]](hass, STORAGE_VERSION, STORAGE_KEY)
+        self._store = Store[dict[str, Any]](menuai, STORAGE_VERSION, STORAGE_KEY)
 
     @property
     def preferences(self) -> dict:
@@ -137,7 +137,7 @@ class Analytics:
     @property
     def supervisor(self) -> bool:
         """Return bool if a supervisor is present."""
-        return is_hassio(self.hass)
+        return is_menuaiio(self.menuai)
 
     async def load(self) -> None:
         """Load preferences."""
@@ -147,7 +147,7 @@ class Analytics:
 
         if (
             self.supervisor
-            and (supervisor_info := hassio.get_supervisor_info(self.hass)) is not None
+            and (supervisor_info := menuaiio.get_supervisor_info(self.menuai)) is not None
         ):
             if not self.onboarded:
                 # User have not configured analytics, get this setting from the supervisor
@@ -169,13 +169,13 @@ class Analytics:
         await self._store.async_save(dataclass_asdict(self._data))
 
         if self.supervisor:
-            await hassio.async_update_diagnostics(
-                self.hass, self.preferences.get(ATTR_DIAGNOSTICS, False)
+            await menuaiio.async_update_diagnostics(
+                self.menuai, self.preferences.get(ATTR_DIAGNOSTICS, False)
             )
 
     async def send_analytics(self, _: datetime | None = None) -> None:
         """Send analytics."""
-        hass = self.hass
+        menuai = self.menuai
         supervisor_info = None
         operating_system_info: dict[str, Any] = {}
 
@@ -188,10 +188,10 @@ class Analytics:
             await self._store.async_save(dataclass_asdict(self._data))
 
         if self.supervisor:
-            supervisor_info = hassio.get_supervisor_info(hass)
-            operating_system_info = hassio.get_os_info(hass) or {}
+            supervisor_info = menuaiio.get_supervisor_info(menuai)
+            operating_system_info = menuaiio.get_os_info(menuai) or {}
 
-        system_info = await async_get_system_info(hass)
+        system_info = await async_get_system_info(menuai)
         integrations = []
         custom_integrations = []
         addons: list[dict[str, Any]] = []
@@ -217,11 +217,11 @@ class Analytics:
         if self.preferences.get(ATTR_USAGE, False) or self.preferences.get(
             ATTR_STATISTICS, False
         ):
-            ent_reg = er.async_get(hass)
+            ent_reg = er.async_get(menuai)
 
             try:
-                yaml_configuration = await conf_util.async_hass_config_yaml(hass)
-            except HomeAssistantError as err:
+                yaml_configuration = await conf_util.async_menuai_config_yaml(menuai)
+            except menuaiError as err:
                 LOGGER.error(err)
                 return
 
@@ -233,8 +233,8 @@ class Analytics:
                 if not entity.disabled
             }
 
-            domains = async_get_loaded_integrations(hass)
-            configured_integrations = await async_get_integrations(hass, domains)
+            domains = async_get_loaded_integrations(menuai)
+            configured_integrations = await async_get_integrations(menuai, domains)
             enabled_domains = set(configured_integrations)
 
             for integration in configured_integrations.values():
@@ -263,7 +263,7 @@ class Analytics:
                 integrations.append(integration.domain)
 
             if supervisor_info is not None:
-                supervisor_client = hassio.get_supervisor_client(hass)
+                supervisor_client = menuaiio.get_supervisor_client(menuai)
                 installed_addons = await asyncio.gather(
                     *(
                         supervisor_client.addons.addon_info(addon[ATTR_SLUG])
@@ -281,7 +281,7 @@ class Analytics:
                 )
 
         if self.preferences.get(ATTR_USAGE, False):
-            payload[ATTR_CERTIFICATE] = hass.http.ssl_certificate is not None
+            payload[ATTR_CERTIFICATE] = menuai.http.ssl_certificate is not None
             payload[ATTR_INTEGRATIONS] = integrations
             payload[ATTR_CUSTOM_INTEGRATIONS] = custom_integrations
             if supervisor_info is not None:
@@ -289,11 +289,11 @@ class Analytics:
 
             if ENERGY_DOMAIN in enabled_domains:
                 payload[ATTR_ENERGY] = {
-                    ATTR_CONFIGURED: await energy_is_configured(hass)
+                    ATTR_CONFIGURED: await energy_is_configured(menuai)
                 }
 
             if RECORDER_DOMAIN in enabled_domains:
-                instance = get_recorder_instance(hass)
+                instance = get_recorder_instance(menuai)
                 engine = instance.database_engine
                 if engine and engine.version is not None:
                     payload[ATTR_RECORDER] = {
@@ -302,8 +302,8 @@ class Analytics:
                     }
 
         if self.preferences.get(ATTR_STATISTICS, False):
-            payload[ATTR_STATE_COUNT] = hass.states.async_entity_ids_count()
-            payload[ATTR_AUTOMATION_COUNT] = hass.states.async_entity_ids_count(
+            payload[ATTR_STATE_COUNT] = menuai.states.async_entity_ids_count()
+            payload[ATTR_AUTOMATION_COUNT] = menuai.states.async_entity_ids_count(
                 AUTOMATION_DOMAIN
             )
             payload[ATTR_INTEGRATION_COUNT] = len(integrations)
@@ -312,7 +312,7 @@ class Analytics:
             payload[ATTR_USER_COUNT] = len(
                 [
                     user
-                    for user in await hass.auth.async_get_users()
+                    for user in await menuai.auth.async_get_users()
                     if not user.system_generated
                 ]
             )
@@ -323,7 +323,7 @@ class Analytics:
                 if response.status == 200:
                     LOGGER.info(
                         (
-                            "Submitted analytics to Home Assistant servers. "
+                            "Submitted analytics to MenuAI servers. "
                             "Information submitted includes %s"
                         ),
                         payload,
@@ -363,7 +363,7 @@ class Analytics:
         if not integration.config_flow:
             return False
 
-        entries = self.hass.config_entries.async_entries(integration.domain)
+        entries = self.menuai.config_entries.async_entries(integration.domain)
 
         # Filter out ignored and disabled entries
         return any(

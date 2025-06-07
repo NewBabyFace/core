@@ -6,16 +6,16 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_NAME, CONF_REGION
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_NAME, CONF_REGION
+from menuai.core import menuai, callback
+from menuai.helpers.selector import (
     BooleanSelector,
     SelectSelector,
     SelectSelectorConfig,
@@ -24,7 +24,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (
     CONF_AVOID_FERRIES,
@@ -102,10 +102,10 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def default_options(hass: HomeAssistant) -> dict[str, str | bool | list[str]]:
+def default_options(menuai: menuai) -> dict[str, str | bool | list[str]]:
     """Get the default options."""
     defaults = DEFAULT_OPTIONS.copy()
-    if hass.config.units is US_CUSTOMARY_SYSTEM:
+    if menuai.config.units is US_CUSTOMARY_SYSTEM:
         defaults[CONF_UNITS] = IMPERIAL_UNITS
     return defaults
 
@@ -156,7 +156,7 @@ class WazeConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input:
             user_input[CONF_REGION] = user_input[CONF_REGION].upper()
             if await is_valid_config_entry(
-                self.hass,
+                self.menuai,
                 user_input[CONF_ORIGIN],
                 user_input[CONF_DESTINATION],
                 user_input[CONF_REGION],
@@ -170,7 +170,7 @@ class WazeConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title=user_input.get(CONF_NAME, DEFAULT_NAME),
                     data=user_input,
-                    options=default_options(self.hass),
+                    options=default_options(self.menuai),
                 )
 
             # If we get here, it's because we couldn't connect

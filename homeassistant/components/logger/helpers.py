@@ -11,12 +11,12 @@ from functools import lru_cache
 import logging
 from typing import Any
 
-from homeassistant.const import EVENT_LOGGING_CHANGED
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import IntegrationNotFound, async_get_integration
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import EVENT_LOGGING_CHANGED
+from menuai.core import menuai, callback
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType
+from menuai.loader import IntegrationNotFound, async_get_integration
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     DOMAIN,
@@ -29,7 +29,7 @@ from .const import (
     STORAGE_VERSION,
 )
 
-DATA_LOGGER: HassKey[LoggerDomainConfig] = HassKey(DOMAIN)
+DATA_LOGGER: menuaiKey[LoggerDomainConfig] = menuaiKey(DOMAIN)
 
 SAVE_DELAY = 15.0
 # At startup, we want to save after a long delay to avoid
@@ -43,19 +43,19 @@ SAVE_DELAY_LONG = 180.0
 
 
 @callback
-def set_default_log_level(hass: HomeAssistant, level: int) -> None:
+def set_default_log_level(menuai: menuai, level: int) -> None:
     """Set the default log level for components."""
     _set_log_level(logging.getLogger(""), level)
-    hass.bus.async_fire(EVENT_LOGGING_CHANGED)
+    menuai.bus.async_fire(EVENT_LOGGING_CHANGED)
 
 
 @callback
-def set_log_levels(hass: HomeAssistant, logpoints: Mapping[str, int]) -> None:
+def set_log_levels(menuai: menuai, logpoints: Mapping[str, int]) -> None:
     """Set the specified log levels."""
-    hass.data[DATA_LOGGER].overrides.update(logpoints)
+    menuai.data[DATA_LOGGER].overrides.update(logpoints)
     for key, value in logpoints.items():
         _set_log_level(logging.getLogger(key), value)
-    hass.bus.async_fire(EVENT_LOGGING_CHANGED)
+    menuai.bus.async_fire(EVENT_LOGGING_CHANGED)
 
 
 def _set_log_level(logger: logging.Logger, level: int) -> None:
@@ -76,16 +76,16 @@ def _chattiest_log_level(level1: int, level2: int) -> int:
 
 
 @callback
-def _clear_logger_overwrites(hass: HomeAssistant) -> None:
+def _clear_logger_overwrites(menuai: menuai) -> None:
     """Clear logger overwrites. Used for testing."""
-    hass.data[DATA_LOGGER].overrides.clear()
+    menuai.data[DATA_LOGGER].overrides.clear()
 
 
-async def get_integration_loggers(hass: HomeAssistant, domain: str) -> set[str]:
+async def get_integration_loggers(menuai: menuai, domain: str) -> set[str]:
     """Get loggers for an integration."""
-    loggers: set[str] = {f"homeassistant.components.{domain}"}
+    loggers: set[str] = {f"menuai.components.{domain}"}
     with contextlib.suppress(IntegrationNotFound):
-        integration = await async_get_integration(hass, domain)
+        integration = await async_get_integration(menuai, domain)
         loggers.add(integration.pkg_path)
         if integration.loggers:
             loggers.update(integration.loggers)
@@ -129,7 +129,7 @@ class LoggerSettings:
 
     _stored_config: dict[str, dict[str, LoggerSetting]]
 
-    def __init__(self, hass: HomeAssistant, yaml_config: ConfigType) -> None:
+    def __init__(self, menuai: menuai, yaml_config: ConfigType) -> None:
         """Initialize log settings."""
 
         self._yaml_config = yaml_config
@@ -137,7 +137,7 @@ class LoggerSettings:
         if DOMAIN in yaml_config and LOGGER_DEFAULT in yaml_config[DOMAIN]:
             self._default_level = yaml_config[DOMAIN][LOGGER_DEFAULT]
         self._store: Store[dict[str, dict[str, dict[str, Any]]]] = Store(
-            hass, STORAGE_VERSION, STORAGE_KEY
+            menuai, STORAGE_VERSION, STORAGE_KEY
         )
 
     async def async_load(self) -> None:
@@ -190,7 +190,7 @@ class LoggerSettings:
         return logger_logs
 
     async def async_update(
-        self, hass: HomeAssistant, domain: str, settings: LoggerSetting
+        self, menuai: menuai, domain: str, settings: LoggerSetting
     ) -> None:
         """Update settings."""
         stored_log_config = self._stored_config[STORAGE_LOG_KEY]
@@ -202,7 +202,7 @@ class LoggerSettings:
         self.async_save()
 
         if settings.type == LogSettingsType.INTEGRATION:
-            loggers = await get_integration_loggers(hass, domain)
+            loggers = await get_integration_loggers(menuai, domain)
         else:
             loggers = {domain}
 
@@ -210,14 +210,14 @@ class LoggerSettings:
         # Don't override the log levels with the ones from YAML
         # since we want whatever the user is asking for to be honored.
 
-        set_log_levels(hass, combined_logs)
+        set_log_levels(menuai, combined_logs)
 
-    async def async_get_levels(self, hass: HomeAssistant) -> dict[str, int]:
+    async def async_get_levels(self, menuai: menuai) -> dict[str, int]:
         """Get combination of levels from yaml and storage."""
         combined_logs = defaultdict(lambda: logging.CRITICAL)
         for domain, settings in self._stored_config[STORAGE_LOG_KEY].items():
             if settings.type == LogSettingsType.INTEGRATION:
-                loggers = await get_integration_loggers(hass, domain)
+                loggers = await get_integration_loggers(menuai, domain)
             else:
                 loggers = {domain}
 

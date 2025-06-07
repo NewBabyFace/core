@@ -6,17 +6,17 @@ from unittest.mock import AsyncMock
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.device_automation.exceptions import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.nest import DOMAIN
-from homeassistant.components.nest.events import NEST_EVENT
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components.nest import DOMAIN
+from menuai.components.nest.events import NEST_EVENT
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .common import DEVICE_ID, CreateDevice, PlatformSetup, create_nest_event
 
@@ -60,11 +60,11 @@ def make_camera(
 
 
 async def setup_automation(
-    hass: HomeAssistant, device_id: str, trigger_type: str
+    menuai: menuai, device_id: str, trigger_type: str
 ) -> bool:
     """Set up an automation trigger for testing triggering."""
     return await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -86,7 +86,7 @@ async def setup_automation(
 
 
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -122,13 +122,13 @@ async def test_get_triggers(
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_multiple_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -160,7 +160,7 @@ async def test_multiple_devices(
     assert entry2.unique_id == "device-id-2-camera"
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, entry1.device_id
+        menuai, DeviceAutomationType.TRIGGER, entry1.device_id
     )
     assert len(triggers) == 1
     assert triggers[0] == {
@@ -172,7 +172,7 @@ async def test_multiple_devices(
     }
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, entry2.device_id
+        menuai, DeviceAutomationType.TRIGGER, entry2.device_id
     )
     assert len(triggers) == 1
     assert triggers[0] == {
@@ -185,7 +185,7 @@ async def test_multiple_devices(
 
 
 async def test_triggers_for_invalid_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -216,12 +216,12 @@ async def test_triggers_for_invalid_device_id(
 
     with pytest.raises(InvalidDeviceAutomationConfig):
         await async_get_device_automations(
-            hass, DeviceAutomationType.TRIGGER, device_entry_2.id
+            menuai, DeviceAutomationType.TRIGGER, device_entry_2.id
         )
 
 
 async def test_no_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -234,13 +234,13 @@ async def test_no_triggers(
     assert entry.unique_id == f"{DEVICE_ID}-camera"
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, entry.device_id
+        menuai, DeviceAutomationType.TRIGGER, entry.device_id
     )
     assert triggers == []
 
 
 async def test_fires_on_camera_motion(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -260,21 +260,21 @@ async def test_fires_on_camera_motion(
 
     device_entry = device_registry.async_get_device(identifiers={("nest", DEVICE_ID)})
 
-    assert await setup_automation(hass, device_entry.id, "camera_motion")
+    assert await setup_automation(menuai, device_entry.id, "camera_motion")
 
     message = {
         "device_id": device_entry.id,
         "type": "camera_motion",
         "timestamp": utcnow(),
     }
-    hass.bus.async_fire(NEST_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(NEST_EVENT, message)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data == DATA_MESSAGE
 
 
 async def test_fires_on_camera_person(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -294,21 +294,21 @@ async def test_fires_on_camera_person(
 
     device_entry = device_registry.async_get_device(identifiers={("nest", DEVICE_ID)})
 
-    assert await setup_automation(hass, device_entry.id, "camera_person")
+    assert await setup_automation(menuai, device_entry.id, "camera_person")
 
     message = {
         "device_id": device_entry.id,
         "type": "camera_person",
         "timestamp": utcnow(),
     }
-    hass.bus.async_fire(NEST_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(NEST_EVENT, message)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data == DATA_MESSAGE
 
 
 async def test_fires_on_camera_sound(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -328,21 +328,21 @@ async def test_fires_on_camera_sound(
 
     device_entry = device_registry.async_get_device(identifiers={("nest", DEVICE_ID)})
 
-    assert await setup_automation(hass, device_entry.id, "camera_sound")
+    assert await setup_automation(menuai, device_entry.id, "camera_sound")
 
     message = {
         "device_id": device_entry.id,
         "type": "camera_sound",
         "timestamp": utcnow(),
     }
-    hass.bus.async_fire(NEST_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(NEST_EVENT, message)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data == DATA_MESSAGE
 
 
 async def test_fires_on_doorbell_chime(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -362,21 +362,21 @@ async def test_fires_on_doorbell_chime(
 
     device_entry = device_registry.async_get_device(identifiers={("nest", DEVICE_ID)})
 
-    assert await setup_automation(hass, device_entry.id, "doorbell_chime")
+    assert await setup_automation(menuai, device_entry.id, "doorbell_chime")
 
     message = {
         "device_id": device_entry.id,
         "type": "doorbell_chime",
         "timestamp": utcnow(),
     }
-    hass.bus.async_fire(NEST_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(NEST_EVENT, message)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data == DATA_MESSAGE
 
 
 async def test_trigger_for_wrong_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -396,20 +396,20 @@ async def test_trigger_for_wrong_device_id(
 
     device_entry = device_registry.async_get_device(identifiers={("nest", DEVICE_ID)})
 
-    assert await setup_automation(hass, device_entry.id, "camera_motion")
+    assert await setup_automation(menuai, device_entry.id, "camera_motion")
 
     message = {
         "device_id": "wrong-device-id",
         "type": "camera_motion",
         "timestamp": utcnow(),
     }
-    hass.bus.async_fire(NEST_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(NEST_EVENT, message)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
 
 async def test_trigger_for_wrong_event_type(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -429,20 +429,20 @@ async def test_trigger_for_wrong_event_type(
 
     device_entry = device_registry.async_get_device(identifiers={("nest", DEVICE_ID)})
 
-    assert await setup_automation(hass, device_entry.id, "camera_motion")
+    assert await setup_automation(menuai, device_entry.id, "camera_motion")
 
     message = {
         "device_id": device_entry.id,
         "type": "wrong-event-type",
         "timestamp": utcnow(),
     }
-    hass.bus.async_fire(NEST_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(NEST_EVENT, message)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
 
 async def test_subscriber_automation(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     create_device: CreateDevice,
@@ -462,7 +462,7 @@ async def test_subscriber_automation(
 
     device_entry = device_registry.async_get_device(identifiers={("nest", DEVICE_ID)})
 
-    assert await setup_automation(hass, device_entry.id, "camera_motion")
+    assert await setup_automation(menuai, device_entry.id, "camera_motion")
 
     # Simulate a pubsub message received by the subscriber with a motion event
     event = create_nest_event(
@@ -481,7 +481,7 @@ async def test_subscriber_automation(
         },
     )
     await subscriber.async_receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data == DATA_MESSAGE

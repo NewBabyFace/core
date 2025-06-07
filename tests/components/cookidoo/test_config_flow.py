@@ -9,11 +9,11 @@ from cookidoo_api.exceptions import (
 )
 import pytest
 
-from homeassistant.components.cookidoo.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_COUNTRY, CONF_EMAIL, CONF_LANGUAGE, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.cookidoo.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_COUNTRY, CONF_EMAIL, CONF_LANGUAGE, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import COUNTRY, EMAIL, LANGUAGE, PASSWORD
 from .test_init import setup_integration
@@ -32,17 +32,17 @@ MOCK_DATA_LANGUAGE_STEP = {
 
 
 async def test_flow_user_success(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_cookidoo_client: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_cookidoo_client: AsyncMock
 ) -> None:
     """Test we get the user flow and create entry with success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["handler"] == "cookidoo"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_USER_STEP,
     )
@@ -50,7 +50,7 @@ async def test_flow_user_success(
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "language"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LANGUAGE_STEP,
     )
@@ -71,7 +71,7 @@ async def test_flow_user_success(
     ],
 )
 async def test_flow_user_init_data_unknown_error_and_recover_on_step_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     raise_error: Exception,
     text_error: str,
@@ -79,10 +79,10 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_1(
     """Test unknown errors."""
     mock_cookidoo_client.login.side_effect = raise_error
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_USER_STEP,
     )
@@ -92,7 +92,7 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_1(
 
     # Recover
     mock_cookidoo_client.login.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_USER_STEP,
     )
@@ -100,7 +100,7 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_1(
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "language"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LANGUAGE_STEP,
     )
@@ -121,7 +121,7 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_1(
     ],
 )
 async def test_flow_user_init_data_unknown_error_and_recover_on_step_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     raise_error: Exception,
     text_error: str,
@@ -129,10 +129,10 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_2(
     """Test unknown errors."""
     mock_cookidoo_client.get_additional_items.side_effect = raise_error
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_USER_STEP,
     )
@@ -140,7 +140,7 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_2(
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "language"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LANGUAGE_STEP,
     )
@@ -150,7 +150,7 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_2(
 
     # Recover
     mock_cookidoo_client.get_additional_items.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_LANGUAGE_STEP,
     )
@@ -162,19 +162,19 @@ async def test_flow_user_init_data_unknown_error_and_recover_on_step_2(
 
 
 async def test_flow_user_init_data_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     cookidoo_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort user data set when entry is already configured."""
 
-    cookidoo_config_entry.add_to_hass(hass)
+    cookidoo_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": "user"}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_DATA_USER_STEP,
     )
@@ -184,21 +184,21 @@ async def test_flow_user_init_data_already_configured(
 
 
 async def test_flow_reconfigure_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: AsyncMock,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test we get the reconfigure flow and create entry with success."""
-    cookidoo_config_entry.add_to_hass(hass)
-    await setup_integration(hass, cookidoo_config_entry)
+    cookidoo_config_entry.add_to_menuai(menuai)
+    await setup_integration(menuai, cookidoo_config_entry)
 
-    result = await cookidoo_config_entry.start_reconfigure_flow(hass)
+    result = await cookidoo_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["handler"] == "cookidoo"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             **MOCK_DATA_USER_STEP,
@@ -211,7 +211,7 @@ async def test_flow_reconfigure_success(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "language"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_LANGUAGE: "de-DE"},
     )
@@ -225,7 +225,7 @@ async def test_flow_reconfigure_success(
         CONF_COUNTRY: "DE",
         CONF_LANGUAGE: "de-DE",
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -237,7 +237,7 @@ async def test_flow_reconfigure_success(
     ],
 )
 async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: AsyncMock,
     mock_cookidoo_client: AsyncMock,
     raise_error: Exception,
@@ -246,15 +246,15 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_1(
     """Test unknown errors."""
     mock_cookidoo_client.login.side_effect = raise_error
 
-    cookidoo_config_entry.add_to_hass(hass)
-    await setup_integration(hass, cookidoo_config_entry)
+    cookidoo_config_entry.add_to_menuai(menuai)
+    await setup_integration(menuai, cookidoo_config_entry)
 
-    result = await cookidoo_config_entry.start_reconfigure_flow(hass)
+    result = await cookidoo_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["handler"] == "cookidoo"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={**MOCK_DATA_USER_STEP, CONF_COUNTRY: "DE"},
     )
@@ -264,7 +264,7 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_1(
 
     # Recover
     mock_cookidoo_client.login.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={**MOCK_DATA_USER_STEP, CONF_COUNTRY: "DE"},
     )
@@ -272,7 +272,7 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_1(
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "language"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_LANGUAGE: "de-DE"},
     )
@@ -284,7 +284,7 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_1(
         CONF_COUNTRY: "DE",
         CONF_LANGUAGE: "de-DE",
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -296,7 +296,7 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_1(
     ],
 )
 async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: AsyncMock,
     mock_cookidoo_client: AsyncMock,
     raise_error: Exception,
@@ -305,15 +305,15 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_2(
     """Test unknown errors."""
     mock_cookidoo_client.get_additional_items.side_effect = raise_error
 
-    cookidoo_config_entry.add_to_hass(hass)
-    await setup_integration(hass, cookidoo_config_entry)
+    cookidoo_config_entry.add_to_menuai(menuai)
+    await setup_integration(menuai, cookidoo_config_entry)
 
-    result = await cookidoo_config_entry.start_reconfigure_flow(hass)
+    result = await cookidoo_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["handler"] == "cookidoo"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={**MOCK_DATA_USER_STEP, CONF_COUNTRY: "DE"},
     )
@@ -321,7 +321,7 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_2(
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "language"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_LANGUAGE: "de-DE"},
     )
@@ -332,7 +332,7 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_2(
     # Recover
     mock_cookidoo_client.get_additional_items.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_LANGUAGE: "de-DE"},
     )
@@ -344,25 +344,25 @@ async def test_flow_reconfigure_init_data_unknown_error_and_recover_on_step_2(
         CONF_COUNTRY: "DE",
         CONF_LANGUAGE: "de-DE",
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 async def test_flow_reconfigure_id_mismatch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     cookidoo_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort when the new config is not for the same user."""
 
-    cookidoo_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    cookidoo_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         cookidoo_config_entry, unique_id="some_other_uuid"
     )
 
-    result = await cookidoo_config_entry.start_reconfigure_flow(hass)
+    result = await cookidoo_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             **MOCK_DATA_USER_STEP,
@@ -377,19 +377,19 @@ async def test_flow_reconfigure_id_mismatch(
 
 
 async def test_flow_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     cookidoo_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow."""
 
-    cookidoo_config_entry.add_to_hass(hass)
+    cookidoo_config_entry.add_to_menuai(menuai)
 
-    result = await cookidoo_config_entry.start_reauth_flow(hass)
+    result = await cookidoo_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_EMAIL: "new-email", CONF_PASSWORD: "new-password"},
     )
@@ -402,7 +402,7 @@ async def test_flow_reauth(
         CONF_COUNTRY: COUNTRY,
         CONF_LANGUAGE: LANGUAGE,
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -415,7 +415,7 @@ async def test_flow_reauth(
     ],
 )
 async def test_flow_reauth_error_and_recover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     cookidoo_config_entry: MockConfigEntry,
     raise_error,
@@ -423,14 +423,14 @@ async def test_flow_reauth_error_and_recover(
 ) -> None:
     """Test reauth flow."""
 
-    cookidoo_config_entry.add_to_hass(hass)
+    cookidoo_config_entry.add_to_menuai(menuai)
 
-    result = await cookidoo_config_entry.start_reauth_flow(hass)
+    result = await cookidoo_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_cookidoo_client.login.side_effect = raise_error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_EMAIL: "new-email", CONF_PASSWORD: "new-password"},
     )
@@ -439,7 +439,7 @@ async def test_flow_reauth_error_and_recover(
     assert result["errors"] == {"base": text_error}
 
     mock_cookidoo_client.login.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_EMAIL: "new-email", CONF_PASSWORD: "new-password"},
     )
@@ -452,26 +452,26 @@ async def test_flow_reauth_error_and_recover(
         CONF_COUNTRY: COUNTRY,
         CONF_LANGUAGE: LANGUAGE,
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 async def test_flow_reauth_id_mismatch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     cookidoo_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort when the new auth is not for the same user."""
 
-    cookidoo_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    cookidoo_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         cookidoo_config_entry, unique_id="some_other_uuid"
     )
 
-    result = await cookidoo_config_entry.start_reauth_flow(hass)
+    result = await cookidoo_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_EMAIL: "new-email", CONF_PASSWORD: PASSWORD},
     )

@@ -13,11 +13,11 @@ from screenlogicpy.const.common import (
 )
 from screenlogicpy.device_const.system import EQUIPMENT_FLAG
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .config_flow import async_discover_gateways_by_unique_id, name_for_mac
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
@@ -29,7 +29,7 @@ HEATER_COOLDOWN_DELAY = 6
 
 
 async def async_get_connect_info(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, str | int]:
     """Construct connect_info from configuration entry and returns it to caller."""
     mac = entry.unique_id
@@ -56,7 +56,7 @@ class ScreenlogicDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         config_entry: ConfigEntry,
         gateway: ScreenLogicGateway,
@@ -68,7 +68,7 @@ class ScreenlogicDataUpdateCoordinator(DataUpdateCoordinator[None]):
             seconds=config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         )
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -76,7 +76,7 @@ class ScreenlogicDataUpdateCoordinator(DataUpdateCoordinator[None]):
             # Debounced option since the device takes
             # a moment to reflect the knock-on changes
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+                menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
         )
 
@@ -96,7 +96,7 @@ class ScreenlogicDataUpdateCoordinator(DataUpdateCoordinator[None]):
         try:
             if not self.gateway.is_connected:
                 connect_info = await async_get_connect_info(
-                    self.hass, self.config_entry
+                    self.menuai, self.config_entry
                 )
                 await self.gateway.async_connect(**connect_info)
 

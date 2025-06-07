@@ -8,16 +8,16 @@ import httpx
 import pytest
 import respx
 
-from homeassistant import config_entries
-from homeassistant.components.mcp.const import (
+from menuai import config_entries
+from menuai.components.mcp.const import (
     CONF_AUTHORIZATION_URL,
     CONF_TOKEN_URL,
     DOMAIN,
 )
-from homeassistant.const import CONF_TOKEN, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.const import CONF_TOKEN, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from .conftest import (
     AUTH_DOMAIN,
@@ -56,10 +56,10 @@ OAUTH_TOKEN_PAYLOAD = {
 }
 
 
-def encode_state(hass: HomeAssistant, flow_id: str) -> str:
+def encode_state(menuai: menuai, flow_id: str) -> str:
     """Encode the OAuth JWT."""
     return config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": flow_id,
             "redirect_uri": OAUTH_CALLBACK_URL,
@@ -68,10 +68,10 @@ def encode_state(hass: HomeAssistant, flow_id: str) -> str:
 
 
 async def test_form(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_mcp_client: Mock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_mcp_client: Mock
 ) -> None:
     """Test the complete configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -81,7 +81,7 @@ async def test_form(
     response.serverInfo.name = TEST_API_NAME
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -113,18 +113,18 @@ async def test_form(
     ],
 )
 async def test_form_mcp_client_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
     side_effect: Exception,
     expected_error: str,
 ) -> None:
     """Test we handle different client library errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     mock_mcp_client.side_effect = side_effect
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -140,7 +140,7 @@ async def test_form_mcp_client_error(
     response.serverInfo.name = TEST_API_NAME
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -163,16 +163,16 @@ async def test_form_mcp_client_error(
     ],
 )
 async def test_input_form_validation_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
     user_input: dict[str, Any],
 ) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input,
     )
@@ -184,7 +184,7 @@ async def test_input_form_validation_error(
     response.serverInfo.name = TEST_API_NAME
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -200,7 +200,7 @@ async def test_input_form_validation_error(
 
 
 async def test_unique_url(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_mcp_client: Mock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_mcp_client: Mock
 ) -> None:
     """Test that the same url cannot be configured twice."""
     config_entry = MockConfigEntry(
@@ -208,9 +208,9 @@ async def test_unique_url(
         data={CONF_URL: MCP_SERVER_URL},
         title=TEST_API_NAME,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -220,7 +220,7 @@ async def test_unique_url(
     response.serverInfo.name = TEST_API_NAME
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -232,12 +232,12 @@ async def test_unique_url(
 
 
 async def test_server_missing_capbilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
 ) -> None:
     """Test we handle different client library errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     response = Mock()
@@ -245,7 +245,7 @@ async def test_server_missing_capbilities(
     response.capabilities.tools = None
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -258,12 +258,12 @@ async def test_server_missing_capbilities(
 
 @respx.mock
 async def test_oauth_discovery_flow_without_credentials(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
 ) -> None:
     """Test for an OAuth discoveryflow for an MCP server where the user has not yet entered credentials."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     # MCP Server returns 401 indicating the client needs to authenticate
@@ -275,7 +275,7 @@ async def test_oauth_discovery_flow_without_credentials(
         return_value=OAUTH_SERVER_METADATA_RESPONSE
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -289,9 +289,9 @@ async def test_oauth_discovery_flow_without_credentials(
 
 
 async def perform_oauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     result: config_entries.ConfigFlowResult,
     authorize_url: str = OAUTH_AUTHORIZE_URL,
     token_url: str = OAUTH_TOKEN_URL,
@@ -301,7 +301,7 @@ async def perform_oauth_flow(
     Expects to be called from the step where the user selects credentials.
     """
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": OAUTH_CALLBACK_URL,
@@ -313,7 +313,7 @@ async def perform_oauth_flow(
         f"&state={state}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"{CALLBACK_PATH}?code={OAUTH_CODE}&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -358,19 +358,19 @@ async def perform_oauth_flow(
 @pytest.mark.usefixtures("current_request_with_host")
 @respx.mock
 async def test_authentication_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
     credential: None,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     oauth_server_metadata_response: httpx.Response,
     expected_authorize_url: str,
     expected_token_url: str,
 ) -> None:
     """Test for an OAuth authentication flow for an MCP server."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     # MCP Server returns 401 indicating the client needs to authenticate
@@ -382,7 +382,7 @@ async def test_authentication_flow(
         return_value=oauth_server_metadata_response
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -391,7 +391,7 @@ async def test_authentication_flow(
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "credentials_choice"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "next_step_id": "pick_implementation",
@@ -399,9 +399,9 @@ async def test_authentication_flow(
     )
     assert result["type"] is FlowResultType.EXTERNAL_STEP
     result = await perform_oauth_flow(
-        hass,
+        menuai,
         aioclient_mock,
-        hass_client_no_auth,
+        menuai_client_no_auth,
         result,
         authorize_url=expected_authorize_url,
         token_url=expected_token_url,
@@ -413,7 +413,7 @@ async def test_authentication_flow(
     response.serverInfo.name = TEST_API_NAME
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_API_NAME
     data = result["data"]
@@ -446,18 +446,18 @@ async def test_authentication_flow(
 @pytest.mark.usefixtures("current_request_with_host")
 @respx.mock
 async def test_oauth_discovery_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
     credential: None,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     side_effect: Exception,
     expected_error: str,
 ) -> None:
     """Test for an OAuth authentication flow for an MCP server."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     # MCP Server returns 401 indicating the client needs to authenticate
@@ -467,7 +467,7 @@ async def test_oauth_discovery_failure(
     # Prepare the OAuth Server metadata
     respx.get(OAUTH_DISCOVERY_ENDPOINT).mock(side_effect=side_effect)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -492,18 +492,18 @@ async def test_oauth_discovery_failure(
 @pytest.mark.usefixtures("current_request_with_host")
 @respx.mock
 async def test_authentication_flow_server_failure_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
     credential: None,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     side_effect: Exception,
     expected_error: str,
 ) -> None:
     """Test for an OAuth authentication flow for an MCP server."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     # MCP Server returns 401 indicating the client needs to authenticate
@@ -515,7 +515,7 @@ async def test_authentication_flow_server_failure_abort(
         return_value=OAUTH_SERVER_METADATA_RESPONSE
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -524,7 +524,7 @@ async def test_authentication_flow_server_failure_abort(
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "credentials_choice"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "next_step_id": "pick_implementation",
@@ -532,16 +532,16 @@ async def test_authentication_flow_server_failure_abort(
     )
     assert result["type"] is FlowResultType.EXTERNAL_STEP
     result = await perform_oauth_flow(
-        hass,
+        menuai,
         aioclient_mock,
-        hass_client_no_auth,
+        menuai_client_no_auth,
         result,
     )
 
     # Client fails with an error
     mock_mcp_client.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == expected_error
 
@@ -549,16 +549,16 @@ async def test_authentication_flow_server_failure_abort(
 @pytest.mark.usefixtures("current_request_with_host")
 @respx.mock
 async def test_authentication_flow_server_missing_tool_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
     credential: None,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test for an OAuth authentication flow for an MCP server."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     # MCP Server returns 401 indicating the client needs to authenticate
@@ -570,7 +570,7 @@ async def test_authentication_flow_server_missing_tool_capabilities(
         return_value=OAUTH_SERVER_METADATA_RESPONSE
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: MCP_SERVER_URL,
@@ -579,7 +579,7 @@ async def test_authentication_flow_server_missing_tool_capabilities(
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "credentials_choice"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "next_step_id": "pick_implementation",
@@ -587,9 +587,9 @@ async def test_authentication_flow_server_missing_tool_capabilities(
     )
     assert result["type"] is FlowResultType.EXTERNAL_STEP
     result = await perform_oauth_flow(
-        hass,
+        menuai,
         aioclient_mock,
-        hass_client_no_auth,
+        menuai_client_no_auth,
         result,
     )
 
@@ -601,7 +601,7 @@ async def test_authentication_flow_server_missing_tool_capabilities(
     response.capabilities.tools = None
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "missing_capabilities"
 
@@ -609,33 +609,33 @@ async def test_authentication_flow_server_missing_tool_capabilities(
 @pytest.mark.usefixtures("current_request_with_host")
 @respx.mock
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_mcp_client: Mock,
     credential: None,
     config_entry_with_auth: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test for an OAuth authentication flow for an MCP server."""
-    config_entry_with_auth.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    config_entry_with_auth.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
-    result = await perform_oauth_flow(hass, aioclient_mock, hass_client_no_auth, result)
+    result = await perform_oauth_flow(menuai, aioclient_mock, menuai_client_no_auth, result)
 
     # Verify we can connect to the server
     response = Mock()
     response.serverInfo.name = TEST_API_NAME
     mock_mcp_client.return_value.initialize.return_value = response
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 

@@ -13,16 +13,16 @@ from aiowaqi import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_METHOD,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     LocationSelector,
     SelectSelector,
     SelectSelectorConfig,
@@ -67,7 +67,7 @@ class WAQIConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             async with WAQIClient(
-                session=async_get_clientsession(self.hass)
+                session=async_get_clientsession(self.menuai)
             ) as waqi_client:
                 waqi_client.authenticate(user_input[CONF_API_KEY])
                 try:
@@ -108,7 +108,7 @@ class WAQIConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             async with WAQIClient(
-                session=async_get_clientsession(self.hass)
+                session=async_get_clientsession(self.menuai)
             ) as waqi_client:
                 waqi_client.authenticate(self.data[CONF_API_KEY])
                 try:
@@ -135,8 +135,8 @@ class WAQIConfigFlow(ConfigFlow, domain=DOMAIN):
                 ),
                 {
                     CONF_LOCATION: {
-                        CONF_LATITUDE: self.hass.config.latitude,
-                        CONF_LONGITUDE: self.hass.config.longitude,
+                        CONF_LATITUDE: self.menuai.config.latitude,
+                        CONF_LONGITUDE: self.menuai.config.longitude,
                     }
                 },
             ),
@@ -150,7 +150,7 @@ class WAQIConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             async with WAQIClient(
-                session=async_get_clientsession(self.hass)
+                session=async_get_clientsession(self.menuai)
             ) as waqi_client:
                 waqi_client.authenticate(self.data[CONF_API_KEY])
                 station_number = user_input[CONF_STATION_NUMBER]

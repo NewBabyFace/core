@@ -7,25 +7,25 @@ from unittest.mock import MagicMock
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     DOMAIN,
     SERVICE_PRESS,
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_PLATFORM,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, State
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .const import TEST_DOMAIN
 
@@ -40,12 +40,12 @@ from tests.common import (
 )
 
 
-async def test_button(hass: HomeAssistant) -> None:
+async def test_button(menuai: menuai) -> None:
     """Test getting data from the mocked button entity."""
     button = ButtonEntity()
     assert button.state is None
 
-    button.hass = hass
+    button.menuai = menuai
 
     with pytest.raises(NotImplementedError):
         await button.async_press()
@@ -58,33 +58,33 @@ async def test_button(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("enable_custom_integrations", "setup_platform")
 async def test_custom_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test we integration."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("button.button_1").state == STATE_UNKNOWN
+    assert menuai.states.get("button.button_1").state == STATE_UNKNOWN
 
     now = dt_util.utcnow()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.button_1"},
         blocking=True,
     )
 
-    assert hass.states.get("button.button_1").state == now.isoformat()
+    assert menuai.states.get("button.button_1").state == now.isoformat()
     assert "The button has been pressed" in caplog.text
 
     now_isoformat = dt_util.utcnow().isoformat()
-    assert hass.states.get("button.button_1").state == now_isoformat
+    assert menuai.states.get("button.button_1").state == now_isoformat
 
     new_time = dt_util.utcnow() + timedelta(weeks=1)
     freezer.move_to(new_time)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.button_1"},
@@ -92,29 +92,29 @@ async def test_custom_integration(
     )
 
     new_time_isoformat = new_time.isoformat()
-    assert hass.states.get("button.button_1").state == new_time_isoformat
+    assert menuai.states.get("button.button_1").state == new_time_isoformat
 
 
 @pytest.mark.usefixtures("enable_custom_integrations", "setup_platform")
-async def test_restore_state(hass: HomeAssistant) -> None:
+async def test_restore_state(menuai: menuai) -> None:
     """Test we restore state integration."""
-    mock_restore_cache(hass, (State("button.button_1", "2021-01-01T23:59:59+00:00"),))
+    mock_restore_cache(menuai, (State("button.button_1", "2021-01-01T23:59:59+00:00"),))
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("button.button_1").state == "2021-01-01T23:59:59+00:00"
+    assert menuai.states.get("button.button_1").state == "2021-01-01T23:59:59+00:00"
 
 
 @pytest.mark.usefixtures("enable_custom_integrations", "setup_platform")
-async def test_restore_state_does_not_restore_unavailable(hass: HomeAssistant) -> None:
+async def test_restore_state_does_not_restore_unavailable(menuai: menuai) -> None:
     """Test we restore state integration except for unavailable."""
-    mock_restore_cache(hass, (State("button.button_1", STATE_UNAVAILABLE),))
+    mock_restore_cache(menuai, (State("button.button_1", STATE_UNAVAILABLE),))
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("button.button_1").state == STATE_UNKNOWN
+    assert menuai.states.get("button.button_1").state == STATE_UNKNOWN
 
 
 class MockFlow(ConfigFlow):
@@ -122,29 +122,29 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
-async def test_name(hass: HomeAssistant) -> None:
+async def test_name(menuai: menuai) -> None:
     """Test button name."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.BUTTON]
         )
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -176,7 +176,7 @@ async def test_name(hass: HomeAssistant) -> None:
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -184,28 +184,28 @@ async def test_name(hass: HomeAssistant) -> None:
         async_add_entities([entity1, entity2, entity3, entity4])
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state
     assert state.attributes == {}
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state
     assert state.attributes == {"device_class": "restart"}
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state
     assert state.attributes == {"device_class": "restart", "friendly_name": "Restart"}
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity4.entity_id)
     assert state
     assert state.attributes == {"device_class": "restart", "friendly_name": "Restart"}

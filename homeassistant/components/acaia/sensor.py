@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from aioacaia.acaiascale import AcaiaDeviceState, AcaiaScale
 from aioacaia.const import UnitMass as AcaiaUnitOfMass
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
@@ -14,9 +14,9 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfMass, UnitOfVolumeFlowRate
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE, UnitOfMass, UnitOfVolumeFlowRate
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AcaiaConfigEntry
 from .entity import AcaiaEntity
@@ -75,7 +75,7 @@ RESTORE_SENSORS: tuple[AcaiaSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AcaiaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -119,9 +119,9 @@ class AcaiaRestoreSensor(AcaiaEntity, RestoreSensor):
     entity_description: AcaiaSensorEntityDescription
     _restored_data: SensorExtraStoredData | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._restored_data = await self.async_get_last_sensor_data()
         if self._restored_data is not None:

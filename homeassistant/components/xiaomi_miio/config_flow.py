@@ -11,11 +11,11 @@ from micloud import MiCloud
 from micloud.micloudexception import MiCloudAccessDenied
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MAC, CONF_MODEL, CONF_TOKEN
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_MAC, CONF_MODEL, CONF_TOKEN
+from menuai.core import callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_CLOUD_COUNTRY,
@@ -74,7 +74,7 @@ class OptionsFlowHandler(OptionsFlow):
                 not cloud_username or not cloud_password or not cloud_country
             ):
                 errors["base"] = "cloud_credentials_incomplete"
-                self.config_entry.async_start_reauth(self.hass)
+                self.config_entry.async_start_reauth(self.menuai)
 
             if not errors:
                 return self.async_create_entry(title="", data=user_input)
@@ -223,11 +223,11 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
                     step_id="cloud", data_schema=DEVICE_CLOUD_CONFIG, errors=errors
                 )
 
-            miio_cloud = await self.hass.async_add_executor_job(
+            miio_cloud = await self.menuai.async_add_executor_job(
                 MiCloud, cloud_username, cloud_password
             )
             try:
-                if not await self.hass.async_add_executor_job(miio_cloud.login):
+                if not await self.menuai.async_add_executor_job(miio_cloud.login):
                     errors["base"] = "cloud_login_error"
             except MiCloudAccessDenied:
                 errors["base"] = "cloud_login_error"
@@ -241,7 +241,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
                 )
 
             try:
-                devices_raw = await self.hass.async_add_executor_job(
+                devices_raw = await self.menuai.async_add_executor_job(
                     miio_cloud.get_devices, cloud_country
                 )
             except Exception:
@@ -332,7 +332,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
             self.model = user_input[CONF_MODEL]
 
         # Try to connect to a Xiaomi Device.
-        connect_device_class = ConnectXiaomiDevice(self.hass)
+        connect_device_class = ConnectXiaomiDevice(self.menuai)
         try:
             await connect_device_class.async_connect_device(self.host, self.token)
         except AuthException:

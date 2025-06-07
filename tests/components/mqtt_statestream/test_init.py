@@ -4,17 +4,17 @@ from unittest.mock import ANY, call
 
 import pytest
 
-from homeassistant.components import mqtt_statestream as statestream
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CoreState, HomeAssistant, State
-from homeassistant.setup import async_setup_component
+from menuai.components import mqtt_statestream as statestream
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import CoreState, menuai, State
+from menuai.setup import async_setup_component
 
 from tests.common import MockEntity, MockEntityPlatform, mock_state_change_event
 from tests.typing import MqttMockHAClient
 
 
 async def add_statestream(
-    hass: HomeAssistant,
+    menuai: menuai,
     base_topic=None,
     publish_attributes=None,
     publish_timestamps=None,
@@ -34,64 +34,64 @@ async def add_statestream(
     if publish_exclude:
         config["exclude"] = publish_exclude
     return await async_setup_component(
-        hass, statestream.DOMAIN, {statestream.DOMAIN: config}
+        menuai, statestream.DOMAIN, {statestream.DOMAIN: config}
     )
 
 
 async def test_fails_with_no_base(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Setup should fail if no base_topic is set."""
-    assert await add_statestream(hass) is False
+    assert await add_statestream(menuai) is False
 
 
 async def test_setup_succeeds_without_attributes(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the success of the setup with a valid base_topic."""
-    assert await add_statestream(hass, base_topic="pub")
+    assert await add_statestream(menuai, base_topic="pub")
 
 
 async def test_setup_and_stop_waits_for_ha(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the success of the setup with a valid base_topic."""
     e_id = "fake.entity"
 
     # HA is not running
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
-    assert await add_statestream(hass, base_topic="pub")
-    await hass.async_block_till_done()
+    assert await add_statestream(menuai, base_topic="pub")
+    await menuai.async_block_till_done()
     # Set a state of an entity
-    mock_state_change_event(hass, State(e_id, "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was not published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_not_called()
 
     # HA is starting up
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # Change a state of an entity
-    mock_state_change_event(hass, State(e_id, "off"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "off"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "off", 1, True)
     assert mqtt_mock.async_publish.called
     mqtt_mock.reset_mock()
 
     # HA is shutting down
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
 
     # Change a state of an entity
-    mock_state_change_event(hass, State(e_id, "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was not published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_not_called()
@@ -102,74 +102,74 @@ async def test_setup_and_stop_waits_for_ha(
 # The exception is raised by mqtt.async_publish.
 @pytest.mark.xfail
 async def test_startup_no_mqtt(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test startup without MQTT support."""
     e_id = "fake.entity"
 
-    assert await add_statestream(hass, base_topic="pub")
+    assert await add_statestream(menuai, base_topic="pub")
     # Set a state of an entity
-    mock_state_change_event(hass, State(e_id, "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "MQTT is not enabled" in caplog.text
 
 
 async def test_setup_succeeds_with_attributes(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test setup with a valid base_topic and publish_attributes."""
-    assert await add_statestream(hass, base_topic="pub", publish_attributes=True)
+    assert await add_statestream(menuai, base_topic="pub", publish_attributes=True)
 
 
 async def test_state_changed_event_sends_message(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the sending of a new message if event changed."""
     e_id = "fake.entity"
     base_topic = "pub"
 
     # Add the statestream component for publishing state updates
-    assert await add_statestream(hass, base_topic=base_topic)
-    await hass.async_block_till_done()
+    assert await add_statestream(menuai, base_topic=base_topic)
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State(e_id, "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
     assert mqtt_mock.async_publish.called
     mqtt_mock.async_publish.reset_mock()
 
-    # Create a test entity and add it to hass
-    platform = MockEntityPlatform(hass)
+    # Create a test entity and add it to menuai
+    platform = MockEntityPlatform(menuai)
     entity = MockEntity(unique_id="1234")
     await platform.async_add_entities([entity])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mqtt_mock.async_publish.assert_called_with(
         "pub/test_domain/test_platform_1234/state", "unknown", 1, True
     )
     mqtt_mock.async_publish.reset_mock()
 
-    state = hass.states.get("test_domain.test_platform_1234")
+    state = menuai.states.get("test_domain.test_platform_1234")
     assert state is not None
 
     # Now remove it, nothing should be published
-    hass.states.async_remove("test_domain.test_platform_1234")
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_remove("test_domain.test_platform_1234")
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock.async_publish.assert_not_called()
 
 
 async def test_state_changed_event_sends_message_and_timestamp(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the sending of a message and timestamps if event changed."""
     e_id = "another.entity"
@@ -177,18 +177,18 @@ async def test_state_changed_event_sends_message_and_timestamp(
 
     # Add the statestream component for publishing state updates
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_attributes=None, publish_timestamps=True
+        menuai, base_topic=base_topic, publish_attributes=None, publish_timestamps=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State(e_id, "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     calls = [
@@ -202,15 +202,15 @@ async def test_state_changed_event_sends_message_and_timestamp(
 
 
 async def test_state_changed_attr_sends_message(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test the sending of a new message if attribute changed."""
     e_id = "fake.entity"
     base_topic = "pub"
 
     # Add the statestream component for publishing state updates
-    assert await add_statestream(hass, base_topic=base_topic, publish_attributes=True)
-    await hass.async_block_till_done()
+    assert await add_statestream(menuai, base_topic=base_topic, publish_attributes=True)
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
@@ -219,9 +219,9 @@ async def test_state_changed_attr_sends_message(
     test_attributes = {"testing": "YES", "list": ["a", "b", "c"], "bool": False}
 
     # Set a state of an entity
-    mock_state_change_event(hass, State(e_id, "off", attributes=test_attributes))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State(e_id, "off", attributes=test_attributes))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     calls = [
@@ -236,7 +236,7 @@ async def test_state_changed_attr_sends_message(
 
 
 async def test_state_changed_event_include_domain(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test that filtering on included domain works as expected."""
     base_topic = "pub"
@@ -247,18 +247,18 @@ async def test_state_changed_event_include_domain(
     # Add the statestream component for publishing state updates
     # Set the filter to allow fake.* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -266,15 +266,15 @@ async def test_state_changed_event_include_domain(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake2.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake2.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_include_entity(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test that filtering on included entity works as expected."""
     base_topic = "pub"
@@ -285,18 +285,18 @@ async def test_state_changed_event_include_entity(
     # Add the statestream component for publishing state updates
     # Set the filter to allow fake.* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -304,15 +304,15 @@ async def test_state_changed_event_include_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake.entity2", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity2", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_exclude_domain(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test that filtering on excluded domain works as expected."""
     base_topic = "pub"
@@ -323,18 +323,18 @@ async def test_state_changed_event_exclude_domain(
     # Add the statestream component for publishing state updates
     # Set the filter to allow fake.* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -342,15 +342,15 @@ async def test_state_changed_event_exclude_domain(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake2.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake2.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_exclude_entity(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test that filtering on excluded entity works as expected."""
     base_topic = "pub"
@@ -361,18 +361,18 @@ async def test_state_changed_event_exclude_entity(
     # Add the statestream component for publishing state updates
     # Set the filter to allow fake.* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -380,15 +380,15 @@ async def test_state_changed_event_exclude_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake.entity2", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity2", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_exclude_domain_include_entity(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test filtering with excluded domain and included entity."""
     base_topic = "pub"
@@ -399,18 +399,18 @@ async def test_state_changed_event_exclude_domain_include_entity(
     # Add the statestream component for publishing state updates
     # Set the filter to allow fake.* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -418,15 +418,15 @@ async def test_state_changed_event_exclude_domain_include_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake.entity2", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity2", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_include_domain_exclude_entity(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test filtering with included domain and excluded entity."""
     base_topic = "pub"
@@ -437,18 +437,18 @@ async def test_state_changed_event_include_domain_exclude_entity(
     # Add the statestream component for publishing state updates
     # Set the filter to allow fake.* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -456,15 +456,15 @@ async def test_state_changed_event_include_domain_exclude_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake.entity2", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity2", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_include_globs(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test that filtering on included glob works as expected."""
     base_topic = "pub"
@@ -475,18 +475,18 @@ async def test_state_changed_event_include_globs(
     # Add the statestream component for publishing state updates
     # Set the filter to allow *.included_* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity with included glob
-    mock_state_change_event(hass, State("fake2.included_entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake2.included_entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake2/included_entity/state
     mqtt_mock.async_publish.assert_called_with(
@@ -496,15 +496,15 @@ async def test_state_changed_event_include_globs(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake2.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake2.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_exclude_globs(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test that filtering on excluded globs works as expected."""
     base_topic = "pub"
@@ -515,18 +515,18 @@ async def test_state_changed_event_exclude_globs(
     # Add the statestream component for publishing state updates
     # Set the filter to allow *.excluded_* items
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -534,15 +534,15 @@ async def test_state_changed_event_exclude_globs(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included by glob
-    mock_state_change_event(hass, State("fake.excluded_entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.excluded_entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_exclude_domain_globs_include_entity(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test filtering with excluded domain and glob and included entity."""
     base_topic = "pub"
@@ -553,18 +553,18 @@ async def test_state_changed_event_exclude_domain_globs_include_entity(
     # Add the statestream component for publishing state updates
     # Set the filter to exclude with include filter
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -572,9 +572,9 @@ async def test_state_changed_event_exclude_domain_globs_include_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that doesn't match any filters
-    mock_state_change_event(hass, State("fake2.included_entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake2.included_entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with(
@@ -584,23 +584,23 @@ async def test_state_changed_event_exclude_domain_globs_include_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included by domain
-    mock_state_change_event(hass, State("fake.entity2", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity2", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included by glob
-    mock_state_change_event(hass, State("fake.excluded_entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.excluded_entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
 
 async def test_state_changed_event_include_domain_globs_exclude_entity(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test filtering with included domain and glob and excluded entity."""
     base_topic = "pub"
@@ -611,18 +611,18 @@ async def test_state_changed_event_include_domain_globs_exclude_entity(
     # Add the statestream component for publishing state updates
     # Set the filter to include with exclude filter
     assert await add_statestream(
-        hass, base_topic=base_topic, publish_include=incl, publish_exclude=excl
+        menuai, base_topic=base_topic, publish_include=incl, publish_exclude=excl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reset the mock because it will have already gotten calls for the
     # mqtt_statestream state change on initialization, etc.
     mqtt_mock.async_publish.reset_mock()
 
     # Set a state of an entity included by domain
-    mock_state_change_event(hass, State("fake.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with("pub/fake/entity/state", "on", 1, True)
@@ -630,9 +630,9 @@ async def test_state_changed_event_include_domain_globs_exclude_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity included by glob
-    mock_state_change_event(hass, State("fake.included_entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.included_entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure 'on' was published to pub/fake/entity/state
     mqtt_mock.async_publish.assert_called_with(
@@ -642,16 +642,16 @@ async def test_state_changed_event_include_domain_globs_exclude_entity(
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that shouldn't be included
-    mock_state_change_event(hass, State("fake.entity2", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake.entity2", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called
 
     mqtt_mock.async_publish.reset_mock()
     # Set a state of an entity that doesn't match any filters
-    mock_state_change_event(hass, State("fake2.entity", "on"))
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    mock_state_change_event(menuai, State("fake2.entity", "on"))
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not mqtt_mock.async_publish.called

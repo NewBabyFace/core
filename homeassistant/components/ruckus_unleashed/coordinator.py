@@ -6,10 +6,10 @@ import logging
 from aioruckus import AjaxSession
 from aioruckus.exceptions import AuthenticationError, SchemaError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import API_CLIENT_MAC, DOMAIN, KEY_SYS_CLIENTS, SCAN_INTERVAL
 
@@ -22,13 +22,13 @@ class RuckusDataUpdateCoordinator(DataUpdateCoordinator):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, ruckus: AjaxSession
+        self, menuai: menuai, config_entry: ConfigEntry, ruckus: AjaxSession
     ) -> None:
         """Initialize global Ruckus data updater."""
         self.ruckus = ruckus
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

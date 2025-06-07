@@ -13,17 +13,17 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     DOMAIN as CALENDAR_DOMAIN,
     EVENT_END_DATETIME,
     EVENT_START_DATETIME,
     SERVICE_GET_EVENTS,
 )
-from homeassistant.components.husqvarna_automower.const import DOMAIN
-from homeassistant.components.husqvarna_automower.coordinator import SCAN_INTERVAL
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.husqvarna_automower.const import DOMAIN
+from menuai.components.husqvarna_automower.coordinator import SCAN_INTERVAL
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -40,12 +40,12 @@ type GetEventsFn = Callable[[str, str], Awaitable[dict[str, Any]]]
 
 @pytest.fixture(name="get_events")
 def get_events_fixture(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> GetEventsFn:
     """Fetch calendar events from the HTTP API."""
 
     async def _fetch(start: str, end: str) -> list[dict[str, Any]]:
-        client = await hass_client()
+        client = await menuai_client()
         response = await client.get(
             f"/api/calendars/{TEST_ENTITY}?start={urllib.parse.quote(start)}&end={urllib.parse.quote(end)}"
         )
@@ -58,37 +58,37 @@ def get_events_fixture(
 
 @pytest.mark.freeze_time(datetime.datetime(2023, 6, 5, 12))
 async def test_calendar_state_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """State test of the calendar."""
-    await setup_integration(hass, mock_config_entry)
-    state = hass.states.get("calendar.test_mower_1")
+    await setup_integration(menuai, mock_config_entry)
+    state = menuai.states.get("calendar.test_mower_1")
     assert state is not None
     assert state.state == "off"
 
 
 @pytest.mark.freeze_time(datetime.datetime(2023, 6, 5, 19))
 async def test_calendar_state_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """State test of the calendar."""
-    await setup_integration(hass, mock_config_entry)
-    state = hass.states.get("calendar.test_mower_1")
+    await setup_integration(menuai, mock_config_entry)
+    state = menuai.states.get("calendar.test_mower_1")
     assert state is not None
     assert state.state == "on"
 
 
 @pytest.mark.freeze_time(datetime.datetime(2023, 6, 5))
 async def test_empty_calendar(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -97,7 +97,7 @@ async def test_empty_calendar(
     mower_time_zone: zoneinfo.ZoneInfo,
 ) -> None:
     """State if there is no schedule set."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     json_values = load_json_value_fixture("mower.json", DOMAIN)
     json_values["data"][0]["attributes"]["calendar"]["tasks"] = []
     values = mower_list_to_dictionary_dataclass(
@@ -106,9 +106,9 @@ async def test_empty_calendar(
     )
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    state = hass.states.get("calendar.test_mower_1")
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("calendar.test_mower_1")
     assert state is not None
     assert state.state == "off"
     events = await get_events("2023-06-05T00:00:00", "2023-06-12T00:00:00")
@@ -129,7 +129,7 @@ async def test_empty_calendar(
     ],
 )
 async def test_calendar_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -138,8 +138,8 @@ async def test_calendar_snapshot(
     end_date: datetime,
 ) -> None:
     """Snapshot test of the calendar entity."""
-    await setup_integration(hass, mock_config_entry)
-    events = await hass.services.async_call(
+    await setup_integration(menuai, mock_config_entry)
+    events = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {

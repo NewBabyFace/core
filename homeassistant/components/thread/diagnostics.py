@@ -21,9 +21,9 @@ from typing import TYPE_CHECKING, Any, TypedDict
 
 from python_otbr_api.tlv_parser import MeshcopTLVType
 
-from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.components import zeroconf
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .dataset_store import async_get_store
 from .discovery import async_read_zeroconf_cache
@@ -129,13 +129,13 @@ def _get_routes_and_neighbors():
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for all known thread networks."""
     networks: dict[str, Network] = {}
 
     # Start with all networks that HA knows about
-    store = await async_get_store(hass)
+    store = await async_get_store(menuai)
     for record in store.datasets.values():
         if not record.extended_pan_id:
             continue
@@ -156,11 +156,11 @@ async def async_get_config_entry_diagnostics(
     # border routers as we process the zeroconf data.
     #
     # Also find all neighbours
-    routes, reverse_routes, neighbours = await hass.async_add_executor_job(
+    routes, reverse_routes, neighbours = await menuai.async_add_executor_job(
         _get_routes_and_neighbors
     )
 
-    aiozc = await zeroconf.async_get_async_instance(hass)
+    aiozc = await zeroconf.async_get_async_instance(menuai)
     for data in async_read_zeroconf_cache(aiozc):
         if not data.extended_pan_id:
             continue
@@ -188,7 +188,7 @@ async def async_get_config_entry_diagnostics(
             "routes": {},
         }
 
-        # For every address this border router hass, see if we have seen
+        # For every address this border router menuai, see if we have seen
         # it in the route table as a via - these are the routes its
         # announcing via RA
         if data.addresses:

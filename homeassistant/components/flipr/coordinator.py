@@ -10,9 +10,9 @@ from typing import Any
 from flipr_api import FliprAPIRestClient
 from flipr_api.exceptions import FliprError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class BaseDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: FliprConfigEntry,
         client: FliprAPIRestClient,
         flipr_or_hub_id: str,
@@ -45,7 +45,7 @@ class BaseDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         self.client = client
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"Flipr or Hub data measure for {self.device_id}",
@@ -59,7 +59,7 @@ class FliprDataUpdateCoordinator(BaseDataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API endpoint."""
         try:
-            data = await self.hass.async_add_executor_job(
+            data = await self.menuai.async_add_executor_job(
                 self.client.get_pool_measure_latest, self.device_id
             )
         except FliprError as error:
@@ -74,7 +74,7 @@ class FliprHubDataUpdateCoordinator(BaseDataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API endpoint."""
         try:
-            data = await self.hass.async_add_executor_job(
+            data = await self.menuai.async_add_executor_job(
                 self.client.get_hub_state, self.device_id
             )
         except FliprError as error:

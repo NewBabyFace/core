@@ -7,13 +7,13 @@ import logging
 
 from airthings_ble import AirthingsDevice
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
@@ -22,17 +22,17 @@ from homeassistant.const import (
     UnitOfPressure,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.entity_registry import (
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_registry import (
     RegistryEntry,
     async_entries_for_device,
 )
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import DOMAIN, VOLUME_BECQUEREL, VOLUME_PICOCURIE
 from .coordinator import AirthingsBLEConfigEntry, AirthingsBLEDataUpdateCoordinator
@@ -116,15 +116,15 @@ SENSORS_MAPPING_TEMPLATE: dict[str, SensorEntityDescription] = {
 
 
 @callback
-def async_migrate(hass: HomeAssistant, address: str, sensor_name: str) -> None:
+def async_migrate(menuai: menuai, address: str, sensor_name: str) -> None:
     """Migrate entities to new unique ids (with BLE Address)."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     unique_id_trailer = f"_{sensor_name}"
     new_unique_id = f"{address}{unique_id_trailer}"
     if ent_reg.async_get_entity_id(DOMAIN, Platform.SENSOR, new_unique_id):
         # New unique id already exists
         return
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     if not (
         device := dev_reg.async_get_device(
             connections={(CONNECTION_BLUETOOTH, address)}
@@ -151,12 +151,12 @@ def async_migrate(hass: HomeAssistant, address: str, sensor_name: str) -> None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirthingsBLEConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Airthings BLE sensors."""
-    is_metric = hass.config.units is METRIC_SYSTEM
+    is_metric = menuai.config.units is METRIC_SYSTEM
 
     coordinator = entry.runtime_data
 
@@ -182,7 +182,7 @@ async def async_setup_entry(
                 sensor_value,
             )
             continue
-        async_migrate(hass, coordinator.data.address, sensor_type)
+        async_migrate(menuai, coordinator.data.address, sensor_type)
         entities.append(
             AirthingsSensor(coordinator, coordinator.data, sensors_mapping[sensor_type])
         )

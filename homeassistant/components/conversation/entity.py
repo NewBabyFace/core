@@ -3,10 +3,10 @@
 from abc import abstractmethod
 from typing import Literal, final
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.helpers.chat_session import async_get_chat_session
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.util import dt as dt_util
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.helpers.chat_session import async_get_chat_session
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.util import dt as dt_util
 
 from .chat_log import ChatLog, async_get_chat_log
 from .const import ConversationEntityFeature
@@ -34,9 +34,9 @@ class ConversationEntity(RestoreEntity):
             return None
         return self.__last_activity
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         state = await self.async_get_last_state()
         if (
             state is not None
@@ -62,8 +62,8 @@ class ConversationEntity(RestoreEntity):
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         """Process a sentence."""
         with (
-            async_get_chat_session(self.hass, user_input.conversation_id) as session,
-            async_get_chat_log(self.hass, session, user_input) as chat_log,
+            async_get_chat_session(self.menuai, user_input.conversation_id) as session,
+            async_get_chat_log(self.menuai, session, user_input) as chat_log,
         ):
             return await self._async_handle_message(user_input, chat_log)
 

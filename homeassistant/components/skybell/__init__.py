@@ -7,11 +7,11 @@ import asyncio
 from aioskybell import Skybell
 from aioskybell.exceptions import SkybellAuthenticationException, SkybellException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 from .coordinator import SkybellDataUpdateCoordinator
@@ -25,7 +25,7 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Skybell from a config entry."""
     email = entry.data[CONF_EMAIL]
     password = entry.data[CONF_PASSWORD]
@@ -34,8 +34,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         username=email,
         password=password,
         get_devices=True,
-        cache_path=hass.config.path(f"./skybell_{entry.unique_id}.pickle"),
-        session=async_get_clientsession(hass),
+        cache_path=menuai.config.path(f"./skybell_{entry.unique_id}.pickle"),
+        session=async_get_clientsession(menuai),
     )
     try:
         devices = await api.async_initialize()
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(f"Unable to connect to Skybell service: {ex}") from ex
 
     device_coordinators: list[SkybellDataUpdateCoordinator] = [
-        SkybellDataUpdateCoordinator(hass, entry, device) for device in devices
+        SkybellDataUpdateCoordinator(menuai, entry, device) for device in devices
     ]
     await asyncio.gather(
         *[
@@ -53,14 +53,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             for coordinator in device_coordinators
         ]
     )
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = device_coordinators
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = device_coordinators
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

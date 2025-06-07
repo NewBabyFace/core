@@ -8,10 +8,10 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.util.uuid import random_uuid_hex
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import callback
+from menuai.util.uuid import random_uuid_hex
 
 from .client_wrapper import CannotConnect, InvalidAuth, create_client, validate_input
 from .const import CONF_CLIENT_DEVICE_ID, DOMAIN, SUPPORTED_AUDIO_CODECS
@@ -66,7 +66,7 @@ class JellyfinConfigFlow(ConfigFlow, domain=DOMAIN):
             client = create_client(device_id=self.client_device_id)
             try:
                 user_id, connect_result = await validate_input(
-                    self.hass, user_input, client
+                    self.menuai, user_input, client
                 )
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -120,7 +120,7 @@ class JellyfinConfigFlow(ConfigFlow, domain=DOMAIN):
 
             client = create_client(device_id=self.client_device_id)
             try:
-                await validate_input(self.hass, new_input, client)
+                await validate_input(self.menuai, new_input, client)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:

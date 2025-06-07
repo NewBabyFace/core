@@ -6,9 +6,9 @@ import logging
 from todoist_api_python.api_async import TodoistAPIAsync
 from todoist_api_python.models import Label, Project, Section, Task
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 
 class TodoistCoordinator(DataUpdateCoordinator[list[Task]]):
@@ -16,7 +16,7 @@ class TodoistCoordinator(DataUpdateCoordinator[list[Task]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         entry: ConfigEntry | None,
         update_interval: timedelta,
@@ -25,7 +25,7 @@ class TodoistCoordinator(DataUpdateCoordinator[list[Task]]):
     ) -> None:
         """Initialize the Todoist coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=entry,
             name="Todoist",

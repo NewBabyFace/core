@@ -9,10 +9,10 @@ from typing import Any
 
 from pynina import ApiError, Nina
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     _LOGGER,
@@ -51,11 +51,11 @@ class NINADataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize."""
-        self._nina: Nina = Nina(async_get_clientsession(hass))
+        self._nina: Nina = Nina(async_get_clientsession(menuai))
         self.headline_filter: str = config_entry.data[CONF_HEADLINE_FILTER]
         self.area_filter: str = config_entry.data[CONF_AREA_FILTER]
 
@@ -64,7 +64,7 @@ class NINADataUpdateCoordinator(
             self._nina.addRegion(region)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

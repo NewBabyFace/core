@@ -5,10 +5,10 @@ from __future__ import annotations
 from aiohttp import ClientResponseError
 from incomfortclient import InvalidGateway, InvalidHeaterList
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .coordinator import (
@@ -31,14 +31,14 @@ INTEGRATION_TITLE = "Intergas InComfort/Intouch Lan2RF gateway"
 
 @callback
 def async_cleanup_stale_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: InComfortConfigEntry,
     data: InComfortData,
     gateway_device: dr.DeviceEntry,
 ) -> None:
     """Cleanup stale heater devices and climates."""
     heater_serial_numbers = {heater.serial_no for heater in data.heaters}
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entries = device_registry.devices.get_devices_for_config_entry_id(
         entry.entry_id
     )
@@ -66,10 +66,10 @@ def async_cleanup_stale_devices(
         device_registry.async_remove_device(device_id)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: InComfortConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: InComfortConfigEntry) -> bool:
     """Set up a config entry."""
     try:
-        data = await async_connect_gateway(hass, dict(entry.data))
+        data = await async_connect_gateway(menuai, dict(entry.data))
         for heater in data.heaters:
             await heater.update()
     except InvalidHeaterList as exc:
@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: InComfortConfigEntry) ->
         raise InComfortTimeout from exc
 
     # Register discovered gateway device
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     gateway_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
@@ -94,15 +94,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: InComfortConfigEntry) ->
         manufacturer="Intergas",
         name="RFGateway",
     )
-    async_cleanup_stale_devices(hass, entry, data, gateway_device)
-    coordinator = InComfortDataCoordinator(hass, entry, data)
+    async_cleanup_stale_devices(menuai, entry, data, gateway_device)
+    coordinator = InComfortDataCoordinator(menuai, entry, data)
     entry.runtime_data = coordinator
     await coordinator.async_config_entry_first_refresh()
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: InComfortConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: InComfortConfigEntry) -> bool:
     """Unload config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

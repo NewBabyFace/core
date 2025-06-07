@@ -7,30 +7,30 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import automation
-from homeassistant.components.homeassistant.triggers import time
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components import automation
+from menuai.components.menuai.triggers import time
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, ServiceCall
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import assert_setup_component, async_fire_time_changed, mock_component
 
 
 @pytest.fixture(autouse=True)
-def setup_comp(hass: HomeAssistant) -> None:
+def setup_comp(menuai: menuai) -> None:
     """Initialize components."""
-    mock_component(hass, "group")
+    mock_component(menuai, "group")
 
 
 async def test_if_fires_using_at(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -42,7 +42,7 @@ async def test_if_fires_using_at(
 
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -57,10 +57,10 @@ async def test_if_fires_using_at(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "time - 5"
@@ -71,7 +71,7 @@ async def test_if_fires_using_at(
     ("has_date", "has_time"), [(True, True), (True, False), (False, True)]
 )
 async def test_if_fires_using_at_input_datetime(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
     has_date,
@@ -79,7 +79,7 @@ async def test_if_fires_using_at_input_datetime(
 ) -> None:
     """Test for firing at input_datetime."""
     await async_setup_component(
-        hass,
+        menuai,
         "input_datetime",
         {"input_datetime": {"trigger": {"has_date": has_date, "has_time": has_time}}},
     )
@@ -89,7 +89,7 @@ async def test_if_fires_using_at_input_datetime(
         hour=5 if has_time else 0, minute=0, second=0, microsecond=0
     ) + timedelta(2)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {
@@ -98,7 +98,7 @@ async def test_if_fires_using_at_input_datetime(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     time_that_will_not_match_right_away = trigger_dt - timedelta(minutes=1)
 
@@ -106,7 +106,7 @@ async def test_if_fires_using_at_input_datetime(
 
     freezer.move_to(dt_util.as_utc(time_that_will_not_match_right_away))
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -118,10 +118,10 @@ async def test_if_fires_using_at_input_datetime(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
     assert (
@@ -134,7 +134,7 @@ async def test_if_fires_using_at_input_datetime(
     if has_time:
         trigger_dt += timedelta(hours=1)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {
@@ -144,10 +144,10 @@ async def test_if_fires_using_at_input_datetime(
         blocking=True,
     )
     assert len(service_calls) == 3
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 4
     assert (
@@ -170,7 +170,7 @@ async def test_if_fires_using_at_input_datetime(
     ],
 )
 async def test_if_fires_using_at_input_datetime_with_offset(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
     has_date: bool,
@@ -181,7 +181,7 @@ async def test_if_fires_using_at_input_datetime_with_offset(
 ) -> None:
     """Test for firing at input_datetime."""
     await async_setup_component(
-        hass,
+        menuai,
         "input_datetime",
         {"input_datetime": {"trigger": {"has_date": has_date, "has_time": has_time}}},
     )
@@ -192,7 +192,7 @@ async def test_if_fires_using_at_input_datetime_with_offset(
     ) + timedelta(2)
     trigger_dt = start_dt + delta
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {
@@ -201,7 +201,7 @@ async def test_if_fires_using_at_input_datetime_with_offset(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     time_that_will_not_match_right_away = trigger_dt - timedelta(minutes=1)
 
@@ -209,7 +209,7 @@ async def test_if_fires_using_at_input_datetime_with_offset(
 
     freezer.move_to(dt_util.as_utc(time_that_will_not_match_right_away))
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -224,10 +224,10 @@ async def test_if_fires_using_at_input_datetime_with_offset(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
     assert (
@@ -254,7 +254,7 @@ async def test_if_fires_using_at_input_datetime_with_offset(
     ],
 )
 async def test_if_fires_using_multiple_at(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
     conf_at: list[str | dict[str, int | str]],
@@ -266,7 +266,7 @@ async def test_if_fires_using_multiple_at(
 
     start_dt = now.replace(hour=5, minute=0, second=0, microsecond=0) + timedelta(2)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.next_alarm",
         start_dt.isoformat(),
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
@@ -276,7 +276,7 @@ async def test_if_fires_using_multiple_at(
 
     freezer.move_to(dt_util.as_utc(time_that_will_not_match_right_away))
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -290,11 +290,11 @@ async def test_if_fires_using_multiple_at(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for count, delta in enumerate(sorted(trigger_deltas)):
-        async_fire_time_changed(hass, start_dt + delta + timedelta(seconds=1))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, start_dt + delta + timedelta(seconds=1))
+        await menuai.async_block_till_done()
 
         assert len(service_calls) == count + 1
         assert (
@@ -303,7 +303,7 @@ async def test_if_fires_using_multiple_at(
 
 
 async def test_if_not_fires_using_wrong_at(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -320,7 +320,7 @@ async def test_if_not_fires_using_wrong_at(
     freezer.move_to(time_that_will_not_match_right_away)
     with assert_setup_component(1, automation.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: {
@@ -333,23 +333,23 @@ async def test_if_not_fires_using_wrong_at(
                 }
             },
         )
-    await hass.async_block_till_done()
-    assert hass.states.get("automation.automation_0").state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get("automation.automation_0").state == STATE_UNAVAILABLE
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 1, day=1, hour=1, minute=0, second=5)
+        menuai, now.replace(year=now.year + 1, day=1, hour=1, minute=0, second=5)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
 
 async def test_if_action_before(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for if action before."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -359,30 +359,30 @@ async def test_if_action_before(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     before_10 = dt_util.now().replace(hour=8)
     after_10 = dt_util.now().replace(hour=14)
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=before_10):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=before_10):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=after_10):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=after_10):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
 
 async def test_if_action_after(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for if action after."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -392,30 +392,30 @@ async def test_if_action_after(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     before_10 = dt_util.now().replace(hour=8)
     after_10 = dt_util.now().replace(hour=14)
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=before_10):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=before_10):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 0
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=after_10):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=after_10):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
 
 async def test_if_action_one_weekday(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for if action with one weekday."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -425,31 +425,31 @@ async def test_if_action_one_weekday(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     days_past_monday = dt_util.now().weekday()
     monday = dt_util.now() - timedelta(days=days_past_monday)
     tuesday = monday + timedelta(days=1)
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=monday):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=monday):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=tuesday):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=tuesday):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
 
 async def test_if_action_list_weekday(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for action with a list of weekdays."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -459,41 +459,41 @@ async def test_if_action_list_weekday(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     days_past_monday = dt_util.now().weekday()
     monday = dt_util.now() - timedelta(days=days_past_monday)
     tuesday = monday + timedelta(days=1)
     wednesday = tuesday + timedelta(days=1)
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=monday):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=monday):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=tuesday):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=tuesday):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
 
-    with patch("homeassistant.helpers.condition.dt_util.now", return_value=wednesday):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.helpers.condition.dt_util.now", return_value=wednesday):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
 
 
-async def test_untrack_time_change(hass: HomeAssistant) -> None:
+async def test_untrack_time_change(menuai: menuai) -> None:
     """Test for removing tracked time changes."""
     mock_track_time_change = Mock()
     with patch(
-        "homeassistant.components.homeassistant.triggers.time.async_track_time_change",
+        "menuai.components.menuai.triggers.time.async_track_time_change",
         return_value=mock_track_time_change,
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: {
@@ -506,9 +506,9 @@ async def test_untrack_time_change(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         automation.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "automation.test"},
@@ -522,7 +522,7 @@ async def test_untrack_time_change(hass: HomeAssistant) -> None:
     ("at_sensor"), ["sensor.next_alarm", "{{ 'sensor.next_alarm' }}"]
 )
 async def test_if_fires_using_at_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
     at_sensor: str,
@@ -532,7 +532,7 @@ async def test_if_fires_using_at_sensor(
 
     trigger_dt = now.replace(hour=5, minute=0, second=0, microsecond=0) + timedelta(2)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.next_alarm",
         trigger_dt.isoformat(),
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
@@ -544,7 +544,7 @@ async def test_if_fires_using_at_sensor(
 
     freezer.move_to(dt_util.as_utc(time_that_will_not_match_right_away))
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -556,10 +556,10 @@ async def test_if_fires_using_at_sensor(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert (
@@ -569,15 +569,15 @@ async def test_if_fires_using_at_sensor(
 
     trigger_dt += timedelta(days=1, hours=1)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.next_alarm",
         trigger_dt.isoformat(),
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
     assert (
@@ -586,40 +586,40 @@ async def test_if_fires_using_at_sensor(
     )
 
     for broken in ("unknown", "unavailable", "invalid-ts"):
-        hass.states.async_set(
+        menuai.states.async_set(
             "sensor.next_alarm",
             trigger_dt.isoformat(),
             {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
         )
-        await hass.async_block_till_done()
-        hass.states.async_set(
+        await menuai.async_block_till_done()
+        menuai.states.async_set(
             "sensor.next_alarm",
             broken,
             {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+        await menuai.async_block_till_done()
 
         # We should not have listened to anything
         assert len(service_calls) == 2
 
     # Now without device class
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.next_alarm",
         trigger_dt.isoformat(),
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
     )
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "sensor.next_alarm",
         trigger_dt.isoformat(),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     # We should not have listened to anything
     assert len(service_calls) == 2
@@ -634,7 +634,7 @@ async def test_if_fires_using_at_sensor(
     ],
 )
 async def test_if_fires_using_at_sensor_with_offset(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     freezer: FrozenDateTimeFactory,
     offset: str | dict[str, int],
@@ -646,7 +646,7 @@ async def test_if_fires_using_at_sensor_with_offset(
     start_dt = now.replace(hour=5, minute=0, second=0, microsecond=0) + timedelta(2)
     trigger_dt = start_dt + delta
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.next_alarm",
         start_dt.isoformat(),
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
@@ -658,7 +658,7 @@ async def test_if_fires_using_at_sensor_with_offset(
 
     freezer.move_to(dt_util.as_utc(time_that_will_not_match_right_away))
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -676,10 +676,10 @@ async def test_if_fires_using_at_sensor_with_offset(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert (
@@ -690,15 +690,15 @@ async def test_if_fires_using_at_sensor_with_offset(
     start_dt += timedelta(days=1, hours=1)
     trigger_dt += timedelta(days=1, hours=1)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.next_alarm",
         start_dt.isoformat(),
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, trigger_dt + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, trigger_dt + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
     assert (
@@ -744,11 +744,11 @@ def test_schema_invalid(conf) -> None:
 
 
 async def test_datetime_in_past_on_load(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test time trigger works if input_datetime is in past."""
     await async_setup_component(
-        hass,
+        menuai,
         "input_datetime",
         {"input_datetime": {"my_trigger": {"has_date": True, "has_time": True}}},
     )
@@ -757,7 +757,7 @@ async def test_datetime_in_past_on_load(
     past = now - timedelta(days=2)
     future = now + timedelta(days=1)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {
@@ -767,10 +767,10 @@ async def test_datetime_in_past_on_load(
         blocking=True,
     )
     assert len(service_calls) == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -785,12 +785,12 @@ async def test_datetime_in_past_on_load(
         },
     )
 
-    async_fire_time_changed(hass, now)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now)
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {
@@ -800,10 +800,10 @@ async def test_datetime_in_past_on_load(
         blocking=True,
     )
     assert len(service_calls) == 2
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, future + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 3
     assert (
@@ -822,13 +822,13 @@ async def test_datetime_in_past_on_load(
     ],
 )
 async def test_if_at_template_renders_bad_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     trigger: dict[str, str],
 ) -> None:
     """Test for invalid templates."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -840,7 +840,7 @@ async def test_if_at_template_renders_bad_value(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         "expected HH:MM, HH:MM:SS or Entity ID with domain 'input_datetime' or 'sensor'"
@@ -856,13 +856,13 @@ async def test_if_at_template_renders_bad_value(
     ],
 )
 async def test_if_at_template_limited_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     trigger: dict[str, str],
 ) -> None:
     """Test for invalid templates."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -874,6 +874,6 @@ async def test_if_at_template_limited_template(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "is not supported in limited templates" in caplog.text

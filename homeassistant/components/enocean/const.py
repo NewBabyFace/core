@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "enocean"
 DATA_ENOCEAN = "enocean"

@@ -3,10 +3,10 @@
 from datetime import timedelta
 from unittest.mock import patch
 
-from homeassistant.components.nuheat.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.nuheat.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .mocks import (
     MOCK_CONFIG_ENTRY,
@@ -20,21 +20,21 @@ from .mocks import (
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_climate_thermostat_run(hass: HomeAssistant) -> None:
+async def test_climate_thermostat_run(menuai: menuai) -> None:
     """Test a thermostat with the schedule running."""
     mock_thermostat = _get_mock_thermostat_run()
     mock_nuheat = _get_mock_nuheat(get_thermostat=mock_thermostat)
 
     with patch(
-        "homeassistant.components.nuheat.nuheat.NuHeat",
+        "menuai.components.nuheat.nuheat.NuHeat",
         return_value=mock_nuheat,
     ):
         config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_ENTRY)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.master_bathroom")
+    state = menuai.states.get("climate.master_bathroom")
     assert state.state == "auto"
     expected_attributes = {
         "current_temperature": 22.2,
@@ -54,22 +54,22 @@ async def test_climate_thermostat_run(hass: HomeAssistant) -> None:
 
 
 async def test_climate_thermostat_schedule_hold_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a thermostat with the schedule hold that is offline."""
     mock_thermostat = _get_mock_thermostat_schedule_hold_unavailable()
     mock_nuheat = _get_mock_nuheat(get_thermostat=mock_thermostat)
 
     with patch(
-        "homeassistant.components.nuheat.nuheat.NuHeat",
+        "menuai.components.nuheat.nuheat.NuHeat",
         return_value=mock_nuheat,
     ):
         config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_ENTRY)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.guest_bathroom")
+    state = menuai.states.get("climate.guest_bathroom")
 
     assert state.state == "unavailable"
     expected_attributes = {
@@ -85,21 +85,21 @@ async def test_climate_thermostat_schedule_hold_unavailable(
     assert all(item in state.attributes.items() for item in expected_attributes.items())
 
 
-async def test_climate_thermostat_schedule_hold_available(hass: HomeAssistant) -> None:
+async def test_climate_thermostat_schedule_hold_available(menuai: menuai) -> None:
     """Test a thermostat with the schedule hold that is online."""
     mock_thermostat = _get_mock_thermostat_schedule_hold_available()
     mock_nuheat = _get_mock_nuheat(get_thermostat=mock_thermostat)
 
     with patch(
-        "homeassistant.components.nuheat.nuheat.NuHeat",
+        "menuai.components.nuheat.nuheat.NuHeat",
         return_value=mock_nuheat,
     ):
         config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_ENTRY)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.available_bathroom")
+    state = menuai.states.get("climate.available_bathroom")
 
     assert state.state == "auto"
     expected_attributes = {
@@ -119,21 +119,21 @@ async def test_climate_thermostat_schedule_hold_available(hass: HomeAssistant) -
     assert all(item in state.attributes.items() for item in expected_attributes.items())
 
 
-async def test_climate_thermostat_schedule_temporary_hold(hass: HomeAssistant) -> None:
+async def test_climate_thermostat_schedule_temporary_hold(menuai: menuai) -> None:
     """Test a thermostat with the temporary schedule hold that is online."""
     mock_thermostat = _get_mock_thermostat_schedule_temporary_hold()
     mock_nuheat = _get_mock_nuheat(get_thermostat=mock_thermostat)
 
     with patch(
-        "homeassistant.components.nuheat.nuheat.NuHeat",
+        "menuai.components.nuheat.nuheat.NuHeat",
         return_value=mock_nuheat,
     ):
         config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_ENTRY)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.temp_bathroom")
+    state = menuai.states.get("climate.temp_bathroom")
 
     assert state.state == "auto"
     expected_attributes = {
@@ -152,22 +152,22 @@ async def test_climate_thermostat_schedule_temporary_hold(hass: HomeAssistant) -
     # HA changes the implementation and a new one appears
     assert all(item in state.attributes.items() for item in expected_attributes.items())
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_temperature",
         service_data={ATTR_ENTITY_ID: "climate.temp_bathroom", "temperature": 90},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # opportunistic set
-    state = hass.states.get("climate.temp_bathroom")
+    state = menuai.states.get("climate.temp_bathroom")
     assert state.attributes["preset_mode"] == "Temporary Hold"
     assert state.attributes["temperature"] == 90.0
 
     # and the api poll returns it to the mock
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
-    await hass.async_block_till_done()
-    state = hass.states.get("climate.temp_bathroom")
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=3))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("climate.temp_bathroom")
     assert state.attributes["preset_mode"] == "Run Schedule"
     assert state.attributes["temperature"] == 37.2

@@ -12,19 +12,19 @@ from aiokef.aiokef import DSP_OPTION_MAPPING
 from getmac import get_mac_address
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,14 +89,14 @@ def get_ip_mode(host):
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the KEF platform."""
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {}
 
     host = config[CONF_HOST]
     speaker_type = config[CONF_TYPE]
@@ -120,7 +120,7 @@ async def async_setup_platform(
     )
 
     mode = get_ip_mode(host)
-    mac = await hass.async_add_executor_job(partial(get_mac_address, **{mode: host}))
+    mac = await menuai.async_add_executor_job(partial(get_mac_address, **{mode: host}))
     if mac is None or mac == "00:00:00:00:00:00":
         raise PlatformNotReady("Cannot get the ip address of kef speaker.")
 
@@ -137,14 +137,14 @@ async def async_setup_platform(
         supports_on,
         sources,
         speaker_type,
-        loop=hass.loop,
+        loop=menuai.loop,
         unique_id=unique_id,
     )
 
-    if host in hass.data[DOMAIN]:
+    if host in menuai.data[DOMAIN]:
         _LOGGER.debug("%s is already configured", host)
     else:
-        hass.data[DOMAIN][host] = media_player
+        menuai.data[DOMAIN][host] = media_player
         async_add_entities([media_player], update_before_add=True)
 
     platform = entity_platform.async_get_current_platform()
@@ -334,13 +334,13 @@ class KefMediaPlayer(MediaPlayerEntity):
             **mode._asdict(),
         }
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to DSP updates."""
         self._update_dsp_task_remover = async_track_time_interval(
-            self.hass, self.update_dsp, DSP_SCAN_INTERVAL
+            self.menuai, self.update_dsp, DSP_SCAN_INTERVAL
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe to DSP updates."""
         self._update_dsp_task_remover()
         self._update_dsp_task_remover = None

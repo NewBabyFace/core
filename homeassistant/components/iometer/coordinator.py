@@ -6,11 +6,11 @@ import logging
 
 from iometer import IOmeterClient, IOmeterConnectionError, Reading, Status
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -37,20 +37,20 @@ class IOMeterCoordinator(DataUpdateCoordinator[IOmeterData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: IOmeterConfigEntry,
         client: IOmeterClient,
     ) -> None:
         """Initialize coordinator."""
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=DEFAULT_SCAN_INTERVAL,
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=1.0, immediate=False
+                menuai, _LOGGER, cooldown=1.0, immediate=False
             ),
         )
         self.client = client
@@ -66,7 +66,7 @@ class IOMeterCoordinator(DataUpdateCoordinator[IOmeterData]):
 
         fw_version = f"{status.device.core.version}/{status.device.bridge.version}"
         if self.current_fw_version and fw_version != self.current_fw_version:
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             device_entry = device_registry.async_get_device(
                 identifiers={(DOMAIN, status.device.id)}
             )

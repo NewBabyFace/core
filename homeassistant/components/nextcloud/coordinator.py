@@ -5,10 +5,10 @@ from typing import Any
 
 from nextcloudmonitor import NextcloudMonitor, NextcloudMonitorError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_SCAN_INTERVAL
 
@@ -23,14 +23,14 @@ class NextcloudDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: NextcloudConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, ncm: NextcloudMonitor, entry: NextcloudConfigEntry
+        self, menuai: menuai, ncm: NextcloudMonitor, entry: NextcloudConfigEntry
     ) -> None:
         """Initialize the Nextcloud coordinator."""
         self.ncm = ncm
         self.url = entry.data[CONF_URL]
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=self.url,
@@ -78,5 +78,5 @@ class NextcloudDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except NextcloudMonitorError as ex:
                 raise UpdateFailed from ex
 
-        await self.hass.async_add_executor_job(_update_data)
+        await self.menuai.async_add_executor_job(_update_data)
         return self._get_data_points(self.ncm.data)

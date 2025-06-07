@@ -9,9 +9,9 @@ import jwt
 from triggercmd import TRIGGERcmdConnectionError, client
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import CONF_TOKEN, DOMAIN
 
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 DATA_SCHEMA = vol.Schema({(CONF_TOKEN): str})
 
 
-async def validate_input(hass: HomeAssistant, data: dict) -> str:
+async def validate_input(menuai: menuai, data: dict) -> str:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -52,7 +52,7 @@ class TriggerCMDConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                identifier = await validate_input(self.hass, user_input)
+                identifier = await validate_input(self.menuai, user_input)
             except InvalidToken:
                 errors[CONF_TOKEN] = "invalid_token"
             except TRIGGERcmdConnectionError:
@@ -71,5 +71,5 @@ class TriggerCMDConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidToken(HomeAssistantError):
+class InvalidToken(menuaiError):
     """Invalid token."""

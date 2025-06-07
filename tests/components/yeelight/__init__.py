@@ -9,7 +9,7 @@ from async_upnp_client.utils import CaseInsensitiveDict
 from yeelight import BulbException, BulbType
 from yeelight.main import _MODEL_SPECS
 
-from homeassistant.components.yeelight import (
+from menuai.components.yeelight import (
     CONF_MODE_MUSIC,
     CONF_NIGHTLIGHT_SWITCH_TYPE,
     CONF_SAVE_ON_CHANGE,
@@ -18,9 +18,9 @@ from homeassistant.components.yeelight import (
     YeelightScanner,
     scanner,
 )
-from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_DEVICES, CONF_ID, CONF_NAME
+from menuai.core import callback
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 FAIL_TO_BIND_IP = "1.2.3.4"
 
@@ -58,7 +58,7 @@ SHORT_ID = hex(int("0x000000000015243f", 16))
 UNIQUE_NAME = f"yeelight_{MODEL}_{SHORT_ID}"
 UNIQUE_FRIENDLY_NAME = f"Yeelight {MODEL.title()} {SHORT_ID}"
 
-MODULE = "homeassistant.components.yeelight"
+MODULE = "menuai.components.yeelight"
 MODULE_CONFIG_FLOW = f"{MODULE}.config_flow"
 
 PROPERTIES = {
@@ -182,7 +182,7 @@ def _patched_ssdp_listener(info: CaseInsensitiveDict, *args, **kwargs):
 
 
 def _patch_discovery(no_device=False, capabilities=None):
-    YeelightScanner._scanner = None  # Clear class scanner to reset hass
+    YeelightScanner._scanner = None  # Clear class scanner to reset menuai
 
     def _generate_fake_ssdp_listener(*args, **kwargs):
         info = None
@@ -191,7 +191,7 @@ def _patch_discovery(no_device=False, capabilities=None):
         return _patched_ssdp_listener(info, *args, **kwargs)
 
     return patch(
-        "homeassistant.components.yeelight.scanner.SsdpSearchListener",
+        "menuai.components.yeelight.scanner.SsdpSearchListener",
         new=_generate_fake_ssdp_listener,
     )
 

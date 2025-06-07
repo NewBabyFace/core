@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING
 
 from tesla_powerwall import GridState, MeterResponse, MeterType
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfElectricCurrent,
@@ -24,9 +24,9 @@ from homeassistant.const import (
     UnitOfFrequency,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import POWERWALL_COORDINATOR
 from .entity import BatteryEntity, PowerWallEntity
@@ -211,7 +211,7 @@ BATTERY_INSTANT_SENSORS: list[PowerwallSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PowerwallConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

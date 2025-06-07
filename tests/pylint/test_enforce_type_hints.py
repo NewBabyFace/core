@@ -1,4 +1,4 @@
-"""Tests for pylint hass_enforce_type_hints plugin."""
+"""Tests for pylint menuai_enforce_type_hints plugin."""
 
 from __future__ import annotations
 
@@ -19,25 +19,25 @@ from . import assert_adds_messages, assert_no_messages
 @pytest.mark.parametrize(
     ("module_name", "expected_platform", "in_platforms"),
     [
-        ("homeassistant", None, False),
-        ("homeassistant.components", None, False),
-        ("homeassistant.components.pylint_test", "__init__", False),
-        ("homeassistant.components.pylint_test.config_flow", "config_flow", False),
-        ("homeassistant.components.pylint_test.light", "light", True),
-        ("homeassistant.components.pylint_test.light.v1", None, False),
+        ("menuai", None, False),
+        ("menuai.components", None, False),
+        ("menuai.components.pylint_test", "__init__", False),
+        ("menuai.components.pylint_test.config_flow", "config_flow", False),
+        ("menuai.components.pylint_test.light", "light", True),
+        ("menuai.components.pylint_test.light.v1", None, False),
     ],
 )
 def test_regex_get_module_platform(
-    hass_enforce_type_hints: ModuleType,
+    menuai_enforce_type_hints: ModuleType,
     module_name: str,
     expected_platform: str | None,
     in_platforms: bool,
 ) -> None:
     """Test _get_module_platform regex."""
-    platform = hass_enforce_type_hints._get_module_platform(module_name)
+    platform = menuai_enforce_type_hints._get_module_platform(module_name)
 
     assert platform == expected_platform
-    assert (platform in hass_enforce_type_hints._PLATFORMS) == in_platforms
+    assert (platform in menuai_enforce_type_hints._PLATFORMS) == in_platforms
 
 
 @pytest.mark.parametrize(
@@ -60,13 +60,13 @@ def test_regex_get_module_platform(
     ],
 )
 def test_regex_x_of_y_i(
-    hass_enforce_type_hints: ModuleType,
+    menuai_enforce_type_hints: ModuleType,
     string: str,
     expected_count: int,
     expected_items: tuple[str, ...],
 ) -> None:
     """Test x_of_y_i regexes."""
-    matchers: dict[str, re.Pattern] = hass_enforce_type_hints._TYPE_HINT_MATCHERS
+    matchers: dict[str, re.Pattern] = menuai_enforce_type_hints._TYPE_HINT_MATCHERS
 
     assert (match := matchers[f"x_of_y_{expected_count}"].match(string))
     assert match.group(0) == string
@@ -84,10 +84,10 @@ def test_regex_x_of_y_i(
     ],
 )
 def test_regex_a_or_b(
-    hass_enforce_type_hints: ModuleType, string: str, expected_a: str, expected_b: str
+    menuai_enforce_type_hints: ModuleType, string: str, expected_a: str, expected_b: str
 ) -> None:
     """Test a_or_b regexes."""
-    matchers: dict[str, re.Pattern] = hass_enforce_type_hints._TYPE_HINT_MATCHERS
+    matchers: dict[str, re.Pattern] = menuai_enforce_type_hints._TYPE_HINT_MATCHERS
 
     assert (match := matchers["a_or_b"].match(string))
     assert match.group(0) == string
@@ -107,7 +107,7 @@ def test_regex_a_or_b(
     ],
 )
 def test_ignore_no_annotations(
-    hass_enforce_type_hints: ModuleType, type_hint_checker: BaseChecker, code: str
+    menuai_enforce_type_hints: ModuleType, type_hint_checker: BaseChecker, code: str
 ) -> None:
     """Ensure that _is_valid_type is not run if there are no annotations."""
     # Set ignore option
@@ -115,12 +115,12 @@ def test_ignore_no_annotations(
 
     func_node = astroid.extract_node(
         code,
-        "homeassistant.components.pylint_test.light",
+        "menuai.components.pylint_test.light",
     )
     type_hint_checker.visit_module(func_node.parent)
 
     with patch.object(
-        hass_enforce_type_hints, "_is_valid_type", return_value=True
+        menuai_enforce_type_hints, "_is_valid_type", return_value=True
     ) as is_valid_type:
         type_hint_checker.visit_asyncfunctiondef(func_node)
         is_valid_type.assert_not_called()
@@ -138,7 +138,7 @@ def test_ignore_no_annotations(
     ],
 )
 def test_bypass_ignore_no_annotations(
-    hass_enforce_type_hints: ModuleType, type_hint_checker: BaseChecker, code: str
+    menuai_enforce_type_hints: ModuleType, type_hint_checker: BaseChecker, code: str
 ) -> None:
     """Test `ignore-missing-annotations` option.
 
@@ -150,12 +150,12 @@ def test_bypass_ignore_no_annotations(
 
     func_node = astroid.extract_node(
         code,
-        "homeassistant.components.pylint_test",
+        "menuai.components.pylint_test",
     )
     type_hint_checker.visit_module(func_node.parent)
 
     with patch.object(
-        hass_enforce_type_hints, "_is_valid_type", return_value=True
+        menuai_enforce_type_hints, "_is_valid_type", return_value=True
     ) as is_valid_type:
         type_hint_checker.visit_asyncfunctiondef(func_node)
         is_valid_type.assert_called()
@@ -185,17 +185,17 @@ def test_bypass_ignore_no_annotations(
     ],
 )
 def test_dont_ignore_partial_annotations(
-    hass_enforce_type_hints: ModuleType, type_hint_checker: BaseChecker, code: str
+    menuai_enforce_type_hints: ModuleType, type_hint_checker: BaseChecker, code: str
 ) -> None:
     """Ensure that _is_valid_type is run if there is at least one annotation."""
     func_node = astroid.extract_node(
         code,
-        "homeassistant.components.pylint_test",
+        "menuai.components.pylint_test",
     )
     type_hint_checker.visit_module(func_node.parent)
 
     with patch.object(
-        hass_enforce_type_hints, "_is_valid_type", return_value=True
+        menuai_enforce_type_hints, "_is_valid_type", return_value=True
     ) as is_valid_type:
         type_hint_checker.visit_asyncfunctiondef(func_node)
         is_valid_type.assert_called()
@@ -208,21 +208,21 @@ def test_invalid_discovery_info(
     func_node, discovery_info_node = astroid.extract_node(
         """
     async def async_setup_scanner( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         async_see: AsyncSeeCallback,
         discovery_info: dict[str, Any] | None = None, #@
     ) -> bool:
         pass
     """,
-        "homeassistant.components.pylint_test.device_tracker",
+        "menuai.components.pylint_test.device_tracker",
     )
     type_hint_checker.visit_module(func_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=discovery_info_node,
             args=(4, "DiscoveryInfoType | None", "async_setup_scanner"),
             line=6,
@@ -241,14 +241,14 @@ def test_valid_discovery_info(
     func_node = astroid.extract_node(
         """
     async def async_setup_scanner( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         async_see: AsyncSeeCallback,
         discovery_info: DiscoveryInfoType | None = None,
     ) -> bool:
         pass
     """,
-        "homeassistant.components.pylint_test.device_tracker",
+        "menuai.components.pylint_test.device_tracker",
     )
     type_hint_checker.visit_module(func_node.parent)
 
@@ -263,19 +263,19 @@ def test_invalid_list_dict_str_any(
     func_node = astroid.extract_node(
         """
     async def async_get_triggers( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         device_id: str
     ) -> list:
         pass
     """,
-        "homeassistant.components.pylint_test.device_trigger",
+        "menuai.components.pylint_test.device_trigger",
     )
     type_hint_checker.visit_module(func_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=func_node,
             args=(
                 ["list[dict[str, str]]", "list[dict[str, Any]]"],
@@ -297,12 +297,12 @@ def test_valid_list_dict_str_any(
     func_node = astroid.extract_node(
         """
     async def async_get_triggers( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         device_id: str
     ) -> list[dict[str, Any]]:
         pass
     """,
-        "homeassistant.components.pylint_test.device_trigger",
+        "menuai.components.pylint_test.device_trigger",
     )
     type_hint_checker.visit_module(func_node.parent)
 
@@ -339,14 +339,14 @@ def test_invalid_config_flow_step(
         ):
             pass
     """,
-        "homeassistant.components.pylint_test.config_flow",
+        "menuai.components.pylint_test.config_flow",
     )
     type_hint_checker.visit_module(class_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=arg_node,
             args=(2, "ZeroconfServiceInfo", "async_step_zeroconf"),
             line=13,
@@ -355,7 +355,7 @@ def test_invalid_config_flow_step(
             end_col_offset=27,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=func_node,
             args=("ConfigFlowResult", "async_step_zeroconf"),
             line=11,
@@ -364,7 +364,7 @@ def test_invalid_config_flow_step(
             end_col_offset=33,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=func_node2,
             args=("ConfigFlowResult", "async_step_custom"),
             line=17,
@@ -398,7 +398,7 @@ def test_invalid_config_flow_step(
 """,
             lambda func_node: [
                 pylint.testutils.MessageTest(
-                    msg_id="hass-return-type",
+                    msg_id="menuai-return-type",
                     node=func_node,
                     args=("ConfigFlowResult", "async_step_axis_specific"),
                     line=11,
@@ -424,7 +424,7 @@ def test_invalid_config_flow_step(
 """,
             lambda func_node: [
                 pylint.testutils.MessageTest(
-                    msg_id="hass-return-type",
+                    msg_id="menuai-return-type",
                     node=func_node,
                     args=("SubentryFlowResult", "async_step_user"),
                     line=9,
@@ -451,7 +451,7 @@ def test_invalid_flow_step(
     """Ensure invalid hints are rejected for flow step."""
     class_node, func_node = astroid.extract_node(
         code,
-        "homeassistant.components.pylint_test.config_flow",
+        "menuai.components.pylint_test.config_flow",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -508,7 +508,7 @@ def test_valid_flow_step(
     """Ensure valid hints are accepted for flow step."""
     class_node = astroid.extract_node(
         code,
-        "homeassistant.components.pylint_test.config_flow",
+        "menuai.components.pylint_test.config_flow",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -543,14 +543,14 @@ def test_invalid_config_flow_async_get_options_flow(
         ) -> AxisOptionsFlow:
             return AxisOptionsFlow(config_entry)
     """,
-        "homeassistant.components.pylint_test.config_flow",
+        "menuai.components.pylint_test.config_flow",
     )
     type_hint_checker.visit_module(class_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=arg_node,
             args=(1, "ConfigEntry", "async_get_options_flow"),
             line=18,
@@ -559,7 +559,7 @@ def test_invalid_config_flow_async_get_options_flow(
             end_col_offset=20,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=func_node,
             args=("OptionsFlow", "async_get_options_flow"),
             line=17,
@@ -603,7 +603,7 @@ def test_valid_config_flow_async_get_options_flow(
             return AxisOptionsFlow(config_entry)
 
     """,
-        "homeassistant.components.pylint_test.config_flow",
+        "menuai.components.pylint_test.config_flow",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -641,14 +641,14 @@ def test_invalid_entity_properties(
         ) -> bool:
             pass
     """,
-        "homeassistant.components.pylint_test.lock",
+        "menuai.components.pylint_test.lock",
     )
     type_hint_checker.visit_module(class_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=prop_node,
             args=(["str", None], "changed_by"),
             line=12,
@@ -657,7 +657,7 @@ def test_invalid_entity_properties(
             end_col_offset=18,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=func_node,
             args=("kwargs", "Any", "async_lock"),
             line=17,
@@ -666,7 +666,7 @@ def test_invalid_entity_properties(
             end_col_offset=24,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=func_node,
             args=("None", "async_lock"),
             line=17,
@@ -708,7 +708,7 @@ def test_ignore_invalid_entity_properties(
         ):
             pass
     """,
-        "homeassistant.components.pylint_test.lock",
+        "menuai.components.pylint_test.lock",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -746,14 +746,14 @@ def test_named_arguments(
         ) -> bool:
             pass
     """,
-        "homeassistant.components.pylint_test.fan",
+        "menuai.components.pylint_test.fan",
     )
     type_hint_checker.visit_module(class_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=percentage_node,
             args=("percentage", "int | None", "async_turn_on"),
             line=16,
@@ -762,7 +762,7 @@ def test_named_arguments(
             end_col_offset=18,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=preset_mode_node,
             args=("preset_mode", "str | None", "async_turn_on"),
             line=18,
@@ -771,7 +771,7 @@ def test_named_arguments(
             end_col_offset=24,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=func_node,
             args=("kwargs", "Any", "async_turn_on"),
             line=14,
@@ -780,7 +780,7 @@ def test_named_arguments(
             end_col_offset=27,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=func_node,
             args=("None", "async_turn_on"),
             line=14,
@@ -829,14 +829,14 @@ def test_invalid_mapping_return_type(
         ){return_hint}:
             pass
     """,
-        "homeassistant.components.pylint_test.fan",
+        "menuai.components.pylint_test.fan",
     )
     type_hint_checker.visit_module(class_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=property_node,
             args=(["Mapping[str, Any]", None], "capability_attributes"),
             line=15,
@@ -892,7 +892,7 @@ def test_valid_mapping_return_type(
         ){return_hint}:
             pass
     """,
-        "homeassistant.components.pylint_test.fan",
+        "menuai.components.pylint_test.fan",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -939,7 +939,7 @@ def test_valid_long_tuple(
         ) -> tuple[int, int, int, int, int]:
             pass
     """,
-        "homeassistant.components.pylint_test.light",
+        "menuai.components.pylint_test.light",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -980,14 +980,14 @@ def test_invalid_long_tuple(
         ) -> tuple[int, int, int, int, float]:
             pass
     """,
-        "homeassistant.components.pylint_test.light",
+        "menuai.components.pylint_test.light",
     )
     type_hint_checker.visit_module(class_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=rgbw_node,
             args=(["tuple[int, int, int, int]", None], "rgbw_color"),
             line=15,
@@ -996,7 +996,7 @@ def test_invalid_long_tuple(
             end_col_offset=18,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=rgbww_node,
             args=(["tuple[int, int, int, int, int]", None], "rgbww_color"),
             line=21,
@@ -1032,14 +1032,14 @@ def test_invalid_device_class(
         ):
             pass
     """,
-        "homeassistant.components.pylint_test.cover",
+        "menuai.components.pylint_test.cover",
     )
     type_hint_checker.visit_module(class_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=prop_node,
             args=(["CoverDeviceClass", None], "device_class"),
             line=12,
@@ -1072,7 +1072,7 @@ def test_media_player_entity(
         async def async_get_media_image(self) -> tuple[bytes | None, str | None]:
             pass
     """,
-        "homeassistant.components.pylint_test.media_player",
+        "menuai.components.pylint_test.media_player",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -1105,7 +1105,7 @@ def test_humidifier_entity(
         def async_set_humidity(self, humidity: float) -> None:
             pass
     """,
-        "homeassistant.components.pylint_test.humidifier",
+        "menuai.components.pylint_test.humidifier",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -1142,7 +1142,7 @@ def test_number_entity(linter: UnittestLinter, type_hint_checker: BaseChecker) -
         def native_value(self) -> int:
             pass
     """,
-        "homeassistant.components.pylint_test.number",
+        "menuai.components.pylint_test.number",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -1181,7 +1181,7 @@ def test_vacuum_entity(linter: UnittestLinter, type_hint_checker: BaseChecker) -
         ) -> None:
             pass
     """,
-        "homeassistant.components.pylint_test.vacuum",
+        "menuai.components.pylint_test.vacuum",
     )
     type_hint_checker.visit_module(class_node.parent)
 
@@ -1199,7 +1199,7 @@ def test_notify_get_service(
         pass
 
     async def async_get_service( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         discovery_info: DiscoveryInfoType | None = None,
     ) -> CustomNotificationService:
@@ -1208,7 +1208,7 @@ def test_notify_get_service(
     class CustomNotificationService(BaseNotificationService):
         pass
     """,
-        "homeassistant.components.pylint_test.notify",
+        "menuai.components.pylint_test.notify",
     )
     type_hint_checker.visit_module(func_node.parent)
 
@@ -1225,7 +1225,7 @@ def test_pytest_function(
     func_node = astroid.extract_node(
         """
     async def test_sample( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         caplog: pytest.LogCaptureFixture,
         aiohttp_server: Callable[[], TestServer],
         unused_tcp_port_factory: Callable[[], int],
@@ -1268,11 +1268,11 @@ def test_pytest_invalid_function(
     linter: UnittestLinter, type_hint_checker: BaseChecker
 ) -> None:
     """Ensure invalid hints are rejected for a test function."""
-    func_node, hass_node, caplog_node, first_none_node, second_none_node = (
+    func_node, menuai_node, caplog_node, first_none_node, second_none_node = (
         astroid.extract_node(
             """
     async def test_sample( #@
-        hass: Something, #@
+        menuai: Something, #@
         caplog: SomethingElse, #@
         current_request_with_host, #@
         enable_custom_integrations: None, #@
@@ -1287,7 +1287,7 @@ def test_pytest_invalid_function(
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-return-type",
+            msg_id="menuai-return-type",
             node=func_node,
             args=("None", "test_sample"),
             line=2,
@@ -1296,7 +1296,7 @@ def test_pytest_invalid_function(
             end_col_offset=21,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=caplog_node,
             args=("caplog", "pytest.LogCaptureFixture", "test_sample"),
             line=4,
@@ -1305,7 +1305,7 @@ def test_pytest_invalid_function(
             end_col_offset=25,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-consider-usefixtures-decorator",
+            msg_id="menuai-consider-usefixtures-decorator",
             node=first_none_node,
             args=("current_request_with_host", "None", "test_sample"),
             line=5,
@@ -1314,7 +1314,7 @@ def test_pytest_invalid_function(
             end_col_offset=29,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=first_none_node,
             args=("current_request_with_host", "None", "test_sample"),
             line=5,
@@ -1323,7 +1323,7 @@ def test_pytest_invalid_function(
             end_col_offset=29,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-consider-usefixtures-decorator",
+            msg_id="menuai-consider-usefixtures-decorator",
             node=second_none_node,
             args=("enable_custom_integrations", "None", "test_sample"),
             line=6,
@@ -1332,9 +1332,9 @@ def test_pytest_invalid_function(
             end_col_offset=36,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
-            node=hass_node,
-            args=("hass", "HomeAssistant", "test_sample"),
+            msg_id="menuai-argument-type",
+            node=menuai_node,
+            args=("menuai", "menuai", "test_sample"),
             line=3,
             col_offset=4,
             end_line=3,
@@ -1352,7 +1352,7 @@ def test_pytest_fixture(linter: UnittestLinter, type_hint_checker: BaseChecker) 
 
     @pytest.fixture
     def sample_fixture( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         caplog: pytest.LogCaptureFixture,
         capsys: pytest.CaptureFixture[str],
         aiohttp_server: Callable[[], TestServer],
@@ -1376,13 +1376,13 @@ def test_pytest_invalid_fixture(
     linter: UnittestLinter, type_hint_checker: BaseChecker, decorator: str
 ) -> None:
     """Ensure invalid hints are rejected for a test fixture."""
-    func_node, hass_node, caplog_node, none_node = astroid.extract_node(
+    func_node, menuai_node, caplog_node, none_node = astroid.extract_node(
         f"""
     import pytest
 
     {decorator}
     def sample_fixture( #@
-        hass: Something, #@
+        menuai: Something, #@
         caplog: SomethingElse, #@
         current_request_with_host, #@
     ) -> Any:
@@ -1395,7 +1395,7 @@ def test_pytest_invalid_fixture(
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=caplog_node,
             args=("caplog", "pytest.LogCaptureFixture", "sample_fixture"),
             line=7,
@@ -1404,7 +1404,7 @@ def test_pytest_invalid_fixture(
             end_col_offset=25,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=none_node,
             args=("current_request_with_host", "None", "sample_fixture"),
             line=8,
@@ -1413,9 +1413,9 @@ def test_pytest_invalid_fixture(
             end_col_offset=29,
         ),
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
-            node=hass_node,
-            args=("hass", "HomeAssistant", "sample_fixture"),
+            msg_id="menuai-argument-type",
+            node=menuai_node,
+            args=("menuai", "menuai", "sample_fixture"),
             line=6,
             col_offset=4,
             end_line=6,
@@ -1440,13 +1440,13 @@ def test_valid_generic(
     func_node = astroid.extract_node(
         f"""
     async def async_setup_entry( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: {entry_annotation},
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
         pass
     """,
-        "homeassistant.components.pylint_test.notify",
+        "menuai.components.pylint_test.notify",
     )
     type_hint_checker.visit_module(func_node.parent)
 
@@ -1472,20 +1472,20 @@ def test_invalid_generic(
     func_node, entry_node = astroid.extract_node(
         f"""
     async def async_setup_entry( #@
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: {entry_annotation}, #@
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
         pass
     """,
-        "homeassistant.components.pylint_test.notify",
+        "menuai.components.pylint_test.notify",
     )
     type_hint_checker.visit_module(func_node.parent)
 
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-argument-type",
+            msg_id="menuai-argument-type",
             node=entry_node,
             args=(
                 2,

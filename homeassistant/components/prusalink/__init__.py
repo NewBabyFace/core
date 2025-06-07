@@ -5,18 +5,18 @@ from __future__ import annotations
 from pyprusalink import PrusaLink
 from pyprusalink.types import InvalidAuth
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.httpx_client import get_async_client
 
 from .config_flow import ConfigFlow
 from .const import DOMAIN
@@ -36,35 +36,35 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up PrusaLink from a config entry."""
     if entry.version == 1 and entry.minor_version < 2:
         raise ConfigEntryError("Please upgrade your printer's firmware.")
 
     api = PrusaLink(
-        get_async_client(hass),
+        get_async_client(menuai),
         entry.data[CONF_HOST],
         entry.data[CONF_USERNAME],
         entry.data[CONF_PASSWORD],
     )
 
     coordinators: dict[str, PrusaLinkUpdateCoordinator] = {
-        "legacy_status": LegacyStatusCoordinator(hass, entry, api),
-        "status": StatusCoordinator(hass, entry, api),
-        "job": JobUpdateCoordinator(hass, entry, api),
-        "info": InfoUpdateCoordinator(hass, entry, api),
+        "legacy_status": LegacyStatusCoordinator(menuai, entry, api),
+        "status": StatusCoordinator(menuai, entry, api),
+        "job": JobUpdateCoordinator(menuai, entry, api),
+        "info": InfoUpdateCoordinator(menuai, entry, api),
     }
     for coordinator in coordinators.values():
         await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     if config_entry.version > ConfigFlow.VERSION:
         # This means the user has downgraded from a future version
@@ -80,7 +80,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             password = config_entry.data[CONF_API_KEY]
 
             api = PrusaLink(
-                get_async_client(hass),
+                get_async_client(menuai),
                 config_entry.data[CONF_HOST],
                 username,
                 password,
@@ -91,7 +91,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 # We are unable to reach the new API which usually means
                 # that the user is running an outdated firmware version
                 ir.async_create_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     "firmware_5_1_required",
                     is_fixable=False,
@@ -112,17 +112,17 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             new_data[CONF_USERNAME] = username
             new_data[CONF_PASSWORD] = password
 
-        ir.async_delete_issue(hass, DOMAIN, "firmware_5_1_required")
-        hass.config_entries.async_update_entry(
+        ir.async_delete_issue(menuai, DOMAIN, "firmware_5_1_required")
+        menuai.config_entries.async_update_entry(
             config_entry, data=new_data, minor_version=2
         )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

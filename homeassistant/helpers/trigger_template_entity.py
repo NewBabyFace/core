@@ -9,13 +9,13 @@ from typing import Any
 import jinja2
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASSES_SCHEMA,
     STATE_CLASSES_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_PICTURE,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -25,9 +25,9 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_UNIT_OF_MEASUREMENT,
 )
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads
+from menuai.core import menuai, State, callback
+from menuai.exceptions import TemplateError
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads
 
 from . import config_validation as cv
 from .entity import Entity
@@ -109,7 +109,7 @@ class ValueTemplate(Template):
     @classmethod
     def from_template(cls, template: Template) -> ValueTemplate:
         """Create a ValueTemplate object from a Template object."""
-        return cls(template.template, template.hass)
+        return cls(template.template, template.menuai)
 
     @callback
     def async_render_as_value_template(
@@ -151,11 +151,11 @@ class TriggerBaseEntity(Entity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
     ) -> None:
         """Initialize the entity."""
-        self.hass = hass
+        self.menuai = menuai
 
         self._set_unique_id(config.get(CONF_UNIQUE_ID))
 
@@ -247,7 +247,7 @@ class TriggerBaseEntity(Entity):
     def _template_variables(self, run_variables: dict[str, Any] | None = None) -> dict:
         """Render template variables."""
         return {
-            "this": TemplateStateFromEntityId(self.hass, self.entity_id),
+            "this": TemplateStateFromEntityId(self.menuai, self.entity_id),
             **(run_variables or {}),
         }
 
@@ -338,11 +338,11 @@ class ManualTriggerEntity(TriggerBaseEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
     ) -> None:
         """Initialize the entity."""
-        TriggerBaseEntity.__init__(self, hass, config)
+        TriggerBaseEntity.__init__(self, menuai, config)
         # Need initial rendering on `name` as it influence the `entity_id`
         self._rendered[CONF_NAME] = config[CONF_NAME].async_render(
             {},
@@ -382,10 +382,10 @@ class ManualTriggerSensorEntity(ManualTriggerEntity, SensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
     ) -> None:
         """Initialize the sensor entity."""
-        ManualTriggerEntity.__init__(self, hass, config)
+        ManualTriggerEntity.__init__(self, menuai, config)
         self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
         self._attr_state_class = config.get(CONF_STATE_CLASS)

@@ -9,16 +9,16 @@ from colorthief import ColorThief
 from PIL import UnidentifiedImageError
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_RGB_COLOR,
     DOMAIN as LIGHT_DOMAIN,
     LIGHT_TURN_ON_SCHEMA,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import SERVICE_TURN_ON as LIGHT_SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import SERVICE_TURN_ON as LIGHT_SERVICE_TURN_ON
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import ATTR_PATH, ATTR_URL, DOMAIN, SERVICE_TURN_ON
 
@@ -59,7 +59,7 @@ def _get_color(file_handler) -> tuple:
     return color
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Color extractor component."""
 
     async def async_handle_service(service_call: ServiceCall) -> None:
@@ -75,7 +75,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             elif ATTR_PATH in service_data:
                 image_type = "file path"
                 image_reference = service_data.pop(ATTR_PATH)
-                color = await hass.async_add_executor_job(
+                color = await menuai.async_add_executor_job(
                     extract_color_from_path, image_reference
                 )
 
@@ -91,11 +91,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if color:
             service_data[ATTR_RGB_COLOR] = color
 
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 LIGHT_DOMAIN, LIGHT_SERVICE_TURN_ON, service_data, blocking=True
             )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_TURN_ON,
         async_handle_service,
@@ -104,7 +104,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     async def async_extract_color_from_url(url):
         """Handle call for URL based image."""
-        if not hass.config.is_allowed_external_url(url):
+        if not menuai.config.is_allowed_external_url(url):
             _LOGGER.error(
                 (
                     "External URL '%s' is not allowed, please add to"
@@ -118,7 +118,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         # Download the image into a buffer for ColorThief to check against
         try:
-            session = aiohttp_client.async_get_clientsession(hass)
+            session = aiohttp_client.async_get_clientsession(menuai)
 
             async with asyncio.timeout(10):
                 response = await session.get(url)
@@ -137,7 +137,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     def extract_color_from_path(file_path):
         """Handle call for local file based image."""
-        if not hass.config.is_allowed_path(file_path):
+        if not menuai.config.is_allowed_path(file_path):
             _LOGGER.error(
                 (
                     "File path '%s' is not allowed, please add to"
@@ -155,6 +155,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Load a config entry."""
     return True

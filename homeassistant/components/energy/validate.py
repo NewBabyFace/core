@@ -6,15 +6,15 @@ from collections.abc import Mapping, Sequence
 import dataclasses
 import functools
 
-from homeassistant.components import recorder, sensor
-from homeassistant.const import (
+from menuai.components import recorder, sensor
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfEnergy,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, callback, valid_entity_id
+from menuai.core import menuai, callback, valid_entity_id
 
 from . import data
 from .const import DOMAIN
@@ -75,8 +75,8 @@ WATER_UNIT_ERROR = "entity_unexpected_unit_water"
 WATER_PRICE_UNIT_ERROR = "entity_unexpected_unit_water_price"
 
 
-def _get_placeholders(hass: HomeAssistant, issue_type: str) -> dict[str, str] | None:
-    currency = hass.config.currency
+def _get_placeholders(menuai: menuai, issue_type: str) -> dict[str, str] | None:
+    currency = menuai.config.currency
     if issue_type == ENERGY_UNIT_ERROR:
         return {
             "energy_units": ", ".join(
@@ -132,7 +132,7 @@ class ValidationIssues:
 
     def add_issue(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         issue_type: str,
         affected_entity: str,
         detail: float | str | None = None,
@@ -140,7 +140,7 @@ class ValidationIssues:
         """Add an issue for an entity."""
         if not (issue := self.issues.get(issue_type)):
             self.issues[issue_type] = issue = ValidationIssue(issue_type)
-            issue.translation_placeholders = _get_placeholders(hass, issue_type)
+            issue.translation_placeholders = _get_placeholders(menuai, issue_type)
         issue.affected_entities.add((affected_entity, detail))
 
 
@@ -167,7 +167,7 @@ class EnergyPreferencesValidation:
 
 @callback
 def _async_validate_usage_stat(
-    hass: HomeAssistant,
+    menuai: menuai,
     metadata: dict[str, tuple[int, recorder.models.StatisticMetaData]],
     stat_id: str,
     allowed_device_classes: Sequence[str],
@@ -177,7 +177,7 @@ def _async_validate_usage_stat(
 ) -> None:
     """Validate a statistic."""
     if stat_id not in metadata:
-        issues.add_issue(hass, "statistics_not_defined", stat_id)
+        issues.add_issue(menuai, "statistics_not_defined", stat_id)
 
     has_entity_source = valid_entity_id(stat_id)
 
@@ -186,37 +186,37 @@ def _async_validate_usage_stat(
 
     entity_id = stat_id
 
-    if not recorder.is_entity_recorded(hass, entity_id):
-        issues.add_issue(hass, "recorder_untracked", entity_id)
+    if not recorder.is_entity_recorded(menuai, entity_id):
+        issues.add_issue(menuai, "recorder_untracked", entity_id)
         return
 
-    if (state := hass.states.get(entity_id)) is None:
-        issues.add_issue(hass, "entity_not_defined", entity_id)
+    if (state := menuai.states.get(entity_id)) is None:
+        issues.add_issue(menuai, "entity_not_defined", entity_id)
         return
 
     if state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-        issues.add_issue(hass, "entity_unavailable", entity_id, state.state)
+        issues.add_issue(menuai, "entity_unavailable", entity_id, state.state)
         return
 
     try:
         current_value: float | None = float(state.state)
     except ValueError:
-        issues.add_issue(hass, "entity_state_non_numeric", entity_id, state.state)
+        issues.add_issue(menuai, "entity_state_non_numeric", entity_id, state.state)
         return
 
     if current_value is not None and current_value < 0:
-        issues.add_issue(hass, "entity_negative_state", entity_id, current_value)
+        issues.add_issue(menuai, "entity_negative_state", entity_id, current_value)
 
     device_class = state.attributes.get(ATTR_DEVICE_CLASS)
     if device_class not in allowed_device_classes:
         issues.add_issue(
-            hass, "entity_unexpected_device_class", entity_id, device_class
+            menuai, "entity_unexpected_device_class", entity_id, device_class
         )
     else:
         unit = state.attributes.get("unit_of_measurement")
 
         if device_class and unit not in allowed_units.get(device_class, []):
-            issues.add_issue(hass, unit_error, entity_id, unit)
+            issues.add_issue(menuai, unit_error, entity_id, unit)
 
     state_class = state.attributes.get(sensor.ATTR_STATE_CLASS)
 
@@ -226,63 +226,63 @@ def _async_validate_usage_stat(
         sensor.SensorStateClass.TOTAL_INCREASING,
     ]
     if state_class not in allowed_state_classes:
-        issues.add_issue(hass, "entity_unexpected_state_class", entity_id, state_class)
+        issues.add_issue(menuai, "entity_unexpected_state_class", entity_id, state_class)
 
     if (
         state_class == sensor.SensorStateClass.MEASUREMENT
         and sensor.ATTR_LAST_RESET not in state.attributes
     ):
         issues.add_issue(
-            hass, "entity_state_class_measurement_no_last_reset", entity_id
+            menuai, "entity_state_class_measurement_no_last_reset", entity_id
         )
 
 
 @callback
 def _async_validate_price_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     issues: ValidationIssues,
     allowed_units: tuple[str, ...],
     unit_error: str,
 ) -> None:
     """Validate that the price entity is correct."""
-    if (state := hass.states.get(entity_id)) is None:
-        issues.add_issue(hass, "entity_not_defined", entity_id)
+    if (state := menuai.states.get(entity_id)) is None:
+        issues.add_issue(menuai, "entity_not_defined", entity_id)
         return
 
     try:
         float(state.state)
     except ValueError:
-        issues.add_issue(hass, "entity_state_non_numeric", entity_id, state.state)
+        issues.add_issue(menuai, "entity_state_non_numeric", entity_id, state.state)
         return
 
     unit = state.attributes.get("unit_of_measurement")
 
     if unit is None or not unit.endswith(allowed_units):
-        issues.add_issue(hass, unit_error, entity_id, unit)
+        issues.add_issue(menuai, unit_error, entity_id, unit)
 
 
 @callback
 def _async_validate_cost_stat(
-    hass: HomeAssistant,
+    menuai: menuai,
     metadata: dict[str, tuple[int, recorder.models.StatisticMetaData]],
     stat_id: str,
     issues: ValidationIssues,
 ) -> None:
     """Validate that the cost stat is correct."""
     if stat_id not in metadata:
-        issues.add_issue(hass, "statistics_not_defined", stat_id)
+        issues.add_issue(menuai, "statistics_not_defined", stat_id)
 
     has_entity = valid_entity_id(stat_id)
 
     if not has_entity:
         return
 
-    if not recorder.is_entity_recorded(hass, stat_id):
-        issues.add_issue(hass, "recorder_untracked", stat_id)
+    if not recorder.is_entity_recorded(menuai, stat_id):
+        issues.add_issue(menuai, "recorder_untracked", stat_id)
 
-    if (state := hass.states.get(stat_id)) is None:
-        issues.add_issue(hass, "entity_not_defined", stat_id)
+    if (state := menuai.states.get(stat_id)) is None:
+        issues.add_issue(menuai, "entity_not_defined", stat_id)
         return
 
     state_class = state.attributes.get("state_class")
@@ -293,32 +293,32 @@ def _async_validate_cost_stat(
         sensor.SensorStateClass.TOTAL_INCREASING,
     ]
     if state_class not in supported_state_classes:
-        issues.add_issue(hass, "entity_unexpected_state_class", stat_id, state_class)
+        issues.add_issue(menuai, "entity_unexpected_state_class", stat_id, state_class)
 
     if (
         state_class == sensor.SensorStateClass.MEASUREMENT
         and sensor.ATTR_LAST_RESET not in state.attributes
     ):
-        issues.add_issue(hass, "entity_state_class_measurement_no_last_reset", stat_id)
+        issues.add_issue(menuai, "entity_state_class_measurement_no_last_reset", stat_id)
 
 
 @callback
 def _async_validate_auto_generated_cost_entity(
-    hass: HomeAssistant, energy_entity_id: str, issues: ValidationIssues
+    menuai: menuai, energy_entity_id: str, issues: ValidationIssues
 ) -> None:
     """Validate that the auto generated cost entity is correct."""
-    if energy_entity_id not in hass.data[DOMAIN]["cost_sensors"]:
+    if energy_entity_id not in menuai.data[DOMAIN]["cost_sensors"]:
         # The cost entity has not been setup
         return
 
-    cost_entity_id = hass.data[DOMAIN]["cost_sensors"][energy_entity_id]
-    if not recorder.is_entity_recorded(hass, cost_entity_id):
-        issues.add_issue(hass, "recorder_untracked", cost_entity_id)
+    cost_entity_id = menuai.data[DOMAIN]["cost_sensors"][energy_entity_id]
+    if not recorder.is_entity_recorded(menuai, cost_entity_id):
+        issues.add_issue(menuai, "recorder_untracked", cost_entity_id)
 
 
-async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
+async def async_validate(menuai: menuai) -> EnergyPreferencesValidation:
     """Validate the energy configuration."""
-    manager: data.EnergyManager = await data.async_get_manager(hass)
+    manager: data.EnergyManager = await data.async_get_manager(menuai)
     statistics_metadata: dict[str, tuple[int, recorder.models.StatisticMetaData]] = {}
     validate_calls = []
     wanted_statistics_metadata: set[str] = set()
@@ -340,7 +340,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_usage_stat,
-                        hass,
+                        menuai,
                         statistics_metadata,
                         flow["stat_energy_from"],
                         ENERGY_USAGE_DEVICE_CLASSES,
@@ -355,7 +355,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                     validate_calls.append(
                         functools.partial(
                             _async_validate_cost_stat,
-                            hass,
+                            menuai,
                             statistics_metadata,
                             stat_cost,
                             source_result,
@@ -367,7 +367,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                     validate_calls.append(
                         functools.partial(
                             _async_validate_price_entity,
-                            hass,
+                            menuai,
                             entity_energy_price,
                             source_result,
                             ENERGY_PRICE_UNITS,
@@ -382,7 +382,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                     validate_calls.append(
                         functools.partial(
                             _async_validate_auto_generated_cost_entity,
-                            hass,
+                            menuai,
                             flow["stat_energy_from"],
                             source_result,
                         )
@@ -393,7 +393,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_usage_stat,
-                        hass,
+                        menuai,
                         statistics_metadata,
                         flow["stat_energy_to"],
                         ENERGY_USAGE_DEVICE_CLASSES,
@@ -408,7 +408,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                     validate_calls.append(
                         functools.partial(
                             _async_validate_cost_stat,
-                            hass,
+                            menuai,
                             statistics_metadata,
                             stat_compensation,
                             source_result,
@@ -420,7 +420,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                     validate_calls.append(
                         functools.partial(
                             _async_validate_price_entity,
-                            hass,
+                            menuai,
                             entity_energy_price,
                             source_result,
                             ENERGY_PRICE_UNITS,
@@ -435,7 +435,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                     validate_calls.append(
                         functools.partial(
                             _async_validate_auto_generated_cost_entity,
-                            hass,
+                            menuai,
                             flow["stat_energy_to"],
                             source_result,
                         )
@@ -446,7 +446,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
             validate_calls.append(
                 functools.partial(
                     _async_validate_usage_stat,
-                    hass,
+                    menuai,
                     statistics_metadata,
                     source["stat_energy_from"],
                     GAS_USAGE_DEVICE_CLASSES,
@@ -461,7 +461,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_cost_stat,
-                        hass,
+                        menuai,
                         statistics_metadata,
                         stat_cost,
                         source_result,
@@ -471,7 +471,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_price_entity,
-                        hass,
+                        menuai,
                         entity_energy_price,
                         source_result,
                         GAS_PRICE_UNITS,
@@ -486,7 +486,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_auto_generated_cost_entity,
-                        hass,
+                        menuai,
                         source["stat_energy_from"],
                         source_result,
                     )
@@ -497,7 +497,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
             validate_calls.append(
                 functools.partial(
                     _async_validate_usage_stat,
-                    hass,
+                    menuai,
                     statistics_metadata,
                     source["stat_energy_from"],
                     WATER_USAGE_DEVICE_CLASSES,
@@ -512,7 +512,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_cost_stat,
-                        hass,
+                        menuai,
                         statistics_metadata,
                         stat_cost,
                         source_result,
@@ -522,7 +522,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_price_entity,
-                        hass,
+                        menuai,
                         entity_energy_price,
                         source_result,
                         WATER_PRICE_UNITS,
@@ -537,7 +537,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
                 validate_calls.append(
                     functools.partial(
                         _async_validate_auto_generated_cost_entity,
-                        hass,
+                        menuai,
                         source["stat_energy_from"],
                         source_result,
                     )
@@ -548,7 +548,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
             validate_calls.append(
                 functools.partial(
                     _async_validate_usage_stat,
-                    hass,
+                    menuai,
                     statistics_metadata,
                     source["stat_energy_from"],
                     ENERGY_USAGE_DEVICE_CLASSES,
@@ -563,7 +563,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
             validate_calls.append(
                 functools.partial(
                     _async_validate_usage_stat,
-                    hass,
+                    menuai,
                     statistics_metadata,
                     source["stat_energy_from"],
                     ENERGY_USAGE_DEVICE_CLASSES,
@@ -576,7 +576,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
             validate_calls.append(
                 functools.partial(
                     _async_validate_usage_stat,
-                    hass,
+                    menuai,
                     statistics_metadata,
                     source["stat_energy_to"],
                     ENERGY_USAGE_DEVICE_CLASSES,
@@ -593,7 +593,7 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
         validate_calls.append(
             functools.partial(
                 _async_validate_usage_stat,
-                hass,
+                menuai,
                 statistics_metadata,
                 device["stat_consumption"],
                 ENERGY_USAGE_DEVICE_CLASSES,
@@ -605,10 +605,10 @@ async def async_validate(hass: HomeAssistant) -> EnergyPreferencesValidation:
 
     # Fetch the needed statistics metadata
     statistics_metadata.update(
-        await recorder.get_instance(hass).async_add_executor_job(
+        await recorder.get_instance(menuai).async_add_executor_job(
             functools.partial(
                 recorder.statistics.get_metadata,
-                hass,
+                menuai,
                 statistic_ids=set(wanted_statistics_metadata),
             )
         )

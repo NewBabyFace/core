@@ -8,9 +8,9 @@ from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncSlackResponse, AsyncWebClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_ICON, CONF_NAME, CONF_USERNAME
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_ICON, CONF_NAME, CONF_USERNAME
+from menuai.helpers import aiohttp_client
 
 from .const import CONF_DEFAULT_CHANNEL, DOMAIN
 
@@ -59,7 +59,7 @@ class SlackFlowHandler(ConfigFlow, domain=DOMAIN):
         self, token: str
     ) -> tuple[str, None] | tuple[None, AsyncSlackResponse]:
         """Try connecting to Slack."""
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
         client = AsyncWebClient(token=token, session=session)  # No run_async
 
         try:

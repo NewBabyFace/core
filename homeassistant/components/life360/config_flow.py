@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigFlow
+from menuai.config_entries import ConfigFlow
 
 from . import DOMAIN
 

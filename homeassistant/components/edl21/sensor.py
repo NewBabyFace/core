@@ -9,14 +9,14 @@ from typing import Any
 from sml import SmlGetListResponse
 from sml.asyncio import SmlProtocol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     DEGREE,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -24,14 +24,14 @@ from homeassistant.const import (
     UnitOfFrequency,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import utcnow
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import utcnow
 
 from .const import (
     CONF_SERIAL_PORT,
@@ -287,12 +287,12 @@ SENSOR_UNIT_MAPPING = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the EDL21 sensor."""
-    api = EDL21(hass, config_entry.data, async_add_entities)
+    api = EDL21(menuai, config_entry.data, async_add_entities)
     await api.connect()
 
 
@@ -315,13 +315,13 @@ class EDL21:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: Mapping[str, Any],
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
         """Initialize an EDL21 object."""
         self._registered_obis: set[tuple[str, str]] = set()
-        self._hass = hass
+        self._menuai = menuai
         self._async_add_entities = async_add_entities
         self._serial_port = config[CONF_SERIAL_PORT]
         self._proto = SmlProtocol(config[CONF_SERIAL_PORT])
@@ -333,7 +333,7 @@ class EDL21:
 
     async def connect(self) -> None:
         """Connect to an EDL21 reader."""
-        await self._proto.connect(self._hass.loop)
+        await self._proto.connect(self._menuai.loop)
 
     def event(self, message_body) -> None:
         """Handle events from pysml."""
@@ -356,7 +356,7 @@ class EDL21:
 
             if (electricity_id, obis) in self._registered_obis:
                 async_dispatcher_send(
-                    self._hass, SIGNAL_EDL21_TELEGRAM, electricity_id, telegram
+                    self._menuai, SIGNAL_EDL21_TELEGRAM, electricity_id, telegram
                 )
             else:
                 entity_description = SENSORS.get(obis)
@@ -403,8 +403,8 @@ class EDL21Entity(SensorEntity):
             name=DEFAULT_DEVICE_NAME,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
 
         @callback
         def handle_telegram(electricity_id, telegram):
@@ -425,11 +425,11 @@ class EDL21Entity(SensorEntity):
             self.async_write_ha_state()
 
         self._async_remove_dispatcher = async_dispatcher_connect(
-            self.hass, SIGNAL_EDL21_TELEGRAM, handle_telegram
+            self.menuai, SIGNAL_EDL21_TELEGRAM, handle_telegram
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         if self._async_remove_dispatcher:
             self._async_remove_dispatcher()
 

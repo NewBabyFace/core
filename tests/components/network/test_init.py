@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import network
-from homeassistant.components.network.const import (
+from menuai.components import network
+from menuai.components.network.const import (
     ATTR_ADAPTERS,
     ATTR_CONFIGURED_ADAPTERS,
     DOMAIN,
@@ -18,10 +18,10 @@ from homeassistant.components.network.const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from . import LOOPBACK_IPADDR, NO_LOOPBACK_IPADDR
 
@@ -52,13 +52,13 @@ def _mock_socket_exception(exc):
 
 @pytest.mark.usefixtures("mock_socket_no_loopback")
 async def test_async_detect_interfaces_setting_non_loopback_route(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test without default interface config and the route returns a non-loopback address."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    network_obj = hass.data[DOMAIN]
+    network_obj = menuai.data[DOMAIN]
     assert network_obj.configured_adapters == []
 
     assert network_obj.adapters == [
@@ -110,13 +110,13 @@ async def test_async_detect_interfaces_setting_non_loopback_route(
 
 @pytest.mark.usefixtures("mock_socket_loopback")
 async def test_async_detect_interfaces_setting_loopback_route(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test without default interface config and the route returns a loopback address."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    network_obj = hass.data[DOMAIN]
+    network_obj = menuai.data[DOMAIN]
     assert network_obj.configured_adapters == []
     assert network_obj.adapters == [
         {
@@ -168,13 +168,13 @@ async def test_async_detect_interfaces_setting_loopback_route(
 @pytest.mark.parametrize("mock_socket", [[]], indirect=True)
 @pytest.mark.usefixtures("mock_socket")
 async def test_async_detect_interfaces_setting_empty_route(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test without default interface config and the route returns nothing."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    network_obj = hass.data[DOMAIN]
+    network_obj = menuai.data[DOMAIN]
     assert network_obj.configured_adapters == []
     assert network_obj.adapters == [
         {
@@ -224,17 +224,17 @@ async def test_async_detect_interfaces_setting_empty_route(
 
 
 async def test_async_detect_interfaces_setting_exception(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test without default interface config and the route throws an exception."""
     with patch(
-        "homeassistant.components.network.util.socket.socket",
+        "menuai.components.network.util.socket.socket",
         return_value=_mock_socket_exception(AttributeError),
     ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    network_obj = hass.data[DOMAIN]
+    network_obj = menuai.data[DOMAIN]
     assert network_obj.configured_adapters == []
     assert network_obj.adapters == [
         {
@@ -285,19 +285,19 @@ async def test_async_detect_interfaces_setting_exception(
 
 @pytest.mark.usefixtures("mock_socket_no_loopback")
 async def test_interfaces_configured_from_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test settings from storage are preferred over auto configure."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth0", "eth1", "vtun0"]},
     }
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    network_obj = hass.data[DOMAIN]
+    network_obj = menuai.data[DOMAIN]
     assert network_obj.configured_adapters == ["eth0", "eth1", "vtun0"]
 
     assert network_obj.adapters == [
@@ -348,26 +348,26 @@ async def test_interfaces_configured_from_storage(
 
 
 async def test_interfaces_configured_from_storage_websocket_update(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test settings from storage can be updated via websocket api."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth0", "eth1", "vtun0"]},
     }
     with patch(
-        "homeassistant.components.network.util.socket.socket",
+        "menuai.components.network.util.socket.socket",
         return_value=MagicMock(getsockname=Mock(return_value=[NO_LOOPBACK_IPADDR])),
     ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    network_obj = hass.data[DOMAIN]
+    network_obj = menuai.data[DOMAIN]
     assert network_obj.configured_adapters == ["eth0", "eth1", "vtun0"]
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json({"id": 1, "type": "network"})
 
     response = await ws_client.receive_json()
@@ -478,90 +478,90 @@ async def test_interfaces_configured_from_storage_websocket_update(
 
 @pytest.mark.usefixtures("mock_socket_no_loopback")
 async def test_async_get_source_ip_matching_interface(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test getting the source ip address with interface matching."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth1"]},
     }
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    assert await network.async_get_source_ip(hass, MDNS_TARGET_IP) == NO_LOOPBACK_IPADDR
+    assert await network.async_get_source_ip(menuai, MDNS_TARGET_IP) == NO_LOOPBACK_IPADDR
 
 
 @pytest.mark.usefixtures("mock_socket_no_loopback")
 async def test_async_get_source_ip_interface_not_match(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test getting the source ip address with interface does not match."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["vtun0"]},
     }
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    assert await network.async_get_source_ip(hass, MDNS_TARGET_IP) == "169.254.3.2"
+    assert await network.async_get_source_ip(menuai, MDNS_TARGET_IP) == "169.254.3.2"
 
 
 @pytest.mark.parametrize("mock_socket", [[None]], indirect=True)
 @pytest.mark.usefixtures("mock_socket")
 async def test_async_get_source_ip_cannot_determine_target(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test getting the source ip address when getsockname fails."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth1"]},
     }
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    assert await network.async_get_source_ip(hass, MDNS_TARGET_IP) == NO_LOOPBACK_IPADDR
+    assert await network.async_get_source_ip(menuai, MDNS_TARGET_IP) == NO_LOOPBACK_IPADDR
 
 
 @pytest.mark.usefixtures("mock_socket_no_loopback")
 async def test_async_get_ipv4_broadcast_addresses_default(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test getting ipv4 broadcast addresses when only the default address is enabled."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth1"]},
     }
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    assert await network.async_get_ipv4_broadcast_addresses(hass) == {
+    assert await network.async_get_ipv4_broadcast_addresses(menuai) == {
         IPv4Address("255.255.255.255")
     }
 
 
 @pytest.mark.usefixtures("mock_socket_loopback")
 async def test_async_get_ipv4_broadcast_addresses_multiple(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test getting ipv4 broadcast addresses when multiple adapters are enabled."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth1", "vtun0"]},
     }
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    assert await network.async_get_ipv4_broadcast_addresses(hass) == {
+    assert await network.async_get_ipv4_broadcast_addresses(menuai) == {
         IPv4Address("255.255.255.255"),
         IPv4Address("192.168.1.255"),
         IPv4Address("169.254.255.255"),
@@ -570,24 +570,24 @@ async def test_async_get_ipv4_broadcast_addresses_multiple(
 
 @pytest.mark.usefixtures("mock_socket_no_loopback")
 async def test_async_get_source_ip_no_enabled_addresses(
-    hass: HomeAssistant, hass_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
+    menuai: menuai, menuai_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test getting the source ip address when all adapters are disabled."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth1"]},
     }
 
     with patch(
-        "homeassistant.components.network.util.ifaddr.get_adapters",
+        "menuai.components.network.util.ifaddr.get_adapters",
         return_value=[],
     ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+        await menuai.async_block_till_done()
 
         assert (
-            await network.async_get_source_ip(hass, MDNS_TARGET_IP)
+            await network.async_get_source_ip(menuai, MDNS_TARGET_IP)
             == NO_LOOPBACK_IPADDR
         )
 
@@ -597,30 +597,30 @@ async def test_async_get_source_ip_no_enabled_addresses(
 @pytest.mark.parametrize("mock_socket", [[None]], indirect=True)
 @pytest.mark.usefixtures("mock_socket")
 async def test_async_get_source_ip_cannot_be_determined_and_no_enabled_addresses(
-    hass: HomeAssistant, hass_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
+    menuai: menuai, menuai_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test getting the source ip address when all adapters are disabled and getting it fails."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth1"]},
     }
 
     with patch(
-        "homeassistant.components.network.util.ifaddr.get_adapters",
+        "menuai.components.network.util.ifaddr.get_adapters",
         return_value=[],
     ):
-        assert not await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
-        with pytest.raises(HomeAssistantError):
-            await network.async_get_source_ip(hass, MDNS_TARGET_IP)
+        assert not await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+        await menuai.async_block_till_done()
+        with pytest.raises(menuaiError):
+            await network.async_get_source_ip(menuai, MDNS_TARGET_IP)
 
 
 async def test_async_get_source_ip_no_ip_loopback(
-    hass: HomeAssistant, hass_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
+    menuai: menuai, menuai_storage: dict[str, Any], caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test getting the source ip address when all adapters are disabled no target is specified."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "key": STORAGE_KEY,
         "data": {ATTR_CONFIGURED_ADAPTERS: ["eth1"]},
@@ -628,18 +628,18 @@ async def test_async_get_source_ip_no_ip_loopback(
 
     with (
         patch(
-            "homeassistant.components.network.util.ifaddr.get_adapters",
+            "menuai.components.network.util.ifaddr.get_adapters",
             return_value=[],
         ),
         patch(
-            "homeassistant.components.network.util.socket.socket",
+            "menuai.components.network.util.socket.socket",
             return_value=_mock_cond_socket(LOOPBACK_IPADDR),
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-        assert await network.async_get_source_ip(hass) == "127.0.0.1"
+        assert await network.async_get_source_ip(menuai) == "127.0.0.1"
 
 
 _ADAPTERS_WITH_MANUAL_CONFIG = [
@@ -702,20 +702,20 @@ _ADAPTERS_WITH_MANUAL_CONFIG = [
 ]
 
 
-async def test_async_get_announce_addresses(hass: HomeAssistant) -> None:
+async def test_async_get_announce_addresses(menuai: menuai) -> None:
     """Test addresses for mDNS/etc announcement."""
     first_ip = "172.16.1.5"
     with (
         patch(
-            "homeassistant.components.network.async_get_source_ip",
+            "menuai.components.network.async_get_source_ip",
             return_value=first_ip,
         ),
         patch(
-            "homeassistant.components.network.async_get_adapters",
+            "menuai.components.network.async_get_adapters",
             return_value=_ADAPTERS_WITH_MANUAL_CONFIG,
         ),
     ):
-        actual = await network.async_get_announce_addresses(hass)
+        actual = await network.async_get_announce_addresses(menuai)
     assert actual[0] == first_ip and actual == [
         first_ip,
         "2001:db8::",
@@ -727,15 +727,15 @@ async def test_async_get_announce_addresses(hass: HomeAssistant) -> None:
     first_ip = "192.168.1.5"
     with (
         patch(
-            "homeassistant.components.network.async_get_source_ip",
+            "menuai.components.network.async_get_source_ip",
             return_value=first_ip,
         ),
         patch(
-            "homeassistant.components.network.async_get_adapters",
+            "menuai.components.network.async_get_adapters",
             return_value=_ADAPTERS_WITH_MANUAL_CONFIG,
         ),
     ):
-        actual = await network.async_get_announce_addresses(hass)
+        actual = await network.async_get_announce_addresses(menuai)
 
     assert actual[0] == first_ip and actual == [
         first_ip,
@@ -746,19 +746,19 @@ async def test_async_get_announce_addresses(hass: HomeAssistant) -> None:
     ]
 
 
-async def test_async_get_announce_addresses_no_source_ip(hass: HomeAssistant) -> None:
+async def test_async_get_announce_addresses_no_source_ip(menuai: menuai) -> None:
     """Test addresses for mDNS/etc announcement without source ip."""
     with (
         patch(
-            "homeassistant.components.network.async_get_source_ip",
+            "menuai.components.network.async_get_source_ip",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.network.async_get_adapters",
+            "menuai.components.network.async_get_adapters",
             return_value=_ADAPTERS_WITH_MANUAL_CONFIG,
         ),
     ):
-        actual = await network.async_get_announce_addresses(hass)
+        actual = await network.async_get_announce_addresses(menuai)
     assert actual == [
         "2001:db8::",
         "fe80::1234:5678:9abc:def0",
@@ -769,18 +769,18 @@ async def test_async_get_announce_addresses_no_source_ip(hass: HomeAssistant) ->
 
 
 async def test_websocket_network_url(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the network/url websocket command."""
-    assert await async_setup_component(hass, "network", {})
+    assert await async_setup_component(menuai, "network", {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with (
         patch(
-            "homeassistant.helpers.network._get_internal_url", return_value="internal"
+            "menuai.helpers.network._get_internal_url", return_value="internal"
         ),
-        patch("homeassistant.helpers.network._get_cloud_url", return_value="cloud"),
+        patch("menuai.helpers.network._get_cloud_url", return_value="cloud"),
     ):
         await client.send_json({"id": 1, "type": "network/url"})
         msg = await client.receive_json()
@@ -794,7 +794,7 @@ async def test_websocket_network_url(
     # Test with no cloud URL
     with (
         patch(
-            "homeassistant.helpers.network._get_internal_url", return_value="internal"
+            "menuai.helpers.network._get_internal_url", return_value="internal"
         ),
     ):
         await client.send_json({"id": 2, "type": "network/url"})
@@ -810,11 +810,11 @@ async def test_websocket_network_url(
 @pytest.mark.parametrize("mock_socket", [[]], indirect=True)
 @pytest.mark.usefixtures("mock_socket")
 async def test_repair_docker_host_network_not_docker(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test repair is not created when not in Docker."""
-    with patch("homeassistant.util.package.is_docker_env", return_value=False):
-        assert await async_setup_component(hass, "network", {})
+    with patch("menuai.util.package.is_docker_env", return_value=False):
+        assert await async_setup_component(menuai, "network", {})
 
     assert not issue_registry.async_get_issue(DOMAIN, "docker_host_network")
 
@@ -822,14 +822,14 @@ async def test_repair_docker_host_network_not_docker(
 @pytest.mark.parametrize("mock_socket", [[]], indirect=True)
 @pytest.mark.usefixtures("mock_socket")
 async def test_repair_docker_host_network_with_host_networking(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test repair is not created when in Docker with host networking."""
     with (
-        patch("homeassistant.util.package.is_docker_env", return_value=True),
-        patch("homeassistant.components.network.Path.exists", return_value=True),
+        patch("menuai.util.package.is_docker_env", return_value=True),
+        patch("menuai.components.network.Path.exists", return_value=True),
     ):
-        assert await async_setup_component(hass, "network", {})
+        assert await async_setup_component(menuai, "network", {})
 
     assert not issue_registry.async_get_issue(DOMAIN, "docker_host_network")
 
@@ -837,16 +837,16 @@ async def test_repair_docker_host_network_with_host_networking(
 @pytest.mark.parametrize("mock_socket", [[]], indirect=True)
 @pytest.mark.usefixtures("mock_socket")
 async def test_repair_docker_host_network_without_host_networking(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test repair is created when in Docker without host networking."""
     with (
-        patch("homeassistant.util.package.is_docker_env", return_value=True),
-        patch("homeassistant.components.network.Path.exists", return_value=False),
+        patch("menuai.util.package.is_docker_env", return_value=True),
+        patch("menuai.components.network.Path.exists", return_value=False),
     ):
-        assert await async_setup_component(hass, "network", {})
+        assert await async_setup_component(menuai, "network", {})
 
     assert (issue := issue_registry.async_get_issue(DOMAIN, "docker_host_network"))
     assert issue == snapshot

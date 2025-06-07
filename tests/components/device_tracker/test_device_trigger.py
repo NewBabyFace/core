@@ -4,18 +4,18 @@ import pytest
 from pytest_unordered import unordered
 import voluptuous_serialize
 
-from homeassistant.components import automation, zone
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.device_tracker import DOMAIN, device_trigger
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import (
+from menuai.components import automation, zone
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.device_tracker import DOMAIN, device_trigger
+from menuai.const import EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
@@ -33,10 +33,10 @@ HOME_LONGITUDE = -117.237561
 
 
 @pytest.fixture(autouse=True)
-async def setup_zone(hass: HomeAssistant) -> None:
+async def setup_zone(menuai: menuai) -> None:
     """Create test zone."""
     await async_setup_component(
-        hass,
+        menuai,
         zone.DOMAIN,
         {
             "zone": {
@@ -50,13 +50,13 @@ async def setup_zone(hass: HomeAssistant) -> None:
 
 
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected triggers from a device_tracker."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -76,7 +76,7 @@ async def test_get_triggers(
         for trigger in ("leaves", "enters")
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
@@ -91,7 +91,7 @@ async def test_get_triggers(
     ],
 )
 async def test_get_triggers_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -99,7 +99,7 @@ async def test_get_triggers_hidden_auxiliary(
 ) -> None:
     """Test we get the expected triggers from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -124,20 +124,20 @@ async def test_get_triggers_hidden_auxiliary(
         for trigger in ("leaves", "enters")
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_if_fires_on_zone_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for enter and leave triggers firing."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -146,14 +146,14 @@ async def test_if_fires_on_zone_change(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         "state",
         {"latitude": AWAY_LATITUDE, "longitude": AWAY_LONGITUDE},
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -210,12 +210,12 @@ async def test_if_fires_on_zone_change(
     )
 
     # Fake that the entity is entering.
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         "state",
         {"latitude": HOME_LATITUDE, "longitude": HOME_LONGITUDE},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert (
         service_calls[0].data["some"]
@@ -223,12 +223,12 @@ async def test_if_fires_on_zone_change(
     )
 
     # Fake that the entity is leaving.
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         "state",
         {"latitude": AWAY_LATITUDE, "longitude": AWAY_LONGITUDE},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert (
         service_calls[1].data["some"]
@@ -237,14 +237,14 @@ async def test_if_fires_on_zone_change(
 
 
 async def test_if_fires_on_zone_change_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for enter and leave triggers firing."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -253,14 +253,14 @@ async def test_if_fires_on_zone_change_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         "state",
         {"latitude": AWAY_LATITUDE, "longitude": AWAY_LONGITUDE},
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -293,12 +293,12 @@ async def test_if_fires_on_zone_change_legacy(
     )
 
     # Fake that the entity is entering.
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         "state",
         {"latitude": HOME_LATITUDE, "longitude": HOME_LONGITUDE},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert (
         service_calls[0].data["some"]
@@ -307,13 +307,13 @@ async def test_if_fires_on_zone_change_legacy(
 
 
 async def test_get_trigger_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected capabilities from a device_tracker trigger."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -322,7 +322,7 @@ async def test_get_trigger_capabilities(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -346,13 +346,13 @@ async def test_get_trigger_capabilities(
 
 
 async def test_get_trigger_capabilities_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected capabilities from a device_tracker trigger."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -361,7 +361,7 @@ async def test_get_trigger_capabilities_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,

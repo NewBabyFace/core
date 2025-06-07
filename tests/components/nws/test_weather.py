@@ -8,22 +8,22 @@ from pynws import NwsNoDataError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import nws
-from homeassistant.components.nws.const import (
+from menuai.components import nws
+from menuai.components.nws.const import (
     DEFAULT_SCAN_INTERVAL,
     OBSERVATION_VALID_TIME,
 )
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_SUNNY,
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from .const import (
     CLEAR_NIGHT_OBSERVATION,
@@ -52,7 +52,7 @@ from tests.typing import WebSocketGenerator
     ],
 )
 async def test_imperial_metric(
-    hass: HomeAssistant,
+    menuai: menuai,
     units,
     result_observation,
     result_forecast,
@@ -60,16 +60,16 @@ async def test_imperial_metric(
     no_sensor,
 ) -> None:
     """Test with imperial and metric units."""
-    hass.config.units = units
+    menuai.config.units = units
     entry = MockConfigEntry(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
 
     assert state
     assert state.state == ATTR_CONDITION_SUNNY
@@ -79,7 +79,7 @@ async def test_imperial_metric(
         assert data.get(key) == value
 
 
-async def test_night_clear(hass: HomeAssistant, mock_simple_nws, no_sensor) -> None:
+async def test_night_clear(menuai: menuai, mock_simple_nws, no_sensor) -> None:
     """Test with clear-night in observation."""
     instance = mock_simple_nws.return_value
     instance.observation = CLEAR_NIGHT_OBSERVATION
@@ -88,15 +88,15 @@ async def test_night_clear(hass: HomeAssistant, mock_simple_nws, no_sensor) -> N
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
     assert state.state == ATTR_CONDITION_CLEAR_NIGHT
 
 
-async def test_none_values(hass: HomeAssistant, mock_simple_nws, no_sensor) -> None:
+async def test_none_values(menuai: menuai, mock_simple_nws, no_sensor) -> None:
     """Test with none values in observation and forecast dicts."""
     instance = mock_simple_nws.return_value
     instance.observation = NONE_OBSERVATION
@@ -106,11 +106,11 @@ async def test_none_values(hass: HomeAssistant, mock_simple_nws, no_sensor) -> N
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
     assert state.state == STATE_UNKNOWN
     data = state.attributes
     for key in WEATHER_EXPECTED_OBSERVATION_IMPERIAL:
@@ -118,7 +118,7 @@ async def test_none_values(hass: HomeAssistant, mock_simple_nws, no_sensor) -> N
 
 
 async def test_data_caching_error_observation(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_simple_nws,
     no_sensor,
@@ -131,21 +131,21 @@ async def test_data_caching_error_observation(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
     assert state.state == "sunny"
 
     # data is still valid even when update fails
     instance.update_observation.side_effect = NwsNoDataError("Test")
 
     freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=100))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
     assert state.state == "sunny"
 
     assert (
@@ -155,17 +155,17 @@ async def test_data_caching_error_observation(
 
     # data is no longer valid after OBSERVATION_VALID_TIME
     freezer.tick(OBSERVATION_VALID_TIME + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
     assert state.state == STATE_UNAVAILABLE
 
     assert "Error fetching NWS observation station ABC data: Test" in caplog.text
 
 
 async def test_no_data_error_observation(
-    hass: HomeAssistant, mock_simple_nws, no_sensor, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mock_simple_nws, no_sensor, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test catching NwsNoDataDrror."""
     instance = mock_simple_nws.return_value
@@ -175,15 +175,15 @@ async def test_no_data_error_observation(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert "Error fetching NWS observation station ABC data: Test" in caplog.text
 
 
 async def test_no_data_error_forecast(
-    hass: HomeAssistant, mock_simple_nws, no_sensor, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mock_simple_nws, no_sensor, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test catching NwsNoDataDrror."""
     instance = mock_simple_nws.return_value
@@ -193,9 +193,9 @@ async def test_no_data_error_forecast(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         "Error fetching NWS forecast station ABC data: No data returned" in caplog.text
@@ -203,7 +203,7 @@ async def test_no_data_error_forecast(
 
 
 async def test_no_data_error_forecast_hourly(
-    hass: HomeAssistant, mock_simple_nws, no_sensor, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mock_simple_nws, no_sensor, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test catching NwsNoDataDrror."""
     instance = mock_simple_nws.return_value
@@ -213,9 +213,9 @@ async def test_no_data_error_forecast_hourly(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         "Error fetching NWS forecast hourly station ABC data: No data returned"
@@ -223,7 +223,7 @@ async def test_no_data_error_forecast_hourly(
     )
 
 
-async def test_none(hass: HomeAssistant, mock_simple_nws, no_sensor) -> None:
+async def test_none(menuai: menuai, mock_simple_nws, no_sensor) -> None:
     """Test with None as observation and forecast."""
     instance = mock_simple_nws.return_value
     instance.observation = None
@@ -233,11 +233,11 @@ async def test_none(hass: HomeAssistant, mock_simple_nws, no_sensor) -> None:
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
     assert state
     assert state.state == STATE_UNKNOWN
 
@@ -246,7 +246,7 @@ async def test_none(hass: HomeAssistant, mock_simple_nws, no_sensor) -> None:
         assert data.get(key) is None
 
 
-async def test_error_station(hass: HomeAssistant, mock_simple_nws, no_sensor) -> None:
+async def test_error_station(menuai: menuai, mock_simple_nws, no_sensor) -> None:
     """Test error in setting station."""
 
     instance = mock_simple_nws.return_value
@@ -256,44 +256,44 @@ async def test_error_station(hass: HomeAssistant, mock_simple_nws, no_sensor) ->
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("weather.abc") is None
+    assert menuai.states.get("weather.abc") is None
 
 
-async def test_entity_refresh(hass: HomeAssistant, mock_simple_nws, no_sensor) -> None:
+async def test_entity_refresh(menuai: menuai, mock_simple_nws, no_sensor) -> None:
     """Test manual refresh."""
     instance = mock_simple_nws.return_value
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     entry = MockConfigEntry(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     instance.update_observation.assert_called_once()
     instance.update_forecast.assert_called_once()
     instance.update_forecast_hourly.assert_called_once()
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {"entity_id": "weather.abc"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert instance.update_observation.call_count == 2
     assert instance.update_forecast.call_count == 2
     assert instance.update_forecast_hourly.call_count == 2
 
 
 async def test_error_observation(
-    hass: HomeAssistant, mock_simple_nws, no_sensor
+    menuai: menuai, mock_simple_nws, no_sensor
 ) -> None:
     """Test error during update observation."""
     instance = mock_simple_nws.return_value
@@ -304,32 +304,32 @@ async def test_error_observation(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     instance.update_observation.assert_called_once()
 
-    state = hass.states.get("weather.abc")
+    state = menuai.states.get("weather.abc")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_new_config_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, no_sensor
+    menuai: menuai, entity_registry: er.EntityRegistry, no_sensor
 ) -> None:
     """Test the expected entities are created."""
     entry = MockConfigEntry(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids("weather")) == 1
-    entry = hass.config_entries.async_entries()[0]
+    assert len(menuai.states.async_entity_ids("weather")) == 1
+    entry = menuai.config_entries.async_entries()[0]
     assert len(er.async_entries_for_config_entry(entity_registry, entry.entry_id)) == 1
 
 
@@ -340,7 +340,7 @@ async def test_new_config_entry(
     ],
 )
 async def test_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     mock_simple_nws,
@@ -354,16 +354,16 @@ async def test_forecast_service(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     instance.update_observation.assert_called_once()
     instance.update_forecast.assert_called_once()
     instance.update_forecast_hourly.assert_called_once()
 
     for forecast_type in ("twice_daily", "hourly"):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             WEATHER_DOMAIN,
             service,
             {
@@ -382,15 +382,15 @@ async def test_forecast_service(
 
     # Trigger data refetch
     freezer.tick(nws.DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert instance.update_observation.call_count == 2
     assert instance.update_forecast.call_count == 2
     assert instance.update_forecast_hourly.call_count == 2
 
     for forecast_type in ("twice_daily", "hourly"):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             WEATHER_DOMAIN,
             service,
             {
@@ -410,10 +410,10 @@ async def test_forecast_service(
     # third update fails, but data is cached
     instance.update_forecast_hourly.side_effect = aiohttp.ClientError
     freezer.tick(nws.DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -427,10 +427,10 @@ async def test_forecast_service(
 
     # after additional 35 minutes data caching expires, data is no longer shown
     freezer.tick(timedelta(minutes=35))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -448,8 +448,8 @@ async def test_forecast_service(
     [("hourly", "weather.abc")],
 )
 async def test_forecast_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
@@ -459,7 +459,7 @@ async def test_forecast_subscription(
     entity_id: str,
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Pre-create the hourly entity
     entity_registry.async_get_or_create(
@@ -473,10 +473,10 @@ async def test_forecast_subscription(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id(
         {
@@ -499,7 +499,7 @@ async def test_forecast_subscription(
     assert forecast1 == snapshot
 
     freezer.tick(nws.DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await client.receive_json()
 
     assert msg["id"] == subscription_id
@@ -515,8 +515,8 @@ async def test_forecast_subscription(
     [("hourly", "weather.abc")],
 )
 async def test_forecast_subscription_with_failing_coordinator(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
@@ -526,7 +526,7 @@ async def test_forecast_subscription_with_failing_coordinator(
     entity_id: str,
 ) -> None:
     """Test a forecast subscription when the coordinator is failing to update."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Pre-create the hourly entity
     entity_registry.async_get_or_create(
@@ -540,10 +540,10 @@ async def test_forecast_subscription_with_failing_coordinator(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id(
         {
@@ -564,7 +564,7 @@ async def test_forecast_subscription_with_failing_coordinator(
     ],
 )
 async def test_detailed_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     mock_simple_nws,
@@ -577,12 +577,12 @@ async def test_detailed_forecast_service(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         nws.DOMAIN,
         "get_forecasts_extra",
         {
@@ -603,7 +603,7 @@ async def test_detailed_forecast_service(
     ],
 )
 async def test_detailed_forecast_service_no_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     mock_simple_nws,
@@ -618,12 +618,12 @@ async def test_detailed_forecast_service_no_data(
         domain=nws.DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         nws.DOMAIN,
         "get_forecasts_extra",
         {

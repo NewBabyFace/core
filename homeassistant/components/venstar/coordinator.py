@@ -8,9 +8,9 @@ from datetime import timedelta
 from requests import RequestException
 from venstarcolortouch import VenstarColorTouch
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import update_coordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import update_coordinator
 
 from .const import _LOGGER, DOMAIN, VENSTAR_SLEEP
 
@@ -22,13 +22,13 @@ class VenstarDataUpdateCoordinator(update_coordinator.DataUpdateCoordinator[None
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         venstar_connection: VenstarColorTouch,
     ) -> None:
         """Initialize global Venstar data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -40,7 +40,7 @@ class VenstarDataUpdateCoordinator(update_coordinator.DataUpdateCoordinator[None
     async def _async_update_data(self) -> None:
         """Update the state."""
         try:
-            await self.hass.async_add_executor_job(self.client.update_info)
+            await self.menuai.async_add_executor_job(self.client.update_info)
         except (OSError, RequestException) as ex:
             raise update_coordinator.UpdateFailed(
                 f"Exception during Venstar info update: {ex}"
@@ -50,7 +50,7 @@ class VenstarDataUpdateCoordinator(update_coordinator.DataUpdateCoordinator[None
         await asyncio.sleep(VENSTAR_SLEEP)
 
         try:
-            await self.hass.async_add_executor_job(self.client.update_sensors)
+            await self.menuai.async_add_executor_job(self.client.update_sensors)
         except (OSError, RequestException) as ex:
             raise update_coordinator.UpdateFailed(
                 f"Exception during Venstar sensor update: {ex}"
@@ -60,7 +60,7 @@ class VenstarDataUpdateCoordinator(update_coordinator.DataUpdateCoordinator[None
         await asyncio.sleep(VENSTAR_SLEEP)
 
         try:
-            await self.hass.async_add_executor_job(self.client.update_alerts)
+            await self.menuai.async_add_executor_job(self.client.update_alerts)
         except (OSError, RequestException) as ex:
             raise update_coordinator.UpdateFailed(
                 f"Exception during Venstar alert update: {ex}"
@@ -70,7 +70,7 @@ class VenstarDataUpdateCoordinator(update_coordinator.DataUpdateCoordinator[None
         await asyncio.sleep(VENSTAR_SLEEP)
 
         try:
-            self.runtimes = await self.hass.async_add_executor_job(
+            self.runtimes = await self.menuai.async_add_executor_job(
                 self.client.get_runtimes
             )
         except (OSError, RequestException) as ex:

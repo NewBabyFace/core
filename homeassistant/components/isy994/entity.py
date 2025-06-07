@@ -21,11 +21,11 @@ from pyisy.nodes import Group, Node, NodeChangedEvent
 from pyisy.programs import Program
 from pyisy.variables import Variable
 
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from .const import DOMAIN
 
@@ -53,7 +53,7 @@ class ISYEntity(Entity):
         self._change_handler: EventListener | None = None
         self._control_handler: EventListener | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node change events."""
         self._change_handler = self._node.status_events.subscribe(self.async_on_update)
 
@@ -83,7 +83,7 @@ class ISYEntity(Entity):
             # New state attributes may be available, update the state.
             self.async_write_ha_state()
 
-        self.hass.bus.async_fire("isy994_control", event_data)
+        self.menuai.bus.async_fire("isy994_control", event_data)
 
 
 class ISYNodeEntity(ISYEntity):
@@ -131,7 +131,7 @@ class ISYNodeEntity(ISYEntity):
     async def async_send_node_command(self, command: str) -> None:
         """Respond to an entity service command call."""
         if not hasattr(self._node, command):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Invalid service call: {command} for device {self.entity_id}"
             )
         await getattr(self._node, command)()
@@ -145,7 +145,7 @@ class ISYNodeEntity(ISYEntity):
     ) -> None:
         """Respond to an entity service raw command call."""
         if not hasattr(self._node, "send_cmd"):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Invalid service call: {command} for device {self.entity_id}"
             )
         await self._node.send_cmd(command, value, unit_of_measurement, parameters)
@@ -153,7 +153,7 @@ class ISYNodeEntity(ISYEntity):
     async def async_get_zwave_parameter(self, parameter: Any) -> None:
         """Respond to an entity service command to request a Z-Wave device parameter from the ISY."""
         if self._node.protocol != PROTO_ZWAVE:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Invalid service call: cannot request Z-Wave Parameter for non-Z-Wave"
                 f" device {self.entity_id}"
             )
@@ -164,7 +164,7 @@ class ISYNodeEntity(ISYEntity):
     ) -> None:
         """Respond to an entity service command to set a Z-Wave device parameter via the ISY."""
         if self._node.protocol != PROTO_ZWAVE:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Invalid service call: cannot set Z-Wave Parameter for non-Z-Wave"
                 f" device {self.entity_id}"
             )
@@ -242,7 +242,7 @@ class ISYAuxControlEntity(Entity):
         self._change_handler: EventListener = None
         self._availability_handler: EventListener = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node control change events."""
         self._change_handler = self._node.control_events.subscribe(
             self.async_on_update,

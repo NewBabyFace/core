@@ -3,9 +3,9 @@
 from typing import Any
 from unittest.mock import patch
 
-from homeassistant.components.feedreader.const import CONF_MAX_ENTRIES, DOMAIN
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
+from menuai.components.feedreader.const import CONF_MAX_ENTRIES, DOMAIN
+from menuai.const import CONF_URL
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -28,21 +28,21 @@ def create_mock_entry(
 
 
 async def async_setup_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, Any],
     return_value: bytes | None = None,
     side_effect: bytes | None = None,
 ) -> bool:
     """Do setup of a MockConfigEntry."""
     entry = create_mock_entry(data)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.feedreader.coordinator.feedparser.http.get",
+        "menuai.components.feedreader.coordinator.feedparser.http.get",
     ) as feedparser:
         if return_value:
             feedparser.return_value = return_value
         if side_effect:
             feedparser.side_effect = side_effect
-        result = await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
     return result

@@ -6,10 +6,10 @@ from typing import Any
 
 from asyncsleepiq import SleepIQBed
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SleepIQData, SleepIQPauseUpdateCoordinator
@@ -17,12 +17,12 @@ from .entity import SleepIQBedEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the sleep number switches."""
-    data: SleepIQData = hass.data[DOMAIN][entry.entry_id]
+    data: SleepIQData = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         SleepNumberPrivateSwitch(data.pause_coordinator, bed)
         for bed in data.client.beds.values()

@@ -8,7 +8,7 @@ import pytest
 from switchbot import ColorMode as switchbotColorMode
 from switchbot.devices.device import SwitchbotOperationError
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_RGB_COLOR,
@@ -16,9 +16,9 @@ from homeassistant.components.light import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import WOSTRIP_SERVICE_INFO
 
@@ -79,7 +79,7 @@ from tests.components.bluetooth import inject_bluetooth_service_info
     ],
 )
 async def test_light_strip_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_factory: Callable[[str], MockConfigEntry],
     service: str,
     service_data: dict,
@@ -89,25 +89,25 @@ async def test_light_strip_services(
     color_mode: switchbotColorMode | None,
 ) -> None:
     """Test all SwitchBot light strip services with proper parameters."""
-    inject_bluetooth_service_info(hass, WOSTRIP_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, WOSTRIP_SERVICE_INFO)
 
     entry = mock_entry_factory(sensor_type="light_strip")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entity_id = "light.test_name"
 
     mocked_instance = AsyncMock(return_value=True)
 
     with patch.multiple(
-        "homeassistant.components.switchbot.light.switchbot.SwitchbotLightStrip",
+        "menuai.components.switchbot.light.switchbot.SwitchbotLightStrip",
         color_modes=color_modes,
         color_mode=color_mode,
         update=AsyncMock(return_value=None),
         **{mock_method: mocked_instance},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LIGHT_DOMAIN,
             service,
             {**service_data, ATTR_ENTITY_ID: entity_id},
@@ -167,7 +167,7 @@ async def test_light_strip_services(
     ],
 )
 async def test_exception_handling_light_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_factory: Callable[[str], MockConfigEntry],
     service: str,
     service_data: dict,
@@ -178,24 +178,24 @@ async def test_exception_handling_light_service(
     error_message: str,
 ) -> None:
     """Test exception handling for light service with exception."""
-    inject_bluetooth_service_info(hass, WOSTRIP_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, WOSTRIP_SERVICE_INFO)
 
     entry = mock_entry_factory(sensor_type="light_strip")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entity_id = "light.test_name"
 
     with patch.multiple(
-        "homeassistant.components.switchbot.light.switchbot.SwitchbotLightStrip",
+        "menuai.components.switchbot.light.switchbot.SwitchbotLightStrip",
         color_modes=color_modes,
         color_mode=color_mode,
         update=AsyncMock(return_value=None),
         **{mock_method: AsyncMock(side_effect=exception)},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        with pytest.raises(HomeAssistantError, match=error_message):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=error_message):
+            await menuai.services.async_call(
                 LIGHT_DOMAIN,
                 service,
                 {**service_data, ATTR_ENTITY_ID: entity_id},

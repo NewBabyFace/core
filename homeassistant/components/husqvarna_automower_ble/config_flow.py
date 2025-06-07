@@ -9,10 +9,10 @@ from automower_ble.mower import Mower
 from bleak import BleakError
 import voluptuous as vol
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import BluetoothServiceInfo
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID
+from menuai.components import bluetooth
+from menuai.components.bluetooth import BluetoothServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS, CONF_CLIENT_ID
 
 from .const import DOMAIN, LOGGER
 
@@ -69,7 +69,7 @@ class HusqvarnaAutomowerBleConfigFlow(ConfigFlow, domain=DOMAIN):
         assert self.address
 
         device = bluetooth.async_ble_device_from_address(
-            self.hass, self.address, connectable=True
+            self.menuai, self.address, connectable=True
         )
         channel_id = random.randint(1, 0xFFFFFFFF)
 

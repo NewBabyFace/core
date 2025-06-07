@@ -9,9 +9,9 @@ from urllib.parse import urlparse
 import upb_lib
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS, CONF_FILE_PATH, CONF_HOST, CONF_PROTOCOL
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS, CONF_FILE_PATH, CONF_HOST, CONF_PROTOCOL
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 
@@ -124,9 +124,9 @@ class UPBConfigFlow(ConfigFlow, domain=DOMAIN):
         return urlparse(url).hostname in existing_hosts
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidUpbFile(HomeAssistantError):
+class InvalidUpbFile(menuaiError):
     """Error to indicate there is invalid or missing UPB config file."""

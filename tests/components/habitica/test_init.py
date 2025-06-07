@@ -8,9 +8,9 @@ from aiohttp import ClientError
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.habitica.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.habitica.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.core import menuai
 
 from .conftest import (
     ERROR_BAD_REQUEST,
@@ -24,17 +24,17 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("habitica")
 async def test_entry_setup_unload(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test integration setup and unload."""
 
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -49,7 +49,7 @@ async def test_entry_setup_unload(
     ],
 )
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -57,26 +57,26 @@ async def test_config_entry_not_ready(
     """Test config entry not ready."""
 
     habitica.get_user.side_effect = exception
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_config_entry_auth_failed(
-    hass: HomeAssistant, config_entry: MockConfigEntry, habitica: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, habitica: AsyncMock
 ) -> None:
     """Test config entry auth failed setup error."""
 
     habitica.get_user.side_effect = ERROR_NOT_AUTHORIZED
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -90,7 +90,7 @@ async def test_config_entry_auth_failed(
 
 @pytest.mark.parametrize("exception", [ERROR_NOT_FOUND, ClientError])
 async def test_coordinator_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -98,15 +98,15 @@ async def test_coordinator_update_failed(
     """Test coordinator update failed."""
 
     habitica.get_tasks.side_effect = exception
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_coordinator_rate_limited(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     caplog: pytest.LogCaptureFixture,
@@ -114,9 +114,9 @@ async def test_coordinator_rate_limited(
 ) -> None:
     """Test coordinator when rate limited."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -124,7 +124,7 @@ async def test_coordinator_rate_limited(
 
     with caplog.at_level(logging.DEBUG):
         freezer.tick(datetime.timedelta(seconds=60))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
         assert "Rate limit exceeded, will try again later" in caplog.text

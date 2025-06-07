@@ -11,9 +11,9 @@ from aiocomelit import (
 )
 from aiocomelit.const import BRIDGE
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PIN, CONF_TYPE
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PIN, CONF_TYPE
+from menuai.core import menuai
 
 from .coordinator import ComelitConfigEntry
 
@@ -21,7 +21,7 @@ TO_REDACT = {CONF_PIN}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ComelitConfigEntry
+    menuai: menuai, entry: ComelitConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 

@@ -8,15 +8,15 @@ from typing import Any
 
 from gotailwind import Tailwind, TailwindError
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import TailwindConfigEntry
@@ -41,7 +41,7 @@ DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TailwindConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -65,7 +65,7 @@ class TailwindButtonEntity(TailwindEntity, ButtonEntity):
         try:
             await self.entity_description.press_fn(self.coordinator.tailwind)
         except TailwindError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 str(exc),
                 translation_domain=DOMAIN,
                 translation_key="communication_error",

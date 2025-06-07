@@ -10,17 +10,17 @@ from zwave_js_server.const import CommandClass
 from zwave_js_server.event import Event
 from zwave_js_server.model.node import Node
 
-from homeassistant.components.zwave_js.diagnostics import (
+from menuai.components.zwave_js.diagnostics import (
     REDACTED,
     ZwaveValueMatcher,
     async_get_device_diagnostics,
 )
-from homeassistant.components.zwave_js.helpers import (
+from menuai.components.zwave_js.helpers import (
     get_device_id,
     get_value_id_from_unique_id,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .common import PROPERTY_ULTRAVIOLET
 
@@ -33,31 +33,31 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     integration,
     config_entry_diagnostics,
     config_entry_diagnostics_redacted,
 ) -> None:
     """Test the config entry level diagnostics data dump."""
     with patch(
-        "homeassistant.components.zwave_js.diagnostics.dump_msgs",
+        "menuai.components.zwave_js.diagnostics.dump_msgs",
         return_value=config_entry_diagnostics,
     ):
         diagnostics = await get_diagnostics_for_config_entry(
-            hass, hass_client, integration
+            menuai, menuai_client, integration
         )
         assert diagnostics == config_entry_diagnostics_redacted
 
 
 async def test_device_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client,
     multisensor_6,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     version_state,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -69,7 +69,7 @@ async def test_device_diagnostics(
 
     # Create mock config entry for fake entity
     mock_config_entry = MockConfigEntry(domain="test_integration")
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     # Add an entity entry to the device that is not part of this config entry
     entity_registry.async_get_or_create(
@@ -103,7 +103,7 @@ async def test_device_diagnostics(
     multisensor_6.receive_event(event)
 
     diagnostics_data = await get_diagnostics_for_device(
-        hass, hass_client, integration, device
+        menuai, menuai_client, integration, device
     )
     assert diagnostics_data["versionInfo"] == {
         "driverVersion": version_state["driverVersion"],
@@ -140,14 +140,14 @@ async def test_device_diagnostics(
 
 
 async def test_device_diagnostics_error(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, integration
+    menuai: menuai, device_registry: dr.DeviceRegistry, integration
 ) -> None:
     """Test the device diagnostics raises exception when an invalid device is used."""
     device = device_registry.async_get_or_create(
         config_entry_id=integration.entry_id, identifiers={("test", "test")}
     )
     with pytest.raises(ValueError):
-        await async_get_device_diagnostics(hass, integration, device)
+        await async_get_device_diagnostics(menuai, integration, device)
 
 
 async def test_empty_zwave_value_matcher() -> None:
@@ -157,13 +157,13 @@ async def test_empty_zwave_value_matcher() -> None:
 
 
 async def test_device_diagnostics_missing_primary_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client,
     multisensor_6,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test that device diagnostics handles an entity with a missing primary value."""
     device = device_registry.async_get_device(
@@ -177,7 +177,7 @@ async def test_device_diagnostics_missing_primary_value(
 
     # check that the primary value for the entity exists in the diagnostics
     diagnostics_data = await get_diagnostics_for_device(
-        hass, hass_client, integration, device
+        menuai, menuai_client, integration, device
     )
 
     value = multisensor_6.values.get(get_value_id_from_unique_id(entry.unique_id))
@@ -217,7 +217,7 @@ async def test_device_diagnostics_missing_primary_value(
     multisensor_6.receive_event(event)
 
     diagnostics_data = await get_diagnostics_for_device(
-        hass, hass_client, integration, device
+        menuai, menuai_client, integration, device
     )
 
     diagnostics_entities = cast(list[dict[str, Any]], diagnostics_data["entities"])
@@ -228,12 +228,12 @@ async def test_device_diagnostics_missing_primary_value(
 
 
 async def test_device_diagnostics_secret_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     multisensor_6_state,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     version_state,
 ) -> None:
     """Test that secret value in device level diagnostics gets redacted."""
@@ -258,14 +258,14 @@ async def test_device_diagnostics_secret_value(
     node = Node(client, node_state)
     client.driver.controller.nodes[node.node_id] = node
     client.driver.controller.emit("node added", {"node": node})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     device = device_registry.async_get_device(
         identifiers={get_device_id(client.driver, node)}
     )
     assert device
 
     diagnostics_data = await get_diagnostics_for_device(
-        hass, hass_client, integration, device
+        menuai, menuai_client, integration, device
     )
     diagnostics_node_state = cast(dict[str, Any], diagnostics_data["state"])
     test_value = _find_ultraviolet_val(diagnostics_node_state)

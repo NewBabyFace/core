@@ -12,24 +12,24 @@ from fritzconnection.core.exceptions import (
 import pytest
 from requests.exceptions import ConnectionError as RequestsConnectionError
 
-from homeassistant.components.fritzbox_callmonitor.config_flow import ConnectResult
-from homeassistant.components.fritzbox_callmonitor.const import (
+from menuai.components.fritzbox_callmonitor.config_flow import ConnectResult
+from menuai.components.fritzbox_callmonitor.const import (
     CONF_PHONEBOOK,
     CONF_PREFIXES,
     DOMAIN,
     FRITZ_ATTR_NAME,
     SERIAL_NUMBER,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry, patch
 
@@ -84,9 +84,9 @@ MOCK_PHONEBOOK_INFO_2 = {FRITZ_ATTR_NAME: MOCK_PHONEBOOK_NAME_2}
 MOCK_UNIQUE_ID = f"{MOCK_SERIAL_NUMBER}-{MOCK_PHONEBOOK_ID}"
 
 
-async def test_setup_one_phonebook(hass: HomeAssistant) -> None:
+async def test_setup_one_phonebook(menuai: menuai) -> None:
     """Test setting up manually."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -95,37 +95,37 @@ async def test_setup_one_phonebook(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_ids",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_ids",
             new_callable=PropertyMock,
             return_value=[0],
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_info",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_info",
             return_value=MOCK_PHONEBOOK_INFO_1,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.modelname",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.modelname",
             return_value=MOCK_PHONEBOOK_NAME_1,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.config_flow.FritzConnection.__init__",
+            "menuai.components.fritzbox_callmonitor.config_flow.FritzConnection.__init__",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.config_flow.FritzConnection.updatecheck",
+            "menuai.components.fritzbox_callmonitor.config_flow.FritzConnection.updatecheck",
             new_callable=PropertyMock,
             return_value=MOCK_DEVICE_INFO,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.async_setup_entry",
+            "menuai.components.fritzbox_callmonitor.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_USER_DATA
         )
 
@@ -135,9 +135,9 @@ async def test_setup_one_phonebook(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_setup_multiple_phonebooks(hass: HomeAssistant) -> None:
+async def test_setup_multiple_phonebooks(menuai: menuai) -> None:
     """Test setting up manually."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -146,29 +146,29 @@ async def test_setup_multiple_phonebooks(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_ids",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_ids",
             new_callable=PropertyMock,
             return_value=[0, 1],
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.config_flow.FritzConnection.__init__",
+            "menuai.components.fritzbox_callmonitor.config_flow.FritzConnection.__init__",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.config_flow.FritzConnection.updatecheck",
+            "menuai.components.fritzbox_callmonitor.config_flow.FritzConnection.updatecheck",
             new_callable=PropertyMock,
             return_value=MOCK_DEVICE_INFO,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_info",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_info",
             side_effect=[MOCK_PHONEBOOK_INFO_1, MOCK_PHONEBOOK_INFO_2],
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_USER_DATA
         )
 
@@ -178,15 +178,15 @@ async def test_setup_multiple_phonebooks(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.modelname",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.modelname",
             return_value=MOCK_PHONEBOOK_NAME_1,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.async_setup_entry",
+            "menuai.components.fritzbox_callmonitor.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_PHONEBOOK: MOCK_PHONEBOOK_NAME_2},
         )
@@ -204,18 +204,18 @@ async def test_setup_multiple_phonebooks(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_setup_cannot_connect(hass: HomeAssistant) -> None:
+async def test_setup_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
     with patch(
-        "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
+        "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
         side_effect=RequestsConnectionError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_USER_DATA
         )
 
@@ -223,18 +223,18 @@ async def test_setup_cannot_connect(hass: HomeAssistant) -> None:
     assert result["reason"] == ConnectResult.NO_DEVIES_FOUND
 
 
-async def test_setup_insufficient_permissions(hass: HomeAssistant) -> None:
+async def test_setup_insufficient_permissions(menuai: menuai) -> None:
     """Test we handle insufficient permissions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
     with patch(
-        "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
+        "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
         side_effect=FritzSecurityError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_USER_DATA
         )
 
@@ -244,19 +244,19 @@ async def test_setup_insufficient_permissions(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("error", [FritzAuthorizationError, FritzConnectionException])
 async def test_setup_invalid_auth(
-    hass: HomeAssistant, error: FritzConnectionException
+    menuai: menuai, error: FritzConnectionException
 ) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
     with patch(
-        "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
+        "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
         side_effect=error,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_USER_DATA
         )
 
@@ -264,47 +264,47 @@ async def test_setup_invalid_auth(
     assert result["errors"] == {"base": ConnectResult.INVALID_AUTH}
 
 
-async def test_reauth_successful(hass: HomeAssistant) -> None:
+async def test_reauth_successful(menuai: menuai) -> None:
     """Test starting a reauthentication flow."""
     mock_config = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_ENTRY)
-    mock_config.add_to_hass(hass)
-    result = await mock_config.start_reauth_flow(hass)
+    mock_config.add_to_menuai(menuai)
+    result = await mock_config.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with (
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_ids",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_ids",
             new_callable=PropertyMock,
             return_value=[0],
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_info",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.phonebook_info",
             return_value=MOCK_PHONEBOOK_INFO_1,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.modelname",
+            "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.modelname",
             return_value=MOCK_PHONEBOOK_NAME_1,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.config_flow.FritzConnection.__init__",
+            "menuai.components.fritzbox_callmonitor.config_flow.FritzConnection.__init__",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.config_flow.FritzConnection.updatecheck",
+            "menuai.components.fritzbox_callmonitor.config_flow.FritzConnection.updatecheck",
             new_callable=PropertyMock,
             return_value=MOCK_DEVICE_INFO,
         ),
         patch(
-            "homeassistant.components.fritzbox_callmonitor.async_setup_entry",
+            "menuai.components.fritzbox_callmonitor.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: "other_fake_user",
@@ -330,20 +330,20 @@ async def test_reauth_successful(hass: HomeAssistant) -> None:
     ],
 )
 async def test_reauth_not_successful(
-    hass: HomeAssistant, side_effect: Exception, error: str
+    menuai: menuai, side_effect: Exception, error: str
 ) -> None:
     """Test starting a reauthentication flow but no connection found."""
     mock_config = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_ENTRY)
-    mock_config.add_to_hass(hass)
-    result = await mock_config.start_reauth_flow(hass)
+    mock_config.add_to_menuai(menuai)
+    result = await mock_config.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with patch(
-        "homeassistant.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
+        "menuai.components.fritzbox_callmonitor.base.FritzPhonebook.__init__",
         side_effect=side_effect,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: "other_fake_user",
@@ -355,7 +355,7 @@ async def test_reauth_not_successful(
         assert result["errors"]["base"] == error
 
 
-async def test_options_flow_correct_prefixes(hass: HomeAssistant) -> None:
+async def test_options_flow_correct_prefixes(menuai: menuai) -> None:
     """Test config flow options."""
 
     config_entry = MockConfigEntry(
@@ -364,19 +364,19 @@ async def test_options_flow_correct_prefixes(hass: HomeAssistant) -> None:
         data=MOCK_CONFIG_ENTRY,
         options={CONF_PREFIXES: None},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.fritzbox_callmonitor.async_setup_entry",
+        "menuai.components.fritzbox_callmonitor.async_setup_entry",
         return_value=True,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input={CONF_PREFIXES: "+49, 491234"}
         )
 
@@ -384,7 +384,7 @@ async def test_options_flow_correct_prefixes(hass: HomeAssistant) -> None:
         assert config_entry.options == {CONF_PREFIXES: ["+49", "491234"]}
 
 
-async def test_options_flow_incorrect_prefixes(hass: HomeAssistant) -> None:
+async def test_options_flow_incorrect_prefixes(menuai: menuai) -> None:
     """Test config flow options."""
 
     config_entry = MockConfigEntry(
@@ -393,19 +393,19 @@ async def test_options_flow_incorrect_prefixes(hass: HomeAssistant) -> None:
         data=MOCK_CONFIG_ENTRY,
         options={CONF_PREFIXES: None},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.fritzbox_callmonitor.async_setup_entry",
+        "menuai.components.fritzbox_callmonitor.async_setup_entry",
         return_value=True,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input={CONF_PREFIXES: ""}
         )
 
@@ -413,7 +413,7 @@ async def test_options_flow_incorrect_prefixes(hass: HomeAssistant) -> None:
         assert result["errors"] == {"base": ConnectResult.MALFORMED_PREFIXES}
 
 
-async def test_options_flow_no_prefixes(hass: HomeAssistant) -> None:
+async def test_options_flow_no_prefixes(menuai: menuai) -> None:
     """Test config flow options."""
 
     config_entry = MockConfigEntry(
@@ -422,19 +422,19 @@ async def test_options_flow_no_prefixes(hass: HomeAssistant) -> None:
         data=MOCK_CONFIG_ENTRY,
         options={CONF_PREFIXES: None},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.fritzbox_callmonitor.async_setup_entry",
+        "menuai.components.fritzbox_callmonitor.async_setup_entry",
         return_value=True,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input={}
         )
 

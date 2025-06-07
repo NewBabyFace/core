@@ -4,20 +4,20 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_COLOR_MODE,
     ATTR_SUPPORTED_COLOR_MODES,
     ColorMode,
     LightEntityFeature,
 )
-from homeassistant.const import ATTR_SUPPORTED_FEATURES
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_SUPPORTED_FEATURES
+from menuai.core import menuai
 
 
 @pytest.mark.parametrize("platforms", [("light",)])
-async def test_works(hass: HomeAssistant, setup_evil_genius_labs) -> None:
+async def test_works(menuai: menuai, setup_evil_genius_labs) -> None:
     """Test it works."""
-    state = hass.states.get("light.fibonacci256_23d4")
+    state = menuai.states.get("light.fibonacci256_23d4")
     assert state is not None
     assert state.state == "on"
     assert state.attributes["brightness"] == 128
@@ -27,13 +27,13 @@ async def test_works(hass: HomeAssistant, setup_evil_genius_labs) -> None:
 
 
 @pytest.mark.parametrize("platforms", [("light",)])
-async def test_turn_on_color(hass: HomeAssistant, setup_evil_genius_labs) -> None:
+async def test_turn_on_color(menuai: menuai, setup_evil_genius_labs) -> None:
     """Test turning on with a color."""
     with (
         patch("pyevilgenius.EvilGeniusDevice.set_path_value") as mock_set_path_value,
         patch("pyevilgenius.EvilGeniusDevice.set_rgb_color") as mock_set_rgb_color,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "light",
             "turn_on",
             {
@@ -53,10 +53,10 @@ async def test_turn_on_color(hass: HomeAssistant, setup_evil_genius_labs) -> Non
 
 
 @pytest.mark.parametrize("platforms", [("light",)])
-async def test_turn_on_effect(hass: HomeAssistant, setup_evil_genius_labs) -> None:
+async def test_turn_on_effect(menuai: menuai, setup_evil_genius_labs) -> None:
     """Test turning on with an effect."""
     with patch("pyevilgenius.EvilGeniusDevice.set_path_value") as mock_set_path_value:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "light",
             "turn_on",
             {
@@ -72,10 +72,10 @@ async def test_turn_on_effect(hass: HomeAssistant, setup_evil_genius_labs) -> No
 
 
 @pytest.mark.parametrize("platforms", [("light",)])
-async def test_turn_off(hass: HomeAssistant, setup_evil_genius_labs) -> None:
+async def test_turn_off(menuai: menuai, setup_evil_genius_labs) -> None:
     """Test turning off."""
     with patch("pyevilgenius.EvilGeniusDevice.set_path_value") as mock_set_path_value:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "light",
             "turn_off",
             {

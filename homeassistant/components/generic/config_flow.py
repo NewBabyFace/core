@@ -17,15 +17,15 @@ import PIL.Image
 import voluptuous as vol
 import yarl
 
-from homeassistant.components import websocket_api
-from homeassistant.components.camera import (
+from menuai.components import websocket_api
+from menuai.components.camera import (
     CAMERA_IMAGE_TIMEOUT,
     DOMAIN as CAMERA_DOMAIN,
     DynamicStreamSettings,
     _async_get_image,
 )
-from homeassistant.components.http.view import HomeAssistantView
-from homeassistant.components.stream import (
+from menuai.components.http.view import menuaiView
+from menuai.components.stream import (
     CONF_RTSP_TRANSPORT,
     CONF_USE_WALLCLOCK_AS_TIMESTAMPS,
     HLS_PROVIDER,
@@ -34,13 +34,13 @@ from homeassistant.components.stream import (
     Stream,
     create_stream,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_NAME,
     CONF_PASSWORD,
@@ -49,13 +49,13 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, TemplateError
-from homeassistant.helpers import config_validation as cv, template as template_helper
-from homeassistant.helpers.entity_platform import EntityPlatform
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.setup import async_prepare_setup_platform
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, TemplateError
+from menuai.helpers import config_validation as cv, template as template_helper
+from menuai.helpers.entity_platform import EntityPlatform
+from menuai.helpers.httpx_client import get_async_client
+from menuai.setup import async_prepare_setup_platform
+from menuai.util import slugify
 
 from .camera import GenericCamera, generate_auth
 from .const import (
@@ -84,7 +84,7 @@ SUPPORTED_IMAGE_TYPES = {"png", "jpeg", "gif", "svg+xml", "webp"}
 IMAGE_PREVIEWS_ACTIVE = "previews"
 
 
-class InvalidStreamException(HomeAssistantError):
+class InvalidStreamException(menuaiError):
     """Error to indicate an invalid stream."""
 
     def __init__(self, error: str, details: str | None = None) -> None:
@@ -166,7 +166,7 @@ def get_image_type(image: bytes) -> str | None:
 
 
 async def async_test_still(
-    hass: HomeAssistant, info: Mapping[str, Any]
+    menuai: menuai, info: Mapping[str, Any]
 ) -> tuple[dict[str, str], str | None]:
     """Verify that the still image is valid before we create an entity."""
     fmt = None
@@ -176,7 +176,7 @@ async def async_test_still(
         return {}, info.get(CONF_CONTENT_TYPE, "image/jpeg")
     try:
         if not isinstance(url, template_helper.Template):
-            url = template_helper.Template(url, hass)
+            url = template_helper.Template(url, menuai)
         url = url.async_render(parse_result=False)
     except TemplateError as err:
         _LOGGER.warning("Problem rendering template %s: %s", url, err)
@@ -190,7 +190,7 @@ async def async_test_still(
     verify_ssl = info[CONF_VERIFY_SSL]
     auth = generate_auth(info)
     try:
-        async_client = get_async_client(hass, verify_ssl=verify_ssl)
+        async_client = get_async_client(menuai, verify_ssl=verify_ssl)
         async with asyncio.timeout(GET_IMAGE_TIMEOUT):
             response = await async_client.get(url, auth=auth, timeout=GET_IMAGE_TIMEOUT)
             response.raise_for_status()
@@ -231,14 +231,14 @@ async def async_test_still(
 
 
 def slug(
-    hass: HomeAssistant, template: str | template_helper.Template | None
+    menuai: menuai, template: str | template_helper.Template | None
 ) -> str | None:
     """Convert a camera url into a string suitable for a camera name."""
     url = ""
     if not template:
         return None
     if not isinstance(template, template_helper.Template):
-        template = template_helper.Template(template, hass)
+        template = template_helper.Template(template, menuai)
     try:
         url = template.async_render(parse_result=False)
         return slugify(yarl.URL(url).host)
@@ -248,7 +248,7 @@ def slug(
 
 
 async def async_test_and_preview_stream(
-    hass: HomeAssistant, info: Mapping[str, Any]
+    menuai: menuai, info: Mapping[str, Any]
 ) -> Stream | None:
     """Verify that the stream is valid before we create an entity.
 
@@ -259,7 +259,7 @@ async def async_test_and_preview_stream(
         return None
 
     if not isinstance(stream_source, template_helper.Template):
-        stream_source = template_helper.Template(stream_source, hass)
+        stream_source = template_helper.Template(stream_source, menuai)
     try:
         stream_source = stream_source.async_render(parse_result=False)
     except TemplateError as err:
@@ -285,7 +285,7 @@ async def async_test_and_preview_stream(
             stream_source = str(url)
     try:
         stream = create_stream(
-            hass,
+            menuai,
             stream_source,
             stream_options,
             DynamicStreamSettings(),
@@ -300,25 +300,25 @@ async def async_test_and_preview_stream(
         if err.errno == EIO:  # input/output error
             raise InvalidStreamException("stream_io_error") from err
         raise
-    except HomeAssistantError as err:
+    except menuaiError as err:
         if "Stream integration is not set up" in str(err):
             raise InvalidStreamException("stream_not_set_up") from err
         raise
     await stream.start()
     if not await hls_provider.part_recv(timeout=SOURCE_TIMEOUT):
-        hass.async_create_task(stream.stop())
+        menuai.async_create_task(stream.stop())
         raise InvalidStreamException("timeout")
     return stream
 
 
-def register_still_preview(hass: HomeAssistant) -> None:
+def register_still_preview(menuai: menuai) -> None:
     """Set up still image preview for camera feeds during config flow."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
-    if not hass.data[DOMAIN].get(IMAGE_PREVIEWS_ACTIVE):
+    if not menuai.data[DOMAIN].get(IMAGE_PREVIEWS_ACTIVE):
         _LOGGER.debug("Registering camera image preview handler")
-        hass.http.register_view(CameraImagePreview(hass))
-    hass.data[DOMAIN][IMAGE_PREVIEWS_ACTIVE] = True
+        menuai.http.register_view(CameraImagePreview(menuai))
+    menuai.data[DOMAIN][IMAGE_PREVIEWS_ACTIVE] = True
 
 
 class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -345,7 +345,7 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle the start of the config flow."""
         errors = {}
-        hass = self.hass
+        menuai = self.menuai
         if user_input:
             # Secondary validation because serialised vol can't seem to handle this complexity:
             if not user_input.get(CONF_STILL_IMAGE_URL) and not user_input.get(
@@ -353,10 +353,10 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
             ):
                 errors["base"] = "no_still_image_or_stream_url"
             else:
-                errors, still_format = await async_test_still(hass, user_input)
+                errors, still_format = await async_test_still(menuai, user_input)
                 try:
                     self.preview_stream = await async_test_and_preview_stream(
-                        hass, user_input
+                        menuai, user_input
                     )
                 except InvalidStreamException as err:
                     errors[CONF_STREAM_SOURCE] = str(err)
@@ -366,7 +366,7 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
                     still_url = user_input.get(CONF_STILL_IMAGE_URL)
                     stream_url = user_input.get(CONF_STREAM_SOURCE)
                     name = (
-                        slug(hass, still_url) or slug(hass, stream_url) or DEFAULT_NAME
+                        slug(menuai, still_url) or slug(menuai, stream_url) or DEFAULT_NAME
                     )
                     self.user_input = user_input
                     self.title = name
@@ -396,7 +396,7 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title=self.title, data={}, options=self.user_input
             )
-        register_still_preview(self.hass)
+        register_still_preview(self.menuai)
         return self.async_show_form(
             step_id="user_confirm",
             data_schema=vol.Schema(
@@ -409,9 +409,9 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
 class GenericOptionsFlowHandler(OptionsFlow):
@@ -428,7 +428,7 @@ class GenericOptionsFlowHandler(OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage Generic IP Camera options."""
         errors: dict[str, str] = {}
-        hass = self.hass
+        menuai = self.menuai
 
         if user_input:
             # Secondary validation because serialised vol can't seem to handle this complexity:
@@ -437,10 +437,10 @@ class GenericOptionsFlowHandler(OptionsFlow):
             ):
                 errors["base"] = "no_still_image_or_stream_url"
             else:
-                errors, still_format = await async_test_still(hass, user_input)
+                errors, still_format = await async_test_still(menuai, user_input)
                 try:
                     self.preview_stream = await async_test_and_preview_stream(
-                        hass, user_input
+                        menuai, user_input
                     )
                 except InvalidStreamException as err:
                     errors[CONF_STREAM_SOURCE] = str(err)
@@ -484,7 +484,7 @@ class GenericOptionsFlowHandler(OptionsFlow):
                 title=self.config_entry.title,
                 data=self.user_input,
             )
-        register_still_preview(self.hass)
+        register_still_preview(self.menuai)
         return self.async_show_form(
             step_id="user_confirm",
             data_schema=vol.Schema(
@@ -497,37 +497,37 @@ class GenericOptionsFlowHandler(OptionsFlow):
         )
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
-class CameraImagePreview(HomeAssistantView):
+class CameraImagePreview(menuaiView):
     """Camera view to temporarily serve an image."""
 
     url = "/api/generic/preview_flow_image/{flow_id}"
     name = "api:generic:preview_flow_image"
     requires_auth = False
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialise."""
-        self.hass = hass
+        self.menuai = menuai
 
     async def get(self, request: web.Request, flow_id: str) -> web.Response:
         """Start a GET request."""
         _LOGGER.debug("processing GET request for flow_id=%s", flow_id)
         flow = cast(
             GenericIPCamConfigFlow,
-            self.hass.config_entries.flow._progress.get(flow_id),  # noqa: SLF001
+            self.menuai.config_entries.flow._progress.get(flow_id),  # noqa: SLF001
         ) or cast(
             GenericOptionsFlowHandler,
-            self.hass.config_entries.options._progress.get(flow_id),  # noqa: SLF001
+            self.menuai.config_entries.options._progress.get(flow_id),  # noqa: SLF001
         )
         if not flow:
             _LOGGER.warning("Unknown flow while getting image preview")
             raise web.HTTPNotFound
         user_input = flow.preview_image_settings
-        camera = GenericCamera(self.hass, user_input, flow_id, "preview")
+        camera = GenericCamera(self.menuai, user_input, flow_id, "preview")
         if not camera.is_on:
             _LOGGER.debug("Camera is off")
             raise web.HTTPServiceUnavailable
@@ -548,7 +548,7 @@ class CameraImagePreview(HomeAssistantView):
 )
 @websocket_api.async_response
 async def ws_start_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -560,19 +560,19 @@ async def ws_start_preview(
     if msg.get("flow_type", "config_flow") == "config_flow":
         flow = cast(
             GenericIPCamConfigFlow,
-            hass.config_entries.flow._progress.get(flow_id),  # noqa: SLF001
+            menuai.config_entries.flow._progress.get(flow_id),  # noqa: SLF001
         )
     else:  # (flow type == "options flow")
         flow = cast(
             GenericOptionsFlowHandler,
-            hass.config_entries.options._progress.get(flow_id),  # noqa: SLF001
+            menuai.config_entries.options._progress.get(flow_id),  # noqa: SLF001
         )
     user_input = flow.preview_image_settings
 
     # Create an EntityPlatform, needed for name translations
-    platform = await async_prepare_setup_platform(hass, {}, CAMERA_DOMAIN, DOMAIN)
+    platform = await async_prepare_setup_platform(menuai, {}, CAMERA_DOMAIN, DOMAIN)
     entity_platform = EntityPlatform(
-        hass=hass,
+        menuai=menuai,
         logger=_LOGGER,
         domain=CAMERA_DOMAIN,
         platform_name=DOMAIN,

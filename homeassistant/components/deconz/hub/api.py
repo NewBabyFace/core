@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 from pydeconz import DeconzSession, errors
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
 
 from ..const import LOGGER
 from ..errors import AuthenticationRequired, CannotConnect
@@ -19,10 +19,10 @@ if TYPE_CHECKING:
 
 
 async def get_deconz_api(
-    hass: HomeAssistant, config_entry: DeconzConfigEntry
+    menuai: menuai, config_entry: DeconzConfigEntry
 ) -> DeconzSession:
     """Create a gateway object and verify configuration."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     config = DeconzConfig.from_config_entry(config_entry)
     api = DeconzSession(session, config.host, config.port, config.api_key)

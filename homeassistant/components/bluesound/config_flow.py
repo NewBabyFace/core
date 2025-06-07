@@ -7,10 +7,10 @@ from pyblu import Player, SyncStatus
 from pyblu.errors import PlayerUnreachableError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 from .media_player import DEFAULT_PORT
@@ -37,7 +37,7 @@ class BluesoundConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle a flow initiated by the user."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             async with Player(
                 user_input[CONF_HOST], user_input[CONF_PORT], session=session
             ) as player:
@@ -81,7 +81,7 @@ class BluesoundConfigFlow(ConfigFlow, domain=DOMAIN):
         if discovery_info.port is not None:
             self._port = discovery_info.port
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         try:
             async with Player(
                 discovery_info.host, self._port, session=session

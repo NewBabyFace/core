@@ -10,8 +10,8 @@ from weatherflow4py.models.rest.observation import ObservationStationREST
 from weatherflow4py.models.rest.stations import StationsResponseREST
 from weatherflow4py.models.rest.unified import WeatherFlowDataREST
 
-from homeassistant.components.weatherflow_cloud.const import DOMAIN
-from homeassistant.const import CONF_API_TOKEN
+from menuai.components.weatherflow_cloud.const import DOMAIN
+from menuai.const import CONF_API_TOKEN
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -20,7 +20,7 @@ from tests.common import MockConfigEntry, load_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.weatherflow_cloud.async_setup_entry",
+        "menuai.components.weatherflow_cloud.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -103,7 +103,7 @@ def mock_api():
     }
 
     with patch(
-        "homeassistant.components.weatherflow_cloud.coordinator.WeatherFlowRestAPI",
+        "menuai.components.weatherflow_cloud.coordinator.WeatherFlowRestAPI",
         autospec=True,
     ) as mock_api_class:
         # Create an instance of AsyncMock for the API

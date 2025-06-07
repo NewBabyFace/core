@@ -18,8 +18,8 @@ from kasa import (
 )
 import voluptuous as vol
 
-from homeassistant.components import ffmpeg, stream
-from homeassistant.config_entries import (
+from menuai.components import ffmpeg, stream
+from menuai.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
     ConfigEntry,
@@ -27,7 +27,7 @@ from homeassistant.config_entries import (
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ALIAS,
     CONF_DEVICE,
     CONF_HOST,
@@ -38,10 +38,10 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.typing import DiscoveryInfoType
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.typing import DiscoveryInfoType
 
 from . import (
     async_discover_devices,
@@ -176,9 +176,9 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured(updates={CONF_HOST: host})
         self._async_abort_entries_match({CONF_HOST: host})
         self.host = host
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
-        credentials = await get_credentials(self.hass)
+        credentials = await get_credentials(self.menuai)
         try:
             # If integration discovery there will be a device or None for dhcp
             if device:
@@ -209,7 +209,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
         assert self._discovered_device is not None
         errors = {}
 
-        credentials = await get_credentials(self.hass)
+        credentials = await get_credentials(self.menuai)
         if credentials and credentials != self._discovered_device.config.credentials:
             try:
                 device = await self._async_try_connect(
@@ -239,8 +239,8 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
                 placeholders["error"] = str(ex)
             else:
                 self._discovered_device = device
-                await set_credentials(self.hass, username, password)
-                self.hass.async_create_task(
+                await set_credentials(self.menuai, username, password)
+                self.menuai.async_create_task(
                     self._async_reload_requires_auth_entries(), eager_start=False
                 )
                 if self._async_supports_camera_credentials(device):
@@ -335,7 +335,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match(match_dict)
 
             self.host = host
-            credentials = await get_credentials(self.hass)
+            credentials = await get_credentials(self.menuai)
             try:
                 device = await self._async_try_discover_and_update(
                     host,
@@ -408,8 +408,8 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "cannot_connect"
                     placeholders["error"] = "try_connect_all failed"
                 else:
-                    await set_credentials(self.hass, username, password)
-                    self.hass.async_create_task(
+                    await set_credentials(self.menuai, username, password)
+                    self.menuai.async_create_task(
                         self._async_reload_requires_auth_entries(), eager_start=False
                     )
                     if self._async_supports_camera_credentials(device):
@@ -467,7 +467,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
             # ffmpeg.async_get_image as some cameras do not work with HLS
             # and the frontend will fallback to mpeg on error
             try:
-                await stream.async_check_stream_client_error(self.hass, rtsp_url)
+                await stream.async_check_stream_client_error(self.menuai, rtsp_url)
             except stream.StreamOpenClientError as ex:
                 if ex.error_code is stream.StreamClientError.Unauthorized:
                     errors["base"] = "invalid_camera_auth"
@@ -475,14 +475,14 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
                     _LOGGER.debug(
                         "Device %s client error checking stream: %s", device.host, ex
                     )
-                    if await ffmpeg.async_get_image(self.hass, rtsp_url):
+                    if await ffmpeg.async_get_image(self.menuai, rtsp_url):
                         return self._create_camera_entry(device, un, pw)
 
                     errors["base"] = "cannot_connect_camera"
                     placeholders["error"] = str(ex)
             except Exception as ex:  # noqa: BLE001
                 _LOGGER.debug("Device %s error checking stream: %s", device.host, ex)
-                if await ffmpeg.async_get_image(self.hass, rtsp_url):
+                if await ffmpeg.async_get_image(self.menuai, rtsp_url):
                     return self._create_camera_entry(device, un, pw)
 
                 errors["base"] = "cannot_connect_camera"
@@ -531,7 +531,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(mac, raise_on_progress=False)
             self._discovered_device = self._discovered_devices[mac]
             self.host = self._discovered_device.host
-            credentials = await get_credentials(self.hass)
+            credentials = await get_credentials(self.menuai)
 
             try:
                 device = await self._async_try_connect(
@@ -550,7 +550,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
         configured_devices = {
             entry.unique_id for entry in self._async_current_entries()
         }
-        self._discovered_devices = await async_discover_devices(self.hass)
+        self._discovered_devices = await async_discover_devices(self.menuai)
         devices_name = {
             formatted_mac: (
                 f"{device.alias or mac_alias(device.mac)} {device.model} ({device.host}) {formatted_mac}"
@@ -568,7 +568,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_reload_requires_auth_entries(self) -> None:
         """Reload all config entries after auth update."""
-        _config_entries = self.hass.config_entries
+        _config_entries = self.menuai.config_entries
 
         if self.source == SOURCE_REAUTH:
             await _config_entries.async_reload(self._get_reauth_entry().entry_id)
@@ -644,7 +644,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
             device = await Discover.try_connect_all(
                 host,
                 credentials=credentials,
-                http_client=create_async_tplink_clientsession(self.hass),
+                http_client=create_async_tplink_clientsession(self.menuai),
                 port=port,
             )
         else:
@@ -695,7 +695,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         if self._discovered_device.config.uses_http:
             self._discovered_device.config.http_client = (
-                create_async_tplink_clientsession(self.hass)
+                create_async_tplink_clientsession(self.menuai)
             )
         await self._discovered_device.update()
         return self._discovered_device
@@ -714,7 +714,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
             config.credentials = credentials
         config.timeout = CONNECT_TIMEOUT
         if config.uses_http:
-            config.http_client = create_async_tplink_clientsession(self.hass)
+            config.http_client = create_async_tplink_clientsession(self.menuai)
 
         self._discovered_device = await Device.connect(config=config)
         await self.async_set_unique_id(
@@ -776,12 +776,12 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
                         dr.format_mac(device.mac),
                         raise_on_progress=False,
                     )
-                    await set_credentials(self.hass, username, password)
+                    await set_credentials(self.menuai, username, password)
                     if updates := self._get_config_updates(reauth_entry, host, device):
-                        self.hass.config_entries.async_update_entry(
+                        self.menuai.config_entries.async_update_entry(
                             reauth_entry, data=updates
                         )
-                    self.hass.async_create_task(
+                    self.menuai.async_create_task(
                         self._async_reload_requires_auth_entries(), eager_start=False
                     )
                     return self.async_abort(reason="reauth_successful")
@@ -818,7 +818,7 @@ class TPLinkConfigFlow(ConfigFlow, domain=DOMAIN):
             host, port = self._async_get_host_port(host)
 
             self.host = host
-            credentials = await get_credentials(self.hass)
+            credentials = await get_credentials(self.menuai)
             try:
                 device = await self._async_try_discover_and_update(
                     host,

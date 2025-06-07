@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.backup import DOMAIN
-from homeassistant.components.backup.manager import NewBackup, WrittenBackup
-from homeassistant.core import HomeAssistant
+from menuai.components.backup import DOMAIN
+from menuai.components.backup.manager import NewBackup, WrittenBackup
+from menuai.core import menuai
 
 from .common import TEST_BACKUP_PATH_ABC123, TEST_BACKUP_PATH_DEF456
 
@@ -19,10 +19,10 @@ from tests.common import get_fixture_path
 
 
 @pytest.fixture(name="instance_id", autouse=True)
-def instance_id_fixture(hass: HomeAssistant) -> Generator[None]:
+def instance_id_fixture(menuai: menuai) -> Generator[None]:
     """Mock instance ID."""
     with patch(
-        "homeassistant.components.backup.manager.instance_id.async_get",
+        "menuai.components.backup.manager.instance_id.async_get",
         return_value="our_uuid",
     ):
         yield
@@ -32,7 +32,7 @@ def instance_id_fixture(hass: HomeAssistant) -> Generator[None]:
 def mocked_json_bytes_fixture() -> Generator[Mock]:
     """Mock json_bytes."""
     with patch(
-        "homeassistant.components.backup.manager.json_bytes",
+        "menuai.components.backup.manager.json_bytes",
         return_value=b"{}",  # Empty JSON
     ) as mocked_json_bytes:
         yield mocked_json_bytes
@@ -42,19 +42,19 @@ def mocked_json_bytes_fixture() -> Generator[Mock]:
 def mocked_tarfile_fixture() -> Generator[Mock]:
     """Mock tarfile."""
     with patch(
-        "homeassistant.components.backup.manager.SecureTarFile"
+        "menuai.components.backup.manager.SecureTarFile"
     ) as mocked_tarfile:
         yield mocked_tarfile
 
 
 @pytest.fixture(name="path_glob")
-def path_glob_fixture(hass: HomeAssistant) -> Generator[MagicMock]:
+def path_glob_fixture(menuai: menuai) -> Generator[MagicMock]:
     """Mock path glob."""
     with patch(
         "pathlib.Path.glob",
         return_value=[
-            Path(hass.config.path()) / "backups" / TEST_BACKUP_PATH_ABC123,
-            Path(hass.config.path()) / "backups" / TEST_BACKUP_PATH_DEF456,
+            Path(menuai.config.path()) / "backups" / TEST_BACKUP_PATH_ABC123,
+            Path(menuai.config.path()) / "backups" / TEST_BACKUP_PATH_DEF456,
         ],
     ) as path_glob:
         yield path_glob
@@ -119,7 +119,7 @@ def mock_create_backup() -> Generator[AsyncMock]:
     fut: Future[MagicMock] = Future()
     fut.set_result(mock_written_backup)
     with patch(
-        "homeassistant.components.backup.CoreBackupReaderWriter.async_create_backup"
+        "menuai.components.backup.CoreBackupReaderWriter.async_create_backup"
     ) as mock_create_backup:
         mock_create_backup.return_value = (NewBackup(backup_job_id="abc123"), fut)
         yield mock_create_backup
@@ -127,7 +127,7 @@ def mock_create_backup() -> Generator[AsyncMock]:
 
 @pytest.fixture(name="mock_backup_generation")
 def mock_backup_generation_fixture(
-    hass: HomeAssistant, mocked_json_bytes: Mock, mocked_tarfile: Mock
+    menuai: menuai, mocked_json_bytes: Mock, mocked_tarfile: Mock
 ) -> Generator[None]:
     """Mock backup generator."""
 
@@ -143,8 +143,8 @@ def mock_backup_generation_fixture(
             "pathlib.Path.exists",
             lambda x: x
             not in (
-                Path(hass.config.path("backups")),
-                Path(hass.config.path("tmp_backups")),
+                Path(menuai.config.path("backups")),
+                Path(menuai.config.path("tmp_backups")),
             ),
         ),
         patch(
@@ -156,7 +156,7 @@ def mock_backup_generation_fixture(
             MagicMock(),
         ),
         patch(
-            "homeassistant.components.backup.manager.HAVERSION",
+            "menuai.components.backup.manager.HAVERSION",
             "2025.1.0",
         ),
     ):
@@ -167,11 +167,11 @@ def mock_backup_generation_fixture(
 def mock_backups() -> Generator[None]:
     """Fixture to setup test backups."""
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.components.backup import backup as core_backup
+    from menuai.components.backup import backup as core_backup
 
     class CoreLocalBackupAgent(core_backup.CoreLocalBackupAgent):
-        def __init__(self, hass: HomeAssistant) -> None:
-            super().__init__(hass)
+        def __init__(self, menuai: menuai) -> None:
+            super().__init__(menuai)
             self._backup_dir = get_fixture_path("test_backups", DOMAIN)
 
     with patch.object(core_backup, "CoreLocalBackupAgent", CoreLocalBackupAgent):

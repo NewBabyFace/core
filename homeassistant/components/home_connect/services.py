@@ -17,11 +17,11 @@ from aiohomeconnect.model import (
 from aiohomeconnect.model.error import HomeConnectError
 import voluptuous as vol
 
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from .const import (
     AFFECTS_TO_ACTIVE_PROGRAM,
@@ -169,9 +169,9 @@ SERVICE_COMMAND_SCHEMA = vol.Schema({vol.Required(ATTR_DEVICE_ID): str})
 
 
 async def _get_client_and_ha_id(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> tuple[HomeConnectClient, str]:
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entry = device_registry.async_get(device_id)
     if device_entry is None:
         raise ServiceValidationError(
@@ -183,7 +183,7 @@ async def _get_client_and_ha_id(
         )
     entry: HomeConnectConfigEntry | None = None
     for entry_id in device_entry.config_entries:
-        _entry = hass.config_entries.async_get_entry(entry_id)
+        _entry = menuai.config_entries.async_get_entry(entry_id)
         assert _entry
         if _entry.domain == DOMAIN:
             entry = cast(HomeConnectConfigEntry, _entry)
@@ -219,7 +219,7 @@ async def _get_client_and_ha_id(
 async def _async_service_program(call: ServiceCall, start: bool) -> None:
     """Execute calls to services taking a program."""
     program = call.data[ATTR_PROGRAM]
-    client, ha_id = await _get_client_and_ha_id(call.hass, call.data[ATTR_DEVICE_ID])
+    client, ha_id = await _get_client_and_ha_id(call.menuai, call.data[ATTR_DEVICE_ID])
 
     option_key = call.data.get(ATTR_KEY)
     options = (
@@ -235,7 +235,7 @@ async def _async_service_program(call: ServiceCall, start: bool) -> None:
     )
 
     async_create_issue(
-        call.hass,
+        call.menuai,
         DOMAIN,
         "deprecated_set_program_and_option_actions",
         breaks_in_ha_version="2025.9.0",
@@ -293,7 +293,7 @@ async def _async_service_program(call: ServiceCall, start: bool) -> None:
                 ha_id, program_key=program, options=options
             )
     except HomeConnectError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="start_program" if start else "select_program",
             translation_placeholders={
@@ -308,10 +308,10 @@ async def _async_service_set_program_options(call: ServiceCall, active: bool) ->
     option_key = call.data[ATTR_KEY]
     value = call.data[ATTR_VALUE]
     unit = call.data.get(ATTR_UNIT)
-    client, ha_id = await _get_client_and_ha_id(call.hass, call.data[ATTR_DEVICE_ID])
+    client, ha_id = await _get_client_and_ha_id(call.menuai, call.data[ATTR_DEVICE_ID])
 
     async_create_issue(
-        call.hass,
+        call.menuai,
         DOMAIN,
         "deprecated_set_program_and_option_actions",
         breaks_in_ha_version="2025.9.0",
@@ -364,7 +364,7 @@ async def _async_service_set_program_options(call: ServiceCall, active: bool) ->
                 unit=unit,
             )
     except HomeConnectError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="set_options_active_program"
             if active
@@ -379,10 +379,10 @@ async def _async_service_set_program_options(call: ServiceCall, active: bool) ->
 
 async def _async_service_command(call: ServiceCall, command_key: CommandKey) -> None:
     """Execute calls to services executing a command."""
-    client, ha_id = await _get_client_and_ha_id(call.hass, call.data[ATTR_DEVICE_ID])
+    client, ha_id = await _get_client_and_ha_id(call.menuai, call.data[ATTR_DEVICE_ID])
 
     async_create_issue(
-        call.hass,
+        call.menuai,
         DOMAIN,
         "deprecated_command_actions",
         breaks_in_ha_version="2025.9.0",
@@ -395,7 +395,7 @@ async def _async_service_command(call: ServiceCall, command_key: CommandKey) -> 
     try:
         await client.put_command(ha_id, command_key=command_key, value=True)
     except HomeConnectError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="execute_command",
             translation_placeholders={
@@ -419,12 +419,12 @@ async def async_service_setting(call: ServiceCall) -> None:
     """Service for changing a setting."""
     key = call.data[ATTR_KEY]
     value = call.data[ATTR_VALUE]
-    client, ha_id = await _get_client_and_ha_id(call.hass, call.data[ATTR_DEVICE_ID])
+    client, ha_id = await _get_client_and_ha_id(call.menuai, call.data[ATTR_DEVICE_ID])
 
     try:
         await client.set_setting(ha_id, setting_key=key, value=value)
     except HomeConnectError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="set_setting",
             translation_placeholders={
@@ -455,7 +455,7 @@ async def async_service_set_program_and_options(call: ServiceCall) -> None:
     data = dict(call.data)
     program = data.pop(ATTR_PROGRAM, None)
     affects_to = data.pop(ATTR_AFFECTS_TO)
-    client, ha_id = await _get_client_and_ha_id(call.hass, data.pop(ATTR_DEVICE_ID))
+    client, ha_id = await _get_client_and_ha_id(call.menuai, data.pop(ATTR_DEVICE_ID))
 
     options: list[Option] = []
 
@@ -507,7 +507,7 @@ async def async_service_set_program_and_options(call: ServiceCall) -> None:
     try:
         await method_call
     except HomeConnectError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key=exception_translation_key,
             translation_placeholders={
@@ -522,49 +522,49 @@ async def async_service_start_program(call: ServiceCall) -> None:
     await _async_service_program(call, True)
 
 
-def register_actions(hass: HomeAssistant) -> None:
+def register_actions(menuai: menuai) -> None:
     """Register custom actions."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_OPTION_ACTIVE,
         async_service_option_active,
         schema=SERVICE_OPTION_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_OPTION_SELECTED,
         async_service_option_selected,
         schema=SERVICE_OPTION_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SETTING, async_service_setting, schema=SERVICE_SETTING_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_PAUSE_PROGRAM,
         async_service_pause_program,
         schema=SERVICE_COMMAND_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_RESUME_PROGRAM,
         async_service_resume_program,
         schema=SERVICE_COMMAND_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SELECT_PROGRAM,
         async_service_select_program,
         schema=SERVICE_PROGRAM_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_START_PROGRAM,
         async_service_start_program,
         schema=SERVICE_PROGRAM_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_PROGRAM_AND_OPTIONS,
         async_service_set_program_and_options,

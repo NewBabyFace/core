@@ -19,8 +19,8 @@ from soco.ms_data_structures import MusicServiceItem
 from sonos_websocket.exception import SonosWebsocketError
 import voluptuous as vol
 
-from homeassistant.components import media_source, spotify
-from homeassistant.components.media_player import (
+from menuai.components import media_source, spotify
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_ALBUM_NAME,
     ATTR_MEDIA_ANNOUNCE,
@@ -38,16 +38,16 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.components.plex import PLEX_URI_SCHEME
-from homeassistant.components.plex.services import process_plex_payload
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TIME
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform, service
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.components.plex import PLEX_URI_SCHEME
+from menuai.components.plex.services import process_plex_payload
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TIME
+from menuai.core import menuai, ServiceCall, SupportsResponse, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform, service
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from . import UnjoinData, media_browser
 from .const import (
@@ -107,7 +107,7 @@ ATTR_QUEUE_POSITION = "queue_position"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -120,7 +120,7 @@ async def async_setup_entry(
         _LOGGER.debug("Creating media_player on %s", speaker.zone_name)
         async_add_entities([SonosMediaPlayerEntity(speaker)])
 
-    @service.verify_domain_control(hass, DOMAIN)
+    @service.verify_domain_control(menuai, DOMAIN)
     async def async_service_handle(service_call: ServiceCall) -> None:
         """Handle dispatched services."""
         assert platform is not None
@@ -136,26 +136,26 @@ async def async_setup_entry(
 
         if service_call.service == SERVICE_SNAPSHOT:
             await SonosSpeaker.snapshot_multi(
-                hass, speakers, service_call.data[ATTR_WITH_GROUP]
+                menuai, speakers, service_call.data[ATTR_WITH_GROUP]
             )
         elif service_call.service == SERVICE_RESTORE:
             await SonosSpeaker.restore_multi(
-                hass, speakers, service_call.data[ATTR_WITH_GROUP]
+                menuai, speakers, service_call.data[ATTR_WITH_GROUP]
             )
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SONOS_CREATE_MEDIA_PLAYER, async_create_entities)
+        async_dispatcher_connect(menuai, SONOS_CREATE_MEDIA_PLAYER, async_create_entities)
     )
 
     join_unjoin_schema = cv.make_entity_service_schema(
         {vol.Optional(ATTR_WITH_GROUP, default=True): cv.boolean}
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SNAPSHOT, async_service_handle, join_unjoin_schema
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_RESTORE, async_service_handle, join_unjoin_schema
     )
 
@@ -236,12 +236,12 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
         super().__init__(speaker)
         self._attr_unique_id = self.soco.uid
 
-    async def async_added_to_hass(self) -> None:
-        """Handle common setup when added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle common setup when added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SONOS_MEDIA_UPDATED,
                 self.async_write_media_state,
             )
@@ -299,9 +299,9 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
     async def _async_fallback_poll(self) -> None:
         """Retrieve latest state by polling."""
         await (
-            self.hass.data[DATA_SONOS].favorites[self.speaker.household_id].async_poll()
+            self.menuai.data[DATA_SONOS].favorites[self.speaker.household_id].async_poll()
         )
-        await self.hass.async_add_executor_job(self._update)
+        await self.menuai.async_add_executor_job(self._update)
 
     def _update(self) -> None:
         """Retrieve latest state by polling."""
@@ -548,9 +548,9 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
             is_radio = media_id.startswith("media-source://radio_browser/")
             media_type = MediaType.MUSIC
             media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
-            media_id = async_process_play_media_url(self.hass, media.url)
+            media_id = async_process_play_media_url(self.menuai, media.url)
 
         if kwargs.get(ATTR_MEDIA_ANNOUNCE):
             volume = kwargs.get("extra", {}).get("volume")
@@ -558,11 +558,11 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
             try:
                 assert self.speaker.websocket
                 response, _ = await self.speaker.websocket.play_clip(
-                    async_process_play_media_url(self.hass, media_id),
+                    async_process_play_media_url(self.menuai, media_id),
                     volume=volume,
                 )
             except SonosWebsocketError as exc:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Error when calling Sonos websocket: {exc}"
                 ) from exc
             if response.get("success"):
@@ -577,7 +577,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
                     response,
                 )
             else:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="announce_media_error",
                     translation_placeholders={
@@ -590,7 +590,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
             media_type = spotify.resolve_spotify_media_type(media_type)
             media_id = spotify.spotify_uri_from_media_browser_url(media_id)
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(self._play_media, media_type, media_id, is_radio, **kwargs)
         )
 
@@ -613,7 +613,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
         if media_id and media_id.startswith(PLEX_URI_SCHEME):
             plex_plugin = self.speaker.plex_plugin
             result = process_plex_payload(
-                self.hass, media_type, media_id, supports_playqueues=False
+                self.menuai, media_type, media_id, supports_playqueues=False
             )
             if result.shuffle:
                 self.set_shuffle(True)
@@ -663,7 +663,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
             )
         elif media_type in {MediaType.MUSIC, MediaType.TRACK}:
             # If media ID is a relative URL, we serve it from HA.
-            media_id = async_process_play_media_url(self.hass, media_id)
+            media_id = async_process_play_media_url(self.menuai, media_id)
 
             if enqueue == MediaPlayerEnqueue.ADD:
                 soco.add_uri_to_queue(media_id, timeout=LONG_SERVICE_TIMEOUT)
@@ -850,7 +850,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
             media_content_type in {MediaType.ALBUM, MediaType.ARTIST}
             and media_content_id
         ):
-            item = await self.hass.async_add_executor_job(
+            item = await self.menuai.async_add_executor_job(
                 media_browser.get_media,
                 self.media.library,
                 media_content_id,
@@ -868,7 +868,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_browser.async_browse_media(
-            self.hass,
+            self.menuai,
             self.speaker,
             self.media,
             self.get_browse_image_url,
@@ -880,12 +880,12 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
         """Join `group_members` as a player group with the current player."""
         speakers = []
         for entity_id in group_members:
-            if speaker := self.hass.data[DATA_SONOS].entity_id_mappings.get(entity_id):
+            if speaker := self.menuai.data[DATA_SONOS].entity_id_mappings.get(entity_id):
                 speakers.append(speaker)
             else:
-                raise HomeAssistantError(f"Not a known Sonos entity_id: {entity_id}")
+                raise menuaiError(f"Not a known Sonos entity_id: {entity_id}")
 
-        await SonosSpeaker.join_multi(self.hass, self.speaker, speakers)
+        await SonosSpeaker.join_multi(self.menuai, self.speaker, speakers)
 
     async def async_unjoin_player(self) -> None:
         """Remove this player from any group.
@@ -894,7 +894,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
         which optimizes the order in which speakers are removed from their groups.
         Removing coordinators last better preserves playqueues on the speakers.
         """
-        sonos_data = self.hass.data[DATA_SONOS]
+        sonos_data = self.menuai.data[DATA_SONOS]
         household_id = self.speaker.household_id
 
         async def async_process_unjoin(now: datetime.datetime) -> None:
@@ -903,7 +903,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
             _LOGGER.debug(
                 "Processing unjoins for %s", [x.zone_name for x in unjoin_data.speakers]
             )
-            await SonosSpeaker.unjoin_multi(self.hass, unjoin_data.speakers)
+            await SonosSpeaker.unjoin_multi(self.menuai, unjoin_data.speakers)
             unjoin_data.event.set()
 
         if unjoin_data := sonos_data.unjoin_data.get(household_id):
@@ -912,7 +912,7 @@ class SonosMediaPlayerEntity(SonosEntity, MediaPlayerEntity):
             unjoin_data = sonos_data.unjoin_data[household_id] = UnjoinData(
                 speakers=[self.speaker]
             )
-            async_call_later(self.hass, UNJOIN_SERVICE_TIMEOUT, async_process_unjoin)
+            async_call_later(self.menuai, UNJOIN_SERVICE_TIMEOUT, async_process_unjoin)
 
         _LOGGER.debug("Requesting unjoin for %s", self.speaker.zone_name)
         await unjoin_data.event.wait()

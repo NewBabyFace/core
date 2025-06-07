@@ -2,36 +2,36 @@
 
 from zwave_me_ws import ZWaveMe, ZWaveMeData
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_TOKEN, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_TOKEN, CONF_URL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import dispatcher_send
 
 from .const import DOMAIN, PLATFORMS, ZWaveMePlatform
 
 ZWAVE_ME_PLATFORMS = [platform.value for platform in ZWaveMePlatform]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Z-Wave-Me from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-    controller = hass.data[DOMAIN][entry.entry_id] = ZWaveMeController(hass, entry)
+    menuai.data.setdefault(DOMAIN, {})
+    controller = menuai.data[DOMAIN][entry.entry_id] = ZWaveMeController(menuai, entry)
     if await controller.async_establish_connection():
-        await async_setup_platforms(hass, entry, controller)
-        registry = dr.async_get(hass)
+        await async_setup_platforms(menuai, entry, controller)
+        registry = dr.async_get(menuai)
         controller.remove_stale_devices(registry)
         return True
     raise ConfigEntryNotReady
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        controller = hass.data[DOMAIN].pop(entry.entry_id)
+        controller = menuai.data[DOMAIN].pop(entry.entry_id)
         await controller.zwave_api.close_ws()
     return unload_ok
 
@@ -39,10 +39,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class ZWaveMeController:
     """Main ZWave-Me API class."""
 
-    def __init__(self, hass: HomeAssistant, config: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config: ConfigEntry) -> None:
         """Create the API instance."""
         self.device_ids: set = set()
-        self._hass = hass
+        self._menuai = menuai
         self.config = config
         self.zwave_api = ZWaveMe(
             on_device_create=self.on_device_create,
@@ -63,10 +63,10 @@ class ZWaveMeController:
     def add_device(self, device: ZWaveMeData) -> None:
         """Send signal to create device."""
         if device.id in self.device_ids:
-            dispatcher_send(self._hass, f"ZWAVE_ME_INFO_{device.id}", device)
+            dispatcher_send(self._menuai, f"ZWAVE_ME_INFO_{device.id}", device)
         else:
             dispatcher_send(
-                self._hass, f"ZWAVE_ME_NEW_{device.deviceType.upper()}", device
+                self._menuai, f"ZWAVE_ME_NEW_{device.deviceType.upper()}", device
             )
             self.device_ids.add(device.id)
 
@@ -78,15 +78,15 @@ class ZWaveMeController:
 
     def on_device_update(self, new_info: ZWaveMeData) -> None:
         """Send signal to update device."""
-        dispatcher_send(self._hass, f"ZWAVE_ME_INFO_{new_info.id}", new_info)
+        dispatcher_send(self._menuai, f"ZWAVE_ME_INFO_{new_info.id}", new_info)
 
     def on_device_unavailable(self, device_id: str) -> None:
         """Send signal to set device unavailable."""
-        dispatcher_send(self._hass, f"ZWAVE_ME_UNAVAILABLE_{device_id}")
+        dispatcher_send(self._menuai, f"ZWAVE_ME_UNAVAILABLE_{device_id}")
 
     def on_device_destroy(self, device_id: str) -> None:
         """Send signal to destroy device."""
-        dispatcher_send(self._hass, f"ZWAVE_ME_DESTROY_{device_id}")
+        dispatcher_send(self._menuai, f"ZWAVE_ME_DESTROY_{device_id}")
 
     def remove_stale_devices(self, registry: dr.DeviceRegistry):
         """Remove old-format devices in the registry."""
@@ -99,10 +99,10 @@ class ZWaveMeController:
 
 
 async def async_setup_platforms(
-    hass: HomeAssistant, entry: ConfigEntry, controller: ZWaveMeController
+    menuai: menuai, entry: ConfigEntry, controller: ZWaveMeController
 ) -> None:
     """Set up platforms."""
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     controller.platforms_inited = True
 
-    await hass.async_add_executor_job(controller.zwave_api.get_devices)
+    await menuai.async_add_executor_job(controller.zwave_api.get_devices)

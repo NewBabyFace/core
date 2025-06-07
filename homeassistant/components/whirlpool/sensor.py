@@ -8,16 +8,16 @@ from typing import override
 from whirlpool.appliance import Appliance
 from whirlpool.washerdryer import MachineState, WasherDryer
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.dt import utcnow
 
 from . import WhirlpoolConfigEntry
 from .entity import WhirlpoolEntity
@@ -146,7 +146,7 @@ WASHER_DRYER_TIME_SENSORS: tuple[SensorEntityDescription] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: WhirlpoolConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -203,12 +203,12 @@ class WasherDryerTimeSensor(WhirlpoolEntity, RestoreSensor):
         self._running: bool | None = None
         self._value: datetime | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register attribute updates callback."""
         if restored_data := await self.async_get_last_sensor_data():
             if isinstance(restored_data.native_value, datetime):
                 self._value = restored_data.native_value
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_update(self) -> None:
         """Update status of Whirlpool."""

@@ -5,8 +5,8 @@ import logging
 from openwebif.api import OpenWebIfDevice, OpenWebIfStatus
 from yarl import URL
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_IDENTIFIERS,
     CONF_HOST,
@@ -16,15 +16,15 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.device_registry import (
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.entity_component import DEFAULT_SCAN_INTERVAL
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_SOURCE_BOUQUET, DOMAIN
 
@@ -40,11 +40,11 @@ class Enigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
     device: OpenWebIfDevice
     unique_id: str | None
 
-    def __init__(self, hass: HomeAssistant, config_entry: Enigma2ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: Enigma2ConfigEntry) -> None:
         """Initialize the Enigma2 data update coordinator."""
 
         super().__init__(
-            hass,
+            menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -60,7 +60,7 @@ class Enigma2UpdateCoordinator(DataUpdateCoordinator[OpenWebIfStatus]):
         )
 
         session = async_create_clientsession(
-            hass, verify_ssl=config_entry.data[CONF_VERIFY_SSL], base_url=base_url
+            menuai, verify_ssl=config_entry.data[CONF_VERIFY_SSL], base_url=base_url
         )
 
         self.device = OpenWebIfDevice(

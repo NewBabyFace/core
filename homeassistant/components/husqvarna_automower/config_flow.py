@@ -7,10 +7,10 @@ from typing import Any
 from aioautomower.session import AutomowerSession
 from aioautomower.utils import structure_token
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_NAME, CONF_TOKEN
-from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_NAME, CONF_TOKEN
+from menuai.helpers import aiohttp_client, config_entry_oauth2_flow
+from menuai.util import dt as dt_util
 
 from .api import AsyncConfigFlowAuth
 from .const import DOMAIN, NAME
@@ -49,7 +49,7 @@ class HusqvarnaConfigFlowHandler(
 
         self._abort_if_unique_id_configured()
 
-        websession = aiohttp_client.async_get_clientsession(self.hass)
+        websession = aiohttp_client.async_get_clientsession(self.menuai)
         tz = await dt_util.async_get_time_zone(str(dt_util.DEFAULT_TIME_ZONE))
         automower_api = AutomowerSession(AsyncConfigFlowAuth(websession, token), tz)
         try:

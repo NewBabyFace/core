@@ -6,9 +6,9 @@ from typing import Any
 
 from aio_georss_client.status_update import StatusUpdate
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
 
 from . import GdacsConfigEntry
 
@@ -16,7 +16,7 @@ TO_REDACT = {CONF_LATITUDE, CONF_LONGITUDE}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: GdacsConfigEntry
+    menuai: menuai, config_entry: GdacsConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data: dict[str, Any] = {

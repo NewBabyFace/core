@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.probe_plus.const import DOMAIN
-from homeassistant.config_entries import SOURCE_BLUETOOTH, SOURCE_USER
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.components.probe_plus.const import DOMAIN
+from menuai.config_entries import SOURCE_BLUETOOTH, SOURCE_USER
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -29,25 +29,25 @@ service_info = BluetoothServiceInfo(
 def mock_discovered_service_info() -> Generator[AsyncMock]:
     """Override getting Bluetooth service info."""
     with patch(
-        "homeassistant.components.probe_plus.config_flow.async_discovered_service_info",
+        "menuai.components.probe_plus.config_flow.async_discovered_service_info",
         return_value=[service_info],
     ) as mock_discovered_service_info:
         yield mock_discovered_service_info
 
 
 async def test_user_config_flow_creates_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_discovered_service_info: AsyncMock,
 ) -> None:
     """Test the user configuration flow successfully creates a config entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_ADDRESS: "aa:bb:cc:dd:ee:ff",
@@ -61,14 +61,14 @@ async def test_user_config_flow_creates_entry(
 
 
 async def test_user_flow_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_discovered_service_info: AsyncMock,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test that the user flow aborts when the entry is already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     # this aborts with no devices found as the config flow
@@ -78,19 +78,19 @@ async def test_user_flow_already_configured(
 
 
 async def test_bluetooth_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_discovered_service_info: AsyncMock,
 ) -> None:
     """Test we can discover a device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_BLUETOOTH}, data=service_info
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "bluetooth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -103,14 +103,14 @@ async def test_bluetooth_discovery(
 
 
 async def test_already_configured_bluetooth_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Ensure configure device is not discovered again."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_BLUETOOTH}, data=service_info
     )
 
@@ -119,14 +119,14 @@ async def test_already_configured_bluetooth_discovery(
 
 
 async def test_no_bluetooth_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_discovered_service_info: AsyncMock,
 ) -> None:
     """Test flow aborts on unsupported device."""
     mock_discovered_service_info.return_value = []
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT

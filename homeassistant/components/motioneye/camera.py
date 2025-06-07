@@ -25,13 +25,13 @@ from motioneye_client.const import (
 )
 import voluptuous as vol
 
-from homeassistant.components.mjpeg import (
+from menuai.components.mjpeg import (
     CONF_MJPEG_URL,
     CONF_STILL_IMAGE_URL,
     MjpegCamera,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_NAME,
     CONF_PASSWORD,
@@ -40,10 +40,10 @@ from homeassistant.const import (
     HTTP_DIGEST_AUTHENTICATION,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import get_camera_from_cameras, is_acceptable_camera, listen_for_new_cameras
 from .const import (
@@ -93,12 +93,12 @@ SCHEMA_SERVICE_SET_TEXT = vol.Schema(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up motionEye from a config entry."""
-    entry_data = hass.data[DOMAIN][entry.entry_id]
+    entry_data = menuai.data[DOMAIN][entry.entry_id]
 
     @callback
     def camera_add(camera: dict[str, Any]) -> None:
@@ -119,7 +119,7 @@ async def async_setup_entry(
             ]
         )
 
-    listen_for_new_cameras(hass, entry, camera_add)
+    listen_for_new_cameras(menuai, entry, camera_add)
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
@@ -192,7 +192,7 @@ class MotionEyeMjpegCamera(MotionEyeEntity, MjpegCamera):
         streaming_url = None
 
         if streaming_template:
-            # Note: Can't use homeassistant.helpers.template as it requires hass
+            # Note: Can't use menuai.helpers.template as it requires menuai
             # which is not available during entity construction.
             streaming_url = Template(streaming_template).render(**camera)
         else:

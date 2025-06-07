@@ -5,20 +5,20 @@ from datetime import datetime
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.config import label_registry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import label_registry as lr
+from menuai.components.config import label_registry
+from menuai.core import menuai
+from menuai.helpers import label_registry as lr
 
 from tests.typing import MockHAClientWebSocket, WebSocketGenerator
 
 
 @pytest.fixture(name="client")
 async def client_fixture(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> MockHAClientWebSocket:
     """Fixture that can interact with the config manager API."""
-    label_registry.async_setup(hass)
-    return await hass_ws_client(hass)
+    label_registry.async_setup(menuai)
+    return await menuai_ws_client(menuai)
 
 
 async def test_list_labels(

@@ -7,10 +7,10 @@ from typing import Any
 import lupupy
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 
@@ -41,7 +41,7 @@ class LupusecConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             password = user_input[CONF_PASSWORD]
 
             try:
-                await test_host_connection(self.hass, host, username, password)
+                await test_host_connection(self.menuai, host, username, password)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except JSONDecodeError:
@@ -62,16 +62,16 @@ class LupusecConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
 
 async def test_host_connection(
-    hass: HomeAssistant, host: str, username: str, password: str
+    menuai: menuai, host: str, username: str, password: str
 ):
     """Test if the host is reachable and is actually a Lupusec device."""
 
     try:
-        await hass.async_add_executor_job(lupupy.Lupusec, username, password, host)
+        await menuai.async_add_executor_job(lupupy.Lupusec, username, password, host)
     except lupupy.LupusecException as ex:
         _LOGGER.error("Failed to connect to Lupusec device at %s", host)
         raise CannotConnect from ex
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

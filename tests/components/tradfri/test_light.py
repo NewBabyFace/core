@@ -6,7 +6,7 @@ import pytest
 from pytradfri.const import ATTR_DEVICE_STATE, ATTR_LIGHT_CONTROL, ATTR_REACHABLE_STATE
 from pytradfri.device import Device
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -17,15 +17,15 @@ from homeassistant.components.light import (
     DOMAIN as LIGHT_DOMAIN,
     ColorMode,
 )
-from homeassistant.components.tradfri.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.tradfri.const import DOMAIN
+from menuai.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import CommandStore, setup_integration
 
@@ -88,15 +88,15 @@ def bulb_cws() -> str:
     indirect=["device"],
 )
 async def test_light_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: Device,
     entity_id: str,
     state_attributes: dict[str, Any],
 ) -> None:
     """Test light state."""
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     for key, value in state_attributes.items():
@@ -105,23 +105,23 @@ async def test_light_state(
 
 @pytest.mark.parametrize("device", ["bulb_w"], indirect=True)
 async def test_light_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
 ) -> None:
     """Test light available property."""
     entity_id = "light.test_w"
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
     await command_store.trigger_observe_callback(
-        hass, device, {ATTR_REACHABLE_STATE: 0}
+        menuai, device, {ATTR_REACHABLE_STATE: 0}
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -236,7 +236,7 @@ async def test_light_available(
     ],
 )
 async def test_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
     entity_id: str,
@@ -247,21 +247,21 @@ async def test_turn_on(
     """Test turning on a light."""
     # Make sure the light is off.
     device.raw[ATTR_LIGHT_CONTROL][0][ATTR_DEVICE_STATE] = 0
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {"entity_id": entity_id, **service_data, **transition},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await command_store.trigger_observe_callback(
-        hass, device, {ATTR_LIGHT_CONTROL: [{ATTR_DEVICE_STATE: 1}]}
+        menuai, device, {ATTR_LIGHT_CONTROL: [{ATTR_DEVICE_STATE: 1}]}
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     for key, value in state_attributes.items():
@@ -284,27 +284,27 @@ async def test_turn_on(
     indirect=["device"],
 )
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
     entity_id: str,
     transition: dict[str, int],
 ) -> None:
     """Test turning off a light."""
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {"entity_id": entity_id, **transition},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await command_store.trigger_observe_callback(
-        hass, device, {ATTR_LIGHT_CONTROL: [{ATTR_DEVICE_STATE: 0}]}
+        menuai, device, {ATTR_LIGHT_CONTROL: [{ATTR_DEVICE_STATE: 0}]}
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF

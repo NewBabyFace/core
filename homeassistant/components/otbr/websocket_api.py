@@ -9,13 +9,13 @@ from python_otbr_api import PENDING_DATASET_DELAY_TIMER, tlv_parser
 from python_otbr_api.tlv_parser import MeshcopTLVType
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon import (
+from menuai.components import websocket_api
+from menuai.components.menuai_hardware.silabs_multiprotocol_addon import (
     is_multiprotocol_url,
 )
-from homeassistant.components.thread import async_add_dataset, async_get_dataset
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.thread import async_add_dataset, async_get_dataset
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .const import DEFAULT_CHANNEL, DOMAIN
 from .util import (
@@ -31,12 +31,12 @@ if TYPE_CHECKING:
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the OTBR Websocket API."""
-    websocket_api.async_register_command(hass, websocket_info)
-    websocket_api.async_register_command(hass, websocket_create_network)
-    websocket_api.async_register_command(hass, websocket_set_channel)
-    websocket_api.async_register_command(hass, websocket_set_network)
+    websocket_api.async_register_command(menuai, websocket_info)
+    websocket_api.async_register_command(menuai, websocket_create_network)
+    websocket_api.async_register_command(menuai, websocket_set_channel)
+    websocket_api.async_register_command(menuai, websocket_set_network)
 
 
 @websocket_api.websocket_command(
@@ -47,11 +47,11 @@ def async_setup(hass: HomeAssistant) -> None:
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_info(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Get OTBR info."""
     config_entries: list[OTBRConfigEntry]
-    config_entries = hass.config_entries.async_loaded_entries(DOMAIN)
+    config_entries = menuai.config_entries.async_loaded_entries(DOMAIN)
 
     if not config_entries:
         connection.send_error(msg["id"], "not_loaded", "No OTBR API loaded")
@@ -66,7 +66,7 @@ async def websocket_info(
             dataset = await data.get_active_dataset()
             dataset_tlvs = await data.get_active_dataset_tlvs()
             extended_address = (await data.get_extended_address()).hex()
-        except HomeAssistantError as exc:
+        except menuaiError as exc:
             connection.send_error(msg["id"], "otbr_info_failed", str(exc))
             return
 
@@ -93,21 +93,21 @@ async def websocket_info(
 
 def async_get_otbr_data(
     orig_func: Callable[
-        [HomeAssistant, websocket_api.ActiveConnection, dict, OTBRData],
+        [menuai, websocket_api.ActiveConnection, dict, OTBRData],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict], Coroutine[Any, Any, None]
+    [menuai, websocket_api.ActiveConnection, dict], Coroutine[Any, Any, None]
 ]:
     """Decorate function to get OTBR data."""
 
     @wraps(orig_func)
     async def async_check_extended_address_func(
-        hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Fetch OTBR data and pass to orig_func."""
         config_entries: list[OTBRConfigEntry]
-        config_entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        config_entries = menuai.config_entries.async_loaded_entries(DOMAIN)
 
         if not config_entries:
             connection.send_error(msg["id"], "not_loaded", "No OTBR API loaded")
@@ -117,7 +117,7 @@ def async_get_otbr_data(
             data = config_entry.runtime_data
             try:
                 extended_address = await data.get_extended_address()
-            except HomeAssistantError as exc:
+            except menuaiError as exc:
                 connection.send_error(
                     msg["id"], "get_extended_address_failed", str(exc)
                 )
@@ -125,7 +125,7 @@ def async_get_otbr_data(
             if extended_address.hex() != msg["extended_address"]:
                 continue
 
-            await orig_func(hass, connection, msg, data)
+            await orig_func(menuai, connection, msg, data)
             return
 
         connection.send_error(msg["id"], "unknown_router", "")
@@ -143,23 +143,23 @@ def async_get_otbr_data(
 @websocket_api.async_response
 @async_get_otbr_data
 async def websocket_create_network(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     data: OTBRData,
 ) -> None:
     """Create a new Thread network."""
-    channel = await get_allowed_channel(hass, data.url) or DEFAULT_CHANNEL
+    channel = await get_allowed_channel(menuai, data.url) or DEFAULT_CHANNEL
 
     try:
         await data.set_enabled(False)
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "set_enabled_failed", str(exc))
         return
 
     try:
-        await data.factory_reset(hass)
-    except HomeAssistantError as exc:
+        await data.factory_reset(menuai)
+    except menuaiError as exc:
         connection.send_error(msg["id"], "factory_reset_failed", str(exc))
         return
 
@@ -172,29 +172,29 @@ async def websocket_create_network(
                 pan_id=pan_id,
             )
         )
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "create_active_dataset_failed", str(exc))
         return
 
     try:
         await data.set_enabled(True)
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "set_enabled_failed", str(exc))
         return
 
     try:
         dataset_tlvs = await data.get_active_dataset_tlvs()
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "get_active_dataset_tlvs_failed", str(exc))
         return
     if not dataset_tlvs:
         connection.send_error(msg["id"], "get_active_dataset_tlvs_empty", "")
         return
 
-    await async_add_dataset(hass, DOMAIN, dataset_tlvs.hex())
+    await async_add_dataset(menuai, DOMAIN, dataset_tlvs.hex())
 
     # Update repair issues
-    await update_issues(hass, data, dataset_tlvs)
+    await update_issues(menuai, data, dataset_tlvs)
 
     connection.send_result(msg["id"])
 
@@ -210,13 +210,13 @@ async def websocket_create_network(
 @websocket_api.async_response
 @async_get_otbr_data
 async def websocket_set_network(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     data: OTBRData,
 ) -> None:
     """Set the Thread network to be used by the OTBR."""
-    dataset_tlv = await async_get_dataset(hass, msg["dataset_id"])
+    dataset_tlv = await async_get_dataset(menuai, msg["dataset_id"])
 
     if not dataset_tlv:
         connection.send_error(msg["id"], "unknown_dataset", "Unknown dataset")
@@ -225,7 +225,7 @@ async def websocket_set_network(
     if channel := dataset.get(MeshcopTLVType.CHANNEL):
         thread_dataset_channel = cast(tlv_parser.Channel, channel).channel
 
-    allowed_channel = await get_allowed_channel(hass, data.url)
+    allowed_channel = await get_allowed_channel(menuai, data.url)
 
     if allowed_channel and thread_dataset_channel != allowed_channel:
         connection.send_error(
@@ -238,24 +238,24 @@ async def websocket_set_network(
 
     try:
         await data.set_enabled(False)
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "set_enabled_failed", str(exc))
         return
 
     try:
         await data.set_active_dataset_tlvs(bytes.fromhex(dataset_tlv))
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "set_active_dataset_tlvs_failed", str(exc))
         return
 
     try:
         await data.set_enabled(True)
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "set_enabled_failed", str(exc))
         return
 
     # Update repair issues
-    await update_issues(hass, data, bytes.fromhex(dataset_tlv))
+    await update_issues(menuai, data, bytes.fromhex(dataset_tlv))
 
     connection.send_result(msg["id"])
 
@@ -271,7 +271,7 @@ async def websocket_set_network(
 @websocket_api.async_response
 @async_get_otbr_data
 async def websocket_set_channel(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     data: OTBRData,
@@ -290,7 +290,7 @@ async def websocket_set_channel(
 
     try:
         await data.set_channel(channel)
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         connection.send_error(msg["id"], "set_channel_failed", str(exc))
         return
 

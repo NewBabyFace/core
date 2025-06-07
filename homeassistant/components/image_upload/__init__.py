@@ -14,15 +14,15 @@ from aiohttp.web_request import FileField
 from PIL import Image, ImageOps, UnidentifiedImageError
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.http.static import CACHE_HEADERS
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.util import dt as dt_util
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.http.static import CACHE_HEADERS
+from menuai.const import CONF_ID
+from menuai.core import menuai, callback
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -43,10 +43,10 @@ UPDATE_FIELDS: VolDictType = {
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Image integration."""
-    image_dir = pathlib.Path(hass.config.path("image"))
-    hass.data[DOMAIN] = storage_collection = ImageStorageCollection(hass, image_dir)
+    image_dir = pathlib.Path(menuai.config.path("image"))
+    menuai.data[DOMAIN] = storage_collection = ImageStorageCollection(menuai, image_dir)
     await storage_collection.async_load()
     ImageUploadStorageCollectionWebsocket(
         storage_collection,
@@ -54,10 +54,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         "image",
         CREATE_FIELDS,
         UPDATE_FIELDS,
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
-    hass.http.register_view(ImageUploadView)
-    hass.http.register_view(ImageServeView(image_dir, storage_collection))
+    menuai.http.register_view(ImageUploadView)
+    menuai.http.register_view(ImageServeView(image_dir, storage_collection))
     return True
 
 
@@ -67,10 +67,10 @@ class ImageStorageCollection(collection.DictStorageCollection):
     CREATE_SCHEMA = vol.Schema(CREATE_FIELDS)
     UPDATE_SCHEMA = vol.Schema(UPDATE_FIELDS)
 
-    def __init__(self, hass: HomeAssistant, image_dir: pathlib.Path) -> None:
+    def __init__(self, menuai: menuai, image_dir: pathlib.Path) -> None:
         """Initialize media storage collection."""
         super().__init__(
-            Store(hass, STORAGE_VERSION, STORAGE_KEY),
+            Store(menuai, STORAGE_VERSION, STORAGE_KEY),
         )
         self.async_add_listener(self._change_listener)
         self.image_dir = image_dir
@@ -88,7 +88,7 @@ class ImageStorageCollection(collection.DictStorageCollection):
             raise vol.Invalid("Only jpeg, png, and gif images are allowed")
 
         data[CONF_ID] = secrets.token_hex(16)
-        data["filesize"] = await self.hass.async_add_executor_job(self._move_data, data)
+        data["filesize"] = await self.menuai.async_add_executor_job(self._move_data, data)
 
         data["content_type"] = uploaded_file.content_type
         data["name"] = uploaded_file.filename
@@ -149,14 +149,14 @@ class ImageStorageCollection(collection.DictStorageCollection):
         if change_type != collection.CHANGE_REMOVED:
             return
 
-        await self.hass.async_add_executor_job(shutil.rmtree, self.image_dir / item_id)
+        await self.menuai.async_add_executor_job(shutil.rmtree, self.image_dir / item_id)
 
 
 class ImageUploadStorageCollectionWebsocket(collection.DictStorageCollectionWebsocket):
     """Class to expose storage collection management over websocket."""
 
     async def ws_create_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Create an item.
 
@@ -165,7 +165,7 @@ class ImageUploadStorageCollectionWebsocket(collection.DictStorageCollectionWebs
         raise NotImplementedError
 
 
-class ImageUploadView(HomeAssistantView):
+class ImageUploadView(menuaiView):
     """View to upload images."""
 
     url = "/api/image/upload"
@@ -177,11 +177,11 @@ class ImageUploadView(HomeAssistantView):
         request._client_max_size = MAX_SIZE  # noqa: SLF001
 
         data = await request.post()
-        item = await request.app[KEY_HASS].data[DOMAIN].async_create_item(data)
+        item = await request.app[KEY_menuai].data[DOMAIN].async_create_item(data)
         return self.json(item)
 
 
-class ImageServeView(HomeAssistantView):
+class ImageServeView(menuaiView):
     """View to download images."""
 
     url = "/api/image/serve/{image_id}/{filename}"
@@ -217,14 +217,14 @@ class ImageServeView(HomeAssistantView):
             except (ValueError, IndexError) as err:
                 raise web.HTTPBadRequest from err
 
-            hass = request.app[KEY_HASS]
+            menuai = request.app[KEY_menuai]
             target_file = self.image_folder / image_id / f"{width}x{height}"
 
-            if not await hass.async_add_executor_job(target_file.is_file):
+            if not await menuai.async_add_executor_job(target_file.is_file):
                 async with self.transform_lock:
                     # Another check in case another request already
                     # finished it while waiting
-                    await hass.async_add_executor_job(
+                    await menuai.async_add_executor_job(
                         _generate_thumbnail_if_file_does_not_exist,
                         target_file,
                         self.image_folder / image_id / "original",

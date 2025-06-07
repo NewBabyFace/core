@@ -4,13 +4,13 @@ from unittest.mock import MagicMock
 
 import pyvera as pv
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import ComponentFactory, new_simple_controller_config
 
 
 async def test_scene(
-    hass: HomeAssistant, vera_component_factory: ComponentFactory
+    menuai: menuai, vera_component_factory: ComponentFactory
 ) -> None:
     """Test function."""
     vera_scene: pv.VeraScene = MagicMock(spec=pv.VeraScene)
@@ -20,13 +20,13 @@ async def test_scene(
     entity_id = "scene.dev1_1"
 
     await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(scenes=(vera_scene,)),
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "scene",
         "turn_on",
         {"entity_id": entity_id},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

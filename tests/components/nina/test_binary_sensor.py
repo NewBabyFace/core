@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import patch
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.nina.const import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.nina.const import (
     ATTR_AFFECTED_AREAS,
     ATTR_DESCRIPTION,
     ATTR_EXPIRES,
@@ -20,10 +20,10 @@ from homeassistant.components.nina.const import (
     ATTR_WEB,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import mocked_request_function
 
@@ -49,7 +49,7 @@ ENTRY_DATA_NO_AREA: dict[str, Any] = {
 }
 
 
-async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> None:
+async def test_sensors(menuai: menuai, entity_registry: er.EntityRegistry) -> None:
     """Test the creation and values of the NINA sensors."""
 
     with patch(
@@ -59,14 +59,14 @@ async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) 
         conf_entry: MockConfigEntry = MockConfigEntry(
             domain=DOMAIN, title="NINA", data=ENTRY_DATA
         )
-        conf_entry.add_to_hass(hass)
+        conf_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(conf_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(conf_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert conf_entry.state is ConfigEntryState.LOADED
 
-        state_w1 = hass.states.get("binary_sensor.warning_aach_stadt_1")
+        state_w1 = menuai.states.get("binary_sensor.warning_aach_stadt_1")
         entry_w1 = entity_registry.async_get("binary_sensor.warning_aach_stadt_1")
 
         assert state_w1.state == STATE_ON
@@ -91,7 +91,7 @@ async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) 
         assert entry_w1.unique_id == "083350000000-1"
         assert state_w1.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w2 = hass.states.get("binary_sensor.warning_aach_stadt_2")
+        state_w2 = menuai.states.get("binary_sensor.warning_aach_stadt_2")
         entry_w2 = entity_registry.async_get("binary_sensor.warning_aach_stadt_2")
 
         assert state_w2.state == STATE_OFF
@@ -110,7 +110,7 @@ async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) 
         assert entry_w2.unique_id == "083350000000-2"
         assert state_w2.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w3 = hass.states.get("binary_sensor.warning_aach_stadt_3")
+        state_w3 = menuai.states.get("binary_sensor.warning_aach_stadt_3")
         entry_w3 = entity_registry.async_get("binary_sensor.warning_aach_stadt_3")
 
         assert state_w3.state == STATE_OFF
@@ -129,7 +129,7 @@ async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) 
         assert entry_w3.unique_id == "083350000000-3"
         assert state_w3.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w4 = hass.states.get("binary_sensor.warning_aach_stadt_4")
+        state_w4 = menuai.states.get("binary_sensor.warning_aach_stadt_4")
         entry_w4 = entity_registry.async_get("binary_sensor.warning_aach_stadt_4")
 
         assert state_w4.state == STATE_OFF
@@ -148,7 +148,7 @@ async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) 
         assert entry_w4.unique_id == "083350000000-4"
         assert state_w4.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w5 = hass.states.get("binary_sensor.warning_aach_stadt_5")
+        state_w5 = menuai.states.get("binary_sensor.warning_aach_stadt_5")
         entry_w5 = entity_registry.async_get("binary_sensor.warning_aach_stadt_5")
 
         assert state_w5.state == STATE_OFF
@@ -169,7 +169,7 @@ async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) 
 
 
 async def test_sensors_without_corona_filter(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the creation and values of the NINA sensors without the corona filter."""
 
@@ -180,14 +180,14 @@ async def test_sensors_without_corona_filter(
         conf_entry: MockConfigEntry = MockConfigEntry(
             domain=DOMAIN, title="NINA", data=ENTRY_DATA_NO_CORONA
         )
-        conf_entry.add_to_hass(hass)
+        conf_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(conf_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(conf_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert conf_entry.state is ConfigEntryState.LOADED
 
-        state_w1 = hass.states.get("binary_sensor.warning_aach_stadt_1")
+        state_w1 = menuai.states.get("binary_sensor.warning_aach_stadt_1")
         entry_w1 = entity_registry.async_get("binary_sensor.warning_aach_stadt_1")
 
         assert state_w1.state == STATE_ON
@@ -218,7 +218,7 @@ async def test_sensors_without_corona_filter(
         assert entry_w1.unique_id == "083350000000-1"
         assert state_w1.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w2 = hass.states.get("binary_sensor.warning_aach_stadt_2")
+        state_w2 = menuai.states.get("binary_sensor.warning_aach_stadt_2")
         entry_w2 = entity_registry.async_get("binary_sensor.warning_aach_stadt_2")
 
         assert state_w2.state == STATE_ON
@@ -243,7 +243,7 @@ async def test_sensors_without_corona_filter(
         assert entry_w2.unique_id == "083350000000-2"
         assert state_w2.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w3 = hass.states.get("binary_sensor.warning_aach_stadt_3")
+        state_w3 = menuai.states.get("binary_sensor.warning_aach_stadt_3")
         entry_w3 = entity_registry.async_get("binary_sensor.warning_aach_stadt_3")
 
         assert state_w3.state == STATE_OFF
@@ -262,7 +262,7 @@ async def test_sensors_without_corona_filter(
         assert entry_w3.unique_id == "083350000000-3"
         assert state_w3.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w4 = hass.states.get("binary_sensor.warning_aach_stadt_4")
+        state_w4 = menuai.states.get("binary_sensor.warning_aach_stadt_4")
         entry_w4 = entity_registry.async_get("binary_sensor.warning_aach_stadt_4")
 
         assert state_w4.state == STATE_OFF
@@ -281,7 +281,7 @@ async def test_sensors_without_corona_filter(
         assert entry_w4.unique_id == "083350000000-4"
         assert state_w4.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w5 = hass.states.get("binary_sensor.warning_aach_stadt_5")
+        state_w5 = menuai.states.get("binary_sensor.warning_aach_stadt_5")
         entry_w5 = entity_registry.async_get("binary_sensor.warning_aach_stadt_5")
 
         assert state_w5.state == STATE_OFF
@@ -302,7 +302,7 @@ async def test_sensors_without_corona_filter(
 
 
 async def test_sensors_with_area_filter(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the creation and values of the NINA sensors with an area filter."""
 
@@ -313,14 +313,14 @@ async def test_sensors_with_area_filter(
         conf_entry: MockConfigEntry = MockConfigEntry(
             domain=DOMAIN, title="NINA", data=ENTRY_DATA_NO_AREA
         )
-        conf_entry.add_to_hass(hass)
+        conf_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(conf_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(conf_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert conf_entry.state is ConfigEntryState.LOADED
 
-        state_w1 = hass.states.get("binary_sensor.warning_aach_stadt_1")
+        state_w1 = menuai.states.get("binary_sensor.warning_aach_stadt_1")
         entry_w1 = entity_registry.async_get("binary_sensor.warning_aach_stadt_1")
 
         assert state_w1.state == STATE_ON
@@ -328,7 +328,7 @@ async def test_sensors_with_area_filter(
         assert entry_w1.unique_id == "083350000000-1"
         assert state_w1.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w2 = hass.states.get("binary_sensor.warning_aach_stadt_2")
+        state_w2 = menuai.states.get("binary_sensor.warning_aach_stadt_2")
         entry_w2 = entity_registry.async_get("binary_sensor.warning_aach_stadt_2")
 
         assert state_w2.state == STATE_OFF
@@ -336,7 +336,7 @@ async def test_sensors_with_area_filter(
         assert entry_w2.unique_id == "083350000000-2"
         assert state_w2.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w3 = hass.states.get("binary_sensor.warning_aach_stadt_3")
+        state_w3 = menuai.states.get("binary_sensor.warning_aach_stadt_3")
         entry_w3 = entity_registry.async_get("binary_sensor.warning_aach_stadt_3")
 
         assert state_w3.state == STATE_OFF
@@ -344,7 +344,7 @@ async def test_sensors_with_area_filter(
         assert entry_w3.unique_id == "083350000000-3"
         assert state_w3.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w4 = hass.states.get("binary_sensor.warning_aach_stadt_4")
+        state_w4 = menuai.states.get("binary_sensor.warning_aach_stadt_4")
         entry_w4 = entity_registry.async_get("binary_sensor.warning_aach_stadt_4")
 
         assert state_w4.state == STATE_OFF
@@ -352,7 +352,7 @@ async def test_sensors_with_area_filter(
         assert entry_w4.unique_id == "083350000000-4"
         assert state_w4.attributes.get("device_class") == BinarySensorDeviceClass.SAFETY
 
-        state_w5 = hass.states.get("binary_sensor.warning_aach_stadt_5")
+        state_w5 = menuai.states.get("binary_sensor.warning_aach_stadt_5")
         entry_w5 = entity_registry.async_get("binary_sensor.warning_aach_stadt_5")
 
         assert state_w5.state == STATE_OFF

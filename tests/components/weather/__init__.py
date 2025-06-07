@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_SUNNY,
     ATTR_FORECAST_CLOUD_COVERAGE,
     ATTR_FORECAST_HUMIDITY,
@@ -18,10 +18,10 @@ from homeassistant.components.weather import (
     ATTR_FORECAST_WIND_BEARING,
     Forecast,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from tests.common import (
     MockConfigEntry,
@@ -60,7 +60,7 @@ class MockWeatherTest(WeatherPlatform.MockWeather):
 
 
 async def create_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_weather: type[WeatherPlatform.MockWeather],
     manifest_extra: dict[str, Any] | None,
     **kwargs,
@@ -81,16 +81,16 @@ async def create_entity(
     )
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.WEATHER]
         )
         return True
 
     async def async_setup_entry_weather_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -98,7 +98,7 @@ async def create_entity(
         async_add_entities([weather_entity])
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=async_setup_entry_init,
@@ -107,14 +107,14 @@ async def create_entity(
         built_in=False,
     )
     mock_platform(
-        hass,
+        menuai,
         "test.weather",
         MockPlatform(async_setup_entry=async_setup_entry_weather_platform),
     )
 
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return weather_entity

@@ -1,20 +1,20 @@
-"""Temperature helpers for Home Assistant."""
+"""Temperature helpers for MenuAI."""
 
 from __future__ import annotations
 
 from numbers import Number
 
-from homeassistant.const import PRECISION_HALVES, PRECISION_TENTHS
-from homeassistant.core import HomeAssistant
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.const import PRECISION_HALVES, PRECISION_TENTHS
+from menuai.core import menuai
+from menuai.util.unit_conversion import TemperatureConverter
 
 
 def display_temp(
-    hass: HomeAssistant, temperature: float | None, unit: str, precision: float
+    menuai: menuai, temperature: float | None, unit: str, precision: float
 ) -> float | None:
     """Convert temperature into preferred units/precision for display."""
     temperature_unit = unit
-    ha_unit = hass.config.units.temperature_unit
+    ha_unit = menuai.config.units.temperature_unit
 
     if temperature is None:
         return temperature

@@ -13,24 +13,24 @@ from georss_qld_bushfire_alert_client import (
 )
 import voluptuous as vol
 
-from homeassistant.components.geo_location import (
+from menuai.components.geo_location import (
     PLATFORM_SCHEMA as GEO_LOCATION_PLATFORM_SCHEMA,
     GeolocationEvent,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     UnitOfLength,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import Event, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ PLATFORM_SCHEMA = GEO_LOCATION_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -80,21 +80,21 @@ def setup_platform(
     """Set up the Queensland Bushfire Alert Feed platform."""
     scan_interval: timedelta = config.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL)
     coordinates: tuple[float, float] = (
-        config.get(CONF_LATITUDE, hass.config.latitude),
-        config.get(CONF_LONGITUDE, hass.config.longitude),
+        config.get(CONF_LATITUDE, menuai.config.latitude),
+        config.get(CONF_LONGITUDE, menuai.config.longitude),
     )
     radius_in_km: float = config[CONF_RADIUS]
     categories: list[str] = config[CONF_CATEGORIES]
     # Initialize the entity manager.
     feed = QldBushfireFeedEntityManager(
-        hass, add_entities, scan_interval, coordinates, radius_in_km, categories
+        menuai, add_entities, scan_interval, coordinates, radius_in_km, categories
     )
 
     def start_feed_manager(event: Event) -> None:
         """Start feed manager."""
         feed.startup()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, start_feed_manager)
+    menuai.bus.listen_once(EVENT_menuai_START, start_feed_manager)
 
 
 class QldBushfireFeedEntityManager:
@@ -102,7 +102,7 @@ class QldBushfireFeedEntityManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         add_entities: AddEntitiesCallback,
         scan_interval: timedelta,
         coordinates: tuple[float, float],
@@ -110,7 +110,7 @@ class QldBushfireFeedEntityManager:
         categories: list[str],
     ) -> None:
         """Initialize the Feed Entity Manager."""
-        self._hass = hass
+        self._menuai = menuai
         self._feed_manager = QldBushfireAlertFeedManager(
             self._generate_entity,
             self._update_entity,
@@ -130,7 +130,7 @@ class QldBushfireFeedEntityManager:
     def _init_regular_updates(self) -> None:
         """Schedule regular updates at the specified interval."""
         track_time_interval(
-            self._hass,
+            self._menuai,
             lambda now: self._feed_manager.update(),
             self._scan_interval,
             cancel_on_shutdown=True,
@@ -148,11 +148,11 @@ class QldBushfireFeedEntityManager:
 
     def _update_entity(self, external_id: str) -> None:
         """Update entity."""
-        dispatcher_send(self._hass, SIGNAL_UPDATE_ENTITY.format(external_id))
+        dispatcher_send(self._menuai, SIGNAL_UPDATE_ENTITY.format(external_id))
 
     def _remove_entity(self, external_id: str) -> None:
         """Remove entity."""
-        dispatcher_send(self._hass, SIGNAL_DELETE_ENTITY.format(external_id))
+        dispatcher_send(self._menuai, SIGNAL_DELETE_ENTITY.format(external_id))
 
 
 class QldBushfireLocationEvent(GeolocationEvent):
@@ -176,15 +176,15 @@ class QldBushfireLocationEvent(GeolocationEvent):
         self._remove_signal_delete: Callable[[], None]
         self._remove_signal_update: Callable[[], None]
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self._remove_signal_delete = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_DELETE_ENTITY.format(self._external_id),
             self._delete_callback,
         )
         self._remove_signal_update = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_UPDATE_ENTITY.format(self._external_id),
             self._update_callback,
         )
@@ -194,7 +194,7 @@ class QldBushfireLocationEvent(GeolocationEvent):
         """Remove this entity."""
         self._remove_signal_delete()
         self._remove_signal_update()
-        self.hass.async_create_task(self.async_remove(force_remove=True))
+        self.menuai.async_create_task(self.async_remove(force_remove=True))
 
     @callback
     def _update_callback(self) -> None:

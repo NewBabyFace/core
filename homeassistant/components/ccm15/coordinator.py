@@ -6,10 +6,10 @@ import logging
 from ccm15 import CCM15Device, CCM15DeviceState, CCM15SlaveDevice
 import httpx
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.climate import HVACMode
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONST_FAN_CMD_MAP,
@@ -27,11 +27,11 @@ class CCM15Coordinator(DataUpdateCoordinator[CCM15DeviceState]):
     """Class to coordinate multiple CCM15Climate devices."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: CCM15ConfigEntry, host: str, port: int
+        self, menuai: menuai, entry: CCM15ConfigEntry, host: str, port: int
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=host,

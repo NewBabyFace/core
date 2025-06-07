@@ -18,27 +18,27 @@ from songpal import (
 from songpal.containers import Setting
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_platform,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_ENDPOINT, DOMAIN, ERROR_REQUEST_RETRY, SET_SOUND_SETTING
 
@@ -51,7 +51,7 @@ INITIAL_RETRY_DELAY = 10
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -64,7 +64,7 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -133,12 +133,12 @@ class SongpalEntity(MediaPlayerEntity):
         self._active_sound_mode = None
         self._sound_modes = {}
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity is added to menuai."""
         await self.async_activate_websocket()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         await self._dev.stop_listen_notifications()
 
     async def _get_sound_modes_info(self):
@@ -229,7 +229,7 @@ class SongpalEntity(MediaPlayerEntity):
                     # back from a disconnected state.
                     await self.async_update_ha_state(force_refresh=True)
 
-            self.hass.loop.create_task(self._dev.listen_notifications())
+            self.menuai.loop.create_task(self._dev.listen_notifications())
             _LOGGER.warning(
                 "[%s(%s)] Connection reestablished", self.name, self._dev.endpoint
             )
@@ -243,9 +243,9 @@ class SongpalEntity(MediaPlayerEntity):
         async def handle_stop(event):
             await self._dev.stop_listen_notifications()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, handle_stop)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, handle_stop)
 
-        self.hass.loop.create_task(self._dev.listen_notifications())
+        self.menuai.loop.create_task(self._dev.listen_notifications())
 
     @property
     def unique_id(self):

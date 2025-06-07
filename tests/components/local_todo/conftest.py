@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.local_todo import LocalTodoListStore
-from homeassistant.components.local_todo.const import (
+from menuai.components.local_todo import LocalTodoListStore
+from menuai.components.local_todo.const import (
     CONF_STORAGE_KEY,
     CONF_TODO_LIST_NAME,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -27,7 +27,7 @@ TEST_ENTITY = "todo.my_tasks"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.local_todo.async_setup_entry", return_value=True
+        "menuai.components.local_todo.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -37,7 +37,7 @@ class FakeStore(LocalTodoListStore):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         path: Path,
         ics_content: str | None,
         read_side_effect: Any | None = None,
@@ -50,7 +50,7 @@ class FakeStore(LocalTodoListStore):
         mock_path.read_text.side_effect = read_side_effect
         mock_path.write_text = self._mock_write_text
 
-        super().__init__(hass, mock_path)
+        super().__init__(menuai, mock_path)
 
     def _mock_exists(self) -> bool:
         return self._mock_path.read_text.return_value is not None
@@ -77,12 +77,12 @@ def mock_store(ics_content: str, store_read_side_effect: Any | None) -> Generato
 
     stores: dict[Path, FakeStore] = {}
 
-    def new_store(hass: HomeAssistant, path: Path) -> FakeStore:
+    def new_store(menuai: menuai, path: Path) -> FakeStore:
         if path not in stores:
-            stores[path] = FakeStore(hass, path, ics_content, store_read_side_effect)
+            stores[path] = FakeStore(menuai, path, ics_content, store_read_side_effect)
         return stores[path]
 
-    with patch("homeassistant.components.local_todo.LocalTodoListStore", new=new_store):
+    with patch("menuai.components.local_todo.LocalTodoListStore", new=new_store):
         yield
 
 
@@ -96,8 +96,8 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture(name="setup_integration")
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Set up the integration."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

@@ -8,11 +8,11 @@ import pytest
 from requests.exceptions import HTTPError
 from requests.models import Response
 
-from homeassistant.components.pterodactyl.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.pterodactyl.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import TEST_API_KEY, TEST_URL, TEST_USER_INPUT
 
@@ -28,19 +28,19 @@ def mock_response():
 
 
 @pytest.mark.usefixtures("mock_pterodactyl", "mock_setup_entry")
-async def test_full_flow(hass: HomeAssistant) -> None:
+async def test_full_flow(menuai: menuai) -> None:
     """Test full flow without errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id=result["flow_id"],
         user_input=TEST_USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_URL
@@ -58,13 +58,13 @@ async def test_full_flow(hass: HomeAssistant) -> None:
     ],
 )
 async def test_recovery_after_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception_type: Exception,
     expected_error: str,
     mock_pterodactyl: Generator[AsyncMock],
 ) -> None:
     """Test recovery after an error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -72,21 +72,21 @@ async def test_recovery_after_error(
 
     mock_pterodactyl.client.servers.list_servers.side_effect = exception_type
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id=result["flow_id"],
         user_input=TEST_USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": expected_error}
 
     mock_pterodactyl.reset_mock(side_effect=True)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id=result["flow_id"], user_input=TEST_USER_INPUT
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_URL
@@ -95,13 +95,13 @@ async def test_recovery_after_error(
 
 @pytest.mark.usefixtures("mock_setup_entry", "mock_pterodactyl")
 async def test_service_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test config flow abort if the Pterodactyl server is already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=TEST_USER_INPUT
     )
 
@@ -111,16 +111,16 @@ async def test_service_already_configured(
 
 @pytest.mark.usefixtures("mock_pterodactyl", "mock_setup_entry")
 async def test_reauth_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth config flow success."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_API_KEY: TEST_API_KEY}
     )
 
@@ -141,21 +141,21 @@ async def test_reauth_full_flow(
     ],
 )
 async def test_reauth_recovery_after_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception_type: Exception,
     expected_error: str,
     mock_config_entry: MockConfigEntry,
     mock_pterodactyl: Generator[AsyncMock],
 ) -> None:
     """Test recovery after an error during re-authentication."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_pterodactyl.client.servers.list_servers.side_effect = exception_type
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_API_KEY: TEST_API_KEY}
     )
 
@@ -164,7 +164,7 @@ async def test_reauth_recovery_after_error(
 
     mock_pterodactyl.reset_mock(side_effect=True)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_API_KEY: TEST_API_KEY}
     )
 

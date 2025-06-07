@@ -12,11 +12,11 @@ from onedrive_personal_sdk.const import DriveState
 from onedrive_personal_sdk.exceptions import AuthenticationError, OneDriveException
 from onedrive_personal_sdk.models.items import Drive
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -44,11 +44,11 @@ class OneDriveUpdateCoordinator(DataUpdateCoordinator[Drive]):
     config_entry: OneDriveConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: OneDriveConfigEntry, client: OneDriveClient
+        self, menuai: menuai, entry: OneDriveConfigEntry, client: OneDriveClient
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -77,7 +77,7 @@ class OneDriveUpdateCoordinator(DataUpdateCoordinator[Drive]):
         ):
             key = "drive_full" if state is DriveState.EXCEEDED else "drive_almost_full"
             ir.async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 key,
                 is_fixable=False,

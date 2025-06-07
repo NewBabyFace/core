@@ -1,6 +1,6 @@
 """Types for the Model Context Protocol integration."""
 
-from homeassistant.config_entries import ConfigEntry
+from menuai.config_entries import ConfigEntry
 
 from .coordinator import ModelContextProtocolCoordinator
 

@@ -37,7 +37,7 @@ class Config:
 
     def __post_init__(self) -> None:
         """Post init."""
-        self.core_integrations_path = self.root / "homeassistant/components"
+        self.core_integrations_path = self.root / "menuai/components"
 
     def add_error(self, *args: Any, **kwargs: Any) -> None:
         """Add an error."""

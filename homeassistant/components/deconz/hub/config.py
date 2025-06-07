@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
 
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT
 
 from ..const import (
     CONF_ALLOW_CLIP_SENSOR,

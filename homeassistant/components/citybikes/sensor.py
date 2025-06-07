@@ -9,12 +9,12 @@ import logging
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ID,
     ATTR_LATITUDE,
     ATTR_LOCATION,
@@ -26,17 +26,17 @@ from homeassistant.const import (
     CONF_RADIUS,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import location as location_util
-from homeassistant.util.unit_conversion import DistanceConverter
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import location as location_util
+from menuai.util.unit_conversion import DistanceConverter
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -135,10 +135,10 @@ class CityBikesRequestError(Exception):
     """Error to indicate a CityBikes API request has failed."""
 
 
-async def async_citybikes_request(hass, uri, schema):
+async def async_citybikes_request(menuai, uri, schema):
     """Perform a request to CityBikes API endpoint, and parse the response."""
     try:
-        session = async_get_clientsession(hass)
+        session = async_get_clientsession(menuai)
 
         async with asyncio.timeout(REQUEST_TIMEOUT):
             req = await session.get(DEFAULT_ENDPOINT.format(uri=uri))
@@ -155,39 +155,39 @@ async def async_citybikes_request(hass, uri, schema):
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the CityBikes platform."""
-    if PLATFORM not in hass.data:
-        hass.data[PLATFORM] = {MONITORED_NETWORKS: {}}
+    if PLATFORM not in menuai.data:
+        menuai.data[PLATFORM] = {MONITORED_NETWORKS: {}}
 
-    latitude = config.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
+    latitude = config.get(CONF_LATITUDE, menuai.config.latitude)
+    longitude = config.get(CONF_LONGITUDE, menuai.config.longitude)
     network_id = config.get(CONF_NETWORK)
     stations_list = set(config.get(CONF_STATIONS_LIST, []))
     radius = config.get(CONF_RADIUS, 0)
     name = config[CONF_NAME]
-    if hass.config.units is US_CUSTOMARY_SYSTEM:
+    if menuai.config.units is US_CUSTOMARY_SYSTEM:
         radius = DistanceConverter.convert(
             radius, UnitOfLength.FEET, UnitOfLength.METERS
         )
 
     # Create a single instance of CityBikesNetworks.
-    networks = hass.data.setdefault(CITYBIKES_NETWORKS, CityBikesNetworks(hass))
+    networks = menuai.data.setdefault(CITYBIKES_NETWORKS, CityBikesNetworks(menuai))
 
     if not network_id:
         network_id = await networks.get_closest_network_id(latitude, longitude)
 
-    if network_id not in hass.data[PLATFORM][MONITORED_NETWORKS]:
-        network = CityBikesNetwork(hass, network_id)
-        hass.data[PLATFORM][MONITORED_NETWORKS][network_id] = network
-        hass.async_create_task(network.async_refresh())
-        async_track_time_interval(hass, network.async_refresh, SCAN_INTERVAL)
+    if network_id not in menuai.data[PLATFORM][MONITORED_NETWORKS]:
+        network = CityBikesNetwork(menuai, network_id)
+        menuai.data[PLATFORM][MONITORED_NETWORKS][network_id] = network
+        menuai.async_create_task(network.async_refresh())
+        async_track_time_interval(menuai, network.async_refresh, SCAN_INTERVAL)
     else:
-        network = hass.data[PLATFORM][MONITORED_NETWORKS][network_id]
+        network = menuai.data[PLATFORM][MONITORED_NETWORKS][network_id]
 
     await network.ready.wait()
 
@@ -204,7 +204,7 @@ async def async_setup_platform(
                 uid = f"{network.network_id}_{name}_{station_id}"
             else:
                 uid = f"{network.network_id}_{station_id}"
-            entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, uid, hass=hass)
+            entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, uid, menuai=menuai)
             devices.append(CityBikesStation(network, station_id, entity_id))
 
     async_add_entities(devices, True)
@@ -213,9 +213,9 @@ async def async_setup_platform(
 class CityBikesNetworks:
     """Represent all CityBikes networks."""
 
-    def __init__(self, hass):
+    def __init__(self, menuai):
         """Initialize the networks instance."""
-        self.hass = hass
+        self.menuai = menuai
         self.networks = None
         self.networks_loading = asyncio.Condition()
 
@@ -225,7 +225,7 @@ class CityBikesNetworks:
             await self.networks_loading.acquire()
             if self.networks is None:
                 networks = await async_citybikes_request(
-                    self.hass, NETWORKS_URI, NETWORKS_RESPONSE_SCHEMA
+                    self.menuai, NETWORKS_URI, NETWORKS_RESPONSE_SCHEMA
                 )
                 self.networks = networks[ATTR_NETWORKS_LIST]
         except CityBikesRequestError as err:
@@ -251,9 +251,9 @@ class CityBikesNetworks:
 class CityBikesNetwork:
     """Thin wrapper around a CityBikes network object."""
 
-    def __init__(self, hass, network_id):
+    def __init__(self, menuai, network_id):
         """Initialize the network object."""
-        self.hass = hass
+        self.menuai = menuai
         self.network_id = network_id
         self.stations = []
         self.ready = asyncio.Event()
@@ -262,7 +262,7 @@ class CityBikesNetwork:
         """Refresh the state of the network."""
         try:
             network = await async_citybikes_request(
-                self.hass,
+                self.menuai,
                 STATIONS_URI.format(uid=self.network_id),
                 STATIONS_RESPONSE_SCHEMA,
             )

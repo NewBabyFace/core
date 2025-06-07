@@ -5,9 +5,9 @@ from datetime import timedelta
 
 from streamlabswater.streamlabswater import StreamlabsClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import LOGGER
 
@@ -30,13 +30,13 @@ class StreamlabsCoordinator(DataUpdateCoordinator[dict[str, StreamlabsData]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         client: StreamlabsClient,
     ) -> None:
         """Coordinator for Streamlabs."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="Streamlabs",
@@ -45,7 +45,7 @@ class StreamlabsCoordinator(DataUpdateCoordinator[dict[str, StreamlabsData]]):
         self.client = client
 
     async def _async_update_data(self) -> dict[str, StreamlabsData]:
-        return await self.hass.async_add_executor_job(self._update_data)
+        return await self.menuai.async_add_executor_job(self._update_data)
 
     def _update_data(self) -> dict[str, StreamlabsData]:
         locations = self.client.get_locations()

@@ -7,15 +7,15 @@ from typing import Any
 from pywilight.const import ITEM_LIGHT, LIGHT_COLOR, LIGHT_DIMMER, LIGHT_ON_OFF
 from pywilight.wilight_device import PyWiLightDevice
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import WiLightDevice
@@ -41,12 +41,12 @@ def entities_from_discovered_wilight(api_device: PyWiLightDevice) -> list[LightE
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up WiLight lights from a config entry."""
-    parent: WiLightParent = hass.data[DOMAIN][entry.entry_id]
+    parent: WiLightParent = menuai.data[DOMAIN][entry.entry_id]
 
     # Handle a discovered WiLight device.
     assert parent.api
@@ -107,23 +107,23 @@ class WiLightLightDimmer(WiLightDevice, LightEntity):
         await self._client.turn_off(self._index)
 
 
-def wilight_to_hass_hue(value: int) -> float:
-    """Convert wilight hue 1..255 to hass 0..360 scale."""
+def wilight_to_menuai_hue(value: int) -> float:
+    """Convert wilight hue 1..255 to menuai 0..360 scale."""
     return min(360, round((value * 360) / 255, 3))
 
 
-def hass_to_wilight_hue(value: float) -> int:
-    """Convert hass hue 0..360 to wilight 1..255 scale."""
+def menuai_to_wilight_hue(value: float) -> int:
+    """Convert menuai hue 0..360 to wilight 1..255 scale."""
     return min(255, round((value * 255) / 360))
 
 
-def wilight_to_hass_saturation(value: int) -> float:
-    """Convert wilight saturation 1..255 to hass 0..100 scale."""
+def wilight_to_menuai_saturation(value: int) -> float:
+    """Convert wilight saturation 1..255 to menuai 0..100 scale."""
     return min(100, round((value * 100) / 255, 3))
 
 
-def hass_to_wilight_saturation(value: float) -> int:
-    """Convert hass saturation 0..100 to wilight 1..255 scale."""
+def menuai_to_wilight_saturation(value: float) -> int:
+    """Convert menuai saturation 0..100 to wilight 1..255 scale."""
     return min(255, round((value * 255) / 100))
 
 
@@ -143,8 +143,8 @@ class WiLightLightColor(WiLightDevice, LightEntity):
     def hs_color(self) -> tuple[float, float]:
         """Return the hue and saturation color value [float, float]."""
         return (
-            wilight_to_hass_hue(int(self._status.get("hue", 0))),
-            wilight_to_hass_saturation(int(self._status.get("saturation", 0))),
+            wilight_to_menuai_hue(int(self._status.get("hue", 0))),
+            wilight_to_menuai_saturation(int(self._status.get("saturation", 0))),
         )
 
     @property
@@ -159,15 +159,15 @@ class WiLightLightColor(WiLightDevice, LightEntity):
         # Saturation use a range of [0, 100] to control
         if ATTR_BRIGHTNESS in kwargs and ATTR_HS_COLOR in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS]
-            hue = hass_to_wilight_hue(kwargs[ATTR_HS_COLOR][0])
-            saturation = hass_to_wilight_saturation(kwargs[ATTR_HS_COLOR][1])
+            hue = menuai_to_wilight_hue(kwargs[ATTR_HS_COLOR][0])
+            saturation = menuai_to_wilight_saturation(kwargs[ATTR_HS_COLOR][1])
             await self._client.set_hsb_color(self._index, hue, saturation, brightness)
         elif ATTR_BRIGHTNESS in kwargs and ATTR_HS_COLOR not in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS]
             await self._client.set_brightness(self._index, brightness)
         elif ATTR_BRIGHTNESS not in kwargs and ATTR_HS_COLOR in kwargs:
-            hue = hass_to_wilight_hue(kwargs[ATTR_HS_COLOR][0])
-            saturation = hass_to_wilight_saturation(kwargs[ATTR_HS_COLOR][1])
+            hue = menuai_to_wilight_hue(kwargs[ATTR_HS_COLOR][0])
+            saturation = menuai_to_wilight_saturation(kwargs[ATTR_HS_COLOR][1])
             await self._client.set_hs_color(self._index, hue, saturation)
         else:
             await self._client.turn_on(self._index)

@@ -7,10 +7,10 @@ from freezegun.api import FrozenDateTimeFactory
 from peblar import PeblarAuthenticationError, PeblarConnectionError, PeblarError
 import pytest
 
-from homeassistant.components.peblar.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.peblar.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -40,7 +40,7 @@ pytestmark = [
     ],
 )
 async def test_coordinator_error_handler(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
@@ -52,17 +52,17 @@ async def test_coordinator_error_handler(
 
     # Ensure we are set up and the coordinator is working.
     # Confirming this through a sensor entity, that is available.
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state != STATE_UNAVAILABLE
 
     # Mock an error in the coordinator.
     mock_peblar.rest_api.return_value.meter.side_effect = error
     freezer.tick(timedelta(seconds=15))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Ensure the sensor entity is now unavailable.
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNAVAILABLE
 
     # Ensure the error is logged
@@ -71,16 +71,16 @@ async def test_coordinator_error_handler(
     # Recover
     mock_peblar.rest_api.return_value.meter.side_effect = None
     freezer.tick(timedelta(seconds=15))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Ensure the sensor entity is now available.
-    assert (state := hass.states.get("sensor.peblar_ev_charger_power"))
+    assert (state := menuai.states.get("sensor.peblar_ev_charger_power"))
     assert state.state != STATE_UNAVAILABLE
 
 
 async def test_coordinator_error_handler_authentication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_peblar: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -88,7 +88,7 @@ async def test_coordinator_error_handler_authentication_error(
     """Test the coordinator error handler with an authentication error."""
 
     # Ensure the sensor entity is now available.
-    assert (state := hass.states.get("sensor.peblar_ev_charger_power"))
+    assert (state := menuai.states.get("sensor.peblar_ev_charger_power"))
     assert state.state != STATE_UNAVAILABLE
 
     # Mock an authentication in the coordinator
@@ -97,17 +97,17 @@ async def test_coordinator_error_handler_authentication_error(
     )
     mock_peblar.login.side_effect = PeblarAuthenticationError("Authentication error")
     freezer.tick(timedelta(seconds=15))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Ensure the sensor entity is now unavailable.
-    assert (state := hass.states.get("sensor.peblar_ev_charger_power"))
+    assert (state := menuai.states.get("sensor.peblar_ev_charger_power"))
     assert state.state == STATE_UNAVAILABLE
 
     # Ensure we have triggered a reauthentication flow
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

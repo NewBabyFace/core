@@ -9,9 +9,9 @@ from typing import Any
 
 from aiokem import AioKem, CommunicationError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -38,7 +38,7 @@ class RehlkoUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         config_entry: RehlkoConfigEntry,
         rehlko: AioKem,
@@ -53,7 +53,7 @@ class RehlkoUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.device_id = device_id
         self.home_data = home_data
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             config_entry=config_entry,
             name=name,

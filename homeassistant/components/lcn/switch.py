@@ -6,12 +6,12 @@ from typing import Any
 
 import pypck
 
-from homeassistant.components.switch import DOMAIN as DOMAIN_SWITCH, SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DOMAIN, CONF_ENTITIES
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.switch import DOMAIN as DOMAIN_SWITCH, SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DOMAIN, CONF_ENTITIES
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ADD_ENTITIES_CALLBACKS,
@@ -51,7 +51,7 @@ def add_lcn_switch_entities(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -62,7 +62,7 @@ async def async_setup_entry(
         async_add_entities,
     )
 
-    hass.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
+    menuai.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
         {DOMAIN_SWITCH: add_entities}
     )
 
@@ -86,15 +86,15 @@ class LcnOutputSwitch(LcnEntity, SwitchEntity):
 
         self.output = pypck.lcn_defs.OutputPort[config[CONF_DOMAIN_DATA][CONF_OUTPUT]]
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(self.output)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(self.output)
 
@@ -135,15 +135,15 @@ class LcnRelaySwitch(LcnEntity, SwitchEntity):
 
         self.output = pypck.lcn_defs.RelayPort[config[CONF_DOMAIN_DATA][CONF_OUTPUT]]
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(self.output)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(self.output)
 
@@ -188,17 +188,17 @@ class LcnRegulatorLockSwitch(LcnEntity, SwitchEntity):
         ]
         self.reg_id = pypck.lcn_defs.Var.to_set_point_id(self.setpoint_variable)
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(
                 self.setpoint_variable
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(
                 self.setpoint_variable
@@ -243,15 +243,15 @@ class LcnKeyLockSwitch(LcnEntity, SwitchEntity):
         self.table_id = ord(self.key.name[0]) - 65
         self.key_id = int(self.key.name[1]) - 1
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(self.key)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(self.key)
 

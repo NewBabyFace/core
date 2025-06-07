@@ -1,9 +1,9 @@
 """Make sure that existing VOCOlinc VP3 support isn't broken."""
 
-from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.sensor import SensorStateClass
+from menuai.const import UnitOfPower
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from ..common import (
     HUB_TEST_ACCESSORY_ID,
@@ -16,7 +16,7 @@ from ..common import (
 
 
 async def test_vocolinc_vp3_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that a VOCOlinc VP3 can be correctly setup in HA."""
@@ -34,11 +34,11 @@ async def test_vocolinc_vp3_setup(
         suggested_object_id="original_vocolinc_vp3_power",
     )
 
-    accessories = await setup_accessories_from_file(hass, "vocolinc_vp3.json")
-    await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, "vocolinc_vp3.json")
+    await setup_test_accessories(menuai, accessories)
 
     await assert_devices_and_entities_created(
-        hass,
+        menuai,
         DeviceTestInfo(
             unique_id=HUB_TEST_ACCESSORY_ID,
             name="VOCOlinc-VP3-123456",

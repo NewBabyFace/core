@@ -7,18 +7,18 @@ from typing import Any
 
 from aiohttp.web import Response
 
-from homeassistant.components import http
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import intent
-from homeassistant.util.decorator import Registry
+from menuai.components import http
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import intent
+from menuai.util.decorator import Registry
 
 from .const import DOMAIN, SYN_RESOLUTION_MATCH
 
 _LOGGER = logging.getLogger(__name__)
 
 HANDLERS: Registry[
-    str, Callable[[HomeAssistant, dict[str, Any]], Coroutine[Any, Any, dict[str, Any]]]
+    str, Callable[[menuai, dict[str, Any]], Coroutine[Any, Any, dict[str, Any]]]
 ] = Registry()
 
 INTENTS_API_ENDPOINT = "/api/alexa"
@@ -42,12 +42,12 @@ class CardType(enum.StrEnum):
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Activate Alexa component."""
-    hass.http.register_view(AlexaIntentsView)
+    menuai.http.register_view(AlexaIntentsView)
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Do intents setup.
 
     Right now this module does not expose any, but the intent component breaks
@@ -55,37 +55,37 @@ async def async_setup_intents(hass: HomeAssistant) -> None:
     """
 
 
-class UnknownRequest(HomeAssistantError):
+class UnknownRequest(menuaiError):
     """When an unknown Alexa request is passed in."""
 
 
-class AlexaIntentsView(http.HomeAssistantView):
+class AlexaIntentsView(http.menuaiView):
     """Handle Alexa requests."""
 
     url = INTENTS_API_ENDPOINT
     name = "api:alexa"
 
-    async def post(self, request: http.HomeAssistantRequest) -> Response | bytes:
+    async def post(self, request: http.menuaiRequest) -> Response | bytes:
         """Handle Alexa."""
-        hass = request.app[http.KEY_HASS]
+        menuai = request.app[http.KEY_menuai]
         message: dict[str, Any] = await request.json()
 
         _LOGGER.debug("Received Alexa request: %s", message)
 
         try:
-            response: dict[str, Any] = await async_handle_message(hass, message)
+            response: dict[str, Any] = await async_handle_message(menuai, message)
             return b"" if response is None else self.json(response)
         except UnknownRequest as err:
             _LOGGER.warning(str(err))
-            return self.json(intent_error_response(hass, message, str(err)))
+            return self.json(intent_error_response(menuai, message, str(err)))
 
         except intent.UnknownIntent as err:
             _LOGGER.warning(str(err))
             return self.json(
                 intent_error_response(
-                    hass,
+                    menuai,
                     message,
-                    "This intent is not yet configured within Home Assistant.",
+                    "This intent is not yet configured within MenuAI.",
                 )
             )
 
@@ -93,29 +93,29 @@ class AlexaIntentsView(http.HomeAssistantView):
             _LOGGER.error("Received invalid slot data from Alexa: %s", err)
             return self.json(
                 intent_error_response(
-                    hass, message, "Invalid slot information received for this intent."
+                    menuai, message, "Invalid slot information received for this intent."
                 )
             )
 
         except intent.IntentError:
             _LOGGER.exception("Error handling intent")
             return self.json(
-                intent_error_response(hass, message, "Error handling intent.")
+                intent_error_response(menuai, message, "Error handling intent.")
             )
 
 
 def intent_error_response(
-    hass: HomeAssistant, message: dict[str, Any], error: str
+    menuai: menuai, message: dict[str, Any], error: str
 ) -> dict[str, Any]:
     """Return an Alexa response that will speak the error message."""
     alexa_intent_info = message["request"].get("intent")
-    alexa_response = AlexaIntentResponse(hass, alexa_intent_info)
+    alexa_response = AlexaIntentResponse(menuai, alexa_intent_info)
     alexa_response.add_speech(SpeechType.plaintext, error)
     return alexa_response.as_dict()
 
 
 async def async_handle_message(
-    hass: HomeAssistant, message: dict[str, Any]
+    menuai: menuai, message: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle an Alexa intent.
 
@@ -132,14 +132,14 @@ async def async_handle_message(
     if not (handler := HANDLERS.get(req_type)):
         raise UnknownRequest(f"Received unknown request {req_type}")
 
-    return await handler(hass, message)
+    return await handler(menuai, message)
 
 
 @HANDLERS.register("SessionEndedRequest")
 @HANDLERS.register("IntentRequest")
 @HANDLERS.register("LaunchRequest")
 async def async_handle_intent(
-    hass: HomeAssistant, message: dict[str, Any]
+    menuai: menuai, message: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle an intent request.
 
@@ -151,7 +151,7 @@ async def async_handle_intent(
     """
     req = message["request"]
     alexa_intent_info = req.get("intent")
-    alexa_response = AlexaIntentResponse(hass, alexa_intent_info)
+    alexa_response = AlexaIntentResponse(menuai, alexa_intent_info)
 
     if req["type"] == "LaunchRequest":
         intent_name = (
@@ -166,7 +166,7 @@ async def async_handle_intent(
         intent_name = alexa_intent_info["name"]
 
     intent_response = await intent.async_handle(
-        hass,
+        menuai,
         DOMAIN,
         intent_name,
         {key: {"value": value} for key, value in alexa_response.variables.items()},
@@ -240,9 +240,9 @@ def resolve_slot_data(key: str, request: dict[str, Any]) -> dict[str, str]:
 class AlexaIntentResponse:
     """Help generating the response for Alexa."""
 
-    def __init__(self, hass: HomeAssistant, intent_info: dict[str, Any] | None) -> None:
+    def __init__(self, menuai: menuai, intent_info: dict[str, Any] | None) -> None:
         """Initialize the response."""
-        self.hass = hass
+        self.menuai = menuai
         self.speech: dict[str, Any] | None = None
         self.card: dict[str, Any] | None = None
         self.reprompt: dict[str, Any] | None = None

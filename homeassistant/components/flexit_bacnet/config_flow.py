@@ -10,8 +10,8 @@ from flexit_bacnet import FlexitBACnet
 from flexit_bacnet.bacnet import DecodingError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE_ID, CONF_IP_ADDRESS
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE_ID, CONF_IP_ADDRESS
 
 from .const import DOMAIN
 

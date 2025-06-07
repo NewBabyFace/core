@@ -16,7 +16,7 @@ from amcrest import AmcrestError, ApiWrapper, LoginError
 import httpx
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_BINARY_SENSORS,
     CONF_HOST,
@@ -30,11 +30,11 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.dispatcher import async_dispatcher_send, dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.dispatcher import async_dispatcher_send, dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 from .binary_sensor import BINARY_SENSOR_KEYS, BINARY_SENSORS, check_binary_sensors
 from .camera import STREAM_SOURCE_LIST
@@ -127,7 +127,7 @@ class AmcrestChecker(ApiWrapper):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         host: str,
         port: int,
@@ -135,7 +135,7 @@ class AmcrestChecker(ApiWrapper):
         password: str,
     ) -> None:
         """Initialize."""
-        self._hass = hass
+        self._menuai = menuai
         self._wrap_name = name
         self._wrap_errors = 0
         self._wrap_lock = threading.Lock()
@@ -175,10 +175,10 @@ class AmcrestChecker(ApiWrapper):
         self.available_flag.clear()
         self.async_available_flag.clear()
         async_dispatcher_send(
-            self._hass, service_signal(SERVICE_UPDATE, self._wrap_name)
+            self._menuai, service_signal(SERVICE_UPDATE, self._wrap_name)
         )
         self._unsub_recheck = async_track_time_interval(
-            self._hass, self._wrap_test_online, RECHECK_INTERVAL
+            self._menuai, self._wrap_test_online, RECHECK_INTERVAL
         )
 
     def command(self, *args: Any, **kwargs: Any) -> Any:
@@ -241,7 +241,7 @@ class AmcrestChecker(ApiWrapper):
     def _handle_offline(self, ex: Exception) -> None:
         """Handle camera offline status from a thread."""
         if self._handle_offline_thread_safe(ex):
-            self._hass.loop.call_soon_threadsafe(self._async_start_recovery)
+            self._menuai.loop.call_soon_threadsafe(self._async_start_recovery)
 
     @callback
     def _async_handle_offline(self, ex: Exception) -> None:
@@ -265,7 +265,7 @@ class AmcrestChecker(ApiWrapper):
         """Handle camera error status from a thread."""
         if self._handle_error_thread_safe():
             _LOGGER.error("%s camera offline: Too many errors", self._wrap_name)
-            self._hass.loop.call_soon_threadsafe(self._async_start_recovery)
+            self._menuai.loop.call_soon_threadsafe(self._async_start_recovery)
 
     @callback
     def _async_handle_error(self) -> None:
@@ -288,7 +288,7 @@ class AmcrestChecker(ApiWrapper):
     def _set_online(self) -> None:
         """Set camera online status from a thread."""
         if self._set_online_thread_safe():
-            self._hass.loop.call_soon_threadsafe(self._async_signal_online)
+            self._menuai.loop.call_soon_threadsafe(self._async_signal_online)
 
     @callback
     def _async_set_online(self) -> None:
@@ -306,7 +306,7 @@ class AmcrestChecker(ApiWrapper):
         self.available_flag.set()
         self.async_available_flag.set()
         async_dispatcher_send(
-            self._hass, service_signal(SERVICE_UPDATE, self._wrap_name)
+            self._menuai, service_signal(SERVICE_UPDATE, self._wrap_name)
         )
 
     async def _wrap_test_online(self, now: datetime) -> None:
@@ -317,7 +317,7 @@ class AmcrestChecker(ApiWrapper):
 
 
 def _monitor_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     api: AmcrestChecker,
     event_codes: set[str],
@@ -327,7 +327,7 @@ def _monitor_events(
         try:
             for code, payload in api.event_actions("All"):
                 event_data = {"camera": name, "event": code, "payload": payload}
-                hass.bus.fire("amcrest", event_data)
+                menuai.bus.fire("amcrest", event_data)
                 if code in event_codes:
                     signal = service_signal(SERVICE_EVENT, name, code)
                     start = any(
@@ -335,7 +335,7 @@ def _monitor_events(
                         for key, val in payload.items()
                     )
                     _LOGGER.debug("Sending signal: '%s': %s", signal, start)
-                    dispatcher_send(hass, signal, start)
+                    dispatcher_send(menuai, signal, start)
         except AmcrestError as error:
             _LOGGER.warning(
                 "Error while processing events from %s camera: %r", name, error
@@ -343,7 +343,7 @@ def _monitor_events(
 
 
 def _start_event_monitor(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     api: AmcrestChecker,
     event_codes: set[str],
@@ -351,15 +351,15 @@ def _start_event_monitor(
     thread = threading.Thread(
         target=_monitor_events,
         name=f"Amcrest {name}",
-        args=(hass, name, api, event_codes),
+        args=(menuai, name, api, event_codes),
         daemon=True,
     )
     thread.start()
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Amcrest IP Camera component."""
-    hass.data.setdefault(DATA_AMCREST, {DEVICES: {}, CAMERAS: []})
+    menuai.data.setdefault(DATA_AMCREST, {DEVICES: {}, CAMERAS: []})
 
     for device in config[DOMAIN]:
         name: str = device[CONF_NAME]
@@ -367,7 +367,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         password: str = device[CONF_PASSWORD]
 
         api = AmcrestChecker(
-            hass, name, device[CONF_HOST], device[CONF_PORT], username, password
+            menuai, name, device[CONF_HOST], device[CONF_PORT], username, password
         )
 
         ffmpeg_arguments = device[CONF_FFMPEG_ARGUMENTS]
@@ -387,7 +387,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             authentication = None
 
-        hass.data[DATA_AMCREST][DEVICES][name] = AmcrestDevice(
+        menuai.data[DATA_AMCREST][DEVICES][name] = AmcrestDevice(
             api,
             authentication,
             ffmpeg_arguments,
@@ -396,17 +396,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             control_light,
         )
 
-        hass.async_create_task(
+        menuai.async_create_task(
             discovery.async_load_platform(
-                hass, Platform.CAMERA, DOMAIN, {CONF_NAME: name}, config
+                menuai, Platform.CAMERA, DOMAIN, {CONF_NAME: name}, config
             )
         )
 
         event_codes = set()
         if binary_sensors:
-            hass.async_create_task(
+            menuai.async_create_task(
                 discovery.async_load_platform(
-                    hass,
+                    menuai,
                     Platform.BINARY_SENSOR,
                     DOMAIN,
                     {CONF_NAME: name, CONF_BINARY_SENSORS: binary_sensors},
@@ -422,12 +422,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 for event_code in sensor.event_codes
             }
 
-        _start_event_monitor(hass, name, api, event_codes)
+        _start_event_monitor(menuai, name, api, event_codes)
 
         if sensors:
-            hass.async_create_task(
+            menuai.async_create_task(
                 discovery.async_load_platform(
-                    hass,
+                    menuai,
                     Platform.SENSOR,
                     DOMAIN,
                     {CONF_NAME: name, CONF_SENSORS: sensors},
@@ -436,9 +436,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
 
         if switches:
-            hass.async_create_task(
+            menuai.async_create_task(
                 discovery.async_load_platform(
-                    hass,
+                    menuai,
                     Platform.SWITCH,
                     DOMAIN,
                     {CONF_NAME: name, CONF_SWITCHES: switches},
@@ -446,10 +446,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 )
             )
 
-    if not hass.data[DATA_AMCREST][DEVICES]:
+    if not menuai.data[DATA_AMCREST][DEVICES]:
         return False
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 

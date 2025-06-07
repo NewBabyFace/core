@@ -1,4 +1,4 @@
-"""Hassfest utils."""
+"""menuaifest utils."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from typing import Any
 
-DEFAULT_GENERATOR = "script.hassfest"
+DEFAULT_GENERATOR = "script.menuaifest"
 
 
 def _wrap_items(

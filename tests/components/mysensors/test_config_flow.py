@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.mysensors.const import (
+from menuai import config_entries
+from menuai.components.mysensors.const import (
     CONF_BAUD_RATE,
     CONF_GATEWAY_TYPE,
     CONF_GATEWAY_TYPE_MQTT,
@@ -23,9 +23,9 @@ from homeassistant.components.mysensors.const import (
     DOMAIN,
     ConfGatewayType,
 )
-from homeassistant.const import CONF_DEVICE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult, FlowResultType
+from menuai.const import CONF_DEVICE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult, FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -37,35 +37,35 @@ GATEWAY_TYPE_TO_STEP = {
 
 
 async def get_form(
-    hass: HomeAssistant, gateway_type: ConfGatewayType, expected_step_id: str
+    menuai: menuai, gateway_type: ConfGatewayType, expected_step_id: str
 ) -> FlowResult:
     """Get a form for the given gateway type."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": GATEWAY_TYPE_TO_STEP[gateway_type]}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == expected_step_id
 
     return result
 
 
-async def test_config_mqtt(hass: HomeAssistant, mqtt: None) -> None:
+async def test_config_mqtt(menuai: menuai, mqtt: None) -> None:
     """Test configuring a mqtt gateway."""
-    step = await get_form(hass, CONF_GATEWAY_TYPE_MQTT, "gw_mqtt")
+    step = await get_form(menuai, CONF_GATEWAY_TYPE_MQTT, "gw_mqtt")
     flow_id = step["flow_id"]
 
     with patch(
-        "homeassistant.components.mysensors.async_setup_entry",
+        "menuai.components.mysensors.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id,
             {
                 CONF_RETAIN: True,
@@ -74,7 +74,7 @@ async def test_config_mqtt(hass: HomeAssistant, mqtt: None) -> None:
                 CONF_VERSION: "2.4",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     if "errors" in result:
         assert not result["errors"]
@@ -91,43 +91,43 @@ async def test_config_mqtt(hass: HomeAssistant, mqtt: None) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_missing_mqtt(hass: HomeAssistant) -> None:
+async def test_missing_mqtt(menuai: menuai) -> None:
     """Test configuring a mqtt gateway without mqtt integration setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": GATEWAY_TYPE_TO_STEP[CONF_GATEWAY_TYPE_MQTT]},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "mqtt_required"
 
 
-async def test_config_serial(hass: HomeAssistant) -> None:
+async def test_config_serial(menuai: menuai) -> None:
     """Test configuring a gateway via serial."""
-    step = await get_form(hass, CONF_GATEWAY_TYPE_SERIAL, "gw_serial")
+    step = await get_form(menuai, CONF_GATEWAY_TYPE_SERIAL, "gw_serial")
     flow_id = step["flow_id"]
 
     with (
         patch(  # mock is_serial_port because otherwise the test will be platform dependent (/dev/ttyACMx vs COMx)
-            "homeassistant.components.mysensors.config_flow.is_serial_port",
+            "menuai.components.mysensors.config_flow.is_serial_port",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.mysensors.config_flow.try_connect",
+            "menuai.components.mysensors.config_flow.try_connect",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.mysensors.async_setup_entry",
+            "menuai.components.mysensors.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id,
             {
                 CONF_BAUD_RATE: 115200,
@@ -135,7 +135,7 @@ async def test_config_serial(hass: HomeAssistant) -> None:
                 CONF_VERSION: "2.4",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     if "errors" in result:
         assert not result["errors"]
@@ -150,22 +150,22 @@ async def test_config_serial(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_config_tcp(hass: HomeAssistant) -> None:
+async def test_config_tcp(menuai: menuai) -> None:
     """Test configuring a gateway via tcp."""
-    step = await get_form(hass, CONF_GATEWAY_TYPE_TCP, "gw_tcp")
+    step = await get_form(menuai, CONF_GATEWAY_TYPE_TCP, "gw_tcp")
     flow_id = step["flow_id"]
 
     with (
         patch(
-            "homeassistant.components.mysensors.config_flow.try_connect",
+            "menuai.components.mysensors.config_flow.try_connect",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.mysensors.async_setup_entry",
+            "menuai.components.mysensors.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id,
             {
                 CONF_TCP_PORT: 5003,
@@ -173,7 +173,7 @@ async def test_config_tcp(hass: HomeAssistant) -> None:
                 CONF_VERSION: "2.4",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     if "errors" in result:
         assert not result["errors"]
@@ -188,22 +188,22 @@ async def test_config_tcp(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_fail_to_connect(hass: HomeAssistant) -> None:
+async def test_fail_to_connect(menuai: menuai) -> None:
     """Test configuring a gateway via tcp."""
-    step = await get_form(hass, CONF_GATEWAY_TYPE_TCP, "gw_tcp")
+    step = await get_form(menuai, CONF_GATEWAY_TYPE_TCP, "gw_tcp")
     flow_id = step["flow_id"]
 
     with (
         patch(
-            "homeassistant.components.mysensors.config_flow.try_connect",
+            "menuai.components.mysensors.config_flow.try_connect",
             return_value=False,
         ),
         patch(
-            "homeassistant.components.mysensors.async_setup_entry",
+            "menuai.components.mysensors.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id,
             {
                 CONF_TCP_PORT: 5003,
@@ -211,7 +211,7 @@ async def test_fail_to_connect(hass: HomeAssistant) -> None:
                 CONF_VERSION: "2.4",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert "errors" in result
@@ -342,7 +342,7 @@ async def test_fail_to_connect(hass: HomeAssistant) -> None:
     ],
 )
 async def test_config_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt: None,
     gateway_type: ConfGatewayType,
     expected_step_id: str,
@@ -351,28 +351,28 @@ async def test_config_invalid(
     err_string: str,
 ) -> None:
     """Perform a test that is expected to generate an error."""
-    step = await get_form(hass, gateway_type, expected_step_id)
+    step = await get_form(menuai, gateway_type, expected_step_id)
     flow_id = step["flow_id"]
 
     with (
         patch(
-            "homeassistant.components.mysensors.config_flow.try_connect",
+            "menuai.components.mysensors.config_flow.try_connect",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.mysensors.gateway.socket.getaddrinfo",
+            "menuai.components.mysensors.gateway.socket.getaddrinfo",
             side_effect=OSError,
         ),
         patch(
-            "homeassistant.components.mysensors.async_setup_entry",
+            "menuai.components.mysensors.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow_id,
             user_input,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert "errors" in result
@@ -663,7 +663,7 @@ async def test_config_invalid(
     ],
 )
 async def test_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt: None,
     first_input: dict,
     second_input: dict,
@@ -674,25 +674,25 @@ async def test_duplicate(
     with (
         patch("sys.platform", "win32"),
         patch(
-            "homeassistant.components.mysensors.config_flow.try_connect",
+            "menuai.components.mysensors.config_flow.try_connect",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.mysensors.async_setup_entry",
+            "menuai.components.mysensors.async_setup_entry",
             return_value=True,
         ),
     ):
-        MockConfigEntry(domain=DOMAIN, data=first_input).add_to_hass(hass)
+        MockConfigEntry(domain=DOMAIN, data=first_input).add_to_menuai(menuai)
 
         second_gateway_type = second_input.pop(CONF_GATEWAY_TYPE)
         result = await get_form(
-            hass, second_gateway_type, GATEWAY_TYPE_TO_STEP[second_gateway_type]
+            menuai, second_gateway_type, GATEWAY_TYPE_TO_STEP[second_gateway_type]
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             second_input,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         for key, val in expected_result.items():
             assert result[key] == val  # type: ignore[literal-required]

@@ -9,11 +9,11 @@ from typing import Any
 from pyvizio.const import APPS
 from pyvizio.util import gen_apps_list_from_url
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.storage import Store
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -27,13 +27,13 @@ class VizioAppsDataUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         store: Store[list[dict[str, Any]]],
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -50,7 +50,7 @@ class VizioAppsDataUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]
     async def _async_update_data(self) -> list[dict[str, Any]]:
         """Update data via library."""
         if data := await gen_apps_list_from_url(
-            session=async_get_clientsession(self.hass)
+            session=async_get_clientsession(self.menuai)
         ):
             # Reset the fail count and threshold when the data is successfully retrieved
             self.fail_count = 0

@@ -8,11 +8,11 @@ from typing import Any
 from rachiopy import Rachio
 from requests.exceptions import Timeout
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -37,18 +37,18 @@ class RachioUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         rachio: Rachio,
         config_entry: ConfigEntry,
         base_station,
         base_count: int,
     ) -> None:
         """Initialize the Rachio Update Coordinator."""
-        self.hass = hass
+        self.menuai = menuai
         self.rachio = rachio
         self.base_station = base_station
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} update coordinator",
@@ -57,14 +57,14 @@ class RachioUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=timedelta(minutes=(base_count + 1)),
             # Debouncer used because the API takes a bit to update state changes
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=UPDATE_DELAY_TIME, immediate=False
+                menuai, _LOGGER, cooldown=UPDATE_DELAY_TIME, immediate=False
             ),
         )
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update smart hose timer data."""
         try:
-            data = await self.hass.async_add_executor_job(
+            data = await self.menuai.async_add_executor_job(
                 self.rachio.valve.list_valves, self.base_station[KEY_ID]
             )
         except Timeout as err:
@@ -77,17 +77,17 @@ class RachioScheduleUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         rachio: Rachio,
         config_entry: ConfigEntry,
         base_station,
     ) -> None:
         """Initialize a Rachio schedule coordinator."""
-        self.hass = hass
+        self.menuai = menuai
         self.rachio = rachio
         self.base_station = base_station
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} schedule update coordinator",
@@ -111,7 +111,7 @@ class RachioScheduleUpdateCoordinator(DataUpdateCoordinator[list[dict[str, Any]]
         }
 
         try:
-            schedule = await self.hass.async_add_executor_job(
+            schedule = await self.menuai.async_add_executor_job(
                 self.rachio.summary.get_valve_day_views,
                 self.base_station[KEY_ID],
                 start,

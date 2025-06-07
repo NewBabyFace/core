@@ -7,26 +7,26 @@ from typing import Any
 import axis
 from axis.models.configuration import Configuration
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.core import menuai
+from menuai.helpers.httpx_client import get_async_client
 
 from ..const import LOGGER
 from ..errors import AuthenticationRequired, CannotConnect
 
 
 async def get_axis_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: Mapping[str, Any],
 ) -> axis.AxisDevice:
     """Create a Axis device API."""
-    session = get_async_client(hass, verify_ssl=False)
+    session = get_async_client(menuai, verify_ssl=False)
 
     api = axis.AxisDevice(
         Configuration(

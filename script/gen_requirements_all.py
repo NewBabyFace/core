@@ -13,8 +13,8 @@ import sys
 import tomllib
 from typing import Any
 
-from homeassistant.util.yaml.loader import load_yaml
-from script.hassfest.model import Config, Integration
+from menuai.util.yaml.loader import load_yaml
+from script.menuaifest.model import Config, Integration
 
 # Requirements which can't be installed on all systems because they rely on additional
 # system packages. Requirements listed in EXCLUDED_REQUIREMENTS_ALL will be commented-out
@@ -99,7 +99,7 @@ URL_PIN = (
 
 
 CONSTRAINT_PATH = (
-    Path(__file__).parent.parent / "homeassistant" / "package_constraints.txt"
+    Path(__file__).parent.parent / "menuai" / "package_constraints.txt"
 )
 CONSTRAINT_BASE = """
 # Constrain pycryptodome to avoid vulnerability
@@ -268,11 +268,11 @@ PACKAGE_REGEX = re.compile(r"^(?:--.+\s)?([-_\.\w\d]+).*==.+$")
 def has_tests(module: str) -> bool:
     """Test if a module has tests.
 
-    Module format: homeassistant.components.hue
+    Module format: menuai.components.hue
     Test if exists: tests/components/hue/__init__.py
     """
     path = (
-        Path(module.replace(".", "/").replace("homeassistant", "tests", 1))
+        Path(module.replace(".", "/").replace("menuai", "tests", 1))
         / "__init__.py"
     )
     return path.exists()
@@ -312,7 +312,7 @@ def gather_recursive_requirements(
 
     seen.add(domain)
     integration = Integration(
-        Path(f"homeassistant/components/{domain}"), _get_hassfest_config()
+        Path(f"menuai/components/{domain}"), _get_menuaifest_config()
     )
     integration.load_manifest()
     reqs = {x for x in integration.requirements if x not in CONSTRAINT_BASE}
@@ -329,7 +329,7 @@ def _normalize_package_name(package_name: str) -> str:
 
 def normalize_package_name(requirement: str) -> str:
     """Return a normalized package name from a requirement string."""
-    # This function is also used in hassfest.
+    # This function is also used in menuaifest.
     match = PACKAGE_REGEX.search(requirement)
     if not match:
         return ""
@@ -383,7 +383,7 @@ def gather_requirements_from_manifests(
     errors: list[str], reqs: dict[str, list[str]]
 ) -> None:
     """Gather all of the requirements from manifests."""
-    config = _get_hassfest_config()
+    config = _get_menuaifest_config()
     integrations = Integration.load_dir(config.core_integrations_path, config)
     for domain in sorted(integrations):
         integration = integrations[domain]
@@ -392,7 +392,7 @@ def gather_requirements_from_manifests(
             continue
 
         process_requirements(
-            errors, integration.requirements, f"homeassistant.components.{domain}", reqs
+            errors, integration.requirements, f"menuai.components.{domain}", reqs
         )
 
 
@@ -401,8 +401,8 @@ def gather_requirements_from_modules(
 ) -> None:
     """Collect the requirements from the modules directly."""
     for package in sorted(
-        explore_module("homeassistant.scripts", True)
-        + explore_module("homeassistant.auth", True)
+        explore_module("menuai.scripts", True)
+        + explore_module("menuai.auth", True)
     ):
         try:
             module = importlib.import_module(package)
@@ -457,9 +457,9 @@ def requirements_output() -> str:
     """Generate output for requirements."""
     output = [
         GENERATED_MESSAGE,
-        "-c homeassistant/package_constraints.txt\n",
+        "-c menuai/package_constraints.txt\n",
         "\n",
-        "# Home Assistant Core\n",
+        "# MenuAI Core\n",
     ]
     output.append("\n".join(core_requirements()))
     output.append("\n")
@@ -470,7 +470,7 @@ def requirements_output() -> str:
 def requirements_all_output(reqs: dict[str, list[str]]) -> str:
     """Generate output for requirements_all."""
     output = [
-        "# Home Assistant Core, full dependency set\n",
+        "# MenuAI Core, full dependency set\n",
         GENERATED_MESSAGE,
         "-r requirements.txt\n",
     ]
@@ -482,7 +482,7 @@ def requirements_all_output(reqs: dict[str, list[str]]) -> str:
 def requirements_all_action_output(reqs: dict[str, list[str]], action: str) -> str:
     """Generate output for requirements_all_{action}."""
     output = [
-        f"# Home Assistant Core, full dependency set for {action}\n",
+        f"# MenuAI Core, full dependency set for {action}\n",
         GENERATED_MESSAGE,
         "-r requirements.txt\n",
     ]
@@ -494,7 +494,7 @@ def requirements_all_action_output(reqs: dict[str, list[str]], action: str) -> s
 def requirements_test_all_output(reqs: dict[str, list[str]]) -> str:
     """Generate output for test_requirements."""
     output = [
-        "# Home Assistant tests, full dependency set\n",
+        "# MenuAI tests, full dependency set\n",
         GENERATED_MESSAGE,
         "-r requirements_test.txt\n",
     ]
@@ -504,7 +504,7 @@ def requirements_test_all_output(reqs: dict[str, list[str]]) -> str:
         for requirement, modules in reqs.items()
         if any(
             # Always install requirements that are not part of integrations
-            not mdl.startswith("homeassistant.components.")
+            not mdl.startswith("menuai.components.")
             or
             # Install tests for integrations that have tests
             has_tests(mdl)
@@ -600,7 +600,7 @@ def main(validate: bool, ci: bool) -> int:
         ("requirements_all.txt", reqs_all_file),
         ("requirements_test_pre_commit.txt", reqs_pre_commit_file),
         ("requirements_test_all.txt", reqs_test_all_file),
-        ("homeassistant/package_constraints.txt", constraints),
+        ("menuai/package_constraints.txt", constraints),
     ]
     if ci:
         files.extend(
@@ -633,8 +633,8 @@ def main(validate: bool, ci: bool) -> int:
     return 0
 
 
-def _get_hassfest_config() -> Config:
-    """Get hassfest config."""
+def _get_menuaifest_config() -> Config:
+    """Get menuaifest config."""
     return Config(
         root=Path().absolute(),
         specific_integrations=None,

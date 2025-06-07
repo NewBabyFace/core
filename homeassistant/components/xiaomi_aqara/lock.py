@@ -6,11 +6,11 @@ from typing import Any
 
 from xiaomi_gateway import XiaomiGateway
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.components.lock import LockEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from .const import DOMAIN, GATEWAYS_KEY
 from .entity import XiaomiDevice
@@ -26,12 +26,12 @@ UNLOCK_MAINTAIN_TIME = 5
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Perform the setup for Xiaomi devices."""
-    gateway = hass.data[DOMAIN][GATEWAYS_KEY][config_entry.entry_id]
+    gateway = menuai.data[DOMAIN][GATEWAYS_KEY][config_entry.entry_id]
     async_add_entities(
         XiaomiAqaraLock(device, "Lock", gateway, config_entry)
         for device in gateway.devices["lock"]
@@ -78,7 +78,7 @@ class XiaomiAqaraLock(LockEntity, XiaomiDevice):
                 self._verified_wrong_times = 0
                 self._attr_is_locked = False
                 async_call_later(
-                    self.hass, UNLOCK_MAINTAIN_TIME, self.clear_unlock_state
+                    self.menuai, UNLOCK_MAINTAIN_TIME, self.clear_unlock_state
                 )
                 return True
 

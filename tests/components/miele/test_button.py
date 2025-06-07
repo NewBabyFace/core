@@ -6,11 +6,11 @@ from aiohttp import ClientResponseError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -22,7 +22,7 @@ ENTITY_ID = "button.washing_machine_start"
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_button_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -30,12 +30,12 @@ async def test_button_states(
 ) -> None:
     """Test button entity state."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_button_states_api_push(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -44,18 +44,18 @@ async def test_button_states_api_push(
 ) -> None:
     """Test binary sensor state when the API pushes data via SSE."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_button_press(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
 ) -> None:
     """Test button press."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM, SERVICE_PRESS, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
     )
     mock_miele_client.send_action.assert_called_once_with(
@@ -65,7 +65,7 @@ async def test_button_press(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_api_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
 ) -> None:
@@ -73,9 +73,9 @@ async def test_api_failure(
     mock_miele_client.send_action.side_effect = ClientResponseError("test", "Test")
 
     with pytest.raises(
-        HomeAssistantError, match=f"Failed to set state for {ENTITY_ID}"
+        menuaiError, match=f"Failed to set state for {ENTITY_ID}"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TEST_PLATFORM, SERVICE_PRESS, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
         )
     mock_miele_client.send_action.assert_called_once()

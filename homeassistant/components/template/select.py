@@ -7,28 +7,28 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN as SELECT_DOMAIN,
     SelectEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_NAME,
     CONF_OPTIMISTIC,
     CONF_STATE,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.device import async_device_info_to_link_from_device_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.device import async_device_info_to_link_from_device_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import TriggerUpdateCoordinator
 from .const import DOMAIN
@@ -75,7 +75,7 @@ SELECT_CONFIG_SCHEMA = vol.Schema(
 
 
 async def _async_create_entities(
-    hass: HomeAssistant, definitions: list[dict[str, Any]], unique_id_prefix: str | None
+    menuai: menuai, definitions: list[dict[str, Any]], unique_id_prefix: str | None
 ) -> list[TemplateSelect]:
     """Create the Template select."""
     entities = []
@@ -83,12 +83,12 @@ async def _async_create_entities(
         unique_id = definition.get(CONF_UNIQUE_ID)
         if unique_id and unique_id_prefix:
             unique_id = f"{unique_id_prefix}-{unique_id}"
-        entities.append(TemplateSelect(hass, definition, unique_id))
+        entities.append(TemplateSelect(menuai, definition, unique_id))
     return entities
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -102,20 +102,20 @@ async def async_setup_platform(
 
     if "coordinator" in discovery_info:
         async_add_entities(
-            TriggerSelectEntity(hass, discovery_info["coordinator"], config)
+            TriggerSelectEntity(menuai, discovery_info["coordinator"], config)
             for config in discovery_info["entities"]
         )
         return
 
     async_add_entities(
         await _async_create_entities(
-            hass, discovery_info["entities"], discovery_info["unique_id"]
+            menuai, discovery_info["entities"], discovery_info["unique_id"]
         )
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -123,7 +123,7 @@ async def async_setup_entry(
     _options = dict(config_entry.options)
     _options.pop("template_type")
     validated_config = SELECT_CONFIG_SCHEMA(_options)
-    async_add_entities([TemplateSelect(hass, validated_config, config_entry.entry_id)])
+    async_add_entities([TemplateSelect(menuai, validated_config, config_entry.entry_id)])
 
 
 class TemplateSelect(TemplateEntity, SelectEntity):
@@ -133,12 +133,12 @@ class TemplateSelect(TemplateEntity, SelectEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: dict[str, Any],
         unique_id: str | None,
     ) -> None:
         """Initialize the select."""
-        super().__init__(hass, config=config, unique_id=unique_id)
+        super().__init__(menuai, config=config, unique_id=unique_id)
         assert self._attr_name is not None
         self._value_template = config[CONF_STATE]
         # Scripts can be an empty list, therefore we need to check for None
@@ -149,7 +149,7 @@ class TemplateSelect(TemplateEntity, SelectEntity):
         self._attr_options = []
         self._attr_current_option = None
         self._attr_device_info = async_device_info_to_link_from_device_id(
-            hass,
+            menuai,
             config.get(CONF_DEVICE_ID),
         )
 
@@ -192,12 +192,12 @@ class TriggerSelectEntity(TriggerEntity, SelectEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: TriggerUpdateCoordinator,
         config: dict,
     ) -> None:
         """Initialize the entity."""
-        super().__init__(hass, coordinator, config)
+        super().__init__(menuai, coordinator, config)
         # Scripts can be an empty list, therefore we need to check for None
         if (select_option := config.get(CONF_SELECT_OPTION)) is not None:
             self.add_script(

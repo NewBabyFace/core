@@ -4,9 +4,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN, HOME_LOCATION_NAME
 
@@ -33,13 +33,13 @@ class MetEireannFlowHandler(ConfigFlow, domain=DOMAIN):
                     {
                         vol.Required(CONF_NAME, default=HOME_LOCATION_NAME): str,
                         vol.Required(
-                            CONF_LATITUDE, default=self.hass.config.latitude
+                            CONF_LATITUDE, default=self.menuai.config.latitude
                         ): cv.latitude,
                         vol.Required(
-                            CONF_LONGITUDE, default=self.hass.config.longitude
+                            CONF_LONGITUDE, default=self.menuai.config.longitude
                         ): cv.longitude,
                         vol.Required(
-                            CONF_ELEVATION, default=self.hass.config.elevation
+                            CONF_ELEVATION, default=self.menuai.config.elevation
                         ): int,
                     }
                 ),

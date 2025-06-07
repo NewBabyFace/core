@@ -6,9 +6,9 @@ from functools import partial
 
 from aioesphomeapi import EntityInfo, Event, EventInfo
 
-from homeassistant.components.event import EventDeviceClass, EventEntity
-from homeassistant.core import callback
-from homeassistant.util.enum import try_parse_enum
+from menuai.components.event import EventDeviceClass, EventEntity
+from menuai.core import callback
+from menuai.util.enum import try_parse_enum
 
 from .entity import EsphomeEntity, platform_async_setup_entry
 

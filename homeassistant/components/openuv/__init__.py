@@ -7,8 +7,8 @@ from typing import Any
 
 from pyopenuv import Client
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_BINARY_SENSORS,
     CONF_ELEVATION,
@@ -17,8 +17,8 @@ from homeassistant.const import (
     CONF_SENSORS,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
 
 from .const import (
     CONF_FROM_WINDOW,
@@ -35,14 +35,14 @@ from .coordinator import OpenUvCoordinator
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up OpenUV as config entry."""
-    websession = aiohttp_client.async_get_clientsession(hass)
+    websession = aiohttp_client.async_get_clientsession(menuai)
     client = Client(
         entry.data[CONF_API_KEY],
-        entry.data.get(CONF_LATITUDE, hass.config.latitude),
-        entry.data.get(CONF_LONGITUDE, hass.config.longitude),
-        altitude=entry.data.get(CONF_ELEVATION, hass.config.elevation),
+        entry.data.get(CONF_LATITUDE, menuai.config.latitude),
+        entry.data.get(CONF_LONGITUDE, menuai.config.longitude),
+        altitude=entry.data.get(CONF_ELEVATION, menuai.config.elevation),
         session=websession,
         check_status_before_request=True,
     )
@@ -55,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinators: dict[str, OpenUvCoordinator] = {
         coordinator_name: OpenUvCoordinator(
-            hass,
+            menuai,
             entry=entry,
             name=coordinator_name,
             latitude=client.latitude,
@@ -74,24 +74,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ]
     await asyncio.gather(*init_tasks)
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinators
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload an OpenUV config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate the config entry upon new versions."""
     version = entry.version
     data = {**entry.data}
@@ -103,7 +103,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data.pop(CONF_BINARY_SENSORS, None)
         data.pop(CONF_SENSORS, None)
         version = 2
-        hass.config_entries.async_update_entry(entry, data=data, version=2)
+        menuai.config_entries.async_update_entry(entry, data=data, version=2)
         LOGGER.debug("Migration to version %s successful", version)
 
     return True

@@ -2,8 +2,8 @@
 
 from whirlpool.appliance import Appliance
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -26,11 +26,11 @@ class WhirlpoolEntity(Entity):
         )
         self._attr_unique_id = f"{appliance.said}{unique_id_suffix}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register attribute updates callback."""
         self._appliance.register_attr_callback(self.async_write_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unregister attribute updates callback."""
         self._appliance.unregister_attr_callback(self.async_write_ha_state)
 

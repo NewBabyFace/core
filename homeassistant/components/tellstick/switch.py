@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_DISCOVER_CONFIG,
@@ -17,7 +17,7 @@ from .entity import TellstickDevice
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -33,7 +33,7 @@ def setup_platform(
 
     add_entities(
         [
-            TellstickSwitch(hass.data[DATA_TELLSTICK][tellcore_id], signal_repetitions)
+            TellstickSwitch(menuai.data[DATA_TELLSTICK][tellcore_id], signal_repetitions)
             for tellcore_id in discovery_info[ATTR_DISCOVER_DEVICES]
         ],
         True,

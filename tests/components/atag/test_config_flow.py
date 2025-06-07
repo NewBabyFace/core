@@ -4,10 +4,10 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.atag import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.atag import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import UID, USER_INPUT, init_integration, mock_connection
 
@@ -17,11 +17,11 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 async def test_show_form(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that the form is served with no input."""
     mock_connection(aioclient_mock)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -30,12 +30,12 @@ async def test_show_form(
 
 
 async def test_adding_second_device(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that only one Atag configuration is allowed."""
-    await init_integration(hass, aioclient_mock, unique_id=UID)
+    await init_integration(menuai, aioclient_mock, unique_id=UID)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=USER_INPUT
     )
 
@@ -45,18 +45,18 @@ async def test_adding_second_device(
         "pyatag.AtagOne.id",
         new_callable=PropertyMock(return_value="secondary_device"),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=USER_INPUT
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
 async def test_connection_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test we show user form on Atag connection error."""
     mock_connection(aioclient_mock, conn_error=True)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=USER_INPUT,
@@ -68,11 +68,11 @@ async def test_connection_error(
 
 
 async def test_unauthorized(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test we show correct form when Unauthorized error is raised."""
     mock_connection(aioclient_mock, authorized=False)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=USER_INPUT,
@@ -83,11 +83,11 @@ async def test_unauthorized(
 
 
 async def test_full_flow_implementation(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test registering an integration and finishing flow works."""
     mock_connection(aioclient_mock)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=USER_INPUT,

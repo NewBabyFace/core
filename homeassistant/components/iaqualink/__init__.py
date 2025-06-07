@@ -20,13 +20,13 @@ from iaqualink.device import (
 )
 from iaqualink.exception import AqualinkServiceException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import DOMAIN, UPDATE_INTERVAL
 from .entity import AqualinkEntity
@@ -60,12 +60,12 @@ class AqualinkRuntimeData:
     thermostats: list[AqualinkThermostat]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AqualinkConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AqualinkConfigEntry) -> bool:
     """Set up Aqualink from a config entry."""
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
 
-    aqualink = AqualinkClient(username, password, httpx_client=get_async_client(hass))
+    aqualink = AqualinkClient(username, password, httpx_client=get_async_client(menuai))
     try:
         await aqualink.login()
     except AqualinkServiceException as login_exception:
@@ -134,7 +134,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AqualinkConfigEntry) -> 
 
     entry.runtime_data = runtime_data
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def _async_systems_update(_: datetime) -> None:
         """Refresh internal state for all systems."""
@@ -156,19 +156,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: AqualinkConfigEntry) -> 
                 if cur and not prev:
                     _LOGGER.warning("System %s reconnected to iAqualink", system.serial)
 
-            async_dispatcher_send(hass, DOMAIN)
+            async_dispatcher_send(menuai, DOMAIN)
 
     entry.async_on_unload(
-        async_track_time_interval(hass, _async_systems_update, UPDATE_INTERVAL)
+        async_track_time_interval(menuai, _async_systems_update, UPDATE_INTERVAL)
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AqualinkConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AqualinkConfigEntry) -> bool:
     """Unload a config entry."""
     await entry.runtime_data.client.close()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 def refresh_system[_AqualinkEntityT: AqualinkEntity, **_P](
@@ -182,6 +182,6 @@ def refresh_system[_AqualinkEntityT: AqualinkEntity, **_P](
     ) -> None:
         """Call decorated function and send update signal to all entities."""
         await func(self, *args, **kwargs)
-        async_dispatcher_send(self.hass, DOMAIN)
+        async_dispatcher_send(self.menuai, DOMAIN)
 
     return wrapper

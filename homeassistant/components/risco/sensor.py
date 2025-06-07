@@ -8,14 +8,14 @@ from typing import Any
 
 from pyrisco.cloud.event import Event
 
-from homeassistant.components.binary_sensor import DOMAIN as BS_DOMAIN
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.components.binary_sensor import DOMAIN as BS_DOMAIN
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from . import is_local
 from .const import DOMAIN, EVENTS_COORDINATOR
@@ -44,7 +44,7 @@ EVENT_ATTRIBUTES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -53,7 +53,7 @@ async def async_setup_entry(
         # no events in local comm
         return
 
-    coordinator: RiscoEventsDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: RiscoEventsDataUpdateCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ][EVENTS_COORDINATOR]
     sensors = [
@@ -92,10 +92,10 @@ class RiscoSensor(CoordinatorEntity[RiscoEventsDataUpdateCoordinator], SensorEnt
         self._attr_name = f"Risco {self.coordinator.risco.site_name} {name} Events"
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
-        self._entity_registry = er.async_get(self.hass)
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
+        self._entity_registry = er.async_get(self.menuai)
 
     def _handle_coordinator_update(self) -> None:
         events = self.coordinator.data

@@ -20,16 +20,16 @@ from homewizard_energy.errors import (
 from homewizard_energy.models import Device
 import voluptuous as vol
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import instance_id
-from homeassistant.helpers.selector import TextSelector
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import onboarding
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers import instance_id
+from menuai.helpers.selector import TextSelector
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_PRODUCT_NAME, CONF_PRODUCT_TYPE, CONF_SERIAL, DOMAIN, LOGGER
 
@@ -90,7 +90,7 @@ class HomeWizardConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # Tell device we want a token, user must now press the button within 30 seconds
         # The first attempt will always fail, but this opens the window to press the button
-        token = await async_request_token(self.hass, self.ip_address)
+        token = await async_request_token(self.menuai, self.ip_address)
         errors: dict[str, str] | None = None
 
         if token is None:
@@ -165,7 +165,7 @@ class HomeWizardConfigFlow(ConfigFlow, domain=DOMAIN):
             updates={CONF_IP_ADDRESS: discovery_info.ip}
         )
 
-        # This situation should never happen, as Home Assistant will only
+        # This situation should never happen, as MenuAI will only
         # send updates for existing entries. In case it does, we'll just
         # abort the flow with an unknown error.
         return self.async_abort(reason="unknown")
@@ -180,7 +180,7 @@ class HomeWizardConfigFlow(ConfigFlow, domain=DOMAIN):
         assert self.serial
 
         errors: dict[str, str] | None = None
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             try:
                 await async_try_connect(self.ip_address)
             except RecoverableError as ex:
@@ -239,7 +239,7 @@ class HomeWizardConfigFlow(ConfigFlow, domain=DOMAIN):
                 LOGGER.error(ex)
                 errors = {"base": ex.error_code}
             else:
-                await self.hass.config_entries.async_reload(reauth_entry.entry_id)
+                await self.menuai.config_entries.async_reload(reauth_entry.entry_id)
                 return self.async_abort(reason="reauth_enable_api_successful")
 
         return self.async_show_form(step_id="reauth_enable_api", errors=errors)
@@ -252,7 +252,7 @@ class HomeWizardConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] | None = None
 
-        token = await async_request_token(self.hass, self.ip_address)
+        token = await async_request_token(self.menuai, self.ip_address)
 
         if user_input is not None:
             if token is None:
@@ -355,7 +355,7 @@ async def async_try_connect(ip_address: str, token: str | None = None) -> Device
         await energy_api.close()
 
 
-async def async_request_token(hass: HomeAssistant, ip_address: str) -> str | None:
+async def async_request_token(menuai: menuai, ip_address: str) -> str | None:
     """Try to request a token from the device.
 
     This method is used to request a token from the device,
@@ -366,7 +366,7 @@ async def async_request_token(hass: HomeAssistant, ip_address: str) -> str | Non
 
     # Get a part of the unique id to make the token unique
     # This is to prevent token conflicts when multiple HA instances are used
-    uuid = await instance_id.async_get(hass)
+    uuid = await instance_id.async_get(menuai)
 
     try:
         return await api.get_token(f"home-assistant#{uuid[:6]}")
@@ -376,7 +376,7 @@ async def async_request_token(hass: HomeAssistant, ip_address: str) -> str | Non
         await api.close()
 
 
-class RecoverableError(HomeAssistantError):
+class RecoverableError(menuaiError):
     """Raised when a connection has been failed but can be retried."""
 
     def __init__(self, message: str, error_code: str) -> None:

@@ -10,17 +10,17 @@ from zoneinfo import ZoneInfo
 from aiohttp import ClientConnectorError
 from vulcan import UnauthorizedCertificateException
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     ENTITY_ID_FORMAT,
     CalendarEntity,
     CalendarEvent,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity import generate_entity_id
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity import generate_entity_id
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 from .fetch_data import get_lessons, get_student_info
@@ -29,12 +29,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the calendar platform for entity."""
-    client = hass.data[DOMAIN][config_entry.entry_id]
+    client = menuai.data[DOMAIN][config_entry.entry_id]
     data = {
         "student_info": await get_student_info(
             client, config_entry.data.get("student_id")
@@ -48,7 +48,7 @@ async def async_setup_entry(
                 generate_entity_id(
                     ENTITY_ID_FORMAT,
                     f"vulcan_calendar_{data['student_info']['full_name']}",
-                    hass=hass,
+                    menuai=menuai,
                 ),
             )
         ],
@@ -88,7 +88,7 @@ class VulcanCalendarEntity(CalendarEntity):
         return self._event
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
         try:

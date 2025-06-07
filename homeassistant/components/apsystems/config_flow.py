@@ -6,10 +6,10 @@ from aiohttp.client_exceptions import ClientConnectionError
 from APsystemsEZ1 import APsystemsEZ1M
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -33,7 +33,7 @@ class APsystemsLocalAPIFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            session = async_get_clientsession(self.hass, False)
+            session = async_get_clientsession(self.menuai, False)
             api = APsystemsEZ1M(
                 ip_address=user_input[CONF_IP_ADDRESS],
                 port=user_input.get(CONF_PORT, DEFAULT_PORT),

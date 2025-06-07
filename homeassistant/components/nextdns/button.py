@@ -6,12 +6,12 @@ from aiohttp import ClientError
 from aiohttp.client_exceptions import ClientConnectorError
 from nextdns import AnalyticsStatus, ApiError, InvalidApiKeyError
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import NextDnsConfigEntry
 from .const import DOMAIN
@@ -27,7 +27,7 @@ CLEAR_LOGS_BUTTON = ButtonEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NextDnsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -65,7 +65,7 @@ class NextDnsButton(
             TimeoutError,
             ClientError,
         ) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="method_error",
                 translation_placeholders={
@@ -74,4 +74,4 @@ class NextDnsButton(
                 },
             ) from err
         except InvalidApiKeyError:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
+            self.coordinator.config_entry.async_start_reauth(self.menuai)

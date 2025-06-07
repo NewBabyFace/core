@@ -14,12 +14,12 @@ from microbot import (
 )
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_ADDRESS
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_ADDRESS
 
 from .const import DOMAIN
 
@@ -86,7 +86,7 @@ class MicroBotConfigFlow(ConfigFlow, domain=DOMAIN):
             self._discovered_advs[discovery.address] = discovery
         else:
             current_addresses = self._async_current_ids()
-            for discovery_info in async_discovered_service_info(self.hass):
+            for discovery_info in async_discovered_service_info(self.menuai):
                 self._ble_device = discovery_info.device
                 address = discovery_info.address
                 if address in current_addresses or address in self._discovered_advs:

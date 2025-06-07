@@ -1,14 +1,14 @@
 """Test KNX fan."""
 
-from homeassistant.components.knx.const import KNX_ADDRESS
-from homeassistant.components.knx.schema import FanSchema
-from homeassistant.const import CONF_NAME, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.components.knx.const import KNX_ADDRESS
+from menuai.components.knx.schema import FanSchema
+from menuai.const import CONF_NAME, STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
 
-async def test_fan_percent(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_percent(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX fan with percentage speed."""
     await knx.setup_integration(
         {
@@ -20,31 +20,31 @@ async def test_fan_percent(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # turn on fan with default speed (50%)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan", "turn_on", {"entity_id": "fan.test"}, blocking=True
     )
     await knx.assert_write("1/2/3", (128,))
 
     # turn off fan
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan", "turn_off", {"entity_id": "fan.test"}, blocking=True
     )
     await knx.assert_write("1/2/3", (0,))
 
     # receive 100% telegram
     await knx.receive_write("1/2/3", (0xFF,))
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state is STATE_ON
 
     # receive 80% telegram
     await knx.receive_write("1/2/3", (0xCC,))
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state is STATE_ON
     assert state.attributes.get("percentage") == 80
 
     # receive 0% telegram
     await knx.receive_write("1/2/3", (0,))
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state is STATE_OFF
 
     # fan does not respond to read
@@ -52,7 +52,7 @@ async def test_fan_percent(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.assert_telegram_count(0)
 
 
-async def test_fan_step(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_step(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX fan with speed steps."""
     await knx.setup_integration(
         {
@@ -65,38 +65,38 @@ async def test_fan_step(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # turn on fan with default speed (50% - step 2)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan", "turn_on", {"entity_id": "fan.test"}, blocking=True
     )
     await knx.assert_write("1/2/3", (2,))
 
     # turn up speed to 75% - step 3
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan", "turn_on", {"entity_id": "fan.test", "percentage": 75}, blocking=True
     )
     await knx.assert_write("1/2/3", (3,))
 
     # turn off fan
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan", "turn_off", {"entity_id": "fan.test"}, blocking=True
     )
     await knx.assert_write("1/2/3", (0,))
 
     # receive step 4 (100%) telegram
     await knx.receive_write("1/2/3", (4,))
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state is STATE_ON
     assert state.attributes.get("percentage") == 100
 
     # receive step 1 (25%) telegram
     await knx.receive_write("1/2/3", (1,))
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state is STATE_ON
     assert state.attributes.get("percentage") == 25
 
     # receive step 0 (off) telegram
     await knx.receive_write("1/2/3", (0,))
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.state is STATE_OFF
 
     # fan does not respond to read
@@ -104,7 +104,7 @@ async def test_fan_step(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.assert_telegram_count(0)
 
 
-async def test_fan_oscillation(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_oscillation(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX fan oscillation."""
     await knx.setup_integration(
         {
@@ -117,7 +117,7 @@ async def test_fan_oscillation(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # turn on oscillation
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "oscillate",
         {"entity_id": "fan.test", "oscillating": True},
@@ -126,7 +126,7 @@ async def test_fan_oscillation(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.assert_write("2/2/2", True)
 
     # turn off oscillation
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "oscillate",
         {"entity_id": "fan.test", "oscillating": False},
@@ -136,10 +136,10 @@ async def test_fan_oscillation(hass: HomeAssistant, knx: KNXTestKit) -> None:
 
     # receive oscillation on
     await knx.receive_write("2/2/2", True)
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("oscillating") is True
 
     # receive oscillation off
     await knx.receive_write("2/2/2", False)
-    state = hass.states.get("fan.test")
+    state = menuai.states.get("fan.test")
     assert state.attributes.get("oscillating") is False

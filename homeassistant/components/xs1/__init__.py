@@ -5,7 +5,7 @@ import logging
 import voluptuous as vol
 import xs1_api_client
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -13,9 +13,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ CONFIG_SCHEMA = vol.Schema(
 PLATFORMS = [Platform.CLIMATE, Platform.SENSOR, Platform.SWITCH]
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up XS1 integration."""
     _LOGGER.debug("Initializing XS1")
 
@@ -66,17 +66,17 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     _LOGGER.debug("Establishing connection to XS1 gateway and retrieving data")
 
-    hass.data[DOMAIN] = {}
+    menuai.data[DOMAIN] = {}
 
     actuators = xs1.get_all_actuators(enabled=True)
     sensors = xs1.get_all_sensors(enabled=True)
 
-    hass.data[DOMAIN][ACTUATORS] = actuators
-    hass.data[DOMAIN][SENSORS] = sensors
+    menuai.data[DOMAIN][ACTUATORS] = actuators
+    menuai.data[DOMAIN][SENSORS] = sensors
 
     _LOGGER.debug("Loading platforms for XS1 integration")
     # Load platforms for supported devices
     for platform in PLATFORMS:
-        discovery.load_platform(hass, platform, DOMAIN, {}, config)
+        discovery.load_platform(menuai, platform, DOMAIN, {}, config)
 
     return True

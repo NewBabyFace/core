@@ -1,9 +1,9 @@
 """Errors for the UniFi Network integration."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class UnifiException(HomeAssistantError):
+class UnifiException(menuaiError):
     """Base class for UniFi Network exceptions."""
 
 

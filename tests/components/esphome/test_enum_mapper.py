@@ -4,7 +4,7 @@ from enum import StrEnum
 
 from aioesphomeapi import APIIntEnum
 
-from homeassistant.components.esphome.enum_mapper import EsphomeEnumMapper
+from menuai.components.esphome.enum_mapper import EsphomeEnumMapper
 
 
 class MockEnum(APIIntEnum):
@@ -39,5 +39,5 @@ async def test_map_esphome_to_ha() -> None:
 async def test_map_ha_to_esphome() -> None:
     """Test mapping from HA to ESPHome."""
 
-    assert MOCK_MAPPING.from_hass(MockStrEnum.HA_FOO) == MockEnum.ESPHOME_FOO
-    assert MOCK_MAPPING.from_hass(MockStrEnum.HA_BAR) == MockEnum.ESPHOME_BAR
+    assert MOCK_MAPPING.from_menuai(MockStrEnum.HA_FOO) == MockEnum.ESPHOME_FOO
+    assert MOCK_MAPPING.from_menuai(MockStrEnum.HA_BAR) == MockEnum.ESPHOME_BAR

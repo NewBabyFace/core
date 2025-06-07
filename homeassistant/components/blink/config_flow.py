@@ -10,11 +10,11 @@ from blinkpy.auth import Auth, LoginError, TokenRefreshFailed
 from blinkpy.blinkpy import Blink, BlinkSetupError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_PIN, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_PIN, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEVICE_ID, DOMAIN
 
@@ -31,9 +31,9 @@ async def validate_input(auth: Auth) -> None:
         raise Require2FA
 
 
-async def _send_blink_2fa_pin(hass: HomeAssistant, auth: Auth, pin: str | None) -> bool:
+async def _send_blink_2fa_pin(menuai: menuai, auth: Auth, pin: str | None) -> bool:
     """Send 2FA pin to blink servers."""
-    blink = Blink(session=async_get_clientsession(hass))
+    blink = Blink(session=async_get_clientsession(menuai))
     blink.auth = auth
     blink.setup_login_ids()
     blink.setup_urls()
@@ -58,7 +58,7 @@ class BlinkConfigFlow(ConfigFlow, domain=DOMAIN):
             self.auth = Auth(
                 {**user_input, "device_id": DEVICE_ID},
                 no_prompt=True,
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             await self.async_set_unique_id(user_input[CONF_USERNAME])
             if self.source != SOURCE_REAUTH:
@@ -94,7 +94,7 @@ class BlinkConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 valid_token = await _send_blink_2fa_pin(
-                    self.hass, self.auth, user_input.get(CONF_PIN)
+                    self.menuai, self.auth, user_input.get(CONF_PIN)
                 )
             except BlinkSetupError:
                 errors["base"] = "cannot_connect"
@@ -128,9 +128,9 @@ class BlinkConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title=DOMAIN, data=self.auth.login_attributes)
 
 
-class Require2FA(HomeAssistantError):
+class Require2FA(menuaiError):
     """Error to indicate we require 2FA."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

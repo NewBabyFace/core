@@ -7,12 +7,12 @@ from dataclasses import dataclass
 
 from pytile.tile import Tile
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import TileConfigEntry, TileCoordinator
 from .entity import TileEntity
@@ -35,7 +35,7 @@ ENTITIES: tuple[TileBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TileConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

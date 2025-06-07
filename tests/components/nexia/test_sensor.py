@@ -1,17 +1,17 @@
 """The sensor tests for the nexia platform."""
 
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from menuai.const import PERCENTAGE, UnitOfTemperature
+from menuai.core import menuai
 
 from .util import async_init_integration
 
 
-async def test_create_sensors(hass: HomeAssistant) -> None:
+async def test_create_sensors(menuai: menuai) -> None:
     """Test creation of sensors."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("sensor.nick_office_temperature")
+    state = menuai.states.get("sensor.nick_office_temperature")
     assert round(float(state.state)) == 23
 
     expected_attributes = {
@@ -26,7 +26,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.nick_office_zone_setpoint_status")
+    state = menuai.states.get("sensor.nick_office_zone_setpoint_status")
     assert state.state == "Permanent Hold"
     expected_attributes = {
         "attribution": "Data provided by Trane Technologies",
@@ -38,7 +38,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.nick_office_zone_status")
+    state = menuai.states.get("sensor.nick_office_zone_status")
     assert state.state == "Relieving Air"
 
     expected_attributes = {
@@ -51,7 +51,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.master_suite_air_cleaner_mode")
+    state = menuai.states.get("sensor.master_suite_air_cleaner_mode")
     assert state.state == "auto"
 
     expected_attributes = {
@@ -64,7 +64,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.master_suite_current_compressor_speed")
+    state = menuai.states.get("sensor.master_suite_current_compressor_speed")
     assert round(float(state.state)) == 69
 
     expected_attributes = {
@@ -78,7 +78,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.master_suite_outdoor_temperature")
+    state = menuai.states.get("sensor.master_suite_outdoor_temperature")
     assert round(float(state.state), 1) == 30.6
 
     expected_attributes = {
@@ -93,7 +93,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.master_suite_humidity")
+    state = menuai.states.get("sensor.master_suite_humidity")
     assert state.state == "52.0"
 
     expected_attributes = {
@@ -108,7 +108,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.master_suite_requested_compressor_speed")
+    state = menuai.states.get("sensor.master_suite_requested_compressor_speed")
     assert state.state == "69.0"
 
     expected_attributes = {
@@ -122,7 +122,7 @@ async def test_create_sensors(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("sensor.master_suite_system_status")
+    state = menuai.states.get("sensor.master_suite_system_status")
     assert state.state == "Cooling"
 
     expected_attributes = {

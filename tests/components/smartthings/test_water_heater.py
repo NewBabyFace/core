@@ -7,8 +7,8 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.smartthings import MAIN
-from homeassistant.components.water_heater import (
+from menuai.components.smartthings import MAIN
+from menuai.components.water_heater import (
     ATTR_AWAY_MODE,
     ATTR_CURRENT_TEMPERATURE,
     ATTR_OPERATION_LIST,
@@ -22,7 +22,7 @@ from homeassistant.components.water_heater import (
     STATE_ECO,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
@@ -33,8 +33,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     setup_integration,
@@ -47,17 +47,17 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     snapshot_smartthings_entities(
-        hass, entity_registry, snapshot, Platform.WATER_HEATER
+        menuai, entity_registry, snapshot, Platform.WATER_HEATER
     )
 
 
@@ -72,16 +72,16 @@ async def test_all_entities(
     ],
 )
 async def test_set_operation_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     operation_mode: str,
     argument: str,
 ) -> None:
     """Test set operation mode."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_OPERATION_MODE,
         {
@@ -101,14 +101,14 @@ async def test_set_operation_mode(
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_set_operation_mode_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test set operation mode to off."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_OPERATION_MODE,
         {
@@ -127,16 +127,16 @@ async def test_set_operation_mode_off(
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000001_sub"])
 async def test_set_operation_mode_from_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test set operation mode."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("water_heater.eco_heating_system").state == STATE_OFF
+    assert menuai.states.get("water_heater.eco_heating_system").state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_OPERATION_MODE,
         {
@@ -164,14 +164,14 @@ async def test_set_operation_mode_from_off(
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_set_operation_to_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test set operation mode to off."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_OPERATION_MODE,
         {
@@ -197,16 +197,16 @@ async def test_set_operation_to_off(
     ],
 )
 async def test_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     service: str,
     command: Command,
 ) -> None:
     """Test turn on and off."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         service,
         {
@@ -224,14 +224,14 @@ async def test_turn_on_off(
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test set operation mode."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -258,16 +258,16 @@ async def test_set_temperature(
     ],
 )
 async def test_away_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     on: bool,
     argument: str,
 ) -> None:
     """Test set away mode."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_AWAY_MODE,
         {
@@ -287,14 +287,14 @@ async def test_away_mode(
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_operation_list_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("water_heater.warmepumpe").attributes[
+    assert menuai.states.get("water_heater.warmepumpe").attributes[
         ATTR_OPERATION_LIST
     ] == [
         STATE_OFF,
@@ -305,7 +305,7 @@ async def test_operation_list_update(
     ]
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "3810e5ad-5351-d9f9-12ff-000001200000",
         Capability.AIR_CONDITIONER_MODE,
@@ -313,7 +313,7 @@ async def test_operation_list_update(
         ["eco", "force", "power"],
     )
 
-    assert hass.states.get("water_heater.warmepumpe").attributes[
+    assert menuai.states.get("water_heater.warmepumpe").attributes[
         ATTR_OPERATION_LIST
     ] == [
         STATE_OFF,
@@ -325,17 +325,17 @@ async def test_operation_list_update(
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_current_operation_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("water_heater.warmepumpe").state == "standard"
+    assert menuai.states.get("water_heater.warmepumpe").state == "standard"
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "3810e5ad-5351-d9f9-12ff-000001200000",
         Capability.AIR_CONDITIONER_MODE,
@@ -343,19 +343,19 @@ async def test_current_operation_update(
         "eco",
     )
 
-    assert hass.states.get("water_heater.warmepumpe").state == STATE_ECO
+    assert menuai.states.get("water_heater.warmepumpe").state == STATE_ECO
 
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_switch_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("water_heater.warmepumpe")
+    state = menuai.states.get("water_heater.warmepumpe")
     assert state.state == "standard"
     assert (
         state.attributes[ATTR_SUPPORTED_FEATURES]
@@ -366,7 +366,7 @@ async def test_switch_update(
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "3810e5ad-5351-d9f9-12ff-000001200000",
         Capability.SWITCH,
@@ -374,7 +374,7 @@ async def test_switch_update(
         "off",
     )
 
-    state = hass.states.get("water_heater.warmepumpe")
+    state = menuai.states.get("water_heater.warmepumpe")
     assert state.state == STATE_OFF
     assert (
         state.attributes[ATTR_SUPPORTED_FEATURES]
@@ -386,20 +386,20 @@ async def test_switch_update(
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_current_temperature_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[ATTR_CURRENT_TEMPERATURE]
+        menuai.states.get("water_heater.warmepumpe").attributes[ATTR_CURRENT_TEMPERATURE]
         == 49.6
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "3810e5ad-5351-d9f9-12ff-000001200000",
         Capability.TEMPERATURE_MEASUREMENT,
@@ -408,26 +408,26 @@ async def test_current_temperature_update(
     )
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[ATTR_CURRENT_TEMPERATURE]
+        menuai.states.get("water_heater.warmepumpe").attributes[ATTR_CURRENT_TEMPERATURE]
         == 50.0
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_target_temperature_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[ATTR_TEMPERATURE] == 52.0
+        menuai.states.get("water_heater.warmepumpe").attributes[ATTR_TEMPERATURE] == 52.0
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "3810e5ad-5351-d9f9-12ff-000001200000",
         Capability.THERMOSTAT_COOLING_SETPOINT,
@@ -436,7 +436,7 @@ async def test_target_temperature_update(
     )
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[ATTR_TEMPERATURE] == 50.0
+        menuai.states.get("water_heater.warmepumpe").attributes[ATTR_TEMPERATURE] == 50.0
     )
 
 
@@ -449,7 +449,7 @@ async def test_target_temperature_update(
     ],
 )
 async def test_target_temperature_bound_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     attribute: Attribute,
@@ -457,15 +457,15 @@ async def test_target_temperature_bound_update(
     state_attribute: str,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[state_attribute]
+        menuai.states.get("water_heater.warmepumpe").attributes[state_attribute]
         == old_value
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "3810e5ad-5351-d9f9-12ff-000001200000",
         Capability.CUSTOM_THERMOSTAT_SETPOINT_CONTROL,
@@ -474,26 +474,26 @@ async def test_target_temperature_bound_update(
     )
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[state_attribute] == 50.0
+        menuai.states.get("water_heater.warmepumpe").attributes[state_attribute] == 50.0
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_away_mode_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[ATTR_AWAY_MODE]
+        menuai.states.get("water_heater.warmepumpe").attributes[ATTR_AWAY_MODE]
         == STATE_OFF
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "3810e5ad-5351-d9f9-12ff-000001200000",
         Capability.CUSTOM_OUTING_MODE,
@@ -502,41 +502,41 @@ async def test_away_mode_update(
     )
 
     assert (
-        hass.states.get("water_heater.warmepumpe").attributes[ATTR_AWAY_MODE]
+        menuai.states.get("water_heater.warmepumpe").attributes[ATTR_AWAY_MODE]
         == STATE_ON
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("water_heater.warmepumpe").state == "standard"
-
-    await trigger_health_update(
-        hass, devices, "3810e5ad-5351-d9f9-12ff-000001200000", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("water_heater.warmepumpe").state == STATE_UNAVAILABLE
+    assert menuai.states.get("water_heater.warmepumpe").state == "standard"
 
     await trigger_health_update(
-        hass, devices, "3810e5ad-5351-d9f9-12ff-000001200000", HealthStatus.ONLINE
+        menuai, devices, "3810e5ad-5351-d9f9-12ff-000001200000", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("water_heater.warmepumpe").state == "standard"
+    assert menuai.states.get("water_heater.warmepumpe").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "3810e5ad-5351-d9f9-12ff-000001200000", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("water_heater.warmepumpe").state == "standard"
 
 
 @pytest.mark.parametrize("device_fixture", ["da_sac_ehs_000002_sub"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("water_heater.warmepumpe").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("water_heater.warmepumpe").state == STATE_UNAVAILABLE

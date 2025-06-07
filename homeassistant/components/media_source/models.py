@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, cast
 
-from homeassistant.components.media_player import BrowseMedia, MediaClass, MediaType
-from homeassistant.core import HomeAssistant, callback
+from menuai.components.media_player import BrowseMedia, MediaClass, MediaType
+from menuai.core import menuai, callback
 
 from .const import DOMAIN, URI_SCHEME, URI_SCHEME_REGEX
 
@@ -40,7 +40,7 @@ class BrowseMediaSource(BrowseMedia):
 class MediaSourceItem:
     """A parsed media item."""
 
-    hass: HomeAssistant
+    menuai: menuai
     domain: str | None
     identifier: str
     target_media_player: str | None
@@ -70,7 +70,7 @@ class MediaSourceItem:
                         can_play=False,
                         can_expand=True,
                     )
-                    for source in self.hass.data[DOMAIN].values()
+                    for source in self.menuai.data[DOMAIN].values()
                 ),
                 key=lambda item: item.title,
             )
@@ -85,11 +85,11 @@ class MediaSourceItem:
     @callback
     def async_media_source(self) -> MediaSource:
         """Return media source that owns this item."""
-        return cast(MediaSource, self.hass.data[DOMAIN][self.domain])
+        return cast(MediaSource, self.menuai.data[DOMAIN][self.domain])
 
     @classmethod
     def from_uri(
-        cls, hass: HomeAssistant, uri: str, target_media_player: str | None
+        cls, menuai: menuai, uri: str, target_media_player: str | None
     ) -> MediaSourceItem:
         """Create an item from a uri."""
         if not (match := URI_SCHEME_REGEX.match(uri)):
@@ -98,7 +98,7 @@ class MediaSourceItem:
         domain = match.group("domain")
         identifier = match.group("identifier")
 
-        return cls(hass, domain, identifier, target_media_player)
+        return cls(menuai, domain, identifier, target_media_player)
 
 
 class MediaSource:

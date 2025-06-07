@@ -8,16 +8,16 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, DOMAIN as LIGHT_DOMAIN
-from homeassistant.const import (
+from menuai.components.light import ATTR_BRIGHTNESS, DOMAIN as LIGHT_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, RtspEventMock
 from .const import DEFAULT_HOST, NAME
@@ -75,7 +75,7 @@ def light_control_fixture(light_control_items: list[dict[str, Any]]) -> None:
 @pytest.mark.parametrize("light_control_items", [[]])
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_no_light_entity_without_light_control_representation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rtsp_event: RtspEventMock,
 ) -> None:
     """Verify no lights entities get created without light control representation."""
@@ -86,14 +86,14 @@ async def test_no_light_entity_without_light_control_representation(
         source_name="id",
         source_idx="0",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert not hass.states.async_entity_ids(LIGHT_DOMAIN)
+    assert not menuai.states.async_entity_ids(LIGHT_DOMAIN)
 
 
 @pytest.mark.parametrize("api_discovery_items", [API_DISCOVERY_LIGHT_CONTROL])
 async def test_lights(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_rtsp_event: RtspEventMock,
@@ -134,7 +134,7 @@ async def test_lights(
         },
     )
 
-    with patch("homeassistant.components.axis.PLATFORMS", [Platform.LIGHT]):
+    with patch("menuai.components.axis.PLATFORMS", [Platform.LIGHT]):
         config_entry = await config_entry_factory()
 
     mock_rtsp_event(
@@ -144,8 +144,8 @@ async def test_lights(
         source_name="id",
         source_idx="0",
     )
-    await hass.async_block_till_done()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await menuai.async_block_till_done()
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     entity_id = f"{LIGHT_DOMAIN}.{NAME}_ir_light_0"
 
@@ -156,7 +156,7 @@ async def test_lights(
             "axis.interfaces.vapix.LightHandler.set_manual_intensity"
         ) as mock_set_intensity,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LIGHT_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id, ATTR_BRIGHTNESS: 50},
@@ -169,7 +169,7 @@ async def test_lights(
     with patch(
         "axis.interfaces.vapix.LightHandler.deactivate_light"
     ) as mock_deactivate:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LIGHT_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
@@ -185,9 +185,9 @@ async def test_lights(
         source_name="id",
         source_idx="0",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    light_0 = hass.states.get(entity_id)
+    light_0 = menuai.states.get(entity_id)
     assert light_0.state == STATE_OFF
 
     # Turn on, set brightness
@@ -197,7 +197,7 @@ async def test_lights(
             "axis.interfaces.vapix.LightHandler.set_manual_intensity"
         ) as mock_set_intensity,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LIGHT_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -210,7 +210,7 @@ async def test_lights(
     with patch(
         "axis.interfaces.vapix.LightHandler.deactivate_light"
     ) as mock_deactivate:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LIGHT_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},

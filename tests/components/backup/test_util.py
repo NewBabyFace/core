@@ -11,15 +11,15 @@ from unittest.mock import Mock, patch
 import pytest
 import securetar
 
-from homeassistant.components.backup import DOMAIN, AddonInfo, AgentBackup, Folder
-from homeassistant.components.backup.util import (
+from menuai.components.backup import DOMAIN, AddonInfo, AgentBackup, Folder
+from menuai.components.backup.util import (
     DecryptedBackupStreamer,
     EncryptedBackupStreamer,
     read_backup,
     suggested_filename,
     validate_password,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import get_fixture_path
 
@@ -28,7 +28,7 @@ from tests.common import get_fixture_path
     ("backup_json_content", "expected_backup"),
     [
         (
-            b'{"compressed":true,"date":"2024-12-02T07:23:58.261875-05:00","homeassistant":'
+            b'{"compressed":true,"date":"2024-12-02T07:23:58.261875-05:00","menuai":'
             b'{"exclude_database":true,"version":"2024.12.0.dev0"},"name":"test",'
             b'"protected":true,"slug":"455645fe","type":"partial","version":2}',
             AgentBackup(
@@ -38,8 +38,8 @@ from tests.common import get_fixture_path
                 database_included=False,
                 extra_metadata={},
                 folders=[],
-                homeassistant_included=True,
-                homeassistant_version="2024.12.0.dev0",
+                menuai_included=True,
+                menuai_version="2024.12.0.dev0",
                 name="test",
                 protected=True,
                 size=1234,
@@ -50,13 +50,13 @@ from tests.common import get_fixture_path
             b'"date":"2024-12-20T11:27:51.119062+00:00","type":"partial",'
             b'"supervisor_version":"2024.12.1.dev1803",'
             b'"extra":{"instance_id":"6b453733d2d74d2a9ae432ff2fbaaa64",'
-            b'"with_automatic_settings":false},"homeassistant":'
+            b'"with_automatic_settings":false},"menuai":'
             b'{"version":"2025.1.0.dev202412200230","exclude_database":false,"size":0.0},'
             b'"compressed":true,"protected":true,"repositories":['
-            b'"https://github.com/home-assistant/hassio-addons-development","local",'
+            b'"https://github.com/home-assistant/menuaiio-addons-development","local",'
             b'"https://github.com/esphome/home-assistant-addon","core",'
             b'"https://github.com/music-assistant/home-assistant-addon",'
-            b'"https://github.com/hassio-addons/repository"],"crypto":"aes128",'
+            b'"https://github.com/menuaiio-addons/repository"],"crypto":"aes128",'
             b'"folders":["share","media"],"addons":[{"slug":"core_configurator",'
             b'"name":"File editor","version":"5.5.0","size":0.0},'
             b'{"slug":"ae6e943c_remote_api","name":"Remote API proxy",'
@@ -82,8 +82,8 @@ from tests.common import get_fixture_path
                     "with_automatic_settings": False,
                 },
                 folders=[Folder.SHARE, Folder.MEDIA],
-                homeassistant_included=True,
-                homeassistant_version="2025.1.0.dev202412200230",
+                menuai_included=True,
+                menuai_version="2025.1.0.dev202412200230",
                 name="Core 2025.1.0.dev0",
                 protected=True,
                 size=1234,
@@ -91,7 +91,7 @@ from tests.common import get_fixture_path
         ),
         # Check the backup_request_date is used as date if present
         (
-            b'{"compressed":true,"date":"2024-12-01T00:00:00.000000-00:00","homeassistant":'
+            b'{"compressed":true,"date":"2024-12-01T00:00:00.000000-00:00","menuai":'
             b'{"exclude_database":true,"version":"2024.12.0.dev0"},"name":"test",'
             b'"extra":{"supervisor.backup_request_date":"2025-12-01T00:00:00.000000-00:00"},'
             b'"protected":true,"slug":"455645fe","type":"partial","version":2}',
@@ -104,8 +104,8 @@ from tests.common import get_fixture_path
                     "supervisor.backup_request_date": "2025-12-01T00:00:00.000000-00:00"
                 },
                 folders=[],
-                homeassistant_included=True,
-                homeassistant_version="2024.12.0.dev0",
+                menuai_included=True,
+                menuai_version="2024.12.0.dev0",
                 name="test",
                 protected=True,
                 size=1234,
@@ -123,7 +123,7 @@ def test_read_backup(backup_json_content: bytes, expected_backup: AgentBackup) -
     mock_path = Mock()
     mock_path.stat.return_value.st_size = 1234
 
-    with patch("homeassistant.components.backup.util.tarfile.open") as mock_open_tar:
+    with patch("menuai.components.backup.util.tarfile.open") as mock_open_tar:
         mock_open_tar.return_value.__enter__.return_value.extractfile.return_value.read.return_value = backup_json_content
         backup = read_backup(mock_path)
         assert backup == expected_backup
@@ -135,8 +135,8 @@ def test_validate_password(password: str | None) -> None:
     mock_path = Mock()
 
     with (
-        patch("homeassistant.components.backup.util.tarfile.open"),
-        patch("homeassistant.components.backup.util.SecureTarFile"),
+        patch("menuai.components.backup.util.tarfile.open"),
+        patch("menuai.components.backup.util.SecureTarFile"),
     ):
         assert validate_password(mock_path, password) is True
 
@@ -150,21 +150,21 @@ def test_validate_password_wrong_password(
     mock_path = Mock()
 
     with (
-        patch("homeassistant.components.backup.util.tarfile.open"),
+        patch("menuai.components.backup.util.tarfile.open"),
         patch(
-            "homeassistant.components.backup.util.SecureTarFile",
+            "menuai.components.backup.util.SecureTarFile",
         ) as mock_secure_tar,
     ):
         mock_secure_tar.return_value.__enter__.side_effect = secure_tar_side_effect
         assert validate_password(mock_path, password) is False
 
 
-def test_validate_password_no_homeassistant() -> None:
+def test_validate_password_no_menuai() -> None:
     """Test validating a password."""
     mock_path = Mock()
 
     with (
-        patch("homeassistant.components.backup.util.tarfile.open") as mock_open_tar,
+        patch("menuai.components.backup.util.tarfile.open") as mock_open_tar,
     ):
         mock_open_tar.return_value.__enter__.return_value.extractfile.side_effect = (
             KeyError
@@ -193,7 +193,7 @@ def test_validate_password_no_homeassistant() -> None:
     ],
 )
 async def test_decrypted_backup_streamer(
-    hass: HomeAssistant,
+    menuai: menuai,
     addons: list[AddonInfo],
     padding_size: int,
     decrypted_backup: str,
@@ -208,8 +208,8 @@ async def test_decrypted_backup_streamer(
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=True,
         size=encrypted_backup_path.stat().st_size,
@@ -224,7 +224,7 @@ async def test_decrypted_backup_streamer(
     async def open_backup() -> AsyncIterator[bytes]:
         return send_backup()
 
-    decryptor = DecryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+    decryptor = DecryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
     assert decryptor.backup() == dataclasses.replace(
         backup, protected=False, size=backup.size + len(expected_padding)
     )
@@ -241,7 +241,7 @@ async def test_decrypted_backup_streamer(
 
 
 async def test_decrypted_backup_streamer_interrupt_stuck_reader(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the decrypted backup streamer."""
     encrypted_backup_path = get_fixture_path("test_backups/c0cb53bd.tar", DOMAIN)
@@ -255,8 +255,8 @@ async def test_decrypted_backup_streamer_interrupt_stuck_reader(
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=True,
         size=encrypted_backup_path.stat().st_size,
@@ -273,13 +273,13 @@ async def test_decrypted_backup_streamer_interrupt_stuck_reader(
     async def open_backup() -> AsyncIterator[bytes]:
         return send_backup()
 
-    decryptor = DecryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+    decryptor = DecryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
     await decryptor.open_stream()
     await decryptor.wait()
 
 
 async def test_decrypted_backup_streamer_interrupt_stuck_writer(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the decrypted backup streamer."""
     encrypted_backup_path = get_fixture_path("test_backups/c0cb53bd.tar", DOMAIN)
@@ -293,8 +293,8 @@ async def test_decrypted_backup_streamer_interrupt_stuck_writer(
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=True,
         size=encrypted_backup_path.stat().st_size,
@@ -308,12 +308,12 @@ async def test_decrypted_backup_streamer_interrupt_stuck_writer(
     async def open_backup() -> AsyncIterator[bytes]:
         return send_backup()
 
-    decryptor = DecryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+    decryptor = DecryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
     await decryptor.open_stream()
     await decryptor.wait()
 
 
-async def test_decrypted_backup_streamer_wrong_password(hass: HomeAssistant) -> None:
+async def test_decrypted_backup_streamer_wrong_password(menuai: menuai) -> None:
     """Test the decrypted backup streamer with wrong password."""
     encrypted_backup_path = get_fixture_path("test_backups/c0cb53bd.tar", DOMAIN)
     backup = AgentBackup(
@@ -326,8 +326,8 @@ async def test_decrypted_backup_streamer_wrong_password(hass: HomeAssistant) -> 
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=True,
         size=encrypted_backup_path.stat().st_size,
@@ -341,7 +341,7 @@ async def test_decrypted_backup_streamer_wrong_password(hass: HomeAssistant) -> 
     async def open_backup() -> AsyncIterator[bytes]:
         return send_backup()
 
-    decryptor = DecryptedBackupStreamer(hass, backup, open_backup, "wrong_password")
+    decryptor = DecryptedBackupStreamer(menuai, backup, open_backup, "wrong_password")
     decrypted_stream = await decryptor.open_stream()
     async for _ in decrypted_stream:
         pass
@@ -371,7 +371,7 @@ async def test_decrypted_backup_streamer_wrong_password(hass: HomeAssistant) -> 
     ],
 )
 async def test_encrypted_backup_streamer(
-    hass: HomeAssistant,
+    menuai: menuai,
     addons: list[AddonInfo],
     padding_size: int,
     encrypted_backup: str,
@@ -388,8 +388,8 @@ async def test_encrypted_backup_streamer(
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=False,
         size=decrypted_backup_path.stat().st_size,
@@ -414,7 +414,7 @@ async def test_encrypted_backup_streamer(
             bytes.fromhex("8b7a58e48faf2efb23845eb3164382e0"),
             bytes.fromhex("00000000000000000000000000000000"),
         )
-        encryptor = EncryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+        encryptor = EncryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
 
         assert encryptor.backup() == dataclasses.replace(
             backup, protected=True, size=backup.size + len(expected_padding)
@@ -433,7 +433,7 @@ async def test_encrypted_backup_streamer(
 
 
 async def test_encrypted_backup_streamer_interrupt_stuck_reader(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the encrypted backup streamer."""
     decrypted_backup_path = get_fixture_path(
@@ -449,8 +449,8 @@ async def test_encrypted_backup_streamer_interrupt_stuck_reader(
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=False,
         size=decrypted_backup_path.stat().st_size,
@@ -467,13 +467,13 @@ async def test_encrypted_backup_streamer_interrupt_stuck_reader(
     async def open_backup() -> AsyncIterator[bytes]:
         return send_backup()
 
-    decryptor = EncryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+    decryptor = EncryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
     await decryptor.open_stream()
     await decryptor.wait()
 
 
 async def test_encrypted_backup_streamer_interrupt_stuck_writer(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the encrypted backup streamer."""
     decrypted_backup_path = get_fixture_path(
@@ -489,8 +489,8 @@ async def test_encrypted_backup_streamer_interrupt_stuck_writer(
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=True,
         size=decrypted_backup_path.stat().st_size,
@@ -504,12 +504,12 @@ async def test_encrypted_backup_streamer_interrupt_stuck_writer(
     async def open_backup() -> AsyncIterator[bytes]:
         return send_backup()
 
-    decryptor = EncryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+    decryptor = EncryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
     await decryptor.open_stream()
     await decryptor.wait()
 
 
-async def test_encrypted_backup_streamer_random_nonce(hass: HomeAssistant) -> None:
+async def test_encrypted_backup_streamer_random_nonce(menuai: menuai) -> None:
     """Test the encrypted backup streamer."""
     decrypted_backup_path = get_fixture_path(
         "test_backups/c0cb53bd.tar.decrypted", DOMAIN
@@ -525,8 +525,8 @@ async def test_encrypted_backup_streamer_random_nonce(hass: HomeAssistant) -> No
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=False,
         size=decrypted_backup_path.stat().st_size,
@@ -540,8 +540,8 @@ async def test_encrypted_backup_streamer_random_nonce(hass: HomeAssistant) -> No
     async def open_backup() -> AsyncIterator[bytes]:
         return send_backup()
 
-    encryptor1 = EncryptedBackupStreamer(hass, backup, open_backup, "hunter2")
-    encryptor2 = EncryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+    encryptor1 = EncryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
+    encryptor2 = EncryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
 
     async def read_stream(stream: AsyncIterator[bytes]) -> bytes:
         output = b""
@@ -574,7 +574,7 @@ async def test_encrypted_backup_streamer_random_nonce(hass: HomeAssistant) -> No
     assert encrypted_output1[: len(encrypted_backup_data)] != encrypted_backup_data
 
 
-async def test_encrypted_backup_streamer_error(hass: HomeAssistant) -> None:
+async def test_encrypted_backup_streamer_error(menuai: menuai) -> None:
     """Test the encrypted backup streamer."""
     decrypted_backup_path = get_fixture_path(
         "test_backups/c0cb53bd.tar.decrypted", DOMAIN
@@ -589,8 +589,8 @@ async def test_encrypted_backup_streamer_error(hass: HomeAssistant) -> None:
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="test",
         protected=False,
         size=decrypted_backup_path.stat().st_size,
@@ -607,10 +607,10 @@ async def test_encrypted_backup_streamer_error(hass: HomeAssistant) -> None:
     # Patch os.urandom to return values matching the nonce used in the encrypted
     # test backup. The backup has three inner tar files, but we need an extra nonce
     # for a future planned supervisor.tar.
-    encryptor = EncryptedBackupStreamer(hass, backup, open_backup, "hunter2")
+    encryptor = EncryptedBackupStreamer(menuai, backup, open_backup, "hunter2")
 
     with patch(
-        "homeassistant.components.backup.util.tarfile.open",
+        "menuai.components.backup.util.tarfile.open",
         side_effect=tarfile.TarError,
     ):
         encrypted_stream = await encryptor.open_stream()
@@ -641,8 +641,8 @@ def test_suggested_filename(name: str, resulting_filename: str) -> None:
         database_included=False,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name=name,
         protected=False,
         size=1234,

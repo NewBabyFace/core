@@ -1,14 +1,14 @@
-"""Home Assistant Hardware firmware utilities."""
+"""MenuAI Hardware firmware utilities."""
 
 from __future__ import annotations
 
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
     OwningIntegration,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
 
 from .const import DOMAIN
 from .helpers import get_zha_gateway
@@ -16,7 +16,7 @@ from .helpers import get_zha_gateway
 
 @callback
 def get_firmware_info(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> FirmwareInfo | None:
     """Return firmware information for the ZHA instance, synchronously."""
 
@@ -28,7 +28,7 @@ def get_firmware_info(
         return None
 
     try:
-        gateway = get_zha_gateway(hass)
+        gateway = get_zha_gateway(menuai)
     except ValueError:
         firmware_version = None
     else:

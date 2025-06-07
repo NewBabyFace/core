@@ -18,13 +18,13 @@ from aiohomekit.exceptions import (
     EncryptionError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_IDENTIFIERS, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.async_ import create_eager_task
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_IDENTIFIERS, EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
+from menuai.util.async_ import create_eager_task
 
 from .config_flow import normalize_hkid
 from .connection import HKDevice
@@ -45,14 +45,14 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a HomeKit connection on a config entry."""
-    conn = HKDevice(hass, entry, entry.data)
-    hass.data[KNOWN_DEVICES][conn.unique_id] = conn
+    conn = HKDevice(menuai, entry, entry.data)
+    menuai.data[KNOWN_DEVICES][conn.unique_id] = conn
 
     # For backwards compat
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=normalize_hkid(conn.unique_id)
         )
 
@@ -64,7 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         EncryptionError,
         AccessoryDisconnectedError,
     ) as ex:
-        del hass.data[KNOWN_DEVICES][conn.unique_id]
+        del menuai.data[KNOWN_DEVICES][conn.unique_id]
         with contextlib.suppress(TimeoutError):
             await conn.pairing.close()
         raise ConfigEntryNotReady from ex
@@ -72,51 +72,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up for Homekit devices."""
-    await async_get_controller(hass)
+    await async_get_controller(menuai)
 
-    hass.data[KNOWN_DEVICES] = {}
+    menuai.data[KNOWN_DEVICES] = {}
 
     async def _async_stop_homekit_controller(event: Event) -> None:
         await asyncio.gather(
             *(
                 create_eager_task(connection.async_unload())
-                for connection in hass.data[KNOWN_DEVICES].values()
+                for connection in menuai.data[KNOWN_DEVICES].values()
             )
         )
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop_homekit_controller)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_stop_homekit_controller)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Disconnect from HomeKit devices before unloading entry."""
     hkid = entry.data["AccessoryPairingID"]
 
-    if hkid in hass.data[KNOWN_DEVICES]:
-        connection: HKDevice = hass.data[KNOWN_DEVICES][hkid]
+    if hkid in menuai.data[KNOWN_DEVICES]:
+        connection: HKDevice = menuai.data[KNOWN_DEVICES][hkid]
         await connection.async_unload()
 
     return True
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Cleanup caches before removing config entry."""
     hkid = entry.data["AccessoryPairingID"]
 
-    controller = await async_get_controller(hass)
+    controller = await async_get_controller(menuai)
 
     # Remove the pairing on the device, making the device discoverable again.
-    # Don't reuse any objects in hass.data as they are already unloaded
+    # Don't reuse any objects in menuai.data as they are already unloaded
     controller.load_pairing(hkid, dict(entry.data))
     try:
         await controller.remove_pairing(hkid)
     except aiohomekit.AccessoryDisconnectedError:
         _LOGGER.warning(
             (
-                "Accessory %s was removed from HomeAssistant but was not reachable "
+                "Accessory %s was removed from menuai but was not reachable "
                 "to properly unpair. It may need resetting before you can use it with "
                 "HomeKit again"
             ),
@@ -125,11 +125,11 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove homekit_controller config entry from a device."""
     hkid = config_entry.data["AccessoryPairingID"]
-    connection: HKDevice = hass.data[KNOWN_DEVICES][hkid]
+    connection: HKDevice = menuai.data[KNOWN_DEVICES][hkid]
     return not device_entry.identifiers.intersection(
         identifier
         for accessory in connection.entity_map.accessories

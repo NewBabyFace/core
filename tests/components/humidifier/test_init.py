@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     ATTR_HUMIDITY,
     DOMAIN,
     MODE_ECO,
@@ -13,8 +13,8 @@ from homeassistant.components.humidifier import (
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from tests.common import MockConfigEntry, MockEntity, setup_test_component_platform
 
@@ -28,10 +28,10 @@ class MockHumidifierEntity(MockEntity, HumidifierEntity):
         return 0
 
 
-async def test_sync_turn_on(hass: HomeAssistant) -> None:
+async def test_sync_turn_on(menuai: menuai) -> None:
     """Test if async turn_on calls sync turn_on."""
     humidifier = MockHumidifierEntity()
-    humidifier.hass = hass
+    humidifier.menuai = menuai
 
     humidifier.turn_on = MagicMock()
     await humidifier.async_turn_on()
@@ -39,10 +39,10 @@ async def test_sync_turn_on(hass: HomeAssistant) -> None:
     assert humidifier.turn_on.called
 
 
-async def test_sync_turn_off(hass: HomeAssistant) -> None:
+async def test_sync_turn_off(menuai: menuai) -> None:
     """Test if async turn_off calls sync turn_off."""
     humidifier = MockHumidifierEntity()
-    humidifier.hass = hass
+    humidifier.menuai = menuai
 
     humidifier.turn_off = MagicMock()
     await humidifier.async_turn_off()
@@ -51,7 +51,7 @@ async def test_sync_turn_off(hass: HomeAssistant) -> None:
 
 
 async def test_humidity_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_test_integration: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -77,19 +77,19 @@ async def test_humidity_validation(
     )
 
     setup_test_component_platform(
-        hass, DOMAIN, entities=[test_humidifier], from_config_entry=True
+        menuai, DOMAIN, entities=[test_humidifier], from_config_entry=True
     )
-    await hass.config_entries.async_setup(register_test_integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(register_test_integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("humidifier.test")
+    state = menuai.states.get("humidifier.test")
     assert state.attributes.get(ATTR_HUMIDITY) == 50
 
     with pytest.raises(
         ServiceValidationError,
         match="Provided humidity 1 is not valid. Accepted range is 50 to 60",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_HUMIDITY,
             {
@@ -106,7 +106,7 @@ async def test_humidity_validation(
         ServiceValidationError,
         match="Provided humidity 70 is not valid. Accepted range is 50 to 60",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_HUMIDITY,
             {

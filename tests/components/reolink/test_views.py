@@ -10,8 +10,8 @@ import pytest
 from reolink_aio.enums import VodRequestType
 from reolink_aio.exceptions import ReolinkError
 
-from homeassistant.components.reolink.views import async_generate_playback_proxy_url
-from homeassistant.core import HomeAssistant
+from menuai.components.reolink.views import async_generate_playback_proxy_url
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator
@@ -63,10 +63,10 @@ def get_mock_session(
     [("video/mp4"), ("application/octet-stream"), ("apolication/octet-stream")],
 )
 async def test_playback_proxy(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
     content_type: str,
 ) -> None:
@@ -76,11 +76,11 @@ async def test_playback_proxy(
     mock_session = get_mock_session(content_type=content_type)
 
     with patch(
-        "homeassistant.components.reolink.views.async_get_clientsession",
+        "menuai.components.reolink.views.async_get_clientsession",
         return_value=mock_session,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     caplog.set_level(logging.DEBUG)
 
     proxy_url = async_generate_playback_proxy_url(
@@ -91,7 +91,7 @@ async def test_playback_proxy(
         TEST_VOD_TYPE,
     )
 
-    http_client = await hass_client()
+    http_client = await menuai_client()
     response = cast(ClientResponse, await http_client.get(proxy_url))
 
     assert await response.content.read() == b"testtest"
@@ -99,16 +99,16 @@ async def test_playback_proxy(
 
 
 async def test_proxy_get_source_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test error while getting source for playback proxy URL."""
     reolink_connect.get_vod_source.side_effect = ReolinkError(TEST_ERROR)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     proxy_url = async_generate_playback_proxy_url(
         config_entry.entry_id,
@@ -118,7 +118,7 @@ async def test_proxy_get_source_error(
         TEST_VOD_TYPE,
     )
 
-    http_client = await hass_client()
+    http_client = await menuai_client()
     response = await http_client.get(proxy_url)
 
     assert await response.content.read() == bytes(TEST_ERROR, "utf-8")
@@ -127,14 +127,14 @@ async def test_proxy_get_source_error(
 
 
 async def test_proxy_invalid_config_entry_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test config entry id not found for playback proxy URL."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     proxy_url = async_generate_playback_proxy_url(
         "wrong_config_id",
@@ -144,7 +144,7 @@ async def test_proxy_invalid_config_entry_id(
         TEST_VOD_TYPE,
     )
 
-    http_client = await hass_client()
+    http_client = await menuai_client()
     response = await http_client.get(proxy_url)
 
     assert await response.content.read() == bytes(
@@ -155,10 +155,10 @@ async def test_proxy_invalid_config_entry_id(
 
 
 async def test_playback_proxy_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test playback proxy URL with a timeout in the second chunk."""
     reolink_connect.get_vod_source.return_value = (TEST_MIME_TYPE_MP4, TEST_URL)
@@ -166,11 +166,11 @@ async def test_playback_proxy_timeout(
     mock_session = get_mock_session([b"test", TimeoutError()], 4)
 
     with patch(
-        "homeassistant.components.reolink.views.async_get_clientsession",
+        "menuai.components.reolink.views.async_get_clientsession",
         return_value=mock_session,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     proxy_url = async_generate_playback_proxy_url(
         config_entry.entry_id,
@@ -180,7 +180,7 @@ async def test_playback_proxy_timeout(
         TEST_VOD_TYPE,
     )
 
-    http_client = await hass_client()
+    http_client = await menuai_client()
     response = cast(ClientResponse, await http_client.get(proxy_url))
 
     assert await response.content.read() == b"test"
@@ -189,10 +189,10 @@ async def test_playback_proxy_timeout(
 
 @pytest.mark.parametrize(("content_type"), [("video/x-flv"), ("text/html")])
 async def test_playback_wrong_content(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     content_type: str,
 ) -> None:
     """Test playback proxy URL with a wrong content type in the response."""
@@ -201,11 +201,11 @@ async def test_playback_wrong_content(
     mock_session = get_mock_session(content_type=content_type)
 
     with patch(
-        "homeassistant.components.reolink.views.async_get_clientsession",
+        "menuai.components.reolink.views.async_get_clientsession",
         return_value=mock_session,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     proxy_url = async_generate_playback_proxy_url(
         config_entry.entry_id,
@@ -215,17 +215,17 @@ async def test_playback_wrong_content(
         TEST_VOD_TYPE,
     )
 
-    http_client = await hass_client()
+    http_client = await menuai_client()
     response = cast(ClientResponse, await http_client.get(proxy_url))
 
     assert response.status == HTTPStatus.BAD_REQUEST
 
 
 async def test_playback_connect_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test playback proxy URL with a connection error."""
     reolink_connect.get_vod_source.return_value = (TEST_MIME_TYPE_MP4, TEST_URL)
@@ -234,11 +234,11 @@ async def test_playback_connect_error(
     mock_session.get = AsyncMock(side_effect=ClientConnectionError(TEST_ERROR))
 
     with patch(
-        "homeassistant.components.reolink.views.async_get_clientsession",
+        "menuai.components.reolink.views.async_get_clientsession",
         return_value=mock_session,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     proxy_url = async_generate_playback_proxy_url(
         config_entry.entry_id,
@@ -248,7 +248,7 @@ async def test_playback_connect_error(
         TEST_VOD_TYPE,
     )
 
-    http_client = await hass_client()
+    http_client = await menuai_client()
     response = cast(ClientResponse, await http_client.get(proxy_url))
 
     assert response.status == HTTPStatus.BAD_REQUEST

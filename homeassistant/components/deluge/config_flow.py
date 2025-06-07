@@ -10,9 +10,9 @@ from typing import Any
 from deluge_client.client import DelugeRPCClient
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_WEB_PORT,
@@ -86,7 +86,7 @@ class DelugeFlowHandler(ConfigFlow, domain=DOMAIN):
             host=host, port=port, username=username, password=password, decode_utf8=True
         )
         try:
-            await self.hass.async_add_executor_job(api.connect)
+            await self.menuai.async_add_executor_job(api.connect)
         except (ConnectionRefusedError, TimeoutError, SSLError):
             return "cannot_connect"
         except Exception as ex:

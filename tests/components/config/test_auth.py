@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant.auth import models as auth_models
-from homeassistant.components.config import auth as auth_config
-from homeassistant.core import HomeAssistant
+from menuai.auth import models as auth_models
+from menuai.components.config import auth as auth_config
+from menuai.core import menuai
 
 from tests.common import CLIENT_ID, MockGroup, MockUser
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
@@ -12,19 +12,19 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 @pytest.fixture(autouse=True)
 async def setup_config(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
-    """Fixture that sets up the auth provider homeassistant module."""
-    auth_config.async_setup(hass)
+    """Fixture that sets up the auth provider menuai module."""
+    auth_config.async_setup(menuai)
 
 
 async def test_list_requires_admin(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_read_only_access_token: str,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_read_only_access_token: str,
 ) -> None:
     """Test get users requires auth."""
-    client = await hass_ws_client(hass, hass_read_only_access_token)
+    client = await menuai_ws_client(menuai, menuai_read_only_access_token)
 
     await client.send_json({"id": 5, "type": auth_config.WS_TYPE_LIST})
 
@@ -34,37 +34,37 @@ async def test_list_requires_admin(
 
 
 async def test_list(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_admin_user: MockUser
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_admin_user: MockUser
 ) -> None:
     """Test get users."""
-    group = MockGroup().add_to_hass(hass)
+    group = MockGroup().add_to_menuai(menuai)
 
     owner = MockUser(
         id="abc", name="Test Owner", is_owner=True, groups=[group]
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     owner.credentials.append(
         auth_models.Credentials(
-            auth_provider_type="homeassistant",
+            auth_provider_type="menuai",
             auth_provider_id=None,
             data={"username": "test-owner"},
         )
     )
 
-    system = MockUser(id="efg", name="Test Hass.io", system_generated=True).add_to_hass(
-        hass
+    system = MockUser(id="efg", name="Test menuai.io", system_generated=True).add_to_menuai(
+        menuai
     )
 
     inactive = MockUser(
         id="hij", name="Inactive User", is_active=False, groups=[group]
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    refresh_token = await hass.auth.async_create_refresh_token(
+    refresh_token = await menuai.auth.async_create_refresh_token(
         owner, CLIENT_ID, credential=owner.credentials[0]
     )
-    access_token = hass.auth.async_create_access_token(refresh_token)
+    access_token = menuai.auth.async_create_access_token(refresh_token)
 
-    client = await hass_ws_client(hass, access_token)
+    client = await menuai_ws_client(menuai, access_token)
     await client.send_json({"id": 5, "type": auth_config.WS_TYPE_LIST})
 
     result = await client.receive_json()
@@ -72,15 +72,15 @@ async def test_list(
     data = result["result"]
     assert len(data) == 5
     assert data[0] == {
-        "id": hass_admin_user.id,
+        "id": menuai_admin_user.id,
         "username": "admin",
         "name": "Mock User",
         "is_owner": False,
         "is_active": True,
         "local_only": False,
         "system_generated": False,
-        "group_ids": [group.id for group in hass_admin_user.groups],
-        "credentials": [{"type": "homeassistant"}],
+        "group_ids": [group.id for group in menuai_admin_user.groups],
+        "credentials": [{"type": "menuai"}],
     }
     assert data[1] == {
         "id": owner.id,
@@ -91,12 +91,12 @@ async def test_list(
         "local_only": False,
         "system_generated": False,
         "group_ids": [group.id for group in owner.groups],
-        "credentials": [{"type": "homeassistant"}],
+        "credentials": [{"type": "menuai"}],
     }
     assert data[2] == {
         "id": system.id,
         "username": None,
-        "name": "Test Hass.io",
+        "name": "Test menuai.io",
         "is_owner": False,
         "is_active": True,
         "local_only": False,
@@ -118,12 +118,12 @@ async def test_list(
 
 
 async def test_delete_requires_admin(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_read_only_access_token: str,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_read_only_access_token: str,
 ) -> None:
     """Test delete command requires an admin."""
-    client = await hass_ws_client(hass, hass_read_only_access_token)
+    client = await menuai_ws_client(menuai, menuai_read_only_access_token)
 
     await client.send_json(
         {"id": 5, "type": auth_config.WS_TYPE_DELETE, "user_id": "abcd"}
@@ -135,11 +135,11 @@ async def test_delete_requires_admin(
 
 
 async def test_delete_unable_self_account(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_access_token: str
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_access_token: str
 ) -> None:
     """Test we cannot delete our own account."""
-    client = await hass_ws_client(hass, hass_access_token)
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    client = await menuai_ws_client(menuai, menuai_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     await client.send_json(
         {"id": 5, "type": auth_config.WS_TYPE_DELETE, "user_id": refresh_token.user.id}
@@ -151,10 +151,10 @@ async def test_delete_unable_self_account(
 
 
 async def test_delete_unknown_user(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_access_token: str
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_access_token: str
 ) -> None:
     """Test we cannot delete an unknown user."""
-    client = await hass_ws_client(hass, hass_access_token)
+    client = await menuai_ws_client(menuai, menuai_access_token)
 
     await client.send_json(
         {"id": 5, "type": auth_config.WS_TYPE_DELETE, "user_id": "abcd"}
@@ -166,13 +166,13 @@ async def test_delete_unknown_user(
 
 
 async def test_delete(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_access_token: str
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_access_token: str
 ) -> None:
     """Test delete command works."""
-    client = await hass_ws_client(hass, hass_access_token)
-    test_user = MockUser(id="efg").add_to_hass(hass)
+    client = await menuai_ws_client(menuai, menuai_access_token)
+    test_user = MockUser(id="efg").add_to_menuai(menuai)
 
-    cur_users = len(await hass.auth.async_get_users())
+    cur_users = len(await menuai.auth.async_get_users())
 
     await client.send_json(
         {"id": 5, "type": auth_config.WS_TYPE_DELETE, "user_id": test_user.id}
@@ -180,24 +180,24 @@ async def test_delete(
 
     result = await client.receive_json()
     assert result["success"], result
-    assert len(await hass.auth.async_get_users()) == cur_users - 1
+    assert len(await menuai.auth.async_get_users()) == cur_users - 1
 
 
 async def test_create(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_access_token: str
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_access_token: str
 ) -> None:
     """Test create command works."""
-    client = await hass_ws_client(hass, hass_access_token)
+    client = await menuai_ws_client(menuai, menuai_access_token)
 
-    cur_users = len(await hass.auth.async_get_users())
+    cur_users = len(await menuai.auth.async_get_users())
 
     await client.send_json({"id": 5, "type": "config/auth/create", "name": "Paulus"})
 
     result = await client.receive_json()
     assert result["success"], result
-    assert len(await hass.auth.async_get_users()) == cur_users + 1
+    assert len(await menuai.auth.async_get_users()) == cur_users + 1
     data_user = result["result"]["user"]
-    user = await hass.auth.async_get_user(data_user["id"])
+    user = await menuai.auth.async_get_user(data_user["id"])
     assert user is not None
     assert user.name == data_user["name"]
     assert user.is_active
@@ -208,12 +208,12 @@ async def test_create(
 
 
 async def test_create_user_group(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_access_token: str
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_access_token: str
 ) -> None:
     """Test create user with a group."""
-    client = await hass_ws_client(hass, hass_access_token)
+    client = await menuai_ws_client(menuai, menuai_access_token)
 
-    cur_users = len(await hass.auth.async_get_users())
+    cur_users = len(await menuai.auth.async_get_users())
 
     await client.send_json(
         {
@@ -226,9 +226,9 @@ async def test_create_user_group(
 
     result = await client.receive_json()
     assert result["success"], result
-    assert len(await hass.auth.async_get_users()) == cur_users + 1
+    assert len(await menuai.auth.async_get_users()) == cur_users + 1
     data_user = result["result"]["user"]
-    user = await hass.auth.async_get_user(data_user["id"])
+    user = await menuai.auth.async_get_user(data_user["id"])
     assert user is not None
     assert user.name == data_user["name"]
     assert user.is_active
@@ -239,12 +239,12 @@ async def test_create_user_group(
 
 
 async def test_create_requires_admin(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_read_only_access_token: str,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_read_only_access_token: str,
 ) -> None:
     """Test create command requires an admin."""
-    client = await hass_ws_client(hass, hass_read_only_access_token)
+    client = await menuai_ws_client(menuai, menuai_read_only_access_token)
 
     await client.send_json({"id": 5, "type": "config/auth/create", "name": "YO"})
 
@@ -253,11 +253,11 @@ async def test_create_requires_admin(
     assert result["error"]["code"] == "unauthorized"
 
 
-async def test_update(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> None:
+async def test_update(menuai: menuai, menuai_ws_client: WebSocketGenerator) -> None:
     """Test update command works."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    user = await hass.auth.async_create_user("Test user")
+    user = await menuai.auth.async_create_user("Test user")
 
     await client.send_json(
         {
@@ -281,14 +281,14 @@ async def test_update(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -
 
 
 async def test_update_requires_admin(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_read_only_access_token: str,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_read_only_access_token: str,
 ) -> None:
     """Test update command requires an admin."""
-    client = await hass_ws_client(hass, hass_read_only_access_token)
+    client = await menuai_ws_client(menuai, menuai_read_only_access_token)
 
-    user = await hass.auth.async_create_user("Test user")
+    user = await menuai.auth.async_create_user("Test user")
 
     await client.send_json(
         {
@@ -306,12 +306,12 @@ async def test_update_requires_admin(
 
 
 async def test_update_system_generated(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test update command cannot update a system generated."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    user = await hass.auth.async_create_system_user("Test user")
+    user = await menuai.auth.async_create_system_user("Test user")
 
     await client.send_json(
         {
@@ -329,12 +329,12 @@ async def test_update_system_generated(
 
 
 async def test_deactivate(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test deactivation and reactivation of regular user."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    user = await hass.auth.async_create_user("Test user")
+    user = await menuai.auth.async_create_user("Test user")
     assert user.is_active is True
 
     await client.send_json(
@@ -369,15 +369,15 @@ async def test_deactivate(
 
 
 async def test_deactivate_owner(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that owner cannot be deactivated."""
-    user = MockUser(id="abc", name="Test Owner", is_owner=True).add_to_hass(hass)
+    user = MockUser(id="abc", name="Test Owner", is_owner=True).add_to_menuai(menuai)
 
     assert user.is_active is True
     assert user.is_owner is True
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {"id": 5, "type": "config/auth/update", "user_id": user.id, "is_active": False}
     )
@@ -388,12 +388,12 @@ async def test_deactivate_owner(
 
 
 async def test_deactivate_system_generated(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that owner cannot be deactivated."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    user = await hass.auth.async_create_system_user("Test user")
+    user = await menuai.auth.async_create_system_user("Test user")
     assert user.is_active is True
     assert user.system_generated is True
     assert user.is_owner is False

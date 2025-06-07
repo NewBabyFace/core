@@ -2,13 +2,13 @@
 
 from datetime import timedelta
 
-from homeassistant.const import CONF_TIMEOUT
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.util.dt import utcnow
+from menuai.const import CONF_TIMEOUT
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.util.dt import utcnow
 
 from .const import CHECK_ENTITIES_SIGNAL, DEFAULT_TIMEOUT, DOMAIN, UPDATE_ENTITY_SIGNAL
 
@@ -41,18 +41,18 @@ class WiffiEntity(Entity):
         self._value = None
         self._timeout = options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)
 
-    async def async_added_to_hass(self) -> None:
-        """Entity has been added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Entity has been added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{UPDATE_ENTITY_SIGNAL}-{self._id}",
                 self._update_value_callback,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, CHECK_ENTITIES_SIGNAL, self._check_expiration_date
+                self.menuai, CHECK_ENTITIES_SIGNAL, self._check_expiration_date
             )
         )
 

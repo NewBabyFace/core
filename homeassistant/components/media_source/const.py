@@ -2,7 +2,7 @@
 
 import re
 
-from homeassistant.components.media_player import MediaClass
+from menuai.components.media_player import MediaClass
 
 DOMAIN = "media_source"
 MEDIA_MIME_TYPES = ("audio", "video", "image")

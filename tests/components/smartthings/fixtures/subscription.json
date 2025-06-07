@@ -1,7 +1,7 @@
 {
   "subscriptionId": "f5768ce8-c9e5-4507-9020-912c0c60e0ab",
   "registrationUrl": "https://spigot-regional.api.smartthings.com/filters/f5768ce8-c9e5-4507-9020-912c0c60e0ab/activate?filterRegion=eu-west-1",
-  "name": "My Home Assistant sub",
+  "name": "My MenuAI sub",
   "version": 20250122,
   "subscriptionFilters": [
     {

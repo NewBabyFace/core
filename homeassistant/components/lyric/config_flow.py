@@ -6,8 +6,8 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.config_entries import ConfigFlowResult
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN
 
@@ -42,7 +42,7 @@ class OAuth2FlowHandler(
         """Create an oauth config entry or update existing entry for reauth."""
         existing_entry = await self.async_set_unique_id(DOMAIN)
         if existing_entry:
-            self.hass.config_entries.async_update_entry(existing_entry, data=data)
-            await self.hass.config_entries.async_reload(existing_entry.entry_id)
+            self.menuai.config_entries.async_update_entry(existing_entry, data=data)
+            await self.menuai.config_entries.async_reload(existing_entry.entry_id)
             return self.async_abort(reason="reauth_successful")
         return self.async_create_entry(title="Lyric", data=data)

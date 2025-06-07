@@ -10,7 +10,7 @@ from aiohue.v2.controllers.events import EventType
 from aiohue.v2.controllers.groups import GroupedLight, Room, Zone
 from aiohue.v2.models.feature import DynamicStatus
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_FLASH,
@@ -22,11 +22,11 @@ from homeassistant.components.light import (
     LightEntityDescription,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from ..bridge import HueBridge, HueConfigEntry
 from ..const import DOMAIN
@@ -39,7 +39,7 @@ from .helpers import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HueConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -76,7 +76,7 @@ async def async_setup_entry(
     )
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class GroupedHueLight(HueBaseEntity, LightEntity):
     """Representation of a Grouped Hue light."""
 
@@ -109,9 +109,9 @@ class GroupedHueLight(HueBaseEntity, LightEntity):
         self._dynamic_mode_active = False
         self._update_values()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         # subscribe to group updates
         self.async_on_remove(
@@ -301,7 +301,7 @@ class GroupedHueLight(HueBaseEntity, LightEntity):
         self, resource_ids: tuple[str]
     ) -> tuple[set[str], set[str]]:
         """Return the names and entity ids for the given Hue (light) resource IDs."""
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         light_names: set[str] = set()
         light_entities: set[str] = set()
         for resource_id in resource_ids:

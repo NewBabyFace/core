@@ -22,10 +22,10 @@ from elmax_api.model.panel import PanelEntry, PanelStatus
 from elmax_api.push.push import PushNotificationHandler
 from httpx import ConnectError, ConnectTimeout
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, menuaiError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_TIMEOUT, POLLING_SECONDS
 
@@ -41,7 +41,7 @@ class ElmaxCoordinator(DataUpdateCoordinator[PanelStatus]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ElmaxConfigEntry,
         elmax_api_client: GenericElmax,
         panel: PanelEntry,
@@ -52,7 +52,7 @@ class ElmaxCoordinator(DataUpdateCoordinator[PanelStatus]):
         self._state_by_endpoint = {}
         self._push_notification_handler = None
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             config_entry=entry,
             logger=_LOGGER,
             name=f"Elmax Cloud {entry.entry_id}",
@@ -68,25 +68,25 @@ class ElmaxCoordinator(DataUpdateCoordinator[PanelStatus]):
         """Return state of a specific actuator."""
         if self._state_by_endpoint is not None:
             return self._state_by_endpoint[actuator_id]
-        raise HomeAssistantError("Unknown actuator")
+        raise menuaiError("Unknown actuator")
 
     def get_zone_state(self, zone_id: str) -> Actuator:
         """Return state of a specific zone."""
         if self._state_by_endpoint is not None:
             return self._state_by_endpoint[zone_id]
-        raise HomeAssistantError("Unknown zone")
+        raise menuaiError("Unknown zone")
 
     def get_area_state(self, area_id: str) -> Area:
         """Return state of a specific area."""
         if self._state_by_endpoint is not None and area_id:
             return self._state_by_endpoint[area_id]
-        raise HomeAssistantError("Unknown area")
+        raise menuaiError("Unknown area")
 
     def get_cover_state(self, cover_id: str) -> Cover:
         """Return state of a specific cover."""
         if self._state_by_endpoint is not None:
             return self._state_by_endpoint[cover_id]
-        raise HomeAssistantError("Unknown cover")
+        raise menuaiError("Unknown cover")
 
     @property
     def http_client(self):
@@ -159,7 +159,7 @@ class ElmaxCoordinator(DataUpdateCoordinator[PanelStatus]):
         self._push_notification_handler.register_push_notification_handler(
             self._push_handler
         )
-        self._push_notification_handler.start(loop=self.hass.loop)
+        self._push_notification_handler.start(loop=self.menuai.loop)
 
     async def _push_handler(self, status: PanelStatus) -> None:
         self._fire_data_update(status)

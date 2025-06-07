@@ -8,24 +8,24 @@ from pyinsteon.topics import DEVICE_LIST_CHANGED
 from pyinsteon.utils import publish_topic
 import pytest
 
-from homeassistant.components import insteon
-from homeassistant.components.insteon.api import async_load_api
-from homeassistant.components.insteon.api.device import (
+from menuai.components import insteon
+from menuai.components.insteon.api import async_load_api
+from menuai.components.insteon.api.device import (
     DEVICE_ID,
     HA_DEVICE_NOT_FOUND,
     ID,
     INSTEON_DEVICE_NOT_FOUND,
     TYPE,
 )
-from homeassistant.components.insteon.const import (
+from menuai.components.insteon.const import (
     CONF_OVERRIDE,
     CONF_X10,
     DOMAIN,
     MULTIPLE,
 )
-from homeassistant.components.insteon.utils import async_device_name
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.insteon.utils import async_device_name
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import MOCK_USER_INPUT_PLM
 from .mock_devices import MockDevices
@@ -36,11 +36,11 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_get_config(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test getting an Insteon device."""
 
-    ws_client, devices, ha_device, _ = await async_mock_setup(hass, hass_ws_client)
+    ws_client, devices, ha_device, _ = await async_mock_setup(menuai, menuai_ws_client)
     with patch.object(insteon.api.device, "devices", devices):
         await ws_client.send_json(
             {ID: 2, TYPE: "insteon/device/get", DEVICE_ID: ha_device.id}
@@ -53,11 +53,11 @@ async def test_get_config(
 
 
 async def test_no_ha_device(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test response when no HA device exists."""
 
-    ws_client, devices, _, _ = await async_mock_setup(hass, hass_ws_client)
+    ws_client, devices, _, _ = await async_mock_setup(menuai, menuai_ws_client)
     with patch.object(insteon.api.device, "devices", devices):
         await ws_client.send_json(
             {ID: 2, TYPE: "insteon/device/get", DEVICE_ID: "not_a_device"}
@@ -69,8 +69,8 @@ async def test_no_ha_device(
 
 
 async def test_no_insteon_device(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test response when no Insteon device exists."""
@@ -80,10 +80,10 @@ async def test_no_insteon_device(
         data=MOCK_USER_INPUT_PLM,
         options={},
     )
-    config_entry.add_to_hass(hass)
-    async_load_api(hass)
+    config_entry.add_to_menuai(menuai)
+    async_load_api(menuai)
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     devices = MockDevices()
     await devices.async_load()
 
@@ -118,11 +118,11 @@ async def test_no_insteon_device(
 
 
 async def test_get_ha_device_name(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test getting the HA device name from an Insteon address."""
 
-    _, devices, _, device_reg = await async_mock_setup(hass, hass_ws_client)
+    _, devices, _, device_reg = await async_mock_setup(menuai, menuai_ws_client)
 
     with patch.object(insteon.api.device, "devices", devices):
         # Test a real HA and Insteon device
@@ -137,11 +137,11 @@ async def test_get_ha_device_name(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_add_device_api(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test adding an Insteon device."""
 
-    ws_client, devices, _, _ = await async_mock_setup(hass, hass_ws_client)
+    ws_client, devices, _, _ = await async_mock_setup(menuai, menuai_ws_client)
     with patch.object(insteon.api.device, "devices", devices):
         await ws_client.send_json({ID: 2, TYPE: "insteon/device/add", MULTIPLE: True})
 
@@ -167,11 +167,11 @@ async def test_add_device_api(
 
 
 async def test_cancel_add_device(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test cancelling adding of a new device."""
 
-    ws_client, devices, _, _ = await async_mock_setup(hass, hass_ws_client)
+    ws_client, devices, _, _ = await async_mock_setup(menuai, menuai_ws_client)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json(
@@ -185,11 +185,11 @@ async def test_cancel_add_device(
 
 
 async def test_add_x10_device(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test adding an X10 device."""
 
-    ws_client, _, _, _ = await async_mock_setup(hass, hass_ws_client)
+    ws_client, _, _, _ = await async_mock_setup(menuai, menuai_ws_client)
     x10_device = {"housecode": "a", "unitcode": 1, "platform": "switch"}
     await ws_client.send_json(
         {ID: 2, TYPE: "insteon/device/add_x10", "x10_device": x10_device}
@@ -197,7 +197,7 @@ async def test_add_x10_device(
     msg = await ws_client.receive_json()
     assert msg["success"]
 
-    config_entry = hass.config_entries.async_get_entry("abcde12345")
+    config_entry = menuai.config_entries.async_get_entry("abcde12345")
     assert len(config_entry.options[CONF_X10]) == 1
     assert config_entry.options[CONF_X10][0]["housecode"] == "a"
     assert config_entry.options[CONF_X10][0]["unitcode"] == 1
@@ -205,14 +205,14 @@ async def test_add_x10_device(
 
 
 async def test_add_x10_device_duplicate(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test adding a duplicate X10 device."""
 
     x10_device = {"housecode": "a", "unitcode": 1, "platform": "switch"}
 
     ws_client, _, _, _ = await async_mock_setup(
-        hass, hass_ws_client, config_options={CONF_X10: [x10_device]}
+        menuai, menuai_ws_client, config_options={CONF_X10: [x10_device]}
     )
     await ws_client.send_json(
         {ID: 2, TYPE: "insteon/device/add_x10", "x10_device": x10_device}
@@ -223,10 +223,10 @@ async def test_add_x10_device_duplicate(
 
 
 async def test_remove_device(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test removing an Insteon device."""
-    ws_client, _, _, _ = await async_mock_setup(hass, hass_ws_client)
+    ws_client, _, _, _ = await async_mock_setup(menuai, menuai_ws_client)
     await ws_client.send_json(
         {
             ID: 2,
@@ -240,10 +240,10 @@ async def test_remove_device(
 
 
 async def test_remove_x10_device(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test removing an X10 device."""
-    ws_client, _, _, _ = await async_mock_setup(hass, hass_ws_client)
+    ws_client, _, _, _ = await async_mock_setup(menuai, menuai_ws_client)
     await ws_client.send_json(
         {
             ID: 2,
@@ -257,7 +257,7 @@ async def test_remove_x10_device(
 
 
 async def test_remove_one_x10_device(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test one X10 device without removing others."""
     x10_device = {"housecode": "a", "unitcode": 1, "platform": "light", "dim_steps": 22}
@@ -266,7 +266,7 @@ async def test_remove_one_x10_device(
         {"housecode": "a", "unitcode": 2, "platform": "switch"},
     ]
     ws_client, _, _, _ = await async_mock_setup(
-        hass, hass_ws_client, config_options={CONF_X10: x10_devices}
+        menuai, menuai_ws_client, config_options={CONF_X10: x10_devices}
     )
     await ws_client.send_json(
         {
@@ -278,20 +278,20 @@ async def test_remove_one_x10_device(
     )
     msg = await ws_client.receive_json()
     assert msg["success"]
-    config_entry = hass.config_entries.async_get_entry("abcde12345")
+    config_entry = menuai.config_entries.async_get_entry("abcde12345")
     assert len(config_entry.options[CONF_X10]) == 1
     assert config_entry.options[CONF_X10][0]["housecode"] == "a"
     assert config_entry.options[CONF_X10][0]["unitcode"] == 2
 
 
 async def test_remove_device_with_overload(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test removing an Insteon device that has a device overload."""
     overload = {"address": "99.99.99", "cat": 1, "subcat": 3}
     overloads = {CONF_OVERRIDE: [overload]}
     ws_client, _, _, _ = await async_mock_setup(
-        hass, hass_ws_client, config_options=overloads
+        menuai, menuai_ws_client, config_options=overloads
     )
     await ws_client.send_json(
         {
@@ -304,5 +304,5 @@ async def test_remove_device_with_overload(
     msg = await ws_client.receive_json()
     assert msg["success"]
 
-    config_entry = hass.config_entries.async_get_entry("abcde12345")
+    config_entry = menuai.config_entries.async_get_entry("abcde12345")
     assert not config_entry.options.get(CONF_OVERRIDE)

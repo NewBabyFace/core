@@ -5,9 +5,9 @@ import logging
 from python_snoo.containers import SnooData, SnooDevice
 from python_snoo.snoo import Snoo
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 type SnooConfigEntry = ConfigEntry[dict[str, SnooCoordinator]]
 
@@ -19,10 +19,10 @@ class SnooCoordinator(DataUpdateCoordinator[SnooData]):
 
     config_entry: SnooConfigEntry
 
-    def __init__(self, hass: HomeAssistant, device: SnooDevice, snoo: Snoo) -> None:
+    def __init__(self, menuai: menuai, device: SnooDevice, snoo: Snoo) -> None:
         """Set up Snoo Coordinator."""
         super().__init__(
-            hass,
+            menuai,
             name=device.name,
             logger=_LOGGER,
         )

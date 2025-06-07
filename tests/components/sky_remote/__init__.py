@@ -1,13 +1,13 @@
 """Tests for the Sky Remote component."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
-async def setup_mock_entry(hass: HomeAssistant, entry: MockConfigEntry):
+async def setup_mock_entry(menuai: menuai, entry: MockConfigEntry):
     """Initialize a mock config entry."""
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

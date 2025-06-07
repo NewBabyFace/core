@@ -9,14 +9,14 @@ from typing import Any
 from requests.exceptions import ChunkedEncodingError
 import voluptuous as vol
 
-from homeassistant.components.camera import Camera
-from homeassistant.const import CONF_FILE_PATH, CONF_FILENAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.camera import Camera
+from menuai.const import CONF_FILE_PATH, CONF_FILENAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DEFAULT_BRAND,
@@ -36,7 +36,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BlinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -97,7 +97,7 @@ class BlinkCamera(CoordinatorEntity[BlinkUpdateCoordinator], Camera):
         try:
             await self._camera.async_arm(True)
         except TimeoutError as er:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_arm",
             ) from er
@@ -110,7 +110,7 @@ class BlinkCamera(CoordinatorEntity[BlinkUpdateCoordinator], Camera):
         try:
             await self._camera.async_arm(False)
         except TimeoutError as er:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_disarm",
             ) from er
@@ -133,7 +133,7 @@ class BlinkCamera(CoordinatorEntity[BlinkUpdateCoordinator], Camera):
         try:
             await self._camera.record()
         except TimeoutError as er:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_clip",
             ) from er
@@ -145,7 +145,7 @@ class BlinkCamera(CoordinatorEntity[BlinkUpdateCoordinator], Camera):
         try:
             await self._camera.snap_picture()
         except TimeoutError as er:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_snap",
             ) from er
@@ -167,7 +167,7 @@ class BlinkCamera(CoordinatorEntity[BlinkUpdateCoordinator], Camera):
 
     async def save_recent_clips(self, file_path) -> None:
         """Save multiple recent clips to output directory."""
-        if not self.hass.config.is_allowed_path(file_path):
+        if not self.menuai.config.is_allowed_path(file_path):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="no_path",
@@ -185,7 +185,7 @@ class BlinkCamera(CoordinatorEntity[BlinkUpdateCoordinator], Camera):
 
     async def save_video(self, filename) -> None:
         """Handle save video service calls."""
-        if not self.hass.config.is_allowed_path(filename):
+        if not self.menuai.config.is_allowed_path(filename):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="no_path",

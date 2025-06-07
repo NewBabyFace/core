@@ -3,9 +3,9 @@
 from pyHomee.const import AttributeType
 from pyHomee.model import HomeeAttribute
 
-from homeassistant.components.event import EventDeviceClass, EventEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventDeviceClass, EventEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeeConfigEntry
 from .entity import HomeeEntity
@@ -14,7 +14,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HomeeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -46,9 +46,9 @@ class HomeeEvent(HomeeEntity, EventEntity):
     ]
     _attr_device_class = EventDeviceClass.BUTTON
 
-    async def async_added_to_hass(self) -> None:
-        """Add the homee event entity to home assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Add the homee event entity to MenuAI."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self._attribute.add_on_changed_listener(self._event_triggered)
         )

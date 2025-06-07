@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_MAX,
     ATTR_MIN,
     ATTR_MODE,
@@ -19,16 +19,16 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.components.number.const import (
+from menuai.components.number.const import (
     DEVICE_CLASS_UNITS as NUMBER_DEVICE_CLASS_UNITS,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DEVICE_CLASS_UNITS as SENSOR_DEVICE_CLASS_UNITS,
     NON_NUMERIC_DEVICE_CLASSES,
     SensorDeviceClass,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_PLATFORM,
@@ -36,13 +36,13 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
-from homeassistant.setup import async_setup_component
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.core import menuai, State
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
+from menuai.setup import async_setup_component
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from . import common
 
@@ -240,21 +240,21 @@ class MockNumberEntityDescrDeprecated(NumberEntity):
         return 0.5
 
 
-async def test_step(hass: HomeAssistant) -> None:
+async def test_step(menuai: menuai) -> None:
     """Test the step calculation."""
     number = MockDefaultNumberEntity()
-    number.hass = hass
+    number.menuai = menuai
     assert number.step == 1.0
 
     number_2 = MockNumberEntity()
-    number_2.hass = hass
+    number_2.menuai = menuai
     assert number_2.step == 0.1
 
 
-async def test_attributes(hass: HomeAssistant) -> None:
+async def test_attributes(menuai: menuai) -> None:
     """Test the attributes."""
     number = MockDefaultNumberEntity()
-    number.hass = hass
+    number.menuai = menuai
     assert number.max_value == 100.0
     assert number.min_value == 0.0
     assert number.step == 1.0
@@ -268,7 +268,7 @@ async def test_attributes(hass: HomeAssistant) -> None:
     }
 
     number_2 = MockNumberEntity()
-    number_2.hass = hass
+    number_2.menuai = menuai
     assert number_2.max_value == 0.5
     assert number_2.min_value == -0.5
     assert number_2.step == 0.1
@@ -282,7 +282,7 @@ async def test_attributes(hass: HomeAssistant) -> None:
     }
 
     number_3 = MockNumberEntityAttr()
-    number_3.hass = hass
+    number_3.menuai = menuai
     assert number_3.max_value == 1000.0
     assert number_3.min_value == -1000.0
     assert number_3.step == 100.0
@@ -296,7 +296,7 @@ async def test_attributes(hass: HomeAssistant) -> None:
     }
 
     number_4 = MockNumberEntityDescr()
-    number_4.hass = hass
+    number_4.menuai = menuai
     assert number_4.max_value == 10.0
     assert number_4.min_value == -10.0
     assert number_4.step == 2.0
@@ -310,7 +310,7 @@ async def test_attributes(hass: HomeAssistant) -> None:
     }
 
     number_5 = MockNumberEntityAttrWithDescription()
-    number_5.hass = hass
+    number_5.menuai = menuai
     assert number_5.max_value == 1000.0
     assert number_5.min_value == -1000.0
     assert number_5.step == 100.0
@@ -325,10 +325,10 @@ async def test_attributes(hass: HomeAssistant) -> None:
     }
 
 
-async def test_sync_set_value(hass: HomeAssistant) -> None:
+async def test_sync_set_value(menuai: menuai) -> None:
     """Test if async set_value calls sync set_value."""
     number = MockDefaultNumberEntity()
-    number.hass = hass
+    number.menuai = menuai
 
     number.set_value = MagicMock()
     await number.async_set_value(42)
@@ -338,33 +338,33 @@ async def test_sync_set_value(hass: HomeAssistant) -> None:
 
 
 async def test_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_number_entities: list[MockNumberEntity],
 ) -> None:
     """Test we can only set valid values."""
-    setup_test_component_platform(hass, DOMAIN, mock_number_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_number_entities)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("number.test")
+    state = menuai.states.get("number.test")
     assert state.state == "50.0"
     assert state.attributes.get(ATTR_STEP) == 1.0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_VALUE: 60.0, ATTR_ENTITY_ID: "number.test"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("number.test")
+    state = menuai.states.get("number.test")
     assert state.state == "60.0"
 
     # test range validation
     with pytest.raises(ServiceValidationError) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_VALUE: 110.0, ATTR_ENTITY_ID: "number.test"},
@@ -377,8 +377,8 @@ async def test_set_value(
         == "Value 110.0 for number.test is outside valid range 0.0 - 100.0"
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get("number.test")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("number.test")
     assert state.state == "60.0"
 
 
@@ -462,7 +462,7 @@ async def test_set_value(
     ],
 )
 async def test_temperature_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     unit_system,
     native_unit,
     state_unit,
@@ -478,7 +478,7 @@ async def test_temperature_conversion(
     state_step,
 ) -> None:
     """Test temperature conversion."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     entity0 = common.MockNumberEntity(
         name="Test",
         native_max_value=native_max_value,
@@ -488,55 +488,55 @@ async def test_temperature_conversion(
         native_value=initial_native_value,
         device_class=NumberDeviceClass.TEMPERATURE,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(initial_state_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == state_unit
     assert state.attributes[ATTR_MAX] == state_max_value
     assert state.attributes[ATTR_MIN] == state_min_value
     assert state.attributes[ATTR_STEP] == state_step
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_VALUE: updated_state_value, ATTR_ENTITY_ID: entity0.entity_id},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(updated_state_value))
     assert entity0._values["native_value"] == updated_native_value
 
     # Set to the minimum value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_VALUE: state_min_value, ATTR_ENTITY_ID: entity0.entity_id},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(state_min_value), rel=0.1)
 
     # Set to the maximum value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_VALUE: state_max_value, ATTR_ENTITY_ID: entity0.entity_id},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(state_max_value), rel=0.1)
 
 
@@ -550,8 +550,8 @@ RESTORE_DATA = {
 
 
 async def test_restore_number_save_state(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test RestoreNumber."""
     entity0 = common.MockRestoreNumber(
@@ -563,18 +563,18 @@ async def test_restore_number_save_state(
         native_value=123.0,
         device_class=NumberDeviceClass.TEMPERATURE,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "number", {"number": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "number", {"number": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Trigger saving state
-    await async_mock_restore_state_shutdown_restart(hass)
+    await async_mock_restore_state_shutdown_restart(menuai)
 
-    assert len(hass_storage[RESTORE_STATE_KEY]["data"]) == 1
-    state = hass_storage[RESTORE_STATE_KEY]["data"][0]["state"]
+    assert len(menuai_storage[RESTORE_STATE_KEY]["data"]) == 1
+    state = menuai_storage[RESTORE_STATE_KEY]["data"][0]["state"]
     assert state["entity_id"] == entity0.entity_id
-    extra_data = hass_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
+    extra_data = menuai_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
     assert extra_data == RESTORE_DATA
     assert isinstance(extra_data["native_value"], float)
 
@@ -617,8 +617,8 @@ async def test_restore_number_save_state(
     ],
 )
 async def test_restore_number_restore_state(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     native_max_value,
     native_min_value,
     native_step,
@@ -629,19 +629,19 @@ async def test_restore_number_restore_state(
     uom,
 ) -> None:
     """Test RestoreNumber."""
-    mock_restore_cache_with_extra_data(hass, ((State("number.test", ""), extra_data),))
+    mock_restore_cache_with_extra_data(menuai, ((State("number.test", ""), extra_data),))
 
     entity0 = common.MockRestoreNumber(
         device_class=device_class,
         name="Test",
         native_value=None,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "number", {"number": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "number", {"number": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity0.entity_id)
+    assert menuai.states.get(entity0.entity_id)
 
     assert entity0.native_max_value == native_max_value
     assert entity0.native_min_value == native_min_value
@@ -705,7 +705,7 @@ async def test_restore_number_restore_state(
     ],
 )
 async def test_custom_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_class,
     native_unit,
@@ -719,7 +719,7 @@ async def test_custom_unit(
     entity_registry.async_update_entity_options(
         entry.entity_id, "number", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity0 = common.MockNumberEntity(
         name="Test",
@@ -728,12 +728,12 @@ async def test_custom_unit(
         device_class=device_class,
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "number", {"number": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "number", {"number": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(custom_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == state_unit
 
@@ -780,7 +780,7 @@ async def test_custom_unit(
     ],
 )
 async def test_custom_unit_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     native_unit,
     custom_unit,
@@ -798,52 +798,52 @@ async def test_custom_unit_change(
         device_class=NumberDeviceClass.TEMPERATURE,
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "number", {"number": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "number", {"number": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Default unit conversion according to unit system
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(default_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == default_unit
 
     entity_registry.async_update_entity_options(
         "number.test", "number", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Unit conversion to the custom unit
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(custom_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == used_custom_unit
 
     entity_registry.async_update_entity_options(
         "number.test", "number", {"unit_of_measurement": native_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Unit conversion to another custom unit
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(native_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == native_unit
 
     entity_registry.async_update_entity_options("number.test", "number", None)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Default unit conversion according to unit system
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(default_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == default_unit
 
 
 async def test_translated_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test translated unit."""
 
     with patch(
-        "homeassistant.helpers.service.translation.async_get_translations",
+        "menuai.helpers.service.translation.async_get_translations",
         return_value={
             "component.test.entity.number.test_translation_key.unit_of_measurement": "Tests"
         },
@@ -857,25 +857,25 @@ async def test_translated_unit(
             "test",
             translation_key="test_translation_key",
         )
-        setup_test_component_platform(hass, DOMAIN, [entity0])
+        setup_test_component_platform(menuai, DOMAIN, [entity0])
 
         assert await async_setup_component(
-            hass, "number", {"number": {"platform": "test"}}
+            menuai, "number", {"number": {"platform": "test"}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         entity_id = entity0.entity_id
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == "Tests"
 
 
 async def test_translated_unit_with_native_unit_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that translated unit."""
 
     with patch(
-        "homeassistant.helpers.service.translation.async_get_translations",
+        "menuai.helpers.service.translation.async_get_translations",
         return_value={
             "component.test.entity.number.test_translation_key.unit_of_measurement": "Tests"
         },
@@ -890,12 +890,12 @@ async def test_translated_unit_with_native_unit_raises(
             translation_key="test_translation_key",
             native_unit_of_measurement="bad_unit",
         )
-        setup_test_component_platform(hass, DOMAIN, [entity0])
+        setup_test_component_platform(menuai, DOMAIN, [entity0])
 
         assert await async_setup_component(
-            hass, "number", {"number": {"platform": "test"}}
+            menuai, "number", {"number": {"platform": "test"}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         # Setup fails so entity_id is None
         assert entity0.entity_id is None
 
@@ -921,29 +921,29 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
-async def test_name(hass: HomeAssistant) -> None:
+async def test_name(menuai: menuai) -> None:
     """Test number name."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.NUMBER]
         )
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -975,7 +975,7 @@ async def test_name(hass: HomeAssistant) -> None:
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -983,17 +983,17 @@ async def test_name(hass: HomeAssistant) -> None:
         async_add_entities([entity1, entity2, entity3, entity4])
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state
     assert state.attributes == {
         "max": 100.0,
@@ -1002,28 +1002,17 @@ async def test_name(hass: HomeAssistant) -> None:
         "step": 1.0,
     }
 
-    state = hass.states.get(entity2.entity_id)
-    assert state
-    assert state.attributes == {
-        "device_class": "temperature",
-        "max": 100.0,
-        "min": 0.0,
-        "mode": NumberMode.AUTO,
-        "step": 1.0,
-    }
-
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state
     assert state.attributes == {
         "device_class": "temperature",
-        "friendly_name": "Temperature",
         "max": 100.0,
         "min": 0.0,
         "mode": NumberMode.AUTO,
         "step": 1.0,
     }
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state
     assert state.attributes == {
         "device_class": "temperature",
@@ -1034,8 +1023,19 @@ async def test_name(hass: HomeAssistant) -> None:
         "step": 1.0,
     }
 
+    state = menuai.states.get(entity4.entity_id)
+    assert state
+    assert state.attributes == {
+        "device_class": "temperature",
+        "friendly_name": "Temperature",
+        "max": 100.0,
+        "min": 0.0,
+        "mode": NumberMode.AUTO,
+        "step": 1.0,
+    }
 
-def test_device_class_units(hass: HomeAssistant) -> None:
+
+def test_device_class_units(menuai: menuai) -> None:
     """Test all numeric device classes have unit."""
     # DEVICE_CLASS_UNITS should include all device classes except:
     # - NumberDeviceClass.MONETARY

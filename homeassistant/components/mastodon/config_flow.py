@@ -13,14 +13,14 @@ from mastodon.Mastodon import (
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.util import slugify
+from menuai.util import slugify
 
 from .const import CONF_BASE_URL, DOMAIN, LOGGER
 from .utils import construct_mastodon_username, create_mastodon_client
@@ -112,7 +112,7 @@ class MastodonConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input:
             user_input[CONF_BASE_URL] = base_url_from_url(user_input[CONF_BASE_URL])
 
-            instance, account, errors = await self.hass.async_add_executor_job(
+            instance, account, errors = await self.menuai.async_add_executor_job(
                 self.check_connection,
                 user_input[CONF_BASE_URL],
                 user_input[CONF_CLIENT_ID],

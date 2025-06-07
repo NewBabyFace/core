@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.linear_garage_door import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.components.linear_garage_door import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
 
 from tests.common import (
     MockConfigEntry,
@@ -19,7 +19,7 @@ from tests.common import (
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.linear_garage_door.async_setup_entry",
+        "menuai.components.linear_garage_door.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -30,11 +30,11 @@ def mock_linear() -> Generator[AsyncMock]:
     """Mock a Linear Garage Door client."""
     with (
         patch(
-            "homeassistant.components.linear_garage_door.coordinator.Linear",
+            "menuai.components.linear_garage_door.coordinator.Linear",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.linear_garage_door.config_flow.Linear",
+            "menuai.components.linear_garage_door.config_flow.Linear",
             new=mock_client,
         ),
     ):

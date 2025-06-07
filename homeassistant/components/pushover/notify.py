@@ -7,16 +7,16 @@ from typing import Any
 
 from pushover_complete import BadAPIRequestError, PushoverAPI
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_ATTACHMENT,
@@ -37,16 +37,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> PushoverNotificationService | None:
     """Get the Pushover notification service."""
     if discovery_info is None:
         return None
-    pushover_api: PushoverAPI = hass.data[DOMAIN][discovery_info["entry_id"]]
+    pushover_api: PushoverAPI = menuai.data[DOMAIN][discovery_info["entry_id"]]
     return PushoverNotificationService(
-        hass, pushover_api, discovery_info[CONF_USER_KEY]
+        menuai, pushover_api, discovery_info[CONF_USER_KEY]
     )
 
 
@@ -54,10 +54,10 @@ class PushoverNotificationService(BaseNotificationService):
     """Implement the notification service for Pushover."""
 
     def __init__(
-        self, hass: HomeAssistant, pushover: PushoverAPI, user_key: str
+        self, menuai: menuai, pushover: PushoverAPI, user_key: str
     ) -> None:
         """Initialize the service."""
-        self._hass = hass
+        self._menuai = menuai
         self._user_key = user_key
         self.pushover = pushover
 
@@ -80,7 +80,7 @@ class PushoverNotificationService(BaseNotificationService):
         # Check for attachment
         if (image := data.get(ATTR_ATTACHMENT)) is not None:
             # Only allow attachments from whitelisted paths, check valid path
-            if self._hass.config.is_allowed_path(data[ATTR_ATTACHMENT]):
+            if self._menuai.config.is_allowed_path(data[ATTR_ATTACHMENT]):
                 # try to open it as a normal file.
                 try:
                     # pylint: disable-next=consider-using-with
@@ -114,4 +114,4 @@ class PushoverNotificationService(BaseNotificationService):
                 html,
             )
         except BadAPIRequestError as err:
-            raise HomeAssistantError(str(err)) from err
+            raise menuaiError(str(err)) from err

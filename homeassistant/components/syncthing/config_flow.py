@@ -5,10 +5,10 @@ from typing import Any
 import aiosyncthing
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_TOKEN, CONF_URL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_TOKEN, CONF_URL, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import DEFAULT_URL, DEFAULT_VERIFY_SSL, DOMAIN
 
@@ -21,7 +21,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect."""
 
     try:
@@ -29,7 +29,7 @@ async def validate_input(hass: HomeAssistant, data):
             data[CONF_TOKEN],
             url=data[CONF_URL],
             verify_ssl=data[CONF_VERIFY_SSL],
-            loop=hass.loop,
+            loop=menuai.loop,
         ) as client:
             server_id = (await client.system.status())["myID"]
             return {"title": f"{data[CONF_URL]}", "server_id": server_id}
@@ -52,7 +52,7 @@ class SyncThingConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -67,9 +67,9 @@ class SyncThingConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

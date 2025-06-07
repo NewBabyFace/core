@@ -25,19 +25,19 @@ from RestrictedPython.Guards import (
 )
 import voluptuous as vol
 
-from homeassistant.const import CONF_DESCRIPTION, CONF_NAME, SERVICE_RELOAD
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.const import CONF_DESCRIPTION, CONF_NAME, SERVICE_RELOAD
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.service import async_set_service_schema
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util import dt as dt_util, raise_if_invalid_filename
-from homeassistant.util.yaml.loader import load_yaml_dict
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.service import async_set_service_schema
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util import dt as dt_util, raise_if_invalid_filename
+from menuai.util.yaml.loader import load_yaml_dict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ FOLDER = "python_scripts"
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema(dict)}, extra=vol.ALLOW_EXTRA)
 
-ALLOWED_HASS = {"bus", "services", "states"}
+ALLOWED_menuai = {"bus", "services", "states"}
 ALLOWED_EVENTBUS = {"fire"}
 ALLOWED_STATEMACHINE = {
     "entity_ids",
@@ -86,32 +86,32 @@ ALLOWED_DT_UTIL = {
 CONF_FIELDS = "fields"
 
 
-class ScriptError(HomeAssistantError):
+class ScriptError(menuaiError):
     """When a script error occurs."""
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the Python script component."""
-    path = hass.config.path(FOLDER)
+    path = menuai.config.path(FOLDER)
 
     if not os.path.isdir(path):
         _LOGGER.warning("Folder %s not found in configuration folder", FOLDER)
         return False
 
-    discover_scripts(hass)
+    discover_scripts(menuai)
 
     def reload_scripts_handler(call: ServiceCall) -> None:
         """Handle reload service calls."""
-        discover_scripts(hass)
+        discover_scripts(menuai)
 
-    hass.services.register(DOMAIN, SERVICE_RELOAD, reload_scripts_handler)
+    menuai.services.register(DOMAIN, SERVICE_RELOAD, reload_scripts_handler)
 
     return True
 
 
-def discover_scripts(hass: HomeAssistant) -> None:
+def discover_scripts(menuai: menuai) -> None:
     """Discover python scripts in folder."""
-    path = hass.config.path(FOLDER)
+    path = menuai.config.path(FOLDER)
 
     if not os.path.isdir(path):
         _LOGGER.warning("Folder %s not found in configuration folder", FOLDER)
@@ -119,13 +119,13 @@ def discover_scripts(hass: HomeAssistant) -> None:
 
     def python_script_service_handler(call: ServiceCall) -> ServiceResponse:
         """Handle python script service calls."""
-        return execute_script(hass, call.service, call.data, call.return_response)
+        return execute_script(menuai, call.service, call.data, call.return_response)
 
-    existing = hass.services.services.get(DOMAIN, {}).keys()
+    existing = menuai.services.services.get(DOMAIN, {}).keys()
     for existing_service in existing:
         if existing_service == SERVICE_RELOAD:
             continue
-        hass.services.remove(DOMAIN, existing_service)
+        menuai.services.remove(DOMAIN, existing_service)
 
     # Load user-provided service descriptions from python_scripts/services.yaml
     services_yaml = os.path.join(path, "services.yaml")
@@ -136,7 +136,7 @@ def discover_scripts(hass: HomeAssistant) -> None:
 
     for fil in glob.iglob(os.path.join(path, "*.py")):
         name = os.path.splitext(os.path.basename(fil))[0]
-        hass.services.register(
+        menuai.services.register(
             DOMAIN,
             name,
             python_script_service_handler,
@@ -148,7 +148,7 @@ def discover_scripts(hass: HomeAssistant) -> None:
             CONF_DESCRIPTION: services_dict.get(name, {}).get("description", ""),
             CONF_FIELDS: services_dict.get(name, {}).get("fields", {}),
         }
-        async_set_service_schema(hass, DOMAIN, name, service_desc)
+        async_set_service_schema(menuai, DOMAIN, name, service_desc)
 
 
 IOPERATOR_TO_OPERATOR = {
@@ -195,9 +195,9 @@ def guarded_inplacevar(op: str, target: Any, operand: Any) -> Any:
     return op_fun(target, operand)
 
 
-@bind_hass
+@bind_menuai
 def execute_script(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     data: dict[str, Any] | None = None,
     return_response: bool = False,
@@ -205,14 +205,14 @@ def execute_script(
     """Execute a script."""
     filename = f"{name}.py"
     raise_if_invalid_filename(filename)
-    with open(hass.config.path(FOLDER, filename), encoding="utf8") as fil:
+    with open(menuai.config.path(FOLDER, filename), encoding="utf8") as fil:
         source = fil.read()
-    return execute(hass, filename, source, data, return_response=return_response)
+    return execute(menuai, filename, source, data, return_response=return_response)
 
 
-@bind_hass
+@bind_menuai
 def execute(
-    hass: HomeAssistant,
+    menuai: menuai,
     filename: str,
     source: Any,
     data: dict[str, Any] | None = None,
@@ -238,10 +238,10 @@ def execute(
         if name.startswith("async_"):
             raise ScriptError("Not allowed to access async methods")
         if (
-            (obj is hass and name not in ALLOWED_HASS)
-            or (obj is hass.bus and name not in ALLOWED_EVENTBUS)
-            or (obj is hass.states and name not in ALLOWED_STATEMACHINE)
-            or (obj is hass.services and name not in ALLOWED_SERVICEREGISTRY)
+            (obj is menuai and name not in ALLOWED_menuai)
+            or (obj is menuai.bus and name not in ALLOWED_EVENTBUS)
+            or (obj is menuai.states and name not in ALLOWED_STATEMACHINE)
+            or (obj is menuai.services and name not in ALLOWED_SERVICEREGISTRY)
             or (obj is dt_util and name not in ALLOWED_DT_UTIL)
             or (obj is datetime and name not in ALLOWED_DATETIME)
             or (isinstance(obj, TimeWrapper) and name not in ALLOWED_TIME)
@@ -278,7 +278,7 @@ def execute(
         "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
         "_unpack_sequence_": guarded_unpack_sequence,
         "_inplacevar_": guarded_inplacevar,
-        "hass": hass,
+        "menuai": menuai,
         "data": data or {},
         "logger": logger,
         "output": {},
@@ -307,7 +307,7 @@ def execute(
         return None
     except Exception as err:
         if return_response:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error executing script ({type(err).__name__}): {err}"
             ) from err
         logger.exception("Error executing script")
@@ -330,7 +330,7 @@ class StubPrinter:
 class TimeWrapper:
     """Wrap the time module."""
 
-    # Class variable, only going to warn once per Home Assistant run
+    # Class variable, only going to warn once per MenuAI run
     warned = False
 
     def sleep(self, *args: Any, **kwargs: Any) -> None:
@@ -338,7 +338,7 @@ class TimeWrapper:
         if not TimeWrapper.warned:
             TimeWrapper.warned = True
             _LOGGER.warning(
-                "Using time.sleep can reduce the performance of Home Assistant"
+                "Using time.sleep can reduce the performance of MenuAI"
             )
 
         time.sleep(*args, **kwargs)

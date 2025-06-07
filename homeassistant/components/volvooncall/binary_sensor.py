@@ -7,14 +7,14 @@ from contextlib import suppress
 import voluptuous as vol
 from volvooncall.dashboard import Instrument
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, VOLVO_DISCOVERY_NEW
 from .coordinator import VolvoUpdateCoordinator
@@ -22,12 +22,12 @@ from .entity import VolvoEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Configure binary_sensors from a config entry created in the integrations UI."""
-    coordinator: VolvoUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: VolvoUpdateCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
     volvo_data = coordinator.volvo_data
 
     @callback
@@ -48,7 +48,7 @@ async def async_setup_entry(
     async_discover_device([*volvo_data.instruments])
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, VOLVO_DISCOVERY_NEW, async_discover_device)
+        async_dispatcher_connect(menuai, VOLVO_DISCOVERY_NEW, async_discover_device)
     )
 
 

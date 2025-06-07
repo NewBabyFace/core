@@ -11,13 +11,13 @@ from aiohttp.web_exceptions import HTTPException
 from apyhiveapi import Auth, Hive
 from apyhiveapi.helper.hive_exceptions import HiveReauthRequired
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import aiohttp_client
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, PLATFORM_LOOKUP, PLATFORMS
 from .entity import HiveEntity
@@ -27,9 +27,9 @@ _LOGGER = logging.getLogger(__name__)
 type HiveConfigEntry = ConfigEntry[Hive]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HiveConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HiveConfigEntry) -> bool:
     """Set up Hive from a config entry."""
-    web_session = aiohttp_client.async_get_clientsession(hass)
+    web_session = aiohttp_client.async_get_clientsession(menuai)
     hive_config = dict(entry.data)
     hive = Hive(web_session)
 
@@ -47,7 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HiveConfigEntry) -> bool
     except HiveReauthRequired as err:
         raise ConfigEntryAuthFailed from err
 
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry,
         [
             ha_type
@@ -59,12 +59,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HiveConfigEntry) -> bool
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HiveConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: HiveConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: HiveConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: HiveConfigEntry) -> None:
     """Remove a config entry."""
     hive = Auth(entry.data["username"], entry.data["password"])
     await hive.forget_device(
@@ -74,7 +74,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: HiveConfigEntry) -> Non
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: HiveConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, config_entry: HiveConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
     return True
@@ -88,6 +88,6 @@ def refresh_system[_HiveEntityT: HiveEntity, **_P](
     @wraps(func)
     async def wrapper(self: _HiveEntityT, *args: _P.args, **kwargs: _P.kwargs) -> None:
         await func(self, *args, **kwargs)
-        async_dispatcher_send(self.hass, DOMAIN)
+        async_dispatcher_send(self.menuai, DOMAIN)
 
     return wrapper

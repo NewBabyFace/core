@@ -273,8 +273,8 @@
     "hasMic": true,
     "hasPrivacyMask": false,
     "hasRtc": false,
-    "hasSdCard": false,
-    "hasSpeaker": false,
+    "menuaidCard": false,
+    "menuaipeaker": false,
     "hasWifi": true,
     "hasHdr": false,
     "hasAutoICROnly": true,
@@ -285,7 +285,7 @@
     "mountPositions": [],
     "smartDetectTypes": [],
     "motionAlgorithms": ["enhanced"],
-    "hasSquareEventThumbnail": true,
+    "menuaiquareEventThumbnail": true,
     "hasPackageCamera": false,
     "privacyMaskCapability": {
       "maxMasks": 4,
@@ -339,7 +339,7 @@
         "step": null
       }
     },
-    "hasSmartDetect": false
+    "menuaimartDetect": false
   },
   "pirSettings": {
     "pirSensitivity": 100,
@@ -360,7 +360,7 @@
   "id": "0de062b4f6922d489d3b312d",
   "isConnected": true,
   "platform": "sav530q",
-  "hasSpeaker": false,
+  "menuaipeaker": false,
   "hasWifi": true,
   "audioBitrate": 64000,
   "canManage": false,

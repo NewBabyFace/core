@@ -3,7 +3,7 @@
 from collections.abc import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, patch
 
-from aioimmich import ImmichAlbums, ImmichAssests, ImmichServer, ImmichUsers
+from aioimmich import ImmichAlbums, Immicmenuaiests, ImmichServer, ImmichUsers
 from aioimmich.server.models import (
     ImmichServerAbout,
     ImmichServerStatistics,
@@ -12,17 +12,17 @@ from aioimmich.server.models import (
 from aioimmich.users.models import ImmichUserObject
 import pytest
 
-from homeassistant.components.immich.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.immich.const import DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
     CONF_SSL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.aiohttp import MockStreamReaderChunked
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.aiohttp import MockStreamReaderChunked
 
 from .const import MOCK_ALBUM_WITH_ASSETS, MOCK_ALBUM_WITHOUT_ASSETS
 
@@ -33,7 +33,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.immich.async_setup_entry", return_value=True
+        "menuai.components.immich.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -67,7 +67,7 @@ def mock_immich_albums() -> AsyncMock:
 @pytest.fixture
 def mock_immich_assets() -> AsyncMock:
     """Mock the Immich server."""
-    mock = AsyncMock(spec=ImmichAssests)
+    mock = AsyncMock(spec=Immicmenuaiests)
     mock.async_view_asset.return_value = b"xxxx"
     mock.async_play_video_stream.return_value = MockStreamReaderChunked(b"xxxx")
     return mock
@@ -170,8 +170,8 @@ async def mock_immich(
 ) -> AsyncGenerator[AsyncMock]:
     """Mock the Immich API."""
     with (
-        patch("homeassistant.components.immich.Immich", autospec=True) as mock_immich,
-        patch("homeassistant.components.immich.config_flow.Immich", new=mock_immich),
+        patch("menuai.components.immich.Immich", autospec=True) as mock_immich,
+        patch("menuai.components.immich.config_flow.Immich", new=mock_immich),
     ):
         client = mock_immich.return_value
         client.albums = mock_immich_albums
@@ -189,6 +189,6 @@ async def mock_non_admin_immich(mock_immich: AsyncMock) -> AsyncMock:
 
 
 @pytest.fixture
-async def setup_media_source(hass: HomeAssistant) -> None:
+async def setup_media_source(menuai: menuai) -> None:
     """Set up media source."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})

@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.storage import STORAGE_DIR
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.storage import STORAGE_DIR
 
 if TYPE_CHECKING:
     from . import VelbusConfigEntry
@@ -32,12 +32,12 @@ from .const import (
 )
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Register the velbus services."""
 
     def check_entry_id(interface: str) -> str:
         """Check the config_entry for a specific interface."""
-        for config_entry in hass.config_entries.async_entries(DOMAIN):
+        for config_entry in menuai.config_entries.async_entries(DOMAIN):
             if "port" in config_entry.data and config_entry.data["port"] == interface:
                 return config_entry.entry_id
         raise vol.Invalid(
@@ -51,7 +51,7 @@ def setup_services(hass: HomeAssistant) -> None:
         elif CONF_INTERFACE in call.data:
             # Deprecated in 2025.2, to remove in 2025.8
             async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "deprecated_interface_parameter",
                 breaks_in_ha_version="2025.8.0",
@@ -60,7 +60,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 translation_key="deprecated_interface_parameter",
             )
             entry_id = call.data[CONF_INTERFACE]
-        if not (entry := hass.config_entries.async_get_entry(entry_id)):
+        if not (entry := menuai.config_entries.async_get_entry(entry_id)):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="integration_not_found",
@@ -98,22 +98,22 @@ def setup_services(hass: HomeAssistant) -> None:
         entry = await get_config_entry(call)
         with suppress(FileNotFoundError):
             if call.data.get(CONF_ADDRESS):
-                await hass.async_add_executor_job(
+                await menuai.async_add_executor_job(
                     os.unlink,
-                    hass.config.path(
+                    menuai.config.path(
                         STORAGE_DIR,
                         f"velbuscache-{entry.entry_id}/{call.data[CONF_ADDRESS]}.p",
                     ),
                 )
             else:
-                await hass.async_add_executor_job(
+                await menuai.async_add_executor_job(
                     shutil.rmtree,
-                    hass.config.path(STORAGE_DIR, f"velbuscache-{entry.entry_id}/"),
+                    menuai.config.path(STORAGE_DIR, f"velbuscache-{entry.entry_id}/"),
                 )
         # call a scan to repopulate
         await scan(call)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SCAN,
         scan,
@@ -135,7 +135,7 @@ def setup_services(hass: HomeAssistant) -> None:
         ),
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SYNC,
         syn_clock,
@@ -157,7 +157,7 @@ def setup_services(hass: HomeAssistant) -> None:
         ),
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_MEMO_TEXT,
         set_memo_text,
@@ -187,7 +187,7 @@ def setup_services(hass: HomeAssistant) -> None:
         ),
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CLEAR_CACHE,
         clear_cache,

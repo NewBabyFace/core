@@ -4,36 +4,36 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from homeassistant.components.brottsplatskartan.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.brottsplatskartan.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
-async def test_load_unload_entry(hass: HomeAssistant) -> None:
+async def test_load_unload_entry(menuai: menuai) -> None:
     """Test load and unload entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={
-            "latitude": hass.config.latitude,
-            "longitude": hass.config.longitude,
+            "latitude": menuai.config.latitude,
+            "longitude": menuai.config.longitude,
             "area": None,
             "app_id": "ha-1234567890",
         },
         title="BPK-HOME",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.brottsplatskartan.sensor.BrottsplatsKartan",
+        "menuai.components.brottsplatskartan.sensor.BrottsplatsKartan",
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.bpk_home")
+    state = menuai.states.get("sensor.bpk_home")
     assert state
 
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.bpk_home")
+    state = menuai.states.get("sensor.bpk_home")
     assert not state

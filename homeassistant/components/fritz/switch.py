@@ -5,16 +5,16 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.network import async_get_source_ip
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import slugify
+from menuai.components.network import async_get_source_ip
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import slugify
 
 from .const import (
     DOMAIN,
@@ -224,18 +224,18 @@ async def async_all_entities_list(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up entry."""
     _LOGGER.debug("Setting up switches")
     avm_wrapper = entry.runtime_data
-    data_fritz = hass.data[FRITZ_DATA_KEY]
+    data_fritz = menuai.data[FRITZ_DATA_KEY]
 
     _LOGGER.debug("Fritzbox services: %s", avm_wrapper.connection.services)
 
-    local_ip = await async_get_source_ip(avm_wrapper.hass, target_ip=avm_wrapper.host)
+    local_ip = await async_get_source_ip(avm_wrapper.menuai, target_ip=avm_wrapper.host)
 
     entities_list = await async_all_entities_list(
         avm_wrapper,
@@ -252,7 +252,7 @@ async def async_setup_entry(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, avm_wrapper.signal_device_new, async_update_avm_device
+            menuai, avm_wrapper.signal_device_new, async_update_avm_device
         )
     )
 

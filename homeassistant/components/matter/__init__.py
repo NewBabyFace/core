@@ -15,14 +15,14 @@ from matter_server.client.exceptions import (
 )
 from matter_server.common.errors import MatterError, NodeNotExists
 
-from homeassistant.components.hassio import AddonError, AddonManager, AddonState
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import CONF_URL, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.issue_registry import (
+from menuai.components.menuaiio import AddonError, AddonManager, AddonState
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import CONF_URL, EVENT_menuai_STOP
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
@@ -48,12 +48,12 @@ LISTEN_READY_TIMEOUT = 30
 @callback
 @cache
 def get_matter_device_info(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> MatterDeviceInfo | None:
     """Return Matter device info or None if device does not exist."""
-    # Test hass.data[DOMAIN] to ensure config entry is set up
-    if not hass.data.get(DOMAIN, False) or not (
-        node := node_from_ha_device_id(hass, device_id)
+    # Test menuai.data[DOMAIN] to ensure config entry is set up
+    if not menuai.data.get(DOMAIN, False) or not (
+        node := node_from_ha_device_id(menuai, device_id)
     ):
         return None
 
@@ -64,12 +64,12 @@ def get_matter_device_info(
     )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Matter from a config entry."""
     if use_addon := entry.data.get(CONF_USE_ADDON):
-        await _async_ensure_addon_running(hass, entry)
+        await _async_ensure_addon_running(menuai, entry)
 
-    matter_client = MatterClient(entry.data[CONF_URL], async_get_clientsession(hass))
+    matter_client = MatterClient(entry.data[CONF_URL], async_get_clientsession(menuai))
     try:
         async with asyncio.timeout(CONNECT_TIMEOUT):
             await matter_client.connect()
@@ -78,11 +78,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except InvalidServerVersion as err:
         if isinstance(err, ServerVersionTooOld):
             if use_addon:
-                addon_manager = _get_addon_manager(hass)
+                addon_manager = _get_addon_manager(menuai)
                 addon_manager.async_schedule_update_addon(catch_error=True)
             else:
                 async_create_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     "server_version_version_too_old",
                     is_fixable=False,
@@ -91,7 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
         elif isinstance(err, ServerVersionTooNew):
             async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "server_version_version_too_new",
                 is_fixable=False,
@@ -106,24 +106,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Unknown error connecting to the Matter server"
         ) from err
 
-    async_delete_issue(hass, DOMAIN, "server_version_version_too_old")
-    async_delete_issue(hass, DOMAIN, "server_version_version_too_new")
+    async_delete_issue(menuai, DOMAIN, "server_version_version_too_old")
+    async_delete_issue(menuai, DOMAIN, "server_version_version_too_new")
 
-    async def on_hass_stop(event: Event) -> None:
-        """Handle incoming stop event from Home Assistant."""
+    async def on_menuai_stop(event: Event) -> None:
+        """Handle incoming stop event from MenuAI."""
         await matter_client.disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, on_menuai_stop)
     )
 
-    async_register_api(hass)
+    async_register_api(menuai)
 
     # launch the matter client listen task in the background
     # use the init_ready event to wait until initialization is done
     init_ready = asyncio.Event()
     listen_task = asyncio.create_task(
-        _client_listen(hass, entry, matter_client, init_ready)
+        _client_listen(menuai, entry, matter_client, init_ready)
     )
 
     try:
@@ -136,27 +136,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set default fabric
     try:
         await matter_client.set_default_fabric_label(
-            hass.config.location_name or "Home"
+            menuai.config.location_name or "Home"
         )
     except (NotConnected, MatterError) as err:
         listen_task.cancel()
         raise ConfigEntryNotReady("Failed to set default fabric label") from err
 
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {}
 
     # create an intermediate layer (adapter) which keeps track of the nodes
     # and discovery of platform entities from the node attributes
-    matter = MatterAdapter(hass, matter_client, entry)
-    hass.data[DOMAIN][entry.entry_id] = MatterEntryData(matter, listen_task)
+    matter = MatterAdapter(menuai, matter_client, entry)
+    menuai.data[DOMAIN][entry.entry_id] = MatterEntryData(matter, listen_task)
 
-    await hass.config_entries.async_forward_entry_setups(entry, SUPPORTED_PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, SUPPORTED_PLATFORMS)
     await matter.setup_nodes()
 
     # If the listen task is already failed, we need to raise ConfigEntryNotReady
     if listen_task.done() and (listen_error := listen_task.exception()) is not None:
-        await hass.config_entries.async_unload_platforms(entry, SUPPORTED_PLATFORMS)
-        hass.data[DOMAIN].pop(entry.entry_id)
+        await menuai.config_entries.async_unload_platforms(entry, SUPPORTED_PLATFORMS)
+        menuai.data[DOMAIN].pop(entry.entry_id)
         try:
             await matter_client.disconnect()
         finally:
@@ -166,7 +166,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _client_listen(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     matter_client: MatterClient,
     init_ready: asyncio.Event,
@@ -184,24 +184,24 @@ async def _client_listen(
         if entry.state != ConfigEntryState.LOADED:
             raise
 
-    if not hass.is_stopping:
+    if not menuai.is_stopping:
         LOGGER.debug("Disconnected from server. Reloading integration")
-        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+        menuai.async_create_task(menuai.config_entries.async_reload(entry.entry_id))
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         entry, SUPPORTED_PLATFORMS
     )
 
     if unload_ok:
-        matter_entry_data: MatterEntryData = hass.data[DOMAIN].pop(entry.entry_id)
+        matter_entry_data: MatterEntryData = menuai.data[DOMAIN].pop(entry.entry_id)
         matter_entry_data.listen_task.cancel()
         await matter_entry_data.adapter.matter_client.disconnect()
 
     if entry.data.get(CONF_USE_ADDON) and entry.disabled_by:
-        addon_manager: AddonManager = get_addon_manager(hass)
+        addon_manager: AddonManager = get_addon_manager(menuai)
         LOGGER.debug("Stopping Matter Server add-on")
         try:
             await addon_manager.async_stop_addon()
@@ -212,13 +212,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Config entry is being removed."""
 
     if not entry.data.get(CONF_INTEGRATION_CREATED_ADDON):
         return
 
-    addon_manager: AddonManager = get_addon_manager(hass)
+    addon_manager: AddonManager = get_addon_manager(menuai)
     try:
         await addon_manager.async_stop_addon()
     except AddonError as err:
@@ -236,10 +236,10 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 def _remove_via_devices(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> None:
     """Remove all via devices associated with a device."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     devices = dr.async_entries_for_config_entry(device_registry, config_entry.entry_id)
     for device in devices:
         if device.via_device_id == device_entry.id:
@@ -249,14 +249,14 @@ def _remove_via_devices(
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
-    node = get_node_from_device_entry(hass, device_entry)
+    node = get_node_from_device_entry(menuai, device_entry)
 
     if node is None:
         # In case this was a bridge
-        _remove_via_devices(hass, config_entry, device_entry)
+        _remove_via_devices(menuai, config_entry, device_entry)
         # Always allow users to remove orphan devices
         return True
 
@@ -264,7 +264,7 @@ async def async_remove_config_entry_device(
         # Do not allow to delete devices that exposed via bridge.
         return False
 
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     try:
         await matter.matter_client.remove_node(node.node_id)
     except NodeNotExists:
@@ -273,14 +273,14 @@ async def async_remove_config_entry_device(
     finally:
         # Make sure potentially orphan devices of a bridge are removed too.
         if node.is_bridge_device:
-            _remove_via_devices(hass, config_entry, device_entry)
+            _remove_via_devices(menuai, config_entry, device_entry)
 
     return True
 
 
-async def _async_ensure_addon_running(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_ensure_addon_running(menuai: menuai, entry: ConfigEntry) -> None:
     """Ensure that Matter Server add-on is installed and running."""
-    addon_manager = _get_addon_manager(hass)
+    addon_manager = _get_addon_manager(menuai)
     try:
         addon_info = await addon_manager.async_get_addon_info()
     except AddonError as err:
@@ -301,12 +301,12 @@ async def _async_ensure_addon_running(hass: HomeAssistant, entry: ConfigEntry) -
 
 
 @callback
-def _get_addon_manager(hass: HomeAssistant) -> AddonManager:
+def _get_addon_manager(menuai: menuai) -> AddonManager:
     """Ensure that Matter Server add-on is updated and running.
 
     May only be used as part of async_setup_entry above.
     """
-    addon_manager: AddonManager = get_addon_manager(hass)
+    addon_manager: AddonManager = get_addon_manager(menuai)
     if addon_manager.task_in_progress():
         raise ConfigEntryNotReady
     return addon_manager

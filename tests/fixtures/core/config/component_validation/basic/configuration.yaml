@@ -51,7 +51,7 @@ custom_validator_ok_1:
 # Host is missing
 custom_validator_ok_2:
 
-# This always raises HomeAssistantError
+# This always raises menuaiError
 custom_validator_bad_1:
 
 # This always raises ValueError

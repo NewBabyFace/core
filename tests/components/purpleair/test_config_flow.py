@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, patch
 from aiopurpleair.errors import InvalidApiKeyError, PurpleAirError
 import pytest
 
-from homeassistant.components.purpleair.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
+from menuai.components.purpleair.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
 
 from .conftest import TEST_API_KEY, TEST_SENSOR_INDEX1, TEST_SENSOR_INDEX2
 
@@ -36,7 +36,7 @@ TEST_LONGITUDE = -0.2416796
     ],
 )
 async def test_create_entry_by_coordinates(
-    hass: HomeAssistant,
+    menuai: menuai,
     api,
     check_api_key_errors,
     check_api_key_mock,
@@ -45,7 +45,7 @@ async def test_create_entry_by_coordinates(
     mock_aiopurpleair,
 ) -> None:
     """Test creating an entry by entering a latitude/longitude (including errors)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -53,13 +53,13 @@ async def test_create_entry_by_coordinates(
 
     # Test errors that can arise when checking the API key:
     with patch.object(api, "async_check_api_key", check_api_key_mock):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"api_key": TEST_API_KEY}
         )
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == check_api_key_errors
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"api_key": TEST_API_KEY}
     )
     assert result["type"] is FlowResultType.FORM
@@ -67,7 +67,7 @@ async def test_create_entry_by_coordinates(
 
     # Test errors that can arise when searching for nearby sensors:
     with patch.object(api.sensors, "async_get_nearby_sensors", get_nearby_sensors_mock):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 "latitude": TEST_LATITUDE,
@@ -78,7 +78,7 @@ async def test_create_entry_by_coordinates(
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == get_nearby_sensors_errors
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             "latitude": TEST_LATITUDE,
@@ -89,7 +89,7 @@ async def test_create_entry_by_coordinates(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_sensor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             "sensor_index": str(TEST_SENSOR_INDEX1),
@@ -106,10 +106,10 @@ async def test_create_entry_by_coordinates(
 
 
 async def test_duplicate_error(
-    hass: HomeAssistant, config_entry, setup_config_entry
+    menuai: menuai, config_entry, setup_config_entry
 ) -> None:
     """Test that the proper error is shown when adding a duplicate config entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data={"api_key": TEST_API_KEY}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -125,7 +125,7 @@ async def test_duplicate_error(
     ],
 )
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aiopurpleair,
     check_api_key_errors,
     check_api_key_mock,
@@ -133,28 +133,28 @@ async def test_reauth(
     setup_config_entry,
 ) -> None:
     """Test re-auth (including errors)."""
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     # Test errors that can arise when checking the API key:
     with patch.object(mock_aiopurpleair, "async_check_api_key", check_api_key_mock):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"api_key": "new_api_key"}
         )
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == check_api_key_errors
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"api_key": "new_api_key"},
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
     # Unload to make sure the update does not run after the
     # mock is removed.
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -166,7 +166,7 @@ async def test_reauth(
     ],
 )
 async def test_options_add_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aiopurpleair,
     config_entry,
     get_nearby_sensors_errors,
@@ -174,11 +174,11 @@ async def test_options_add_sensor(
     setup_config_entry,
 ) -> None:
     """Test adding a sensor via the options flow (including errors)."""
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"next_step_id": "add_sensor"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -188,7 +188,7 @@ async def test_options_add_sensor(
     with patch.object(
         mock_aiopurpleair.sensors, "async_get_nearby_sensors", get_nearby_sensors_mock
     ):
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 "latitude": TEST_LATITUDE,
@@ -199,7 +199,7 @@ async def test_options_add_sensor(
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "add_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "latitude": TEST_LATITUDE,
@@ -210,7 +210,7 @@ async def test_options_add_sensor(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "sensor_index": str(TEST_SENSOR_INDEX2),
@@ -227,24 +227,24 @@ async def test_options_add_sensor(
     ]
     # Unload to make sure the update does not run after the
     # mock is removed.
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_options_add_sensor_duplicate(
-    hass: HomeAssistant, config_entry, setup_config_entry
+    menuai: menuai, config_entry, setup_config_entry
 ) -> None:
     """Test adding a duplicate sensor via the options flow."""
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"next_step_id": "add_sensor"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "add_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "latitude": TEST_LATITUDE,
@@ -255,7 +255,7 @@ async def test_options_add_sensor_duplicate(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "sensor_index": str(TEST_SENSOR_INDEX1),
@@ -265,21 +265,21 @@ async def test_options_add_sensor_duplicate(
     assert result["reason"] == "already_configured"
     # Unload to make sure the update does not run after the
     # mock is removed.
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_options_remove_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry,
     setup_config_entry,
 ) -> None:
     """Test removing a sensor via the options flow."""
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"next_step_id": "remove_sensor"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -289,7 +289,7 @@ async def test_options_remove_sensor(
         identifiers={(DOMAIN, str(TEST_SENSOR_INDEX1))}
     )
     assert device_entry is not None
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"sensor_device_id": device_entry.id},
     )
@@ -301,24 +301,24 @@ async def test_options_remove_sensor(
     assert config_entry.options["sensor_indices"] == []
     # Unload to make sure the update does not run after the
     # mock is removed.
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_options_settings(
-    hass: HomeAssistant, config_entry, setup_config_entry
+    menuai: menuai, config_entry, setup_config_entry
 ) -> None:
     """Test setting settings via the options flow."""
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"next_step_id": "settings"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "settings"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"show_on_map": True}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY

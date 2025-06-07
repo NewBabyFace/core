@@ -6,11 +6,11 @@ from reolink_aio.api import Chime
 from reolink_aio.enums import ChimeToneEnum
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .host import ReolinkHost
@@ -20,21 +20,21 @@ ATTR_RINGTONE = "ringtone"
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up Reolink services."""
 
     @raise_translated_error
     async def async_play_chime(service_call: ServiceCall) -> None:
         """Play a ringtone."""
         service_data = service_call.data
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
 
         for device_id in service_data[ATTR_DEVICE_ID]:
             config_entry = None
             device = device_registry.async_get(device_id)
             if device is not None:
                 for entry_id in device.config_entries:
-                    config_entry = hass.config_entries.async_get_entry(entry_id)
+                    config_entry = menuai.config_entries.async_get_entry(entry_id)
                     if config_entry is not None and config_entry.domain == DOMAIN:
                         break
             if (
@@ -60,7 +60,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             ringtone = service_data[ATTR_RINGTONE]
             await chime.play(ChimeToneEnum[ringtone].value)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         "play_chime",
         async_play_chime,

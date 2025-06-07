@@ -5,13 +5,13 @@ from __future__ import annotations
 import aiohttp
 from wmspro.webcontrol import WebControlPro
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import UNDEFINED
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import UNDEFINED
 
 from .const import DOMAIN, MANUFACTURER
 
@@ -26,11 +26,11 @@ type WebControlProConfigEntry = ConfigEntry[WebControlPro]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: WebControlProConfigEntry
+    menuai: menuai, entry: WebControlProConfigEntry
 ) -> bool:
     """Set up wmspro from a config entry."""
     host = entry.data[CONF_HOST]
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     hub = WebControlPro(host, session)
 
     try:
@@ -40,7 +40,7 @@ async def async_setup_entry(
 
     entry.runtime_data = hub
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, entry.unique_id)}
@@ -59,13 +59,13 @@ async def async_setup_entry(
     except aiohttp.ClientError as err:
         raise ConfigEntryNotReady(f"Error while refreshing from {host}") from err
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: WebControlProConfigEntry
+    menuai: menuai, entry: WebControlProConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

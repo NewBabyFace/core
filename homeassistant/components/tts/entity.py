@@ -7,7 +7,7 @@ from typing import Any, final
 
 from propcache.api import cached_property
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_ANNOUNCE,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -15,11 +15,11 @@ from homeassistant.components.media_player import (
     SERVICE_PLAY_MEDIA,
     MediaType,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.util import dt as dt_util
 
 from .const import TtsAudioType
 from .media_source import generate_media_source_id
@@ -101,9 +101,9 @@ class TextToSpeechEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH
         """Return a list of supported voices for a language."""
         return None
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         try:
             _ = self.default_language
         except AttributeError as err:
@@ -133,13 +133,13 @@ class TextToSpeechEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH
         options: dict | None = None,
     ) -> None:
         """Speak via a Media Player."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             DOMAIN_MP,
             SERVICE_PLAY_MEDIA,
             {
                 ATTR_ENTITY_ID: media_player_entity_id,
                 ATTR_MEDIA_CONTENT_ID: generate_media_source_id(
-                    self.hass,
+                    self.menuai,
                     message=message,
                     engine=self.entity_id,
                     language=language,
@@ -190,7 +190,7 @@ class TextToSpeechEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH
         )
 
         if extension is None or data is None:
-            raise HomeAssistantError(f"No TTS from {self.entity_id} for '{message}'")
+            raise menuaiError(f"No TTS from {self.entity_id} for '{message}'")
 
         async def data_gen() -> AsyncGenerator[bytes]:
             yield data
@@ -210,6 +210,6 @@ class TextToSpeechEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH
 
         Return a tuple of file extension and data as bytes.
         """
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             partial(self.get_tts_audio, message, language, options=options)
         )

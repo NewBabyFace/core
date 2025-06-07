@@ -5,10 +5,10 @@ from unittest.mock import Mock
 import pytest
 import roborock
 
-from homeassistant.components.switch import SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.switch import SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
@@ -28,7 +28,7 @@ def platforms() -> list[Platform]:
     ],
 )
 async def test_update_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_send_message: Mock,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
@@ -36,8 +36,8 @@ async def test_update_success(
 ) -> None:
     """Test turning switch entities on and off."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id) is not None
-    await hass.services.async_call(
+    assert menuai.states.get(entity_id) is not None
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_ON,
         service_data=None,
@@ -46,7 +46,7 @@ async def test_update_success(
     )
     assert mock_send_message.assert_called_once
     mock_send_message.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_OFF,
         service_data=None,
@@ -67,7 +67,7 @@ async def test_update_success(
     "send_message_side_effect", [roborock.exceptions.RoborockTimeout]
 )
 async def test_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_send_message: Mock,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
@@ -76,11 +76,11 @@ async def test_update_failed(
 ) -> None:
     """Test a failure while updating a switch."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id) is not None
+    assert menuai.states.get(entity_id) is not None
     with (
-        pytest.raises(HomeAssistantError, match="Failed to update Roborock options"),
+        pytest.raises(menuaiError, match="Failed to update Roborock options"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "switch",
             service,
             service_data=None,

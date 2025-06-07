@@ -8,16 +8,16 @@ from bimmer_connected.models import MyBMWAPIError, MyBMWAuthError
 from httpx import RequestError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.bmw_connected_drive.config_flow import DOMAIN
-from homeassistant.components.bmw_connected_drive.const import (
+from menuai import config_entries
+from menuai.components.bmw_connected_drive.config_flow import DOMAIN
+from menuai.components.bmw_connected_drive.const import (
     CONF_CAPTCHA_TOKEN,
     CONF_READ_ONLY,
     CONF_REFRESH_TOKEN,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import (
     BIMMER_CONNECTED_LOGIN_PATCH,
@@ -42,7 +42,7 @@ def login_sideeffect(self: MyBMWAuthentication):
     self.gcid = FIXTURE_GCID
 
 
-async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
+async def test_full_user_flow_implementation(menuai: menuai) -> None:
     """Test registering an integration and finishing flow works."""
     with (
         patch(
@@ -51,11 +51,11 @@ async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
             autospec=True,
         ),
         patch(
-            "homeassistant.components.bmw_connected_drive.async_setup_entry",
+            "menuai.components.bmw_connected_drive.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=deepcopy(FIXTURE_USER_INPUT),
@@ -64,7 +64,7 @@ async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "captcha"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], FIXTURE_CAPTCHA_INPUT
         )
 
@@ -88,7 +88,7 @@ async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
     ],
 )
 async def test_error_display_with_successful_login(
-    hass: HomeAssistant, side_effect: Exception, error: str
+    menuai: menuai, side_effect: Exception, error: str
 ) -> None:
     """Test we show user form on MyBMW authentication error and are still able to succeed."""
 
@@ -96,7 +96,7 @@ async def test_error_display_with_successful_login(
         BIMMER_CONNECTED_LOGIN_PATCH,
         side_effect=side_effect,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=deepcopy(FIXTURE_USER_INPUT_W_CAPTCHA),
@@ -113,11 +113,11 @@ async def test_error_display_with_successful_login(
             autospec=True,
         ),
         patch(
-            "homeassistant.components.bmw_connected_drive.async_setup_entry",
+            "menuai.components.bmw_connected_drive.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             deepcopy(FIXTURE_USER_INPUT),
         )
@@ -125,7 +125,7 @@ async def test_error_display_with_successful_login(
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "captcha"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], FIXTURE_CAPTCHA_INPUT
         )
 
@@ -140,11 +140,11 @@ async def test_error_display_with_successful_login(
         assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_unique_id_existing(hass: HomeAssistant) -> None:
+async def test_unique_id_existing(menuai: menuai) -> None:
     """Test registering an integration and when the unique id already exists."""
 
     mock_config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -153,7 +153,7 @@ async def test_unique_id_existing(hass: HomeAssistant) -> None:
             autospec=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=deepcopy(FIXTURE_USER_INPUT),
@@ -164,10 +164,10 @@ async def test_unique_id_existing(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("bmw_fixture")
-async def test_captcha_flow_missing_error(hass: HomeAssistant) -> None:
+async def test_captcha_flow_missing_error(menuai: menuai) -> None:
     """Test the external flow with captcha failing once and succeeding the second time."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=deepcopy(FIXTURE_USER_INPUT),
@@ -176,7 +176,7 @@ async def test_captcha_flow_missing_error(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "captcha"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_CAPTCHA_TOKEN: " "}
     )
 
@@ -185,7 +185,7 @@ async def test_captcha_flow_missing_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "missing_captcha"}
 
 
-async def test_options_flow_implementation(hass: HomeAssistant) -> None:
+async def test_options_flow_implementation(menuai: menuai) -> None:
     """Test config flow options."""
     with (
         patch(
@@ -193,26 +193,26 @@ async def test_options_flow_implementation(hass: HomeAssistant) -> None:
             return_value=[],
         ),
         patch(
-            "homeassistant.components.bmw_connected_drive.async_setup_entry",
+            "menuai.components.bmw_connected_drive.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
         config_entry_args = deepcopy(FIXTURE_CONFIG_ENTRY)
         config_entry = MockConfigEntry(**config_entry_args)
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "account_options"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={CONF_READ_ONLY: True},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"] == {
@@ -222,7 +222,7 @@ async def test_options_flow_implementation(hass: HomeAssistant) -> None:
         assert len(mock_setup_entry.mock_calls) == 2
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test the reauth form."""
     with (
         patch(
@@ -231,7 +231,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
             autospec=True,
         ),
         patch(
-            "homeassistant.components.bmw_connected_drive.async_setup_entry",
+            "menuai.components.bmw_connected_drive.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
@@ -241,27 +241,27 @@ async def test_reauth(hass: HomeAssistant) -> None:
         config_entry_with_wrong_password["data"][CONF_PASSWORD] = wrong_password
 
         config_entry = MockConfigEntry(**config_entry_with_wrong_password)
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert config_entry.data == config_entry_with_wrong_password["data"]
 
-        result = await config_entry.start_reauth_flow(hass)
+        result = await config_entry.start_reauth_flow(menuai)
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "change_password"
         assert set(result["data_schema"].schema) == {CONF_PASSWORD}
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_PASSWORD: FIXTURE_USER_INPUT[CONF_PASSWORD]}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "captcha"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], FIXTURE_CAPTCHA_INPUT
         )
 
@@ -272,7 +272,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
         assert len(mock_setup_entry.mock_calls) == 2
 
 
-async def test_reconfigure(hass: HomeAssistant) -> None:
+async def test_reconfigure(menuai: menuai) -> None:
     """Test the reconfiguration form."""
     with patch(
         BIMMER_CONNECTED_LOGIN_PATCH,
@@ -280,25 +280,25 @@ async def test_reconfigure(hass: HomeAssistant) -> None:
         autospec=True,
     ):
         config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await config_entry.start_reconfigure_flow(hass)
+        result = await config_entry.start_reconfigure_flow(menuai)
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "change_password"
         assert set(result["data_schema"].schema) == {CONF_PASSWORD}
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_PASSWORD: FIXTURE_USER_INPUT[CONF_PASSWORD]}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "captcha"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], FIXTURE_CAPTCHA_INPUT
         )
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.tradfri.fan import _from_fan_percentage, _from_fan_speed
+from menuai.components.tradfri.fan import _from_fan_percentage, _from_fan_speed
 
 
 @pytest.mark.parametrize(

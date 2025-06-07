@@ -5,26 +5,26 @@ from dataclasses import dataclass
 import logging
 from typing import cast
 
-from homeassistant.components.zone import DOMAIN as ZONE_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.zone import DOMAIN as ZONE_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     ATTR_NAME,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_ZONE,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util.location import distance
+from menuai.helpers import entity_registry as er
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util.location import distance
 
 from .const import (
     ATTR_DIR_OF_TRAVEL,
@@ -74,7 +74,7 @@ class ProximityDataUpdateCoordinator(DataUpdateCoordinator[ProximityData]):
 
     config_entry: ProximityConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: ProximityConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ProximityConfigEntry) -> None:
         """Initialize the Proximity coordinator."""
         self.ignored_zone_ids: list[str] = config_entry.data[CONF_IGNORED_ZONES]
         self.tracked_entities: list[str] = config_entry.data[CONF_TRACKED_ENTITIES]
@@ -82,12 +82,12 @@ class ProximityDataUpdateCoordinator(DataUpdateCoordinator[ProximityData]):
         self.proximity_zone_id: str = config_entry.data[CONF_ZONE]
         self.proximity_zone_name: str = self.proximity_zone_id.split(".")[-1]
         self.unit_of_measurement: str = config_entry.data.get(
-            CONF_UNIT_OF_MEASUREMENT, hass.config.units.length_unit
+            CONF_UNIT_OF_MEASUREMENT, menuai.config.units.length_unit
         )
         self.entity_mapping: dict[str, list[str]] = defaultdict(list)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=config_entry.title,
@@ -126,7 +126,7 @@ class ProximityDataUpdateCoordinator(DataUpdateCoordinator[ProximityData]):
             old_tracked_entity_id = data["old_entity_id"]
             new_tracked_entity_id = data["entity_id"]
 
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry,
                 data={
                     **self.config_entry.data,
@@ -233,7 +233,7 @@ class ProximityDataUpdateCoordinator(DataUpdateCoordinator[ProximityData]):
 
     async def _async_update_data(self) -> ProximityData:
         """Calculate Proximity data."""
-        if (zone_state := self.hass.states.get(self.proximity_zone_id)) is None:
+        if (zone_state := self.menuai.states.get(self.proximity_zone_id)) is None:
             _LOGGER.debug(
                 "%s: zone %s does not exist -> reset",
                 self.name,
@@ -245,7 +245,7 @@ class ProximityDataUpdateCoordinator(DataUpdateCoordinator[ProximityData]):
 
         # calculate distance for all tracked entities
         for entity_id in self.tracked_entities:
-            if (tracked_entity_state := self.hass.states.get(entity_id)) is None:
+            if (tracked_entity_state := self.menuai.states.get(entity_id)) is None:
                 if entities_data.pop(entity_id, None) is not None:
                     _LOGGER.debug(
                         "%s: %s does not exist -> remove", self.name, entity_id
@@ -347,7 +347,7 @@ class ProximityDataUpdateCoordinator(DataUpdateCoordinator[ProximityData]):
     def _create_removed_tracked_entity_issue(self, entity_id: str) -> None:
         """Create a repair issue for a removed tracked entity."""
         async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"tracked_entity_removed_{entity_id}",
             is_fixable=True,

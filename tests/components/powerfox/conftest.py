@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, patch
 from powerfox import Device, DeviceType, HeatMeter, PowerMeter, WaterMeter
 import pytest
 
-from homeassistant.components.powerfox.const import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.components.powerfox.const import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
 
 from tests.common import MockConfigEntry
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.powerfox.async_setup_entry", return_value=True
+        "menuai.components.powerfox.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -27,11 +27,11 @@ def mock_powerfox_client() -> Generator[AsyncMock]:
     """Mock a Powerfox client."""
     with (
         patch(
-            "homeassistant.components.powerfox.Powerfox",
+            "menuai.components.powerfox.Powerfox",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.powerfox.config_flow.Powerfox",
+            "menuai.components.powerfox.config_flow.Powerfox",
             new=mock_client,
         ),
     ):

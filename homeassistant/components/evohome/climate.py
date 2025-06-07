@@ -20,7 +20,7 @@ from evohomeasync2.schemas.const import (
     ZoneType as EvoZoneType,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_ECO,
     PRESET_HOME,
@@ -29,12 +29,12 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_MODE, PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_MODE, PRECISION_TENTHS, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from . import EVOHOME_KEY
 from .const import (
@@ -71,7 +71,7 @@ HA_PRESET_TO_EVO = {v: k for k, v in EVO_PRESET_TO_HA.items()}
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -80,9 +80,9 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    coordinator = hass.data[EVOHOME_KEY].coordinator
-    loc_idx = hass.data[EVOHOME_KEY].loc_idx
-    tcs = hass.data[EVOHOME_KEY].tcs
+    coordinator = menuai.data[EVOHOME_KEY].coordinator
+    loc_idx = menuai.data[EVOHOME_KEY].loc_idx
+    tcs = menuai.data[EVOHOME_KEY].tcs
 
     _LOGGER.debug(
         "Found the Location/Controller (%s), id=%s, name=%s (location_idx=%s)",
@@ -421,7 +421,7 @@ class EvoController(EvoClimateEntity):
                 else EvoSystemMode.OFF
             )
         else:
-            raise HomeAssistantError(f"Invalid hvac_mode: {hvac_mode}")
+            raise menuaiError(f"Invalid hvac_mode: {hvac_mode}")
         await self._set_tcs_mode(evo_mode)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:

@@ -9,7 +9,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TITLE,
@@ -19,18 +19,18 @@ from homeassistant.components.notify import (
     BaseNotificationService,
     NotifyEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_ACTION,
     CONF_ENTITIES,
     CONF_SERVICE,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .entity import GroupEntity
 
@@ -85,20 +85,20 @@ def add_defaults(
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> GroupNotifyPlatform:
     """Get the Group notification service."""
-    return GroupNotifyPlatform(hass, config[CONF_SERVICES])
+    return GroupNotifyPlatform(menuai, config[CONF_SERVICES])
 
 
 class GroupNotifyPlatform(BaseNotificationService):
     """Implement the notification service for the group notify platform."""
 
-    def __init__(self, hass: HomeAssistant, entities: list[dict[str, Any]]) -> None:
+    def __init__(self, menuai: menuai, entities: list[dict[str, Any]]) -> None:
         """Initialize the service."""
-        self.hass = hass
+        self.menuai = menuai
         self.entities = entities
 
     async def async_send_message(self, message: str = "", **kwargs: Any) -> None:
@@ -113,7 +113,7 @@ class GroupNotifyPlatform(BaseNotificationService):
                 add_defaults(sending_payload, default_data)
             tasks.append(
                 asyncio.create_task(
-                    self.hass.services.async_call(
+                    self.menuai.services.async_call(
                         NOTIFY_DOMAIN,
                         entity[CONF_ACTION],
                         sending_payload,
@@ -127,12 +127,12 @@ class GroupNotifyPlatform(BaseNotificationService):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Notify Group config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITIES]
     )
@@ -144,7 +144,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_notify(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    menuai: menuai, name: str, validated_config: dict[str, Any]
 ) -> NotifyGroup:
     """Create a preview notify group."""
     return NotifyGroup(
@@ -173,7 +173,7 @@ class NotifyGroup(GroupEntity, NotifyEntity):
 
     async def async_send_message(self, message: str, title: str | None = None) -> None:
         """Send a message to all members of the group."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             NOTIFY_DOMAIN,
             SERVICE_SEND_MESSAGE,
             {
@@ -192,5 +192,5 @@ class NotifyGroup(GroupEntity, NotifyEntity):
         self._attr_available = any(
             state.state != STATE_UNAVAILABLE
             for entity_id in self._entity_ids
-            if (state := self.hass.states.get(entity_id)) is not None
+            if (state := self.menuai.states.get(entity_id)) is not None
         )

@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.statistics import DOMAIN
-from homeassistant.components.statistics.sensor import (
+from menuai.components.statistics import DOMAIN
+from menuai.components.statistics.sensor import (
     CONF_KEEP_LAST_SAMPLE,
     CONF_MAX_AGE,
     CONF_PERCENTILE,
@@ -19,14 +19,14 @@ from homeassistant.components.statistics.sensor import (
     DEFAULT_NAME,
     STAT_AVERAGE_LINEAR,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_ENTITY_ID,
     CONF_NAME,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .test_sensor import VALUES_NUMERIC
 
@@ -37,7 +37,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Automatically path uuid generator."""
     with patch(
-        "homeassistant.components.statistics.async_setup_entry",
+        "menuai.components.statistics.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -64,9 +64,9 @@ async def get_config_to_integration_load() -> dict[str, Any]:
 
 @pytest.fixture(name="loaded_entry")
 async def load_integration(
-    hass: HomeAssistant, get_config: dict[str, Any]
+    menuai: menuai, get_config: dict[str, Any]
 ) -> MockConfigEntry:
-    """Set up the Statistics integration in Home Assistant."""
+    """Set up the Statistics integration in MenuAI."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         source=SOURCE_USER,
@@ -74,17 +74,17 @@ async def load_integration(
         entry_id="1",
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     for value in VALUES_NUMERIC:
-        hass.states.async_set(
+        menuai.states.async_set(
             "sensor.test_monitored",
             str(value),
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     return config_entry

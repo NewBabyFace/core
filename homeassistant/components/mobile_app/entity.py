@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ICON, CONF_NAME, CONF_UNIQUE_ID, STATE_UNAVAILABLE
-from homeassistant.core import State, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ICON, CONF_NAME, CONF_UNIQUE_ID, STATE_UNAVAILABLE
+from menuai.core import State, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     ATTR_SENSOR_ATTRIBUTES,
@@ -51,11 +51,11 @@ class MobileAppEntity(RestoreEntity):
         self._attr_entity_category = config.get(ATTR_SENSOR_ENTITY_CATEGORY)
         self._attr_available = config.get(ATTR_SENSOR_STATE) != STATE_UNAVAILABLE
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SIGNAL_SENSOR_UPDATE}-{self._attr_unique_id}",
                 self._handle_update,
             )

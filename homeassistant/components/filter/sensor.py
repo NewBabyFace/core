@@ -14,18 +14,18 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
-from homeassistant.components.recorder import get_instance, history
-from homeassistant.components.sensor import (
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
+from menuai.components.recorder import get_instance, history
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     DOMAIN as SENSOR_DOMAIN,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_ICON,
@@ -36,24 +36,24 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.start import async_at_started
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.decorator import Registry
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.start import async_at_started
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, StateType
+from menuai.util import dt as dt_util
+from menuai.util.decorator import Registry
 
 from .const import (
     CONF_FILTER_LOWER_BOUND,
@@ -179,14 +179,14 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the template sensors."""
 
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    await async_setup_reload_service(menuai, DOMAIN, PLATFORMS)
 
     name: str | None = config.get(CONF_NAME)
     unique_id: str | None = config.get(CONF_UNIQUE_ID)
@@ -202,7 +202,7 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -325,10 +325,10 @@ class SensorFilter(SensorEntity):
         if update_ha:
             self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
 
-        if "recorder" in self.hass.config.components:
+        if "recorder" in self.menuai.config.components:
             history_list = []
             largest_window_items = 0
             largest_window_time = timedelta(0)
@@ -348,10 +348,10 @@ class SensorFilter(SensorEntity):
 
             # Retrieve the largest window_size of each type
             if largest_window_items > 0:
-                filter_history = await get_instance(self.hass).async_add_executor_job(
+                filter_history = await get_instance(self.menuai).async_add_executor_job(
                     partial(
                         history.get_last_state_changes,
-                        self.hass,
+                        self.menuai,
                         largest_window_items,
                         entity_id=self._entity,
                     )
@@ -360,10 +360,10 @@ class SensorFilter(SensorEntity):
                     history_list.extend(filter_history[self._entity])
             if largest_window_time > timedelta(seconds=0):
                 start = dt_util.utcnow() - largest_window_time
-                filter_history = await get_instance(self.hass).async_add_executor_job(
+                filter_history = await get_instance(self.menuai).async_add_executor_job(
                     partial(
                         history.state_changes_during_period,
-                        self.hass,
+                        self.menuai,
                         start,
                         entity_id=self._entity,
                     )
@@ -390,15 +390,15 @@ class SensorFilter(SensorEntity):
                     self._update_filter_sensor_state(state, False)
 
         @callback
-        def _async_hass_started(hass: HomeAssistant) -> None:
+        def _async_menuai_started(menuai: menuai) -> None:
             """Delay source entity tracking."""
             self.async_on_remove(
                 async_track_state_change_event(
-                    self.hass, [self._entity], self._update_filter_sensor_state_event
+                    self.menuai, [self._entity], self._update_filter_sensor_state_event
                 )
             )
 
-        self.async_on_remove(async_at_started(self.hass, _async_hass_started))
+        self.async_on_remove(async_at_started(self.menuai, _async_menuai_started))
 
     @property
     def native_value(self) -> datetime | StateType:

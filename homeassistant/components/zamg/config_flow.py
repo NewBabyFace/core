@@ -8,8 +8,8 @@ import voluptuous as vol
 from zamg import ZamgData
 from zamg.exceptions import ZamgApiError, ZamgNoDataError
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_STATION_ID, DOMAIN, LOGGER
 
@@ -27,14 +27,14 @@ class ZamgConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle a flow initiated by the user."""
         if self._client is None:
             self._client = ZamgData()
-            self._client.session = async_get_clientsession(self.hass)
+            self._client.session = async_get_clientsession(self.menuai)
 
         if user_input is None:
             try:
                 stations = await self._client.zamg_stations()
                 closest_station_id = await self._client.closest_station(
-                    self.hass.config.latitude,
-                    self.hass.config.longitude,
+                    self.menuai.config.latitude,
+                    self.menuai.config.longitude,
                 )
             except (ZamgApiError, ZamgNoDataError) as err:
                 LOGGER.error("Config_flow: Received error from ZAMG: %s", err)

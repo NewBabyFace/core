@@ -6,17 +6,17 @@ from peblar import PeblarAuthenticationError, PeblarConnectionError, PeblarError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.peblar.const import DOMAIN
-from homeassistant.components.switch import (
+from menuai.components.peblar.const import DOMAIN
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -27,14 +27,14 @@ pytestmark = [
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the switch entities."""
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
     # Ensure all entities are correctly assigned to the Peblar EV charger
     device_entry = device_registry.async_get_device(
@@ -79,7 +79,7 @@ async def test_entities(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     service: str,
     entity_id: str,
@@ -91,7 +91,7 @@ async def test_switch(
     mocked_method.reset_mock()
 
     # Test normal happy path for changing the switch state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         service,
         {ATTR_ENTITY_ID: entity_id},
@@ -128,7 +128,7 @@ async def test_switch(
 @pytest.mark.parametrize("service", [SERVICE_TURN_ON, SERVICE_TURN_OFF])
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_switch_communication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     error: Exception,
     error_match: str,
@@ -140,10 +140,10 @@ async def test_switch_communication_error(
     entity_id = "switch.peblar_ev_charger_force_single_phase"
     mock_peblar.rest_api.return_value.ev_interface.side_effect = error
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=error_match,
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             service,
             {ATTR_ENTITY_ID: entity_id},
@@ -157,7 +157,7 @@ async def test_switch_communication_error(
 
 @pytest.mark.parametrize("service", [SERVICE_TURN_ON, SERVICE_TURN_OFF])
 async def test_switch_authentication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     mock_config_entry: MockConfigEntry,
     service: str,
@@ -170,13 +170,13 @@ async def test_switch_authentication_error(
     mock_peblar.login.side_effect = PeblarAuthenticationError("Authentication error")
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=(
             r"An authentication failure occurred while communicating "
             r"with the Peblar EV charger"
         ),
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             service,
             {ATTR_ENTITY_ID: entity_id},
@@ -189,10 +189,10 @@ async def test_switch_authentication_error(
 
     # Ensure the device is reloaded on authentication error and triggers
     # a reauthentication flow.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

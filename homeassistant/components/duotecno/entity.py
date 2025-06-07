@@ -8,9 +8,9 @@ from typing import Any, Concatenate
 
 from duotecno.unit import BaseUnit
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -33,8 +33,8 @@ class DuotecnoEntity(Entity):
         )
         self._attr_unique_id = f"{unit.get_node_address()}-{unit.get_number()}"
 
-    async def async_added_to_hass(self) -> None:
-        """When added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """When added to menuai."""
         self._unit.on_status_update(self._on_update)
 
     async def _on_update(self) -> None:
@@ -58,7 +58,7 @@ def api_call[_T: DuotecnoEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except OSError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error calling {func.__name__} on entity {self.entity_id}"
             ) from exc
 

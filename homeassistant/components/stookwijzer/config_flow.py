@@ -7,9 +7,9 @@ from typing import Any
 from stookwijzer import Stookwijzer
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
-from homeassistant.helpers.selector import LocationSelector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
+from menuai.helpers.selector import LocationSelector
 
 from .const import DOMAIN
 
@@ -44,8 +44,8 @@ class StookwijzerFlowHandler(ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         CONF_LOCATION,
                         default={
-                            CONF_LATITUDE: self.hass.config.latitude,
-                            CONF_LONGITUDE: self.hass.config.longitude,
+                            CONF_LATITUDE: self.menuai.config.latitude,
+                            CONF_LONGITUDE: self.menuai.config.longitude,
                         },
                     ): LocationSelector()
                 }

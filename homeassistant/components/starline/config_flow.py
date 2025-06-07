@@ -5,9 +5,9 @@ from __future__ import annotations
 from starline import StarlineAuth
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
 
 from .const import (
     _LOGGER,
@@ -188,10 +188,10 @@ class StarlineFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Authenticate application."""
         try:
-            self._app_code = await self.hass.async_add_executor_job(
+            self._app_code = await self.menuai.async_add_executor_job(
                 self._auth.get_app_code, self._app_id, self._app_secret
             )
-            self._app_token = await self.hass.async_add_executor_job(
+            self._app_token = await self.menuai.async_add_executor_job(
                 self._auth.get_app_token, self._app_id, self._app_secret, self._app_code
             )
             return self._async_form_auth_user(error)
@@ -204,7 +204,7 @@ class StarlineFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Authenticate user."""
         try:
-            state, data = await self.hass.async_add_executor_job(
+            state, data = await self.menuai.async_add_executor_job(
                 self._auth.get_slid_user_token,
                 self._app_token,
                 self._username,
@@ -240,7 +240,7 @@ class StarlineFlowHandler(ConfigFlow, domain=DOMAIN):
             self._slnet_token,
             self._slnet_token_expires,
             self._user_id,
-        ) = await self.hass.async_add_executor_job(
+        ) = await self.menuai.async_add_executor_job(
             self._auth.get_user_id, self._user_slid
         )
 

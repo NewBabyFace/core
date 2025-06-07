@@ -11,16 +11,16 @@ from pytrafikverket.exceptions import InvalidAuthentication, NoTrainAnnouncement
 from pytrafikverket.models import TrainStopModel
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntry
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from tests.common import async_fire_time_changed
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_next(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     load_int: ConfigEntry,
     get_trains_next: list[TrainStopModel],
@@ -36,22 +36,22 @@ async def test_sensor_next(
         "sensor.stockholm_c_to_uppsala_c_departure_time_next",
         "sensor.stockholm_c_to_uppsala_c_departure_time_next_after",
     ):
-        state = hass.states.get(entity)
+        state = menuai.states.get(entity)
         assert state == snapshot
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
             return_value=get_trains_next,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
             return_value=get_train_stop,
         ),
     ):
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     for entity in (
         "sensor.stockholm_c_to_uppsala_c_departure_time",
@@ -61,20 +61,20 @@ async def test_sensor_next(
         "sensor.stockholm_c_to_uppsala_c_departure_time_next",
         "sensor.stockholm_c_to_uppsala_c_departure_time_next_after",
     ):
-        state = hass.states.get(entity)
+        state = menuai.states.get(entity)
         assert state == snapshot
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_single_stop(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     load_int: ConfigEntry,
     get_trains_next: list[TrainStopModel],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Trafikverket Train sensor."""
-    state = hass.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
+    state = menuai.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
 
     assert state.state == "2023-05-01T11:00:00+00:00"
 
@@ -83,86 +83,86 @@ async def test_sensor_single_stop(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_update_auth_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     load_int: ConfigEntry,
     get_trains_next: list[TrainStopModel],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Trafikverket Train sensor with authentication update failure."""
-    state = hass.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
+    state = menuai.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
     assert state.state == "2023-05-01T11:00:00+00:00"
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
             side_effect=InvalidAuthentication,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
             side_effect=InvalidAuthentication,
         ),
     ):
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
+    state = menuai.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
     assert state.state == STATE_UNAVAILABLE
-    active_flows = load_int.async_get_active_flows(hass, (SOURCE_REAUTH))
+    active_flows = load_int.async_get_active_flows(menuai, (SOURCE_REAUTH))
     for flow in active_flows:
         assert flow == snapshot
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_update_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     load_int: ConfigEntry,
     get_trains_next: list[TrainStopModel],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Trafikverket Train sensor with update failure."""
-    state = hass.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
+    state = menuai.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
     assert state.state == "2023-05-01T11:00:00+00:00"
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
             side_effect=NoTrainAnnouncementFound,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
             side_effect=NoTrainAnnouncementFound,
         ),
     ):
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
+    state = menuai.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_update_failure_no_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     load_int: ConfigEntry,
     get_trains_next: list[TrainStopModel],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Trafikverket Train sensor with update failure from empty state."""
-    state = hass.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
+    state = menuai.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
     assert state.state == "2023-05-01T11:00:00+00:00"
 
     with patch(
-        "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
+        "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
         return_value=None,
     ):
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
+    state = menuai.states.get("sensor.stockholm_c_to_uppsala_c_departure_time_2")
     assert state.state == STATE_UNAVAILABLE

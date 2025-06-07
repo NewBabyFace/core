@@ -1,18 +1,18 @@
 """Support for the GPSLogger device tracking."""
 
-from homeassistant.components.device_tracker import TrackerEntity
-from homeassistant.const import (
+from menuai.components.device_tracker import TrackerEntity
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_GPS_ACCURACY,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import TRACKER_UPDATE, GPSLoggerConfigEntry
 from .const import (
@@ -26,7 +26,7 @@ from .const import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GPSLoggerConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -42,10 +42,10 @@ async def async_setup_entry(
 
         async_add_entities([GPSLoggerEntity(device, gps, battery, accuracy, attrs)])
 
-    entry.async_on_unload(async_dispatcher_connect(hass, TRACKER_UPDATE, _receive_data))
+    entry.async_on_unload(async_dispatcher_connect(menuai, TRACKER_UPDATE, _receive_data))
 
     # Restore previously loaded devices
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     dev_ids = {
         identifier[1]
         for device in dev_reg.devices.get_devices_for_config_entry_id(entry.entry_id)
@@ -90,11 +90,11 @@ class GPSLoggerEntity(TrackerEntity, RestoreEntity):
         """Return battery value of the device."""
         return self._battery
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._unsub_dispatcher = async_dispatcher_connect(
-            self.hass, TRACKER_UPDATE, self._async_receive_data
+            self.menuai, TRACKER_UPDATE, self._async_receive_data
         )
 
         # don't restore if we got created with data
@@ -128,9 +128,9 @@ class GPSLoggerEntity(TrackerEntity, RestoreEntity):
         }
         self._battery = attr.get(ATTR_BATTERY_LEVEL)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Clean up after entity before removal."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._unsub_dispatcher()
 
     @callback

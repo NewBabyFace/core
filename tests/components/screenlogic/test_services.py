@@ -8,8 +8,8 @@ import pytest
 from screenlogicpy import ScreenLogicGateway
 from screenlogicpy.device_const.system import COLOR_MODE
 
-from homeassistant.components.screenlogic import DOMAIN
-from homeassistant.components.screenlogic.const import (
+from menuai.components.screenlogic import DOMAIN
+from menuai.components.screenlogic.const import (
     ATTR_COLOR_MODE,
     ATTR_CONFIG_ENTRY,
     ATTR_RUNTIME,
@@ -17,10 +17,10 @@ from homeassistant.components.screenlogic.const import (
     SERVICE_START_SUPER_CHLORINATION,
     SERVICE_STOP_SUPER_CHLORINATION,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import device_registry as dr
 
 from . import (
     DATA_FULL_CHEM,
@@ -47,7 +47,7 @@ def dataset_fixture():
 
 @pytest.fixture(name="service_fixture")
 async def setup_screenlogic_services_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     request: pytest.FixtureRequest,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
@@ -62,7 +62,7 @@ async def setup_screenlogic_services_fixture(
     def _service_connect(*args, **kwargs):
         return stub_async_connect(data, *args, **kwargs)
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     device: dr.DeviceEntry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -84,8 +84,8 @@ async def setup_screenlogic_services_fixture(
             async_set_scg_config=DEFAULT,
         ) as gateway,
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         yield {"gateway": gateway, "device": device}
 
@@ -103,7 +103,7 @@ async def setup_screenlogic_services_fixture(
     ],
 )
 async def test_service_set_color_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_fixture: dict[str, Any],
     data: dict[str, Any],
     target: dict[str, Any],
@@ -114,12 +114,12 @@ async def test_service_set_color_mode(
         "async_set_color_lights"
     ]
 
-    assert hass.services.has_service(DOMAIN, SERVICE_SET_COLOR_MODE)
+    assert menuai.services.has_service(DOMAIN, SERVICE_SET_COLOR_MODE)
 
     non_screenlogic_entry = MockConfigEntry(entry_id="test")
-    non_screenlogic_entry.add_to_hass(hass)
+    non_screenlogic_entry.add_to_menuai(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_COLOR_MODE,
         service_data=data,
@@ -154,7 +154,7 @@ async def test_service_set_color_mode(
     ],
 )
 async def test_service_set_color_mode_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_fixture: dict[str, Any],
     data: dict[str, Any],
     target: dict[str, Any],
@@ -167,15 +167,15 @@ async def test_service_set_color_mode_error(
     ]
 
     non_screenlogic_entry = MockConfigEntry(entry_id=NON_SL_CONFIG_ENTRY_ID)
-    non_screenlogic_entry.add_to_hass(hass)
+    non_screenlogic_entry.add_to_menuai(menuai)
 
-    assert hass.services.has_service(DOMAIN, SERVICE_SET_COLOR_MODE)
+    assert menuai.services.has_service(DOMAIN, SERVICE_SET_COLOR_MODE)
 
     with pytest.raises(
         ServiceValidationError,
         match=error_msg,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_COLOR_MODE,
             service_data=data,
@@ -200,7 +200,7 @@ async def test_service_set_color_mode_error(
     ],
 )
 async def test_service_start_super_chlorination(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_fixture: dict[str, Any],
     data: dict[str, Any],
     target: dict[str, Any],
@@ -211,9 +211,9 @@ async def test_service_start_super_chlorination(
         "async_set_scg_config"
     ]
 
-    assert hass.services.has_service(DOMAIN, SERVICE_START_SUPER_CHLORINATION)
+    assert menuai.services.has_service(DOMAIN, SERVICE_START_SUPER_CHLORINATION)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_START_SUPER_CHLORINATION,
         service_data=data,
@@ -248,7 +248,7 @@ async def test_service_start_super_chlorination(
     ],
 )
 async def test_service_start_super_chlorination_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_fixture: dict[str, Any],
     data: dict[str, Any],
     target: dict[str, Any],
@@ -260,13 +260,13 @@ async def test_service_start_super_chlorination_error(
         "async_set_scg_config"
     ]
 
-    assert hass.services.has_service(DOMAIN, SERVICE_START_SUPER_CHLORINATION)
+    assert menuai.services.has_service(DOMAIN, SERVICE_START_SUPER_CHLORINATION)
 
     with pytest.raises(
         ServiceValidationError,
         match=error_msg,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_START_SUPER_CHLORINATION,
             service_data=data,
@@ -290,7 +290,7 @@ async def test_service_start_super_chlorination_error(
     ],
 )
 async def test_service_stop_super_chlorination(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_fixture: dict[str, Any],
     data: dict[str, Any],
     target: dict[str, Any],
@@ -301,9 +301,9 @@ async def test_service_stop_super_chlorination(
         "async_set_scg_config"
     ]
 
-    assert hass.services.has_service(DOMAIN, SERVICE_STOP_SUPER_CHLORINATION)
+    assert menuai.services.has_service(DOMAIN, SERVICE_STOP_SUPER_CHLORINATION)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_STOP_SUPER_CHLORINATION,
         service_data=data,
@@ -336,7 +336,7 @@ async def test_service_stop_super_chlorination(
     ],
 )
 async def test_service_stop_super_chlorination_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_fixture: dict[str, Any],
     data: dict[str, Any],
     target: dict[str, Any],
@@ -348,13 +348,13 @@ async def test_service_stop_super_chlorination_error(
         "async_set_scg_config"
     ]
 
-    assert hass.services.has_service(DOMAIN, SERVICE_STOP_SUPER_CHLORINATION)
+    assert menuai.services.has_service(DOMAIN, SERVICE_STOP_SUPER_CHLORINATION)
 
     with pytest.raises(
         ServiceValidationError,
         match=error_msg,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_STOP_SUPER_CHLORINATION,
             service_data=data,
@@ -366,12 +366,12 @@ async def test_service_stop_super_chlorination_error(
 
 
 async def test_service_config_entry_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the error case of config not loaded."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     _ = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -396,14 +396,14 @@ async def test_service_config_entry_not_loaded(
             async_set_color_lights=mock_set_color_lights,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        assert hass.services.has_service(DOMAIN, SERVICE_SET_COLOR_MODE)
-        assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+        assert menuai.services.has_service(DOMAIN, SERVICE_SET_COLOR_MODE)
+        assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-        await hass.config_entries.async_unload(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
         with pytest.raises(
@@ -411,7 +411,7 @@ async def test_service_config_entry_not_loaded(
             match=f"Failed to call service '{SERVICE_SET_COLOR_MODE}'. "
             f"Config entry '{MOCK_CONFIG_ENTRY_ID}' not loaded",
         ):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_SET_COLOR_MODE,
                 service_data={

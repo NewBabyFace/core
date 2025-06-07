@@ -5,7 +5,7 @@ import logging
 import gammu
 from gammu.asyncworker import GammuAsyncWorker
 
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .const import DOMAIN, SMS_STATE_UNREAD
 
@@ -15,12 +15,12 @@ _LOGGER = logging.getLogger(__name__)
 class Gateway:
     """SMS gateway to interact with a GSM modem."""
 
-    def __init__(self, config, hass):
+    def __init__(self, config, menuai):
         """Initialize the sms gateway."""
         _LOGGER.debug("Init with connection mode:%s", config["Connection"])
         self._worker = GammuAsyncWorker(self.sms_pull)
         self._worker.configure(config)
-        self._hass = hass
+        self._menuai = menuai
         self._first_pull = True
         self.manufacturer = None
         self.model = None
@@ -79,7 +79,7 @@ class Gateway:
                 _LOGGER.debug("Append event data:%s", event_data)
                 data.append(event_data)
 
-        self._hass.add_job(self._notify_incoming_sms, data)
+        self._menuai.add_job(self._notify_incoming_sms, data)
 
     def get_and_delete_all_sms(self, state_machine, force=False):
         """Read and delete all SMS in the modem."""
@@ -135,14 +135,14 @@ class Gateway:
 
     @callback
     def _notify_incoming_sms(self, messages):
-        """Notify hass when an incoming SMS message is received."""
+        """Notify menuai when an incoming SMS message is received."""
         for message in messages:
             event_data = {
                 "phone": message["phone"],
                 "date": message["date"],
                 "text": message["message"],
             }
-            self._hass.bus.async_fire(f"{DOMAIN}.incoming_sms", event_data)
+            self._menuai.bus.async_fire(f"{DOMAIN}.incoming_sms", event_data)
 
     async def send_sms_async(self, message):
         """Send sms message via the worker."""
@@ -195,10 +195,10 @@ class Gateway:
         return await self._worker.terminate_async()
 
 
-async def create_sms_gateway(config, hass):
+async def create_sms_gateway(config, menuai):
     """Create the sms gateway."""
     try:
-        gateway = Gateway(config, hass)
+        gateway = Gateway(config, menuai)
         try:
             await gateway.init_async()
         except gammu.GSMError as exc:

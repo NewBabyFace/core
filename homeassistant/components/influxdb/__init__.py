@@ -20,7 +20,7 @@ import requests.exceptions
 import urllib3.exceptions
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_HOST,
@@ -34,23 +34,23 @@ from homeassistant.const import (
     CONF_URL,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, HomeAssistant, State, callback
-from homeassistant.helpers import (
+from menuai.core import Event, menuai, State, callback
+from menuai.helpers import (
     config_validation as cv,
     event as event_helper,
     state as state_helper,
 )
-from homeassistant.helpers.entity_values import EntityValues
-from homeassistant.helpers.entityfilter import (
+from menuai.helpers.entity_values import EntityValues
+from menuai.helpers.entityfilter import (
     INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA,
     convert_include_exclude_filter,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     API_VERSION_2,
@@ -478,11 +478,11 @@ def get_influx_connection(  # noqa: C901
     return InfluxClient(databases, write_v1, query_v1, close_v1)
 
 
-def _retry_setup(hass: HomeAssistant, config: ConfigType) -> None:
-    setup(hass, config)
+def _retry_setup(menuai: menuai, config: ConfigType) -> None:
+    setup(menuai, config)
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the InfluxDB component."""
     conf = config[DOMAIN]
     try:
@@ -490,13 +490,13 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     except ConnectionError as exc:
         _LOGGER.error(RETRY_MESSAGE, exc)
         event_helper.call_later(
-            hass, RETRY_INTERVAL, lambda _: _retry_setup(hass, config)
+            menuai, RETRY_INTERVAL, lambda _: _retry_setup(menuai, config)
         )
         return True
 
     event_to_json = _generate_event_to_json(conf)
     max_tries = conf.get(CONF_RETRY_COUNT)
-    instance = hass.data[DOMAIN] = InfluxThread(hass, influx, event_to_json, max_tries)
+    instance = menuai.data[DOMAIN] = InfluxThread(menuai, influx, event_to_json, max_tries)
     instance.start()
 
     def shutdown(event):
@@ -505,7 +505,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         instance.join()
         influx.close()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
+    menuai.bus.listen_once(EVENT_menuai_STOP, shutdown)
 
     return True
 
@@ -513,7 +513,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class InfluxThread(threading.Thread):
     """A threaded event handler class."""
 
-    def __init__(self, hass, influx, event_to_json, max_tries):
+    def __init__(self, menuai, influx, event_to_json, max_tries):
         """Initialize the listener."""
         threading.Thread.__init__(self, name=DOMAIN)
         self.queue: queue.SimpleQueue[threading.Event | tuple[float, Event] | None] = (
@@ -524,7 +524,7 @@ class InfluxThread(threading.Thread):
         self.max_tries = max_tries
         self.write_errors = 0
         self.shutdown = False
-        hass.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
+        menuai.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
 
     @callback
     def _event_listener(self, event):

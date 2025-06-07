@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     ATTR_MEDIA_ENQUEUE,
@@ -14,17 +14,17 @@ from homeassistant.components.media_player import (
     MediaPlayerEnqueue,
     MediaType,
 )
-from homeassistant.components.plex import DOMAIN as PLEX_DOMAIN, PLEX_URI_SCHEME
-from homeassistant.components.sonos.media_player import LONG_SERVICE_TIMEOUT
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.plex import DOMAIN as PLEX_DOMAIN, PLEX_URI_SCHEME
+from menuai.components.sonos.media_player import LONG_SERVICE_TIMEOUT
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import MockSoCo
 
 
 async def test_plex_play_media(
-    hass: HomeAssistant, soco: MockSoCo, async_autosetup_sonos
+    menuai: menuai, soco: MockSoCo, async_autosetup_sonos
 ) -> None:
     """Test playing media via the Plex integration."""
     mock_plex_server = Mock()
@@ -37,16 +37,16 @@ async def test_plex_play_media(
 
     with (
         patch(
-            "homeassistant.components.plex.services.get_plex_server",
+            "menuai.components.plex.services.get_plex_server",
             return_value=mock_plex_server,
         ),
         patch("soco.plugins.plex.PlexPlugin.add_to_queue") as mock_add_to_queue,
         patch(
-            "homeassistant.components.sonos.media_player.SonosMediaPlayerEntity.set_shuffle"
+            "menuai.components.sonos.media_player.SonosMediaPlayerEntity.set_shuffle"
         ) as mock_shuffle,
     ):
         # Test successful Plex service call
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -74,7 +74,7 @@ async def test_plex_play_media(
             '"album_name": "Album", "shuffle": 1}'
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -93,11 +93,11 @@ async def test_plex_play_media(
 
         # Test failed Plex service call
         mock_lookup.reset_mock()
-        mock_lookup.side_effect = HomeAssistantError
+        mock_lookup.side_effect = menuaiError
         mock_add_to_queue.reset_mock()
 
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 MP_DOMAIN,
                 SERVICE_PLAY_MEDIA,
                 {
@@ -119,10 +119,10 @@ async def test_plex_play_media(
         plex_item_key = 300
 
         with patch(
-            "homeassistant.components.plex.services.get_plex_server",
+            "menuai.components.plex.services.get_plex_server",
             return_value=mock_plex_server,
         ):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 MP_DOMAIN,
                 SERVICE_PLAY_MEDIA,
                 {
@@ -142,7 +142,7 @@ async def test_plex_play_media(
         assert mock_lookup.mock_calls[0][2] == {"plex_key": plex_item_key}
 
         mock_add_to_queue.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -161,7 +161,7 @@ async def test_plex_play_media(
         soco.play_from_queue.reset_mock()
         mock_add_to_queue.reset_mock()
         mock_add_to_queue.return_value = 9
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {

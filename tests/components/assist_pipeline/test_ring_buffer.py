@@ -1,6 +1,6 @@
 """Tests for audio ring buffer."""
 
-from homeassistant.components.assist_pipeline.ring_buffer import RingBuffer
+from menuai.components.assist_pipeline.ring_buffer import RingBuffer
 
 
 def test_ring_buffer_empty() -> None:

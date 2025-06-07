@@ -5,17 +5,17 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.kitchen_sink import DOMAIN
-from homeassistant.components.lawn_mower import (
+from menuai.components.kitchen_sink import DOMAIN
+from menuai.components.lawn_mower import (
     DOMAIN as LAWN_MOWER_DOMAIN,
     SERVICE_DOCK,
     SERVICE_PAUSE,
     SERVICE_START_MOWING,
     LawnMowerActivity,
 )
-from homeassistant.const import ATTR_ENTITY_ID, EVENT_STATE_CHANGED, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, EVENT_STATE_CHANGED, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import async_capture_events, async_mock_service
 
@@ -26,22 +26,22 @@ MOWER_SERVICE_ENTITY = "lawn_mower.mower_can_dock"
 async def lawn_mower_only() -> None:
     """Enable only the lawn mower platform."""
     with patch(
-        "homeassistant.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
+        "menuai.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
         [Platform.LAWN_MOWER],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_comp(hass: HomeAssistant, lawn_mower_only):
+async def setup_comp(menuai: menuai, lawn_mower_only):
     """Set up demo component."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
 
-async def test_states(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None:
+async def test_states(menuai: menuai, snapshot: SnapshotAssertion) -> None:
     """Test the expected lawn mower entities are added."""
-    states = hass.states.async_all()
+    states = menuai.states.async_all()
     assert set(states) == snapshot
 
 
@@ -81,23 +81,23 @@ async def test_states(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None:
     ],
 )
 async def test_mower(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity: str,
     service_call: str,
     activity: LawnMowerActivity,
     next_activity: LawnMowerActivity,
 ) -> None:
     """Test the activity states of a lawn mower."""
-    state = hass.states.get(entity)
+    state = menuai.states.get(entity)
 
     assert state.state == str(activity.value)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state_changes = async_capture_events(hass, EVENT_STATE_CHANGED)
-    await hass.services.async_call(
+    state_changes = async_capture_events(menuai, EVENT_STATE_CHANGED)
+    await menuai.services.async_call(
         LAWN_MOWER_DOMAIN, service_call, {ATTR_ENTITY_ID: entity}, blocking=False
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert state_changes[0].data["entity_id"] == entity
     assert state_changes[0].data["new_state"].state == next_activity.value
@@ -111,10 +111,10 @@ async def test_mower(
         SERVICE_PAUSE,
     ],
 )
-async def test_service_calls_mocked(hass: HomeAssistant, service_call) -> None:
+async def test_service_calls_mocked(menuai: menuai, service_call) -> None:
     """Test the services of a lawn mower."""
-    calls = async_mock_service(hass, LAWN_MOWER_DOMAIN, service_call)
-    await hass.services.async_call(
+    calls = async_mock_service(menuai, LAWN_MOWER_DOMAIN, service_call)
+    await menuai.services.async_call(
         LAWN_MOWER_DOMAIN,
         service_call,
         {ATTR_ENTITY_ID: MOWER_SERVICE_ENTITY},

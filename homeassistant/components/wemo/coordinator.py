@@ -1,4 +1,4 @@
-"""Home Assistant wrapper for a pyWeMo device."""
+"""MenuAI wrapper for a pyWeMo device."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from pywemo import Insight, LongPressMixin, WeMoDevice
 from pywemo.exceptions import ActionException, PyWeMoException
 from pywemo.subscribe import EVENT_TYPE_LONG_PRESS, SubscriptionRegistry
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CONFIGURATION_URL,
     ATTR_IDENTIFIERS,
     CONF_DEVICE_ID,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_UPNP, DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_UPNP, DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, WEMO_SUBSCRIPTION_EVENT
 from .models import DATA_WEMO
@@ -86,23 +86,23 @@ class Options:
 
 
 class DeviceCoordinator(DataUpdateCoordinator[None]):
-    """Home Assistant wrapper for a pyWeMo device."""
+    """MenuAI wrapper for a pyWeMo device."""
 
     config_entry: ConfigEntry
     options: Options | None = None
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, wemo: WeMoDevice
+        self, menuai: menuai, config_entry: ConfigEntry, wemo: WeMoDevice
     ) -> None:
         """Initialize DeviceCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=wemo.name,
             update_interval=timedelta(seconds=30),
         )
-        self.hass = hass
+        self.menuai = menuai
         self.wemo = wemo
         self.device_id: str | None = None
         self.device_info = _create_device_info(wemo)
@@ -120,7 +120,7 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
         """Receives push notifications from WeMo devices."""
         _LOGGER.debug("Subscription event (%s) for %s", event_type, self.wemo.name)
         if event_type == EVENT_TYPE_LONG_PRESS:
-            self.hass.bus.fire(
+            self.menuai.bus.fire(
                 WEMO_SUBSCRIPTION_EVENT,
                 {
                     CONF_DEVICE_ID: self.device_id,
@@ -132,9 +132,9 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
             )
         else:
             updated = self.wemo.subscription_update(event_type, params)
-            self.hass.loop.call_soon_threadsafe(
+            self.menuai.loop.call_soon_threadsafe(
                 partial(
-                    self.hass.async_create_background_task,
+                    self.menuai.async_create_background_task,
                     self._async_subscription_callback(updated),
                     f"{self.name} subscription_callback",
                     eager_start=True,
@@ -149,7 +149,7 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
         if TYPE_CHECKING:
             # mypy doesn't known that the device_id is set in async_setup.
             assert self.device_id is not None
-        del _async_coordinators(self.hass)[self.device_id]
+        del _async_coordinators(self.menuai)[self.device_id]
         assert self.options  # Always set by async_register_device.
         if self.options.enable_subscription:
             await self._async_set_enable_subscription(False)
@@ -160,12 +160,12 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
 
     async def _async_set_enable_subscription(self, enable_subscription: bool) -> None:
         """Turn on/off push updates from the device."""
-        registry = _async_registry(self.hass)
+        registry = _async_registry(self.menuai)
         if enable_subscription:
             registry.on(self.wemo, None, self.subscription_callback)
-            await self.hass.async_add_executor_job(registry.register, self.wemo)
+            await self.menuai.async_add_executor_job(registry.register, self.wemo)
         elif self.options is not None:
-            await self.hass.async_add_executor_job(registry.unregister, self.wemo)
+            await self.menuai.async_add_executor_job(registry.unregister, self.wemo)
 
     async def _async_set_enable_long_press(self, enable_long_press: bool) -> None:
         """Turn on/off long-press events from the device."""
@@ -173,11 +173,11 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
             return
         try:
             if enable_long_press:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self.wemo.ensure_long_press_virtual_device
                 )
             elif self.options is not None:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self.wemo.remove_long_press_virtual_device
                 )
         except PyWeMoException:
@@ -187,7 +187,7 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
             self.supports_long_press = False
 
     async def async_set_options(
-        self, hass: HomeAssistant, config_entry: ConfigEntry
+        self, menuai: menuai, config_entry: ConfigEntry
     ) -> None:
         """Update the configuration options for the device."""
         options = Options(**config_entry.options)
@@ -225,7 +225,7 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
         """Return True if polling is needed to update the state for the device.
 
         The alternative, when this returns False, is to rely on the subscription
-        "push updates" to update the device state in Home Assistant.
+        "push updates" to update the device state in MenuAI.
         """
         if isinstance(self.wemo, Insight) and self.wemo.get_state() == 0:
             # The WeMo Insight device does not send subscription updates for the
@@ -234,7 +234,7 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
             return True
 
         return not (
-            _async_registry(self.hass).is_subscribed(self.wemo)
+            _async_registry(self.menuai).is_subscribed(self.wemo)
             and self.last_update_success
         )
 
@@ -257,7 +257,7 @@ class DeviceCoordinator(DataUpdateCoordinator[None]):
         """Try updating within an async lock."""
         async with self.update_lock:
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self.wemo.get_state, force_update
                 )
             except ActionException as err:
@@ -286,39 +286,39 @@ def _device_info(wemo: WeMoDevice) -> DeviceInfo:
 
 
 async def async_register_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, wemo: WeMoDevice
+    menuai: menuai, config_entry: ConfigEntry, wemo: WeMoDevice
 ) -> DeviceCoordinator:
-    """Register a device with home assistant and enable pywemo event callbacks."""
-    device = DeviceCoordinator(hass, config_entry, wemo)
+    """Register a device with MenuAI and enable pywemo event callbacks."""
+    device = DeviceCoordinator(menuai, config_entry, wemo)
     await device.async_refresh()
     if not device.last_update_success and device.last_exception:
         raise device.last_exception
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id, **_create_device_info(wemo)
     )
     device.async_setup(device_id=entry.id)
-    _async_coordinators(hass)[entry.id] = device
+    _async_coordinators(menuai)[entry.id] = device
 
     config_entry.async_on_unload(
         config_entry.add_update_listener(device.async_set_options)
     )
-    await device.async_set_options(hass, config_entry)
+    await device.async_set_options(menuai, config_entry)
 
     return device
 
 
 @callback
-def async_get_coordinator(hass: HomeAssistant, device_id: str) -> DeviceCoordinator:
+def async_get_coordinator(menuai: menuai, device_id: str) -> DeviceCoordinator:
     """Return DeviceCoordinator for device_id."""
-    return _async_coordinators(hass)[device_id]
+    return _async_coordinators(menuai)[device_id]
 
 
 @callback
-def _async_coordinators(hass: HomeAssistant) -> dict[str, DeviceCoordinator]:
-    return hass.data[DATA_WEMO].config_entry_data.device_coordinators
+def _async_coordinators(menuai: menuai) -> dict[str, DeviceCoordinator]:
+    return menuai.data[DATA_WEMO].config_entry_data.device_coordinators
 
 
 @callback
-def _async_registry(hass: HomeAssistant) -> SubscriptionRegistry:
-    return hass.data[DATA_WEMO].registry
+def _async_registry(menuai: menuai) -> SubscriptionRegistry:
+    return menuai.data[DATA_WEMO].registry

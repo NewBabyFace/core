@@ -3,11 +3,11 @@
 from aiohttp import ClientError
 from myuplink import DevicePoint
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberEntity, NumberEntityDescription
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, F_SERIES
 from .coordinator import MyUplinkConfigEntry, MyUplinkDataCoordinator
@@ -61,7 +61,7 @@ def get_description(device_point: DevicePoint) -> NumberEntityDescription | None
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MyUplinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -136,7 +136,7 @@ class MyUplinkNumber(MyUplinkEntity, NumberEntity):
                 self.device_id, data={self.point_id: str(value)}
             )
         except ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_number_error",
                 translation_placeholders={

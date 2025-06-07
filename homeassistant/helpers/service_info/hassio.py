@@ -1,14 +1,14 @@
-"""Hassio Discovery data."""
+"""menuaiio Discovery data."""
 
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.data_entry_flow import BaseServiceInfo
+from menuai.data_entry_flow import BaseServiceInfo
 
 
 @dataclass(slots=True)
-class HassioServiceInfo(BaseServiceInfo):
-    """Prepared info from hassio entries."""
+class menuaiioServiceInfo(BaseServiceInfo):
+    """Prepared info from menuaiio entries."""
 
     config: dict[str, Any]
     name: str

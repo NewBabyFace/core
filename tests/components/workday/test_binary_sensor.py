@@ -1,4 +1,4 @@
-"""Tests the Home Assistant workday binary sensor."""
+"""Tests the MenuAI workday binary sensor."""
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -7,19 +7,19 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.workday.binary_sensor import SERVICE_CHECK_DATE
-from homeassistant.components.workday.const import (
+from menuai.components.workday.binary_sensor import SERVICE_CHECK_DATE
+from menuai.components.workday.const import (
     DEFAULT_EXCLUDES,
     DEFAULT_NAME,
     DEFAULT_OFFSET,
     DEFAULT_WORKDAYS,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.dt import UTC
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.dt import UTC
 
 from . import (
     TEST_CONFIG_ADD_REMOVE_DATE_RANGE,
@@ -72,7 +72,7 @@ from tests.common import async_fire_time_changed
     ],
 )
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     expected_state: str,
     expected_state_weekend: str,
@@ -80,11 +80,11 @@ async def test_setup(
 ) -> None:
     """Test setup from various configs."""
     # Start on a Friday
-    await hass.config.async_set_time_zone("Europe/Paris")
+    await menuai.config.async_set_time_zone("Europe/Paris")
     freezer.move_to(datetime(2022, 4, 15, 0, tzinfo=timezone(timedelta(hours=1))))
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == expected_state
     assert state.attributes == {
@@ -95,17 +95,17 @@ async def test_setup(
     }
 
     freezer.tick(timedelta(days=1))  # Saturday
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == expected_state_weekend
 
 
-async def test_setup_with_invalid_province_from_yaml(hass: HomeAssistant) -> None:
+async def test_setup_with_invalid_province_from_yaml(menuai: menuai) -> None:
     """Test setup invalid province with import."""
     await async_setup_component(
-        hass,
+        menuai,
         "binary_sensor",
         {
             "binary_sensor": {
@@ -115,21 +115,21 @@ async def test_setup_with_invalid_province_from_yaml(hass: HomeAssistant) -> Non
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is None
 
 
 async def test_setup_with_working_holiday(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test setup from various configs."""
     freezer.move_to(datetime(2017, 1, 6, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_INCLUDE_HOLIDAY)
+    await init_integration(menuai, TEST_CONFIG_INCLUDE_HOLIDAY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "on"
 
@@ -142,15 +142,15 @@ async def test_setup_with_working_holiday(
     ],
 )
 async def test_setup_add_holiday(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test setup from various configs."""
     freezer.move_to(datetime(2020, 2, 24, 12, tzinfo=UTC))  # Monday
-    await init_integration(hass, TEST_CONFIG_EXAMPLE_2)
+    await init_integration(menuai, TEST_CONFIG_EXAMPLE_2)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "off"
 
@@ -159,25 +159,25 @@ async def test_setup_add_holiday(
     "time_zone", ["Asia/Tokyo", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_setup_no_country_weekend(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     time_zone: str,
 ) -> None:
     """Test setup shows weekend as non-workday with no country."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     zone = await dt_util.async_get_time_zone(time_zone)
     freezer.move_to(datetime(2020, 2, 22, 0, 1, 1, tzinfo=zone))  # Saturday
-    await init_integration(hass, TEST_CONFIG_NO_COUNTRY)
+    await init_integration(menuai, TEST_CONFIG_NO_COUNTRY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "off"
 
     freezer.move_to(datetime(2020, 2, 24, 23, 59, 59, tzinfo=zone))  # Monday
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "on"
 
@@ -186,108 +186,108 @@ async def test_setup_no_country_weekend(
     "time_zone", ["Asia/Tokyo", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_setup_no_country_weekday(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     time_zone: str,
 ) -> None:
     """Test setup shows a weekday as a workday with no country."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     zone = await dt_util.async_get_time_zone(time_zone)
     freezer.move_to(datetime(2020, 2, 21, 23, 59, 59, tzinfo=zone))  # Friday
-    await init_integration(hass, TEST_CONFIG_NO_COUNTRY)
+    await init_integration(menuai, TEST_CONFIG_NO_COUNTRY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "on"
 
     freezer.move_to(datetime(2020, 2, 22, 23, 59, 59, tzinfo=zone))  # Saturday
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "off"
 
 
 async def test_setup_remove_holiday(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test setup from various configs."""
     freezer.move_to(datetime(2020, 12, 25, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_REMOVE_HOLIDAY)
+    await init_integration(menuai, TEST_CONFIG_REMOVE_HOLIDAY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "on"
 
 
 async def test_setup_remove_holiday_named(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test setup from various configs."""
     freezer.move_to(datetime(2020, 12, 25, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_REMOVE_NAMED)
+    await init_integration(menuai, TEST_CONFIG_REMOVE_NAMED)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "on"
 
 
 async def test_setup_day_after_tomorrow(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test setup from various configs."""
     freezer.move_to(datetime(2022, 5, 27, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_DAY_AFTER_TOMORROW)
+    await init_integration(menuai, TEST_CONFIG_DAY_AFTER_TOMORROW)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "off"
 
 
 async def test_setup_faulty_country(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup with faulty province."""
     freezer.move_to(datetime(2017, 1, 6, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_INCORRECT_COUNTRY)
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_COUNTRY)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is None
 
     assert "Selected country ZZ is not valid" in caplog.text
 
 
 async def test_setup_faulty_province(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup with faulty province."""
     freezer.move_to(datetime(2017, 1, 6, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_INCORRECT_PROVINCE)
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_PROVINCE)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is None
 
     assert "Selected province ZZ for country DE is not valid" in caplog.text
 
 
 async def test_setup_incorrect_add_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup with incorrect add/remove custom holiday."""
     freezer.move_to(datetime(2017, 1, 6, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_INCORRECT_ADD_REMOVE)
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_ADD_REMOVE)
 
-    hass.states.get("binary_sensor.workday_sensor")
+    menuai.states.get("binary_sensor.workday_sensor")
 
     assert (
         "Could not add custom holidays: Cannot parse date from string '2023-12-32'"
@@ -297,16 +297,16 @@ async def test_setup_incorrect_add_remove(
 
 
 async def test_setup_incorrect_add_holiday_ranges(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup with incorrect add/remove holiday ranges."""
     freezer.move_to(datetime(2017, 1, 6, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_INCORRECT_ADD_DATE_RANGE)
-    await init_integration(hass, TEST_CONFIG_INCORRECT_ADD_DATE_RANGE_LEN, "2")
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_ADD_DATE_RANGE)
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_ADD_DATE_RANGE_LEN, "2")
 
-    hass.states.get("binary_sensor.workday_sensor")
+    menuai.states.get("binary_sensor.workday_sensor")
 
     assert "Incorrect dates in date range: 2023-12-30,2023-12-32" in caplog.text
     assert (
@@ -315,16 +315,16 @@ async def test_setup_incorrect_add_holiday_ranges(
 
 
 async def test_setup_incorrect_remove_holiday_ranges(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup with incorrect add/remove holiday ranges."""
     freezer.move_to(datetime(2017, 1, 6, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_INCORRECT_REMOVE_DATE_RANGE)
-    await init_integration(hass, TEST_CONFIG_INCORRECT_REMOVE_DATE_RANGE_LEN, "2")
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_REMOVE_DATE_RANGE)
+    await init_integration(menuai, TEST_CONFIG_INCORRECT_REMOVE_DATE_RANGE_LEN, "2")
 
-    hass.states.get("binary_sensor.workday_sensor")
+    menuai.states.get("binary_sensor.workday_sensor")
 
     assert "Incorrect dates in date range: 2023-12-30,2023-12-32" in caplog.text
     assert (
@@ -333,31 +333,31 @@ async def test_setup_incorrect_remove_holiday_ranges(
 
 
 async def test_setup_date_range(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test setup with date range."""
     freezer.move_to(
         datetime(2022, 12, 26, 12, tzinfo=UTC)
     )  # Boxing Day should be working day
-    await init_integration(hass, TEST_CONFIG_ADD_REMOVE_DATE_RANGE)
+    await init_integration(menuai, TEST_CONFIG_ADD_REMOVE_DATE_RANGE)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state.state == "on"
 
 
 async def test_check_date_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test check date service with response data."""
 
     freezer.move_to(datetime(2017, 1, 6, 12, tzinfo=UTC))  # Friday
-    await init_integration(hass, TEST_CONFIG_WITH_PROVINCE)
+    await init_integration(menuai, TEST_CONFIG_WITH_PROVINCE)
 
-    hass.states.get("binary_sensor.workday_sensor")
+    menuai.states.get("binary_sensor.workday_sensor")
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHECK_DATE,
         {
@@ -369,7 +369,7 @@ async def test_check_date_service(
     )
     assert response == {"binary_sensor.workday_sensor": {"workday": False}}
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHECK_DATE,
         {
@@ -381,7 +381,7 @@ async def test_check_date_service(
     )
     assert response == {"binary_sensor.workday_sensor": {"workday": True}}
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHECK_DATE,
         {
@@ -395,20 +395,20 @@ async def test_check_date_service(
 
 
 async def test_language_difference_english_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test handling difference in English language naming."""
-    await init_integration(hass, TEST_LANGUAGE_CHANGE)
+    await init_integration(menuai, TEST_LANGUAGE_CHANGE)
     assert "Changing language from en to en_US" in caplog.text
 
 
 async def test_language_difference_no_change_other_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test skipping if no difference in language naming."""
-    await init_integration(hass, TEST_LANGUAGE_NO_CHANGE)
+    await init_integration(menuai, TEST_LANGUAGE_NO_CHANGE)
     assert "Changing language from en to en_US" not in caplog.text
 
 
@@ -417,7 +417,7 @@ async def test_language_difference_no_change_other_language(
     [(TEST_OPTIONAL_CATEGORY, "off"), (TEST_NO_OPTIONAL_CATEGORY, "on")],
 )
 async def test_optional_category(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     end_state: str,
     freezer: FrozenDateTimeFactory,
@@ -425,15 +425,15 @@ async def test_optional_category(
     """Test setup from various configs."""
     # CH, subdiv FR has optional holiday Jan 2nd
     freezer.move_to(datetime(2024, 1, 2, 12, tzinfo=UTC))  # Tuesday
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == end_state
 
 
 async def test_only_repairs_for_current_next_year(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     issue_registry: ir.IssueRegistry,
     snapshot: SnapshotAssertion,
@@ -457,14 +457,14 @@ async def test_only_repairs_for_current_next_year(
         "remove_holidays": remove_dates,
         "language": "de",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
     assert len(issue_registry.issues) == 2
     assert issue_registry.issues == snapshot
 
 
 async def test_missing_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test when language exist but is empty."""
@@ -482,12 +482,12 @@ async def test_missing_language(
         ],
         "workdays": ["mon", "tue", "wed", "thu", "fri"],
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
     assert "Changing language from None to en_AU" in caplog.text
 
 
 async def test_incorrect_english_variant(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test when language exist but is empty."""
@@ -505,5 +505,5 @@ async def test_incorrect_english_variant(
         ],
         "workdays": ["mon", "tue", "wed", "thu", "fri"],
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
     assert "Changing language from en_UK to en_AU" in caplog.text

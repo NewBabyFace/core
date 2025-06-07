@@ -8,10 +8,10 @@ from typing import Any, NamedTuple, cast
 
 import voluptuous as vol
 
-from homeassistant import config as conf_util
-from homeassistant.components.light import ATTR_TRANSITION
-from homeassistant.components.scene import DOMAIN as SCENE_DOMAIN, STATES, Scene
-from homeassistant.const import (
+from menuai import config as conf_util
+from menuai.components.light import ATTR_TRANSITION
+from menuai.components.scene import DOMAIN as SCENE_DOMAIN, STATES, Scene
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_STATE,
     CONF_ENTITIES,
@@ -23,17 +23,17 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, State, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
-from homeassistant.helpers.service import (
+from menuai.core import menuai, ServiceCall, State, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
+from menuai.helpers.service import (
     async_extract_entity_ids,
     async_register_admin_service,
 )
-from homeassistant.helpers.state import async_reproduce_state
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.loader import async_get_integration
+from menuai.helpers.state import async_reproduce_state
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.loader import async_get_integration
 
 from .const import DOMAIN
 
@@ -81,7 +81,7 @@ def _ensure_no_intersection(value: dict[str, Any]) -> dict[str, Any]:
 
 CONF_SCENE_ID = "scene_id"
 CONF_SNAPSHOT = "snapshot_entities"
-DATA_PLATFORM = "homeassistant_scene"
+DATA_PLATFORM = "menuai_scene"
 EVENT_SCENE_RELOADED = "scene_reloaded"
 STATES_SCHEMA = vol.All(dict, _convert_states)
 
@@ -136,14 +136,14 @@ class SceneConfig(NamedTuple):
 
 
 @callback
-def scenes_with_entity(hass: HomeAssistant, entity_id: str) -> list[str]:
+def scenes_with_entity(menuai: menuai, entity_id: str) -> list[str]:
     """Return all scenes that reference the entity."""
-    if DATA_PLATFORM not in hass.data:
+    if DATA_PLATFORM not in menuai.data:
         return []
 
-    platform: EntityPlatform = hass.data[DATA_PLATFORM]
+    platform: EntityPlatform = menuai.data[DATA_PLATFORM]
 
-    scene_entities = cast(ValuesView[HomeAssistantScene], platform.entities.values())
+    scene_entities = cast(ValuesView[menuaiScene], platform.entities.values())
     return [
         scene_entity.entity_id
         for scene_entity in scene_entities
@@ -152,47 +152,47 @@ def scenes_with_entity(hass: HomeAssistant, entity_id: str) -> list[str]:
 
 
 @callback
-def entities_in_scene(hass: HomeAssistant, entity_id: str) -> list[str]:
+def entities_in_scene(menuai: menuai, entity_id: str) -> list[str]:
     """Return all entities in a scene."""
-    if DATA_PLATFORM not in hass.data:
+    if DATA_PLATFORM not in menuai.data:
         return []
 
-    platform: EntityPlatform = hass.data[DATA_PLATFORM]
+    platform: EntityPlatform = menuai.data[DATA_PLATFORM]
 
     if (entity := platform.entities.get(entity_id)) is None:
         return []
 
-    return list(cast(HomeAssistantScene, entity).scene_config.states)
+    return list(cast(menuaiScene, entity).scene_config.states)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
-    """Set up Home Assistant scene entries."""
-    _process_scenes_config(hass, async_add_entities, config)
+    """Set up MenuAI scene entries."""
+    _process_scenes_config(menuai, async_add_entities, config)
 
     # This platform can be loaded multiple times. Only first time register the service.
-    if hass.services.has_service(SCENE_DOMAIN, SERVICE_RELOAD):
+    if menuai.services.has_service(SCENE_DOMAIN, SERVICE_RELOAD):
         return
 
     # Store platform for later.
-    platform = hass.data[DATA_PLATFORM] = entity_platform.async_get_current_platform()
+    platform = menuai.data[DATA_PLATFORM] = entity_platform.async_get_current_platform()
 
     async def reload_config(call: ServiceCall) -> None:
         """Reload the scene config."""
         try:
-            config = await conf_util.async_hass_config_yaml(hass)
-        except HomeAssistantError as err:
+            config = await conf_util.async_menuai_config_yaml(menuai)
+        except menuaiError as err:
             _LOGGER.error(err)
             return
 
-        integration = await async_get_integration(hass, SCENE_DOMAIN)
+        integration = await async_get_integration(menuai, SCENE_DOMAIN)
 
         conf = await conf_util.async_process_component_and_handle_errors(
-            hass, config, integration
+            menuai, config, integration
         )
 
         if not (conf and platform):
@@ -200,16 +200,16 @@ async def async_setup_platform(
 
         await platform.async_reset()
 
-        # Extract only the config for the Home Assistant platform, ignore the rest.
+        # Extract only the config for the MenuAI platform, ignore the rest.
         for p_type, p_config in conf_util.config_per_platform(conf, SCENE_DOMAIN):
             if p_type != DOMAIN:
                 continue
 
-            _process_scenes_config(hass, async_add_entities, p_config)
+            _process_scenes_config(menuai, async_add_entities, p_config)
 
-        hass.bus.async_fire(EVENT_SCENE_RELOADED, context=call.context)
+        menuai.bus.async_fire(EVENT_SCENE_RELOADED, context=call.context)
 
-    async_register_admin_service(hass, SCENE_DOMAIN, SERVICE_RELOAD, reload_config)
+    async_register_admin_service(menuai, SCENE_DOMAIN, SERVICE_RELOAD, reload_config)
 
     async def apply_service(call: ServiceCall) -> None:
         """Apply a scene."""
@@ -219,13 +219,13 @@ async def async_setup_platform(
             reproduce_options[ATTR_TRANSITION] = call.data.get(ATTR_TRANSITION)
 
         await async_reproduce_state(
-            hass,
+            menuai,
             call.data[CONF_ENTITIES].values(),
             context=call.context,
             reproduce_options=reproduce_options,
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         SCENE_DOMAIN,
         SERVICE_APPLY,
         apply_service,
@@ -245,7 +245,7 @@ async def async_setup_platform(
         entities = call.data[CONF_ENTITIES]
 
         for entity_id in snapshot:
-            if (state := hass.states.get(entity_id)) is None:
+            if (state := menuai.states.get(entity_id)) is None:
                 _LOGGER.warning(
                     "Entity %s does not exist and therefore cannot be snapshotted",
                     entity_id,
@@ -260,19 +260,19 @@ async def async_setup_platform(
         scene_config = SceneConfig(None, call.data[CONF_SCENE_ID], None, entities)
         entity_id = f"{SCENE_DOMAIN}.{scene_config.name}"
         if (old := platform.entities.get(entity_id)) is not None:
-            if not isinstance(old, HomeAssistantScene) or not old.from_service:
+            if not isinstance(old, menuaiScene) or not old.from_service:
                 _LOGGER.warning("The scene %s already exists", entity_id)
                 return
             await platform.async_remove_entity(entity_id)
-        async_add_entities([HomeAssistantScene(hass, scene_config, from_service=True)])
+        async_add_entities([menuaiScene(menuai, scene_config, from_service=True)])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         SCENE_DOMAIN, SERVICE_CREATE, create_service, CREATE_SCENE_SCHEMA
     )
 
     async def delete_service(call: ServiceCall) -> None:
         """Delete a dynamically created scene."""
-        entity_ids = await async_extract_entity_ids(hass, call)
+        entity_ids = await async_extract_entity_ids(menuai, call)
 
         for entity_id in entity_ids:
             scene = platform.entities.get(entity_id)
@@ -284,7 +284,7 @@ async def async_setup_platform(
                         "entity_id": entity_id,
                     },
                 )
-            assert isinstance(scene, HomeAssistantScene)
+            assert isinstance(scene, menuaiScene)
             if not scene.from_service:
                 raise ServiceValidationError(
                     translation_domain=SCENE_DOMAIN,
@@ -296,7 +296,7 @@ async def async_setup_platform(
 
             await platform.async_remove_entity(entity_id)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         SCENE_DOMAIN,
         SERVICE_DELETE,
         delete_service,
@@ -305,7 +305,7 @@ async def async_setup_platform(
 
 
 def _process_scenes_config(
-    hass: HomeAssistant, async_add_entities: AddEntitiesCallback, config: dict[str, Any]
+    menuai: menuai, async_add_entities: AddEntitiesCallback, config: dict[str, Any]
 ) -> None:
     """Process multiple scenes and add them."""
     # Check empty list
@@ -314,8 +314,8 @@ def _process_scenes_config(
         return
 
     async_add_entities(
-        HomeAssistantScene(
-            hass,
+        menuaiScene(
+            menuai,
             SceneConfig(
                 scene.get(CONF_ID),
                 scene[CONF_NAME],
@@ -327,14 +327,14 @@ def _process_scenes_config(
     )
 
 
-class HomeAssistantScene(Scene):
+class menuaiScene(Scene):
     """A scene is a group of entities and the states we want them to be."""
 
     def __init__(
-        self, hass: HomeAssistant, scene_config: SceneConfig, from_service: bool = False
+        self, menuai: menuai, scene_config: SceneConfig, from_service: bool = False
     ) -> None:
         """Initialize the scene."""
-        self.hass = hass
+        self.menuai = menuai
         self.scene_config = scene_config
         self.from_service = from_service
 
@@ -364,7 +364,7 @@ class HomeAssistantScene(Scene):
     async def async_activate(self, **kwargs: Any) -> None:
         """Activate scene. Try to get entities into requested state."""
         await async_reproduce_state(
-            self.hass,
+            self.menuai,
             self.scene_config.states.values(),
             context=self._context,
             reproduce_options=kwargs,

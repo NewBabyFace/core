@@ -10,13 +10,13 @@ from typing import Any, Literal
 import ollama
 from voluptuous_openapi import convert
 
-from homeassistant.components import assist_pipeline, conversation
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LLM_HASS_API, MATCH_ALL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import intent, llm
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import assist_pipeline, conversation
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LLM_menuai_API, MATCH_ALL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import intent, llm
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_KEEP_ALIVE,
@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -184,26 +184,26 @@ class OllamaConversationEntity(
         # conversation id -> message history
         self._attr_name = entry.title
         self._attr_unique_id = entry.entry_id
-        if self.entry.options.get(CONF_LLM_HASS_API):
+        if self.entry.options.get(CONF_LLM_menuai_API):
             self._attr_supported_features = (
                 conversation.ConversationEntityFeature.CONTROL
             )
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
+        await super().async_added_to_menuai()
         assist_pipeline.async_migrate_engine(
-            self.hass, "conversation", self.entry.entry_id, self.entity_id
+            self.menuai, "conversation", self.entry.entry_id, self.entity_id
         )
-        conversation.async_set_agent(self.hass, self.entry, self)
+        conversation.async_set_agent(self.menuai, self.entry, self)
         self.entry.async_on_unload(
             self.entry.add_update_listener(self._async_entry_update_listener)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """When entity will be removed from Home Assistant."""
-        conversation.async_unset_agent(self.hass, self.entry)
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """When entity will be removed from MenuAI."""
+        conversation.async_unset_agent(self.menuai, self.entry)
+        await super().async_will_remove_from_menuai()
 
     @property
     def supported_languages(self) -> list[str] | Literal["*"]:
@@ -218,14 +218,14 @@ class OllamaConversationEntity(
         """Call the API."""
         settings = {**self.entry.data, **self.entry.options}
 
-        client = self.hass.data[DOMAIN][self.entry.entry_id]
+        client = self.menuai.data[DOMAIN][self.entry.entry_id]
         model = settings[CONF_MODEL]
 
         try:
             await chat_log.async_update_llm_data(
                 DOMAIN,
                 user_input,
-                settings.get(CONF_LLM_HASS_API),
+                settings.get(CONF_LLM_menuai_API),
                 settings.get(CONF_PROMPT),
             )
         except conversation.ConverseError as err:
@@ -261,7 +261,7 @@ class OllamaConversationEntity(
                 )
             except (ollama.RequestError, ollama.ResponseError) as err:
                 _LOGGER.error("Unexpected error talking to Ollama server: %s", err)
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Sorry, I had a problem talking to the Ollama server: {err}"
                 ) from err
 
@@ -317,8 +317,8 @@ class OllamaConversationEntity(
             ] + message_history.messages[drop_index:]
 
     async def _async_entry_update_listener(
-        self, hass: HomeAssistant, entry: ConfigEntry
+        self, menuai: menuai, entry: ConfigEntry
     ) -> None:
         """Handle options update."""
         # Reload as we update device info + entity name + supported features
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)

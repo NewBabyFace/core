@@ -5,9 +5,9 @@ import math
 
 import voluptuous as vol
 
-from homeassistant import core as ha
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.const import (
+from menuai import core as ha
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_ICON,
     ATTR_LOCATION,
@@ -22,10 +22,10 @@ from homeassistant.const import (
     CONF_STATE,
     CONF_URL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 ATTR_ADDRESS = "address"
 ATTR_SPACEFED = "spacefed"
@@ -236,24 +236,24 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Register the SpaceAPI with the HTTP interface."""
-    hass.data[DATA_SPACEAPI] = config[DOMAIN]
-    hass.http.register_view(APISpaceApiView)
+    menuai.data[DATA_SPACEAPI] = config[DOMAIN]
+    menuai.http.register_view(APISpaceApiView)
 
     return True
 
 
-class APISpaceApiView(HomeAssistantView):
+class APISpaceApiView(menuaiView):
     """View to provide details according to the SpaceAPI."""
 
     url = URL_API_SPACEAPI
     name = "api:spaceapi"
 
     @staticmethod
-    def get_sensor_data(hass, spaceapi, sensor):
+    def get_sensor_data(menuai, spaceapi, sensor):
         """Get data from a sensor."""
-        if not (sensor_state := hass.states.get(sensor)):
+        if not (sensor_state := menuai.states.get(sensor)):
             return None
 
         # SpaceAPI sensor values must be numbers
@@ -278,11 +278,11 @@ class APISpaceApiView(HomeAssistantView):
     @ha.callback
     def get(self, request):
         """Get SpaceAPI data."""
-        hass = request.app[KEY_HASS]
-        spaceapi = dict(hass.data[DATA_SPACEAPI])
+        menuai = request.app[KEY_menuai]
+        spaceapi = dict(menuai.data[DATA_SPACEAPI])
         is_sensors = spaceapi.get("sensors")
 
-        location = {ATTR_LAT: hass.config.latitude, ATTR_LON: hass.config.longitude}
+        location = {ATTR_LAT: menuai.config.latitude, ATTR_LON: menuai.config.longitude}
 
         try:
             location[ATTR_ADDRESS] = spaceapi[ATTR_LOCATION][CONF_ADDRESS]
@@ -293,7 +293,7 @@ class APISpaceApiView(HomeAssistantView):
 
         state_entity = spaceapi["state"][ATTR_ENTITY_ID]
 
-        if (space_state := hass.states.get(state_entity)) is not None:
+        if (space_state := menuai.states.get(state_entity)) is not None:
             state = {
                 ATTR_OPEN: space_state.state != "off",
                 ATTR_LASTCHANGE: dt_util.as_timestamp(space_state.last_updated),
@@ -344,7 +344,7 @@ class APISpaceApiView(HomeAssistantView):
             for sensor_type in is_sensors:
                 sensors[sensor_type] = []
                 for sensor in spaceapi["sensors"][sensor_type]:
-                    sensor_data = self.get_sensor_data(hass, spaceapi, sensor)
+                    sensor_data = self.get_sensor_data(menuai, spaceapi, sensor)
                     sensors[sensor_type].append(sensor_data)
             data[ATTR_SENSORS] = sensors
 

@@ -15,16 +15,16 @@ from pyisy.constants import (
 from pyisy.helpers import NodeProperty
 from pyisy.nodes import Group, Node
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.const import STATE_ON, Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import STATE_ON, Platform
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     _LOGGER,
@@ -52,7 +52,7 @@ DEVICE_PARENT_REQUIRED = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -288,9 +288,9 @@ class ISYInsteonBinarySensorEntity(ISYBinarySensorEntity):
             self._computed_state = bool(self._node.status)
             self._status_was_unknown = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node and subnode event emitters."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._node.control_events.subscribe(self._async_positive_node_control_handler)
 
@@ -441,9 +441,9 @@ class ISYBinarySensorHeartbeat(ISYNodeEntity, BinarySensorEntity, RestoreEntity)
         if self.state is None:
             self._computed_state = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node and subnode event emitters."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._node.control_events.subscribe(self._heartbeat_node_control_handler)
 
@@ -490,7 +490,7 @@ class ISYBinarySensorHeartbeat(ISYNodeEntity, BinarySensorEntity, RestoreEntity)
             self.async_write_ha_state()
 
         self._heartbeat_timer = async_call_later(
-            self.hass, timedelta(hours=25), timer_elapsed
+            self.menuai, timedelta(hours=25), timer_elapsed
         )
 
     @callback

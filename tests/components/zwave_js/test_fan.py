@@ -8,7 +8,7 @@ from zwave_js_server.const import CommandClass
 from zwave_js_server.event import Event
 from zwave_js_server.model.node import Node
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PERCENTAGE,
     ATTR_PERCENTAGE_STEP,
     ATTR_PRESET_MODE,
@@ -19,8 +19,8 @@ from homeassistant.components.fan import (
     FanEntityFeature,
     NotValidPresetModeError,
 )
-from homeassistant.components.zwave_js.fan import ATTR_FAN_STATE
-from homeassistant.const import (
+from menuai.components.zwave_js.fan import ATTR_FAN_STATE
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_TURN_OFF,
@@ -31,9 +31,9 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 
 @pytest.fixture
@@ -43,18 +43,18 @@ def platforms() -> list[str]:
 
 
 async def test_generic_fan(
-    hass: HomeAssistant, client, fan_generic, integration
+    menuai: menuai, client, fan_generic, integration
 ) -> None:
     """Test the fan entity for a generic fan that lacks specific speed configuration."""
     node = fan_generic
     entity_id = "fan.generic_fan_controller"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == STATE_OFF
 
     # Test turn on no speed
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": entity_id},
@@ -76,13 +76,13 @@ async def test_generic_fan(
 
     # Due to optimistic updates, the state should be on even though the Z-Wave state
     # hasn't been updated yet
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == STATE_ON
 
     # Test turn on setting speed
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": entity_id, "percentage": 66},
@@ -104,7 +104,7 @@ async def test_generic_fan(
 
     # Test setting unknown speed
     with pytest.raises(MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "fan",
             "set_percentage",
             {"entity_id": entity_id, "percentage": "bad"},
@@ -114,7 +114,7 @@ async def test_generic_fan(
     client.async_send_command.reset_mock()
 
     # Test turning off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_off",
         {"entity_id": entity_id},
@@ -154,7 +154,7 @@ async def test_generic_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_PERCENTAGE] == 100
 
@@ -179,14 +179,14 @@ async def test_generic_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_PERCENTAGE] == 0
 
     client.async_send_command.reset_mock()
 
     # Test setting percentage to 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         SERVICE_SET_PERCENTAGE,
         {"entity_id": entity_id, "percentage": 0},
@@ -224,12 +224,12 @@ async def test_generic_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNKNOWN
 
 
 async def test_configurable_speeds_fan(
-    hass: HomeAssistant, client, hs_fc200, integration
+    menuai: menuai, client, hs_fc200, integration
 ) -> None:
     """Test a fan entity with configurable speeds."""
     node = hs_fc200
@@ -240,7 +240,7 @@ async def test_configurable_speeds_fan(
         """Set the fan to a particular percentage and get the resulting Zwave speed."""
         client.async_send_command.reset_mock()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "fan",
             "turn_on",
             {"entity_id": entity_id, "percentage": percentage},
@@ -273,7 +273,7 @@ async def test_configurable_speeds_fan(
             },
         )
         node.receive_event(event)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         return state.attributes[ATTR_PERCENTAGE]
 
     # In 3-speed mode, the speeds are:
@@ -293,13 +293,13 @@ async def test_configurable_speeds_fan(
             actual_percentage = await get_percentage_from_zwave_speed(zwave_speed)
             assert actual_percentage in percentages
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_PERCENTAGE_STEP] == pytest.approx(33.3333, rel=1e-3)
     assert state.attributes[ATTR_PRESET_MODES] == []
 
 
 async def test_configurable_speeds_fan_with_missing_config_value(
-    hass: HomeAssistant, client, hs_fc200_state, integration
+    menuai: menuai, client, hs_fc200_state, integration
 ) -> None:
     """Test a fan entity with configurable speeds."""
     entity_id = "fan.scene_capable_fan_control_switch"
@@ -320,14 +320,14 @@ async def test_configurable_speeds_fan_with_missing_config_value(
     node = Node(client, bad_node_data)
     event = {"node": node}
     client.driver.controller.emit("node added", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_configurable_speeds_fan_with_bad_config_value(
-    hass: HomeAssistant, client, hs_fc200_state, integration
+    menuai: menuai, client, hs_fc200_state, integration
 ) -> None:
     """Test a fan entity with configurable speeds."""
     entity_id = "fan.scene_capable_fan_control_switch"
@@ -350,13 +350,13 @@ async def test_configurable_speeds_fan_with_bad_config_value(
     node = Node(client, bad_node_data)
     event = {"node": node}
     client.driver.controller.emit("node added", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
 
 
-async def test_ge_12730_fan(hass: HomeAssistant, client, ge_12730, integration) -> None:
+async def test_ge_12730_fan(menuai: menuai, client, ge_12730, integration) -> None:
     """Test a GE 12730 fan with 3 fixed speeds."""
     node = ge_12730
     node_id = 24
@@ -366,7 +366,7 @@ async def test_ge_12730_fan(hass: HomeAssistant, client, ge_12730, integration) 
         """Set the fan to a particular percentage and get the resulting Zwave speed."""
         client.async_send_command.reset_mock()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "fan",
             "turn_on",
             {"entity_id": entity_id, "percentage": percentage},
@@ -399,7 +399,7 @@ async def test_ge_12730_fan(hass: HomeAssistant, client, ge_12730, integration) 
             },
         )
         node.receive_event(event)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         return state.attributes[ATTR_PERCENTAGE]
 
     # This device has the speeds:
@@ -419,7 +419,7 @@ async def test_ge_12730_fan(hass: HomeAssistant, client, ge_12730, integration) 
             actual_percentage = await get_percentage_from_zwave_speed(zwave_speed)
             assert actual_percentage in percentages
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_PERCENTAGE_STEP] == pytest.approx(33.3333, rel=1e-3)
     assert state.attributes[ATTR_PRESET_MODES] == []
 
@@ -443,12 +443,12 @@ async def test_ge_12730_fan(hass: HomeAssistant, client, ge_12730, integration) 
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNKNOWN
 
 
 async def test_inovelli_lzw36(
-    hass: HomeAssistant, client, inovelli_lzw36, integration
+    menuai: menuai, client, inovelli_lzw36, integration
 ) -> None:
     """Test an LZW36."""
     node = inovelli_lzw36
@@ -459,7 +459,7 @@ async def test_inovelli_lzw36(
         """Set the fan to a particular percentage and get the resulting Zwave speed."""
         client.async_send_command.reset_mock()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "fan",
             "turn_on",
             {"entity_id": entity_id, "percentage": percentage},
@@ -496,7 +496,7 @@ async def test_inovelli_lzw36(
     async def get_percentage_from_zwave_speed(zwave_speed):
         """Set the underlying device speed and get the resulting percentage."""
         await set_zwave_speed(zwave_speed)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         return state.attributes[ATTR_PERCENTAGE]
 
     # This device has the speeds:
@@ -517,20 +517,20 @@ async def test_inovelli_lzw36(
             assert actual_percentage in percentages
 
     # Check static entity properties
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_PERCENTAGE_STEP] == pytest.approx(33.3333, rel=1e-3)
     assert state.attributes[ATTR_PRESET_MODES] == ["breeze"]
 
     # This device has one preset, where a device level of "1" is the
     # "breeze" mode
     await set_zwave_speed(1)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_PRESET_MODE] == "breeze"
     assert state.attributes[ATTR_PERCENTAGE] is None
 
     client.async_send_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": entity_id, "preset_mode": "breeze"},
@@ -545,7 +545,7 @@ async def test_inovelli_lzw36(
 
     client.async_send_command.reset_mock()
     with pytest.raises(NotValidPresetModeError) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "fan",
             "turn_on",
             {"entity_id": entity_id, "preset_mode": "wheeze"},
@@ -556,7 +556,7 @@ async def test_inovelli_lzw36(
 
 
 async def test_leviton_zw4sf_fan(
-    hass: HomeAssistant, client, leviton_zw4sf, integration
+    menuai: menuai, client, leviton_zw4sf, integration
 ) -> None:
     """Test a Leviton ZW4SF fan with 4 fixed speeds."""
     node = leviton_zw4sf
@@ -567,7 +567,7 @@ async def test_leviton_zw4sf_fan(
         """Set the fan to a particular percentage and get the resulting Zwave speed."""
         client.async_send_command.reset_mock()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "fan",
             "turn_on",
             {"entity_id": entity_id, "percentage": percentage},
@@ -600,7 +600,7 @@ async def test_leviton_zw4sf_fan(
             },
         )
         node.receive_event(event)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         return state.attributes[ATTR_PERCENTAGE]
 
     # This device has the speeds:
@@ -621,13 +621,13 @@ async def test_leviton_zw4sf_fan(
             actual_percentage = await get_percentage_from_zwave_speed(zwave_speed)
             assert actual_percentage in percentages
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_PERCENTAGE_STEP] == pytest.approx(25, rel=1e-3)
     assert state.attributes[ATTR_PRESET_MODES] == []
 
 
 async def test_thermostat_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_adc_t3000,
     integration,
@@ -637,7 +637,7 @@ async def test_thermostat_fan(
     node = climate_adc_t3000
     entity_id = "fan.adc_t3000"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
     entry = entity_registry.async_get(entity_id)
@@ -650,12 +650,12 @@ async def test_thermostat_fan(
     assert updated_entry != entry
     assert updated_entry.disabled is False
 
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     client.async_send_command.reset_mock()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_FAN_STATE) == "Idle / off"
@@ -668,7 +668,7 @@ async def test_thermostat_fan(
     )
 
     # Test setting preset mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_PRESET_MODE: "Low"},
@@ -690,7 +690,7 @@ async def test_thermostat_fan(
 
     # Test setting unknown preset mode
     with pytest.raises(NotValidPresetModeError) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_PRESET_MODE,
             {ATTR_ENTITY_ID: entity_id, ATTR_PRESET_MODE: "Turbo"},
@@ -701,7 +701,7 @@ async def test_thermostat_fan(
     client.async_send_command.reset_mock()
 
     # Test turning off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -722,7 +722,7 @@ async def test_thermostat_fan(
     client.async_send_command.reset_mock()
 
     # Test turning on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -762,7 +762,7 @@ async def test_thermostat_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_FAN_STATE) == "Circulation mode"
 
     client.async_send_command.reset_mock()
@@ -787,7 +787,7 @@ async def test_thermostat_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert not state.attributes.get(ATTR_FAN_STATE)
 
     client.async_send_command.reset_mock()
@@ -812,7 +812,7 @@ async def test_thermostat_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_PRESET_MODE) == "Low"
 
     client.async_send_command.reset_mock()
@@ -837,7 +837,7 @@ async def test_thermostat_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert not state.attributes.get(ATTR_PRESET_MODE)
 
     client.async_send_command.reset_mock()
@@ -862,12 +862,12 @@ async def test_thermostat_fan(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
 
 async def test_thermostat_fan_without_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus,
     integration,
@@ -876,7 +876,7 @@ async def test_thermostat_fan_without_off(
     """Test the fan entity for a z-wave fan without "off" property."""
     entity_id = "fan.z_wave_thermostat"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
     entry = entity_registry.async_get(entity_id)
@@ -889,18 +889,18 @@ async def test_thermostat_fan_without_off(
     assert updated_entry != entry
     assert updated_entry.disabled is False
 
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     client.async_send_command.reset_mock()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
 
     # Test turning off
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
@@ -913,8 +913,8 @@ async def test_thermostat_fan_without_off(
     client.async_send_command.reset_mock()
 
     # Test turning on
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -928,7 +928,7 @@ async def test_thermostat_fan_without_off(
 
 
 async def test_thermostat_fan_without_preset_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_adc_t3000_missing_fan_mode_states,
     integration,
@@ -937,7 +937,7 @@ async def test_thermostat_fan_without_preset_modes(
     """Test the fan entity for a z-wave fan without "states" metadata."""
     entity_id = "fan.adc_t3000_missing_fan_mode_states"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
     entry = entity_registry.async_get(entity_id)
@@ -950,10 +950,10 @@ async def test_thermostat_fan_without_preset_modes(
     assert updated_entry != entry
     assert updated_entry.disabled is False
 
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     assert not state.attributes.get(ATTR_PRESET_MODE)
@@ -961,7 +961,7 @@ async def test_thermostat_fan_without_preset_modes(
 
 
 async def test_honeywell_39358_fan(
-    hass: HomeAssistant, client, fan_honeywell_39358, integration
+    menuai: menuai, client, fan_honeywell_39358, integration
 ) -> None:
     """Test a Honeywell 39358 fan with 3 fixed speeds."""
     node = fan_honeywell_39358
@@ -972,7 +972,7 @@ async def test_honeywell_39358_fan(
         """Set the fan to a particular percentage and get the resulting Zwave speed."""
         client.async_send_command.reset_mock()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "fan",
             "turn_on",
             {"entity_id": entity_id, "percentage": percentage},
@@ -1005,7 +1005,7 @@ async def test_honeywell_39358_fan(
             },
         )
         node.receive_event(event)
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         return state.attributes[ATTR_PERCENTAGE]
 
     # This device has the speeds:
@@ -1025,6 +1025,6 @@ async def test_honeywell_39358_fan(
             actual_percentage = await get_percentage_from_zwave_speed(zwave_speed)
             assert actual_percentage in percentages
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_PERCENTAGE_STEP] == pytest.approx(33.3333, rel=1e-3)
     assert state.attributes[ATTR_PRESET_MODES] == []

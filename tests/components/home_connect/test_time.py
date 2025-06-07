@@ -17,23 +17,23 @@ from aiohomeconnect.model import (
 from aiohomeconnect.model.error import HomeConnectApiError, HomeConnectError
 import pytest
 
-from homeassistant.components.automation import (
+from menuai.components.automation import (
     DOMAIN as AUTOMATION_DOMAIN,
     automations_with_entity,
 )
-from homeassistant.components.home_connect.const import DOMAIN
-from homeassistant.components.script import DOMAIN as SCRIPT_DOMAIN, scripts_with_entity
-from homeassistant.components.time import DOMAIN as TIME_DOMAIN, SERVICE_SET_VALUE
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TIME, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.components.home_connect.const import DOMAIN
+from menuai.components.script import DOMAIN as SCRIPT_DOMAIN, scripts_with_entity
+from menuai.components.time import DOMAIN as TIME_DOMAIN, SERVICE_SET_VALUE
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, ATTR_TIME, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator
@@ -48,7 +48,7 @@ def platforms() -> list[str]:
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 @pytest.mark.parametrize("appliance", ["Oven"], indirect=True)
 async def test_paired_depaired_devices_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client: MagicMock,
@@ -56,7 +56,7 @@ async def test_paired_depaired_devices_flow(
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
     appliance: HomeAppliance,
 ) -> None:
-    """Test that removed devices are correctly removed from and added to hass on API events."""
+    """Test that removed devices are correctly removed from and added to menuai on API events."""
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -74,7 +74,7 @@ async def test_paired_depaired_devices_flow(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, appliance.ha_id)})
     assert not device
@@ -91,7 +91,7 @@ async def test_paired_depaired_devices_flow(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get_device(identifiers={(DOMAIN, appliance.ha_id)})
     for entity_entry in entity_entries:
@@ -110,7 +110,7 @@ async def test_paired_depaired_devices_flow(
     indirect=["appliance"],
 )
 async def test_connected_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client: MagicMock,
@@ -156,7 +156,7 @@ async def test_connected_devices(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for key in keys_to_check:
         assert entity_registry.async_get_entity_id(
@@ -169,7 +169,7 @@ async def test_connected_devices(
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 @pytest.mark.parametrize("appliance", ["Oven"], indirect=True)
 async def test_time_entity_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -183,7 +183,7 @@ async def test_time_entity_availability(
     assert config_entry.state is ConfigEntryState.LOADED
 
     for entity_id in entity_ids:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state != STATE_UNAVAILABLE
 
@@ -196,10 +196,10 @@ async def test_time_entity_availability(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for entity_id in entity_ids:
-        assert hass.states.is_state(entity_id, STATE_UNAVAILABLE)
+        assert menuai.states.is_state(entity_id, STATE_UNAVAILABLE)
 
     await client.add_events(
         [
@@ -210,10 +210,10 @@ async def test_time_entity_availability(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for entity_id in entity_ids:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state != STATE_UNAVAILABLE
 
@@ -230,7 +230,7 @@ async def test_time_entity_availability(
     ],
 )
 async def test_time_entity_functionality(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -243,10 +243,10 @@ async def test_time_entity_functionality(
     assert config_entry.state is ConfigEntryState.LOADED
 
     value = 30
-    entity_state = hass.states.get(entity_id)
+    entity_state = menuai.states.get(entity_id)
     assert entity_state is not None
     assert entity_state.state != value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TIME_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -254,11 +254,11 @@ async def test_time_entity_functionality(
             ATTR_TIME: time(second=value),
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     client.set_setting.assert_awaited_once_with(
         appliance.ha_id, setting_key=setting_key, value=value
     )
-    assert hass.states.is_state(entity_id, str(time(second=value)))
+    assert menuai.states.is_state(entity_id, str(time(second=value)))
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -273,7 +273,7 @@ async def test_time_entity_functionality(
     ],
 )
 async def test_time_entity_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -299,9 +299,9 @@ async def test_time_entity_error(
         await getattr(client_with_exception, mock_attr)()
 
     with pytest.raises(
-        HomeAssistantError, match=r"Error.*assign.*value.*to.*setting.*"
+        menuaiError, match=r"Error.*assign.*value.*to.*setting.*"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TIME_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -316,7 +316,7 @@ async def test_time_entity_error(
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 @pytest.mark.parametrize("appliance", ["Oven"], indirect=True)
 async def test_create_alarm_clock_deprecation_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -330,7 +330,7 @@ async def test_create_alarm_clock_deprecation_issue(
     action_handler_issue_id = f"deprecated_time_alarm_clock_{entity_id}"
 
     assert await async_setup_component(
-        hass,
+        menuai,
         AUTOMATION_DOMAIN,
         {
             AUTOMATION_DOMAIN: {
@@ -346,7 +346,7 @@ async def test_create_alarm_clock_deprecation_issue(
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         SCRIPT_DOMAIN,
         {
             SCRIPT_DOMAIN: {
@@ -365,7 +365,7 @@ async def test_create_alarm_clock_deprecation_issue(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TIME_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -375,15 +375,15 @@ async def test_create_alarm_clock_deprecation_issue(
         blocking=True,
     )
 
-    assert automations_with_entity(hass, entity_id)[0] == "automation.test"
-    assert scripts_with_entity(hass, entity_id)[0] == "script.test"
+    assert automations_with_entity(menuai, entity_id)[0] == "automation.test"
+    assert scripts_with_entity(menuai, entity_id)[0] == "script.test"
 
     assert len(issue_registry.issues) == 2
     assert issue_registry.async_get_issue(DOMAIN, automation_script_issue_id)
     assert issue_registry.async_get_issue(DOMAIN, action_handler_issue_id)
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert the issue is no longer present
     assert not issue_registry.async_get_issue(DOMAIN, automation_script_issue_id)
@@ -394,8 +394,8 @@ async def test_create_alarm_clock_deprecation_issue(
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 @pytest.mark.parametrize("appliance", ["Oven"], indirect=True)
 async def test_alarm_clock_deprecation_issue_fix(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -409,7 +409,7 @@ async def test_alarm_clock_deprecation_issue_fix(
     action_handler_issue_id = f"deprecated_time_alarm_clock_{entity_id}"
 
     assert await async_setup_component(
-        hass,
+        menuai,
         AUTOMATION_DOMAIN,
         {
             AUTOMATION_DOMAIN: {
@@ -425,7 +425,7 @@ async def test_alarm_clock_deprecation_issue_fix(
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         SCRIPT_DOMAIN,
         {
             SCRIPT_DOMAIN: {
@@ -444,7 +444,7 @@ async def test_alarm_clock_deprecation_issue_fix(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TIME_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -459,7 +459,7 @@ async def test_alarm_clock_deprecation_issue_fix(
     assert issue_registry.async_get_issue(DOMAIN, action_handler_issue_id)
 
     for issue in issue_registry.issues.copy().values():
-        _client = await hass_client()
+        _client = await menuai_client()
         resp = await _client.post(
             "/api/repairs/issues/fix",
             json={"handler": DOMAIN, "issue_id": issue.issue_id},

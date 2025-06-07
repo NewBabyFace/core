@@ -1,12 +1,12 @@
 """Collection of helpers."""
 
-from homeassistant.components.coinbase.const import (
+from menuai.components.coinbase.const import (
     CONF_CURRENCIES,
     CONF_EXCHANGE_RATES,
     DOMAIN,
 )
-from homeassistant.const import CONF_API_KEY, CONF_API_TOKEN, CONF_API_VERSION
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_API_KEY, CONF_API_TOKEN, CONF_API_VERSION
+from menuai.core import menuai
 
 from .const import (
     GOOD_CURRENCY_2,
@@ -117,7 +117,7 @@ def mock_get_portfolios():
 
 
 async def init_mock_coinbase(
-    hass: HomeAssistant,
+    menuai: menuai,
     currencies: list[str] | None = None,
     rates: list[str] | None = None,
 ) -> MockConfigEntry:
@@ -133,16 +133,16 @@ async def init_mock_coinbase(
             CONF_EXCHANGE_RATES: rates or [],
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry
 
 
 async def init_mock_coinbase_v3(
-    hass: HomeAssistant,
+    menuai: menuai,
     currencies: list[str] | None = None,
     rates: list[str] | None = None,
 ) -> MockConfigEntry:
@@ -162,9 +162,9 @@ async def init_mock_coinbase_v3(
             CONF_EXCHANGE_RATES: rates or [],
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry

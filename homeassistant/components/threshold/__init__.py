@@ -1,23 +1,23 @@
 """The threshold component."""
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers.device import (
     async_remove_stale_devices_links_keep_entity_device,
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Min/Max from a config entry."""
 
     async_remove_stale_devices_links_keep_entity_device(
-        hass,
+        menuai,
         entry.entry_id,
         entry.options[CONF_ENTITY_ID],
     )
 
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, (Platform.BINARY_SENSOR,)
     )
 
@@ -26,14 +26,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def config_entry_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Update listener, called when the config entry options are changed."""
 
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, (Platform.BINARY_SENSOR,)
     )

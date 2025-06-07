@@ -7,20 +7,20 @@ from zigpy.const import SIG_EP_INPUT, SIG_EP_OUTPUT, SIG_EP_PROFILE, SIG_EP_TYPE
 from zigpy.profiles import zha
 from zigpy.zcl.clusters import general, security
 
-from homeassistant.components.zha.helpers import (
+from menuai.components.zha.helpers import (
     ZHADeviceProxy,
     ZHAGatewayProxy,
     get_zha_gateway,
     get_zha_gateway_proxy,
 )
-from homeassistant.const import (
+from menuai.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er
 
 from .common import find_entity_id
 
@@ -31,7 +31,7 @@ from tests.common import mock_restore_cache
 def select_select_only():
     """Only set up the select and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.BUTTON,
             Platform.DEVICE_TRACKER,
@@ -47,7 +47,7 @@ def select_select_only():
 
 
 async def test_select(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_zha,
     zigpy_device_mock,
@@ -55,8 +55,8 @@ async def test_select(
     """Test ZHA select platform."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -71,15 +71,15 @@ async def test_select(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
     entity_id = find_entity_id(
-        Platform.SELECT, zha_device_proxy, hass, qualifier="tone"
+        Platform.SELECT, zha_device_proxy, menuai, qualifier="tone"
     )
     assert entity_id is not None
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes["options"] == [
@@ -97,7 +97,7 @@ async def test_select(
     assert entity_entry.entity_category == EntityCategory.CONFIG
 
     # Test select option with string value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -107,7 +107,7 @@ async def test_select(
         blocking=True,
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == security.IasWd.Warning.WarningMode.Burglar.name
 
@@ -125,7 +125,7 @@ async def test_select(
     ],
 )
 async def test_select_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_zha,
     zigpy_device_mock,
@@ -135,7 +135,7 @@ async def test_select_restore_state(
     """Test ZHA select platform restore state."""
     entity_id = "select.fakemanufacturer_fakemodel_default_siren_tone"
 
-    mock_restore_cache(hass, [State(entity_id, restored_state)])
+    mock_restore_cache(menuai, [State(entity_id, restored_state)])
 
     await setup_zha()
 
@@ -150,11 +150,11 @@ async def test_select_restore_state(
         }
     )
 
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == expected_state

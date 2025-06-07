@@ -4,23 +4,23 @@ from __future__ import annotations
 
 from typing import cast
 
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.const import ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant, State
+from menuai.const import ATTR_FRIENDLY_NAME
+from menuai.core import menuai, State
 
 from .const import DATA_COMPONENT, DOMAIN
 
 
-async def async_get_media_source(hass: HomeAssistant) -> ImageMediaSource:
+async def async_get_media_source(menuai: menuai) -> ImageMediaSource:
     """Set up image media source."""
-    return ImageMediaSource(hass)
+    return ImageMediaSource(menuai)
 
 
 class ImageMediaSource(MediaSource):
@@ -28,14 +28,14 @@ class ImageMediaSource(MediaSource):
 
     name: str = "Image"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize ImageMediaSource."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a url."""
-        image = self.hass.data[DATA_COMPONENT].get_entity(item.identifier)
+        image = self.menuai.data[DATA_COMPONENT].get_entity(item.identifier)
 
         if not image:
             raise Unresolvable(f"Could not resolve media item: {item.identifier}")
@@ -58,14 +58,14 @@ class ImageMediaSource(MediaSource):
                 identifier=image.entity_id,
                 media_class=MediaClass.VIDEO,
                 media_content_type=image.content_type,
-                title=cast(State, self.hass.states.get(image.entity_id)).attributes.get(
+                title=cast(State, self.menuai.states.get(image.entity_id)).attributes.get(
                     ATTR_FRIENDLY_NAME, image.name
                 ),
                 thumbnail=f"/api/image_proxy/{image.entity_id}",
                 can_play=True,
                 can_expand=False,
             )
-            for image in self.hass.data[DATA_COMPONENT].entities
+            for image in self.menuai.data[DATA_COMPONENT].entities
         ]
 
         return BrowseMediaSource(

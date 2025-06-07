@@ -9,15 +9,15 @@ from typing import Final
 
 from pyfronius import Fronius, FroniusError
 
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import ATTR_MODEL, ATTR_SW_VERSION, CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import ATTR_MODEL, ATTR_SW_VERSION, CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
 
 from .const import (
     DOMAIN,
@@ -42,33 +42,33 @@ PLATFORMS: Final = [Platform.SENSOR]
 type FroniusConfigEntry = ConfigEntry[FroniusSolarNet]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FroniusConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FroniusConfigEntry) -> bool:
     """Set up fronius from a config entry."""
     host = entry.data[CONF_HOST]
     fronius = Fronius(
         async_get_clientsession(
-            hass,
+            menuai,
             # Fronius Gen24 firmware 1.35.4-1 redirects to HTTPS with self-signed
             # certificate. See https://github.com/home-assistant/core/issues/138881
             verify_ssl=False,
         ),
         host,
     )
-    solar_net = FroniusSolarNet(hass, entry, fronius)
+    solar_net = FroniusSolarNet(menuai, entry, fronius)
     await solar_net.init_devices()
 
     entry.runtime_data = solar_net
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FroniusConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FroniusConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: FroniusConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: FroniusConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
     return True
@@ -78,10 +78,10 @@ class FroniusSolarNet:
     """The FroniusSolarNet class routes received values to sensor entities."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, fronius: Fronius
+        self, menuai: menuai, entry: ConfigEntry, fronius: Fronius
     ) -> None:
         """Initialize FroniusSolarNet class."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = entry
         self.coordinator_lock = asyncio.Lock()
         self.fronius = fronius
@@ -102,7 +102,7 @@ class FroniusSolarNet:
         """Initialize DataUpdateCoordinators for SolarNet devices."""
         if self.config_entry.data["is_logger"]:
             self.logger_coordinator = FroniusLoggerUpdateCoordinator(
-                hass=self.hass,
+                menuai=self.menuai,
                 solar_net=self,
                 logger=_LOGGER,
                 name=f"{DOMAIN}_logger_{self.host}",
@@ -116,7 +116,7 @@ class FroniusSolarNet:
 
         self.meter_coordinator = await self._init_optional_coordinator(
             FroniusMeterUpdateCoordinator(
-                hass=self.hass,
+                menuai=self.menuai,
                 solar_net=self,
                 logger=_LOGGER,
                 name=f"{DOMAIN}_meters_{self.host}",
@@ -125,7 +125,7 @@ class FroniusSolarNet:
 
         self.ohmpilot_coordinator = await self._init_optional_coordinator(
             FroniusOhmpilotUpdateCoordinator(
-                hass=self.hass,
+                menuai=self.menuai,
                 solar_net=self,
                 logger=_LOGGER,
                 name=f"{DOMAIN}_ohmpilot_{self.host}",
@@ -134,7 +134,7 @@ class FroniusSolarNet:
 
         self.power_flow_coordinator = await self._init_optional_coordinator(
             FroniusPowerFlowUpdateCoordinator(
-                hass=self.hass,
+                menuai=self.menuai,
                 solar_net=self,
                 logger=_LOGGER,
                 name=f"{DOMAIN}_power_flow_{self.host}",
@@ -143,7 +143,7 @@ class FroniusSolarNet:
 
         self.storage_coordinator = await self._init_optional_coordinator(
             FroniusStorageUpdateCoordinator(
-                hass=self.hass,
+                menuai=self.menuai,
                 solar_net=self,
                 logger=_LOGGER,
                 name=f"{DOMAIN}_storages_{self.host}",
@@ -153,7 +153,7 @@ class FroniusSolarNet:
         # Setup periodic re-scan
         self.config_entry.async_on_unload(
             async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._init_devices_inverter,
                 timedelta(minutes=SOLAR_NET_RESCAN_TIMER),
             )
@@ -177,7 +177,7 @@ class FroniusSolarNet:
                 "value"
             ]
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             **solar_net_device,
@@ -201,7 +201,7 @@ class FroniusSolarNet:
                 continue
 
             _coordinator = FroniusInverterUpdateCoordinator(
-                hass=self.hass,
+                menuai=self.menuai,
                 solar_net=self,
                 logger=_LOGGER,
                 name=_inverter_name,
@@ -215,7 +215,7 @@ class FroniusSolarNet:
 
             # Only for re-scans. Initial setup adds entities through sensor.async_setup_entry
             if self.config_entry.state == ConfigEntryState.LOADED:
-                async_dispatcher_send(self.hass, SOLAR_NET_DISCOVERY_NEW, _coordinator)
+                async_dispatcher_send(self.menuai, SOLAR_NET_DISCOVERY_NEW, _coordinator)
 
             _LOGGER.debug(
                 "New inverter added (UID: %s)",

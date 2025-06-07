@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.vilfo import DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST
+from menuai.components.vilfo import DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST
 
 from tests.common import MockConfigEntry
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.vilfo.async_setup_entry",
+        "menuai.components.vilfo.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -25,7 +25,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_vilfo_client() -> Generator[AsyncMock]:
     """Mock a Vilfo client."""
     with patch(
-        "homeassistant.components.vilfo.config_flow.VilfoClient",
+        "menuai.components.vilfo.config_flow.VilfoClient",
         autospec=True,
     ) as mock_client:
         client = mock_client.return_value
@@ -41,7 +41,7 @@ def mock_vilfo_client() -> Generator[AsyncMock]:
 def mock_is_valid_host() -> Generator[AsyncMock]:
     """Mock is_valid_host."""
     with patch(
-        "homeassistant.components.vilfo.config_flow.is_host_valid",
+        "menuai.components.vilfo.config_flow.is_host_valid",
         return_value=True,
     ) as mock_is_valid_host:
         yield mock_is_valid_host

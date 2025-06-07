@@ -9,21 +9,21 @@ from urllib.parse import urlparse
 from rokuecp import Roku, RokuError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_PLAY_MEDIA_APP_ID, DEFAULT_PLAY_MEDIA_APP_ID, DOMAIN
 from .coordinator import RokuConfigEntry
@@ -36,12 +36,12 @@ ERROR_UNKNOWN = "unknown"
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     roku = Roku(data[CONF_HOST], session=session)
     device = await roku.update()
 
@@ -99,7 +99,7 @@ class RokuConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except RokuError:
             _LOGGER.debug("Roku Error", exc_info=True)
             errors["base"] = ERROR_CANNOT_CONNECT
@@ -133,7 +133,7 @@ class RokuConfigFlow(ConfigFlow, domain=DOMAIN):
         self.discovery_info.update({CONF_HOST: discovery_info.host})
 
         try:
-            info = await validate_input(self.hass, self.discovery_info)
+            info = await validate_input(self.menuai, self.discovery_info)
         except RokuError:
             _LOGGER.debug("Roku Error", exc_info=True)
             return self.async_abort(reason=ERROR_CANNOT_CONNECT)
@@ -167,7 +167,7 @@ class RokuConfigFlow(ConfigFlow, domain=DOMAIN):
         self.discovery_info.update({CONF_HOST: host, CONF_NAME: name})
 
         try:
-            await validate_input(self.hass, self.discovery_info)
+            await validate_input(self.menuai, self.discovery_info)
         except RokuError:
             _LOGGER.debug("Roku Error", exc_info=True)
             return self.async_abort(reason=ERROR_CANNOT_CONNECT)

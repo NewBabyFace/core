@@ -4,8 +4,8 @@ import datetime as dt
 
 import pytest
 
-from homeassistant.components.jewish_calendar.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.jewish_calendar.const import DOMAIN
+from menuai.core import menuai
 
 
 @pytest.mark.parametrize(
@@ -72,11 +72,11 @@ from homeassistant.core import HomeAssistant
 )
 @pytest.mark.usefixtures("setup_at_time")
 async def test_get_omer_blessing(
-    hass: HomeAssistant, service_data: dict[str, str | dt.date | bool], expected: str
+    menuai: menuai, service_data: dict[str, str | dt.date | bool], expected: str
 ) -> None:
     """Test get omer blessing."""
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN,
         "count_omer",
         service_data,

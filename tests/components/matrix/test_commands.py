@@ -8,8 +8,8 @@ from typing import Any
 from nio import MatrixRoom, RoomMessageText
 import pytest
 
-from homeassistant.components.matrix import MatrixBot, RoomID
-from homeassistant.core import Event, HomeAssistant
+from menuai.components.matrix import MatrixBot, RoomID
+from menuai.core import Event, menuai
 
 from .conftest import (
     MOCK_EXPRESSION_COMMANDS,
@@ -126,7 +126,7 @@ self_command_global = partial(
     ),
 )
 async def test_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     matrix_bot: MatrixBot,
     command_events: list[Event],
     command_params: CommandTestParameters,
@@ -134,10 +134,10 @@ async def test_commands(
     """Test that the configured commands are used correctly."""
     room = MatrixRoom(room_id=command_params.room_id, own_user_id=matrix_bot._mx_id)
 
-    await hass.async_start()
+    await menuai.async_start()
     assert len(command_events) == 0
     await matrix_bot._handle_room_message(room, command_params.room_message)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # MatrixBot should emit exactly one Event with matching data from this Command
     assert len(command_events) == 1
@@ -155,7 +155,7 @@ async def test_commands(
     ),
 )
 async def test_non_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     matrix_bot: MatrixBot,
     command_events: list[Event],
     command_params: CommandTestParameters,
@@ -163,18 +163,18 @@ async def test_non_commands(
     """Test that normal/non-qualifying messages don't wrongly trigger commands."""
     room = MatrixRoom(room_id=command_params.room_id, own_user_id=matrix_bot._mx_id)
 
-    await hass.async_start()
+    await menuai.async_start()
     assert len(command_events) == 0
     await matrix_bot._handle_room_message(room, command_params.room_message)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # MatrixBot should not treat this message as a Command
     assert len(command_events) == 0
 
 
-async def test_commands_parsing(hass: HomeAssistant, matrix_bot: MatrixBot) -> None:
+async def test_commands_parsing(menuai: menuai, matrix_bot: MatrixBot) -> None:
     """Test that the configured commands were parsed correctly."""
 
-    await hass.async_start()
+    await menuai.async_start()
     assert matrix_bot._word_commands == MOCK_WORD_COMMANDS
     assert matrix_bot._expression_commands == MOCK_EXPRESSION_COMMANDS

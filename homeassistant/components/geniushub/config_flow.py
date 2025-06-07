@@ -11,9 +11,9 @@ import aiohttp
 from geniushubclient import GeniusService
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -65,7 +65,7 @@ class GeniusHubConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_HOST],
                 username=user_input[CONF_USERNAME],
                 password=user_input[CONF_PASSWORD],
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             try:
                 response = await service.request("GET", "auth/release")
@@ -100,7 +100,7 @@ class GeniusHubConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match(user_input)
             service = GeniusService(
-                user_input[CONF_TOKEN], session=async_get_clientsession(self.hass)
+                user_input[CONF_TOKEN], session=async_get_clientsession(self.menuai)
             )
             try:
                 await service.request("GET", "version")

@@ -5,7 +5,7 @@ from asyncio import timeout
 import logging
 from typing import Any
 
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.entity import Entity
 
 from .const import STATE_KEY_STATE
 from .hub import AdsHub
@@ -46,7 +46,7 @@ class AdsEntity(Entity):
             else:
                 self._state_dict[state_key] = value / factor
 
-            asyncio.run_coroutine_threadsafe(async_event_set(), self.hass.loop)
+            asyncio.run_coroutine_threadsafe(async_event_set(), self.menuai.loop)
             self.schedule_update_ha_state()
 
         async def async_event_set():
@@ -55,7 +55,7 @@ class AdsEntity(Entity):
 
         self._event = asyncio.Event()
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ads_hub.add_device_notification, ads_var, plctype, update
         )
         try:

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dwdwfsapi import DwdWeatherWarningsAPI
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import location as location_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import location as location_util
 
 from .const import (
     CONF_REGION_DEVICE_TRACKER,
@@ -29,11 +29,11 @@ class DwdWeatherWarningsCoordinator(DataUpdateCoordinator[None]):
     api: DwdWeatherWarningsAPI
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: DwdWeatherWarningsConfigEntry
+        self, menuai: menuai, config_entry: DwdWeatherWarningsConfigEntry
     ) -> None:
         """Initialize the dwd_weather_warnings coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -46,7 +46,7 @@ class DwdWeatherWarningsCoordinator(DataUpdateCoordinator[None]):
     async def _async_setup(self) -> None:
         """Set up coordinator."""
         if region_identifier := self.config_entry.data.get(CONF_REGION_IDENTIFIER):
-            self.api = await self.hass.async_add_executor_job(
+            self.api = await self.menuai.async_add_executor_job(
                 DwdWeatherWarningsAPI, region_identifier
             )
         else:
@@ -58,7 +58,7 @@ class DwdWeatherWarningsCoordinator(DataUpdateCoordinator[None]):
         """Get the latest data from the DWD Weather Warnings API."""
         if self._device_tracker:
             try:
-                position = get_position_data(self.hass, self._device_tracker)
+                position = get_position_data(self.menuai, self._device_tracker)
             except (EntityNotFoundError, AttributeError) as err:
                 raise UpdateFailed(f"Error fetching position: {err!r}") from err
 
@@ -76,13 +76,13 @@ class DwdWeatherWarningsCoordinator(DataUpdateCoordinator[None]):
                 # or when the distance to the previous position
                 # changes by more than 50 meters (to take GPS
                 # inaccuracy into account).
-                self.api = await self.hass.async_add_executor_job(
+                self.api = await self.menuai.async_add_executor_job(
                     DwdWeatherWarningsAPI, position
                 )
             else:
                 # Otherwise update the API to check for new warnings.
-                await self.hass.async_add_executor_job(self.api.update)
+                await self.menuai.async_add_executor_job(self.api.update)
 
             self._previous_position = position
         else:
-            await self.hass.async_add_executor_job(self.api.update)
+            await self.menuai.async_add_executor_job(self.api.update)

@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 from apyosoenergyapi.helper import osoenergy_exceptions
 
-from homeassistant import config_entries
-from homeassistant.components.osoenergy.const import DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.osoenergy.const import DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -18,9 +18,9 @@ TEST_USER_EMAIL = "test_user_email@domain.com"
 UPDATED_SCAN_INTERVAL = 60
 
 
-async def test_user_flow(hass: HomeAssistant) -> None:
+async def test_user_flow(menuai: menuai) -> None:
     """Test the user flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -29,18 +29,18 @@ async def test_user_flow(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.osoenergy.config_flow.OSOEnergy.get_user_email",
+            "menuai.components.osoenergy.config_flow.OSOEnergy.get_user_email",
             return_value=TEST_USER_EMAIL,
         ),
         patch(
-            "homeassistant.components.osoenergy.async_setup_entry", return_value=True
+            "menuai.components.osoenergy.async_setup_entry", return_value=True
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: SUBSCRIPTION_KEY},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == TEST_USER_EMAIL
@@ -49,60 +49,60 @@ async def test_user_flow(hass: HomeAssistant) -> None:
     }
 
     assert len(mock_setup_entry.mock_calls) == 1
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
 
-async def test_reauth_flow(hass: HomeAssistant) -> None:
+async def test_reauth_flow(menuai: menuai) -> None:
     """Test the reauth flow."""
     mock_config = MockConfigEntry(
         domain=DOMAIN,
         unique_id=TEST_USER_EMAIL,
         data={CONF_API_KEY: SUBSCRIPTION_KEY},
     )
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.osoenergy.config_flow.OSOEnergy.get_user_email",
+        "menuai.components.osoenergy.config_flow.OSOEnergy.get_user_email",
         return_value=None,
     ):
-        result = await mock_config.start_reauth_flow(hass)
+        result = await mock_config.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.osoenergy.config_flow.OSOEnergy.get_user_email",
+        "menuai.components.osoenergy.config_flow.OSOEnergy.get_user_email",
         return_value=TEST_USER_EMAIL,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: SUBSCRIPTION_KEY,
             },
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_config.data.get(CONF_API_KEY) == SUBSCRIPTION_KEY
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
 
-async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
+async def test_abort_if_existing_entry(menuai: menuai) -> None:
     """Check flow abort when an entry already exist."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=TEST_USER_EMAIL,
         data={CONF_API_KEY: SUBSCRIPTION_KEY},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.osoenergy.config_flow.OSOEnergy.get_user_email",
+        "menuai.components.osoenergy.config_flow.OSOEnergy.get_user_email",
         return_value=TEST_USER_EMAIL,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data={
@@ -114,9 +114,9 @@ async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_user_flow_invalid_subscription_key(hass: HomeAssistant) -> None:
+async def test_user_flow_invalid_subscription_key(menuai: menuai) -> None:
     """Test user flow with invalid username."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -124,10 +124,10 @@ async def test_user_flow_invalid_subscription_key(hass: HomeAssistant) -> None:
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.osoenergy.config_flow.OSOEnergy.get_user_email",
+        "menuai.components.osoenergy.config_flow.OSOEnergy.get_user_email",
         return_value=None,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: SUBSCRIPTION_KEY},
         )
@@ -138,10 +138,10 @@ async def test_user_flow_invalid_subscription_key(hass: HomeAssistant) -> None:
 
 
 async def test_user_flow_exception_on_subscription_key_check(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test user flow with invalid username."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -149,10 +149,10 @@ async def test_user_flow_exception_on_subscription_key_check(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.osoenergy.config_flow.OSOEnergy.get_user_email",
+        "menuai.components.osoenergy.config_flow.OSOEnergy.get_user_email",
         side_effect=osoenergy_exceptions.OSOEnergyReauthRequired(),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: SUBSCRIPTION_KEY},
         )

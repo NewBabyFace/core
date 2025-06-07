@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.bmw_connected_drive import DEFAULT_OPTIONS
-from homeassistant.components.bmw_connected_drive.const import CONF_READ_ONLY, DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.bmw_connected_drive import DEFAULT_OPTIONS
+from menuai.components.bmw_connected_drive.const import CONF_READ_ONLY, DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import BIMMER_CONNECTED_VEHICLE_PATCH, FIXTURE_CONFIG_ENTRY
 
@@ -33,7 +33,7 @@ VEHICLE_NAME_SLUG = "i3_rex"
     ],
 )
 async def test_migrate_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     options: dict,
 ) -> None:
     """Test successful migration of options."""
@@ -42,18 +42,18 @@ async def test_migrate_options(
     config_entry["options"] = options
 
     mock_config_entry = MockConfigEntry(**config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(
-        hass.config_entries.async_get_entry(mock_config_entry.entry_id).options
+        menuai.config_entries.async_get_entry(mock_config_entry.entry_id).options
     ) == len(DEFAULT_OPTIONS)
 
 
 @pytest.mark.usefixtures("bmw_fixture")
-async def test_migrate_options_from_data(hass: HomeAssistant) -> None:
+async def test_migrate_options_from_data(menuai: menuai) -> None:
     """Test successful migration of options."""
 
     config_entry = deepcopy(FIXTURE_CONFIG_ENTRY)
@@ -61,12 +61,12 @@ async def test_migrate_options_from_data(hass: HomeAssistant) -> None:
     config_entry["data"].update({CONF_READ_ONLY: False})
 
     mock_config_entry = MockConfigEntry(**config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    updated_config_entry = hass.config_entries.async_get_entry(
+    updated_config_entry = menuai.config_entries.async_get_entry(
         mock_config_entry.entry_id
     )
     assert len(updated_config_entry.options) == len(DEFAULT_OPTIONS)
@@ -134,7 +134,7 @@ async def test_migrate_options_from_data(hass: HomeAssistant) -> None:
     ],
 )
 async def test_migrate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entitydata: dict,
     old_unique_id: str,
     new_unique_id: str,
@@ -143,7 +143,7 @@ async def test_migrate_unique_ids(
     """Test successful migration of entity unique_ids."""
     confg_entry = deepcopy(FIXTURE_CONFIG_ENTRY)
     mock_config_entry = MockConfigEntry(**confg_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         **entitydata,
@@ -156,8 +156,8 @@ async def test_migrate_unique_ids(
         BIMMER_CONNECTED_VEHICLE_PATCH,
         return_value=[],
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -181,7 +181,7 @@ async def test_migrate_unique_ids(
     ],
 )
 async def test_dont_migrate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entitydata: dict,
     old_unique_id: str,
     new_unique_id: str,
@@ -190,7 +190,7 @@ async def test_dont_migrate_unique_ids(
     """Test successful migration of entity unique_ids."""
     confg_entry = deepcopy(FIXTURE_CONFIG_ENTRY)
     mock_config_entry = MockConfigEntry(**confg_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     # create existing entry with new_unique_id
     existing_entity = entity_registry.async_get_or_create(
@@ -212,8 +212,8 @@ async def test_dont_migrate_unique_ids(
         BIMMER_CONNECTED_VEHICLE_PATCH,
         return_value=[],
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -228,13 +228,13 @@ async def test_dont_migrate_unique_ids(
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_remove_stale_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test remove stale device registry entries."""
     config_entry = deepcopy(FIXTURE_CONFIG_ENTRY)
     mock_config_entry = MockConfigEntry(**config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -248,8 +248,8 @@ async def test_remove_stale_devices(
     device_entry = device_entries[0]
     assert device_entry.identifiers == {(DOMAIN, "stale_device_id")}
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, mock_config_entry.entry_id

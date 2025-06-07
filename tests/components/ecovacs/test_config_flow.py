@@ -11,17 +11,17 @@ from deebot_client.exceptions import InvalidAuthenticationError, MqttError
 from deebot_client.mqtt_client import create_mqtt_config
 import pytest
 
-from homeassistant.components.ecovacs.const import (
+from menuai.components.ecovacs.const import (
     CONF_OVERRIDE_MQTT_URL,
     CONF_OVERRIDE_REST_URL,
     CONF_VERIFY_MQTT_CERTIFICATE,
     DOMAIN,
     InstanceMode,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_MODE, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_MODE, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import (
     VALID_ENTRY_DATA_CLOUD,
@@ -41,11 +41,11 @@ class _TestFnUserInput:
 
 
 async def _test_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_input: _TestFnUserInput,
 ) -> dict[str, Any]:
     """Test config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -54,18 +54,18 @@ async def _test_user_flow(
     assert result["step_id"] == "auth"
     assert not result["errors"]
 
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=user_input.auth,
     )
 
 
 async def _test_user_flow_show_advanced_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_input: _TestFnUserInput,
 ) -> dict[str, Any]:
     """Test config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER, "show_advanced_options": True},
     )
@@ -74,7 +74,7 @@ async def _test_user_flow_show_advanced_options(
     assert result["step_id"] == "user"
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=user_input.user,
     )
@@ -83,7 +83,7 @@ async def _test_user_flow_show_advanced_options(
     assert result["step_id"] == "auth"
     assert not result["errors"]
 
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=user_input.auth,
     )
@@ -111,16 +111,16 @@ async def _test_user_flow_show_advanced_options(
     ids=["advanced_cloud", "advanced_self_hosted", "cloud"],
 )
 async def test_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_authenticator_authenticate: AsyncMock,
     mock_mqtt_client: Mock,
-    test_fn: Callable[[HomeAssistant, _TestFnUserInput], Awaitable[dict[str, Any]]],
+    test_fn: Callable[[menuai, _TestFnUserInput], Awaitable[dict[str, Any]]],
     test_fn_user_input: _TestFnUserInput,
     entry_data: dict[str, Any],
 ) -> None:
     """Test the user config flow."""
-    result = await test_fn(hass, test_fn_user_input)
+    result = await test_fn(menuai, test_fn_user_input)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == entry_data[CONF_USERNAME]
     assert result["data"] == entry_data
@@ -177,7 +177,7 @@ def _cannot_connect_error(user_input: dict[str, Any]) -> str:
     ids=["advanced_cloud", "advanced_self_hosted", "cloud"],
 )
 async def test_user_flow_raise_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_authenticator_authenticate: AsyncMock,
     mock_mqtt_client: Mock,
@@ -185,7 +185,7 @@ async def test_user_flow_raise_error(
     reason_rest: str,
     side_effect_mqtt: Exception,
     errors_mqtt: Callable[[dict[str, Any]], str],
-    test_fn: Callable[[HomeAssistant, _TestFnUserInput], Awaitable[dict[str, Any]]],
+    test_fn: Callable[[menuai, _TestFnUserInput], Awaitable[dict[str, Any]]],
     test_fn_user_input: _TestFnUserInput,
     entry_data: dict[str, Any],
 ) -> None:
@@ -194,7 +194,7 @@ async def test_user_flow_raise_error(
 
     # Authenticator raises error
     mock_authenticator_authenticate.side_effect = side_effect_rest
-    result = await test_fn(hass, test_fn_user_input)
+    result = await test_fn(menuai, test_fn_user_input)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "auth"
     assert result["errors"] == {"base": reason_rest}
@@ -206,7 +206,7 @@ async def test_user_flow_raise_error(
 
     # MQTT raises error
     mock_mqtt_client.verify_config.side_effect = side_effect_mqtt
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=user_input_auth,
     )
@@ -220,7 +220,7 @@ async def test_user_flow_raise_error(
     mock_authenticator_authenticate.reset_mock(side_effect=True)
     mock_mqtt_client.verify_config.reset_mock(side_effect=True)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=user_input_auth,
     )
@@ -233,7 +233,7 @@ async def test_user_flow_raise_error(
 
 
 async def test_user_flow_self_hosted_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_authenticator_authenticate: AsyncMock,
     mock_mqtt_client: Mock,
@@ -241,7 +241,7 @@ async def test_user_flow_self_hosted_error(
     """Test handling selfhosted errors and custom ssl context."""
 
     result = await _test_user_flow_show_advanced_options(
-        hass,
+        menuai,
         _TestFnUserInput(
             VALID_ENTRY_DATA_SELF_HOSTED
             | {
@@ -267,10 +267,10 @@ async def test_user_flow_self_hosted_error(
 
     data = VALID_ENTRY_DATA_SELF_HOSTED | {CONF_VERIFY_MQTT_CERTIFICATE: False}
     with patch(
-        "homeassistant.components.ecovacs.config_flow.create_mqtt_config",
+        "menuai.components.ecovacs.config_flow.create_mqtt_config",
         wraps=create_mqtt_config,
     ) as mock_create_mqtt_config:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=data,
         )
@@ -307,15 +307,15 @@ async def test_user_flow_self_hosted_error(
     ids=["advanced_cloud", "advanced_self_hosted", "cloud"],
 )
 async def test_already_exists(
-    hass: HomeAssistant,
-    test_fn: Callable[[HomeAssistant, _TestFnUserInput], Awaitable[dict[str, Any]]],
+    menuai: menuai,
+    test_fn: Callable[[menuai, _TestFnUserInput], Awaitable[dict[str, Any]]],
     test_fn_user_input: _TestFnUserInput,
 ) -> None:
     """Test we don't allow duplicated config entries."""
-    MockConfigEntry(domain=DOMAIN, data=test_fn_user_input.auth).add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN, data=test_fn_user_input.auth).add_to_menuai(menuai)
 
     result = await test_fn(
-        hass,
+        menuai,
         test_fn_user_input,
     )
 

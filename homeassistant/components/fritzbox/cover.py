@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import FritzboxConfigEntry
 from .entity import FritzBoxDeviceEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -71,21 +71,21 @@ class FritzboxCover(FritzBoxDeviceEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        await self.hass.async_add_executor_job(self.data.set_blind_open, True)
+        await self.menuai.async_add_executor_job(self.data.set_blind_open, True)
         await self.coordinator.async_refresh()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
-        await self.hass.async_add_executor_job(self.data.set_blind_close, True)
+        await self.menuai.async_add_executor_job(self.data.set_blind_close, True)
         await self.coordinator.async_refresh()
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.data.set_level_percentage, 100 - kwargs[ATTR_POSITION], True
         )
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
-        await self.hass.async_add_executor_job(self.data.set_blind_stop, True)
+        await self.menuai.async_add_executor_job(self.data.set_blind_stop, True)
         await self.coordinator.async_refresh()

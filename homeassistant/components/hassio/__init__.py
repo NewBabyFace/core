@@ -1,4 +1,4 @@
-"""Support for Hass.io."""
+"""Support for menuai.io."""
 
 from __future__ import annotations
 
@@ -14,54 +14,54 @@ from typing import Any, NamedTuple
 from aiohasupervisor import SupervisorError
 import voluptuous as vol
 
-from homeassistant.auth.const import GROUP_ID_ADMIN
-from homeassistant.components import panel_custom
-from homeassistant.components.homeassistant import async_set_stop_handler
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.config_entries import SOURCE_SYSTEM, ConfigEntry
-from homeassistant.const import (
+from menuai.auth.const import GROUP_ID_ADMIN
+from menuai.components import panel_custom
+from menuai.components.menuai import async_set_stop_handler
+from menuai.components.http import StaticPathConfig
+from menuai.config_entries import SOURCE_SYSTEM, ConfigEntry
+from menuai.const import (
     ATTR_NAME,
     EVENT_CORE_CONFIG_UPDATE,
-    HASSIO_USER_NAME,
+    menuaiIO_USER_NAME,
     Platform,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     ServiceCall,
-    async_get_hass_or_none,
+    async_get_menuai_or_none,
     callback,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     discovery_flow,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.deprecation import (
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.deprecation import (
     DeprecatedConstant,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     deprecated_function,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.hassio import (
+from menuai.helpers.event import async_call_later
+from menuai.helpers.menuaiio import (
     get_supervisor_ip as _get_supervisor_ip,
-    is_hassio as _is_hassio,
+    is_menuaiio as _is_menuaiio,
 )
-from homeassistant.helpers.service_info.hassio import (
-    HassioServiceInfo as _HassioServiceInfo,
+from menuai.helpers.service_info.menuaiio import (
+    menuaiioServiceInfo as _menuaiioServiceInfo,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.dt import now
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.async_ import create_eager_task
+from menuai.util.dt import now
 
 # config_flow, diagnostics, system_health, and entity platforms are imported to
-# ensure other dependencies that wait for hassio are not waiting
-# for hassio to import its platforms
+# ensure other dependencies that wait for menuaiio are not waiting
+# for menuaiio to import its platforms
 # backup is pre-imported to ensure that the backup integration does not load
 # it from the event loop
 from . import (  # noqa: F401
@@ -76,15 +76,15 @@ from . import (  # noqa: F401
 from .addon_manager import AddonError, AddonInfo, AddonManager, AddonState  # noqa: F401
 from .addon_panel import async_setup_addon_panel
 from .auth import async_setup_auth_view
-from .config import HassioConfig
+from .config import menuaiioConfig
 from .const import (
     ADDONS_COORDINATOR,
     ATTR_ADDON,
     ATTR_ADDONS,
     ATTR_COMPRESSED,
     ATTR_FOLDERS,
-    ATTR_HOMEASSISTANT,
-    ATTR_HOMEASSISTANT_EXCLUDE_DATABASE,
+    ATTR_menuai,
+    ATTR_menuai_EXCLUDE_DATABASE,
     ATTR_INPUT,
     ATTR_LOCATION,
     ATTR_PASSWORD,
@@ -100,10 +100,10 @@ from .const import (
     DATA_STORE,
     DATA_SUPERVISOR_INFO,
     DOMAIN,
-    HASSIO_UPDATE_INTERVAL,
+    menuaiIO_UPDATE_INTERVAL,
 )
 from .coordinator import (
-    HassioDataUpdateCoordinator,
+    menuaiioDataUpdateCoordinator,
     get_addons_info,
     get_addons_stats,  # noqa: F401
     get_core_info,  # noqa: F401
@@ -117,8 +117,8 @@ from .coordinator import (
 )
 from .discovery import async_setup_discovery_view
 from .handler import (  # noqa: F401
-    HassIO,
-    HassioAPIError,
+    menuaiIO,
+    menuaiioAPIError,
     async_create_backup,
     async_get_green_settings,
     async_get_yellow_settings,
@@ -127,7 +127,7 @@ from .handler import (  # noqa: F401
     async_update_diagnostics,
     get_supervisor_client,
 )
-from .http import HassIOView
+from .http import menuaiIOView
 from .ingress import async_setup_ingress_view
 from .issues import SupervisorIssues
 from .websocket_api import async_load_websocket_api
@@ -135,16 +135,16 @@ from .websocket_api import async_load_websocket_api
 _LOGGER = logging.getLogger(__name__)
 
 get_supervisor_ip = deprecated_function(
-    "homeassistant.helpers.hassio.get_supervisor_ip", breaks_in_ha_version="2025.11"
+    "menuai.helpers.menuaiio.get_supervisor_ip", breaks_in_ha_version="2025.11"
 )(_get_supervisor_ip)
-_DEPRECATED_HassioServiceInfo = DeprecatedConstant(
-    _HassioServiceInfo,
-    "homeassistant.helpers.service_info.hassio.HassioServiceInfo",
+_DEPRECATED_menuaiioServiceInfo = DeprecatedConstant(
+    _menuaiioServiceInfo,
+    "menuai.helpers.service_info.menuaiio.menuaiioServiceInfo",
     "2025.11",
 )
 
 # If new platforms are added, be sure to import them above
-# so we do not make other components that depend on hassio
+# so we do not make other components that depend on menuaiio
 # wait for the import of the platforms
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.UPDATE]
 
@@ -172,9 +172,9 @@ VALID_ADDON_SLUG = vol.Match(re.compile(r"^[-_.A-Za-z0-9]+$"))
 def valid_addon(value: Any) -> str:
     """Validate value is a valid addon slug."""
     value = VALID_ADDON_SLUG(value)
-    hass = async_get_hass_or_none()
+    menuai = async_get_menuai_or_none()
 
-    if hass and (addons := get_addons_info(hass)) is not None and value not in addons:
+    if menuai and (addons := get_addons_info(menuai)) is not None and value not in addons:
         raise vol.Invalid("Not a valid add-on slug")
     return value
 
@@ -197,13 +197,13 @@ SCHEMA_BACKUP_FULL = vol.Schema(
         vol.Optional(ATTR_LOCATION): vol.All(
             cv.string, lambda v: None if v == "/backup" else v
         ),
-        vol.Optional(ATTR_HOMEASSISTANT_EXCLUDE_DATABASE): cv.boolean,
+        vol.Optional(ATTR_menuai_EXCLUDE_DATABASE): cv.boolean,
     }
 )
 
 SCHEMA_BACKUP_PARTIAL = SCHEMA_BACKUP_FULL.extend(
     {
-        vol.Optional(ATTR_HOMEASSISTANT): cv.boolean,
+        vol.Optional(ATTR_menuai): cv.boolean,
         vol.Optional(ATTR_FOLDERS): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional(ATTR_ADDONS): vol.All(cv.ensure_list, [VALID_ADDON_SLUG]),
     }
@@ -218,7 +218,7 @@ SCHEMA_RESTORE_FULL = vol.Schema(
 
 SCHEMA_RESTORE_PARTIAL = SCHEMA_RESTORE_FULL.extend(
     {
-        vol.Optional(ATTR_HOMEASSISTANT): cv.boolean,
+        vol.Optional(ATTR_menuai): cv.boolean,
         vol.Optional(ATTR_FOLDERS): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional(ATTR_ADDONS): vol.All(cv.ensure_list, [VALID_ADDON_SLUG]),
     }
@@ -270,7 +270,7 @@ MAP_SERVICE_API = {
 }
 
 HARDWARE_INTEGRATIONS = {
-    "green": "homeassistant_green",
+    "green": "menuai_green",
     "odroid-c2": "hardkernel",
     "odroid-c4": "hardkernel",
     "odroid-m1": "hardkernel",
@@ -283,7 +283,7 @@ HARDWARE_INTEGRATIONS = {
     "rpi4": "raspberry_pi",
     "rpi4-64": "raspberry_pi",
     "rpi5-64": "raspberry_pi",
-    "yellow": "homeassistant_yellow",
+    "yellow": "menuai_yellow",
 }
 
 
@@ -294,36 +294,36 @@ def hostname_from_addon_slug(addon_slug: str) -> str:
 
 @callback
 @deprecated_function(
-    "homeassistant.helpers.hassio.is_hassio", breaks_in_ha_version="2025.11"
+    "menuai.helpers.menuaiio.is_menuaiio", breaks_in_ha_version="2025.11"
 )
-@bind_hass
-def is_hassio(hass: HomeAssistant) -> bool:
-    """Return true if Hass.io is loaded.
+@bind_menuai
+def is_menuaiio(menuai: menuai) -> bool:
+    """Return true if menuai.io is loaded.
 
     Async friendly.
     """
-    return _is_hassio(hass)
+    return _is_menuaiio(menuai)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa: C901
-    """Set up the Hass.io component."""
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:  # noqa: C901
+    """Set up the menuai.io component."""
     # Check local setup
     for env in ("SUPERVISOR", "SUPERVISOR_TOKEN"):
         if os.environ.get(env):
             continue
         _LOGGER.error("Missing %s environment variable", env)
-        if config_entries := hass.config_entries.async_entries(DOMAIN):
-            hass.async_create_task(
-                hass.config_entries.async_remove(config_entries[0].entry_id)
+        if config_entries := menuai.config_entries.async_entries(DOMAIN):
+            menuai.async_create_task(
+                menuai.config_entries.async_remove(config_entries[0].entry_id)
             )
         return False
 
-    async_load_websocket_api(hass)
+    async_load_websocket_api(menuai)
 
     host = os.environ["SUPERVISOR"]
-    websession = async_get_clientsession(hass)
-    hass.data[DATA_COMPONENT] = hassio = HassIO(hass.loop, websession, host)
-    supervisor_client = get_supervisor_client(hass)
+    websession = async_get_clientsession(menuai)
+    menuai.data[DATA_COMPONENT] = menuaiio = menuaiIO(menuai.loop, websession, host)
+    supervisor_client = get_supervisor_client(menuai)
 
     try:
         await supervisor_client.supervisor.ping()
@@ -331,84 +331,84 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         _LOGGER.warning("Not connected with the supervisor / system too busy!")
 
     # Load the store
-    config_store = HassioConfig(hass)
+    config_store = menuaiioConfig(menuai)
     await config_store.load()
-    hass.data[DATA_CONFIG_STORE] = config_store
+    menuai.data[DATA_CONFIG_STORE] = config_store
 
     refresh_token = None
-    if (hassio_user := config_store.data.hassio_user) is not None:
-        user = await hass.auth.async_get_user(hassio_user)
+    if (menuaiio_user := config_store.data.menuaiio_user) is not None:
+        user = await menuai.auth.async_get_user(menuaiio_user)
         if user and user.refresh_tokens:
             refresh_token = list(user.refresh_tokens.values())[0]
 
-            # Migrate old Hass.io users to be admin.
+            # Migrate old menuai.io users to be admin.
             if not user.is_admin:
-                await hass.auth.async_update_user(user, group_ids=[GROUP_ID_ADMIN])
+                await menuai.auth.async_update_user(user, group_ids=[GROUP_ID_ADMIN])
 
             # Migrate old name
-            if user.name == "Hass.io":
-                await hass.auth.async_update_user(user, name=HASSIO_USER_NAME)
+            if user.name == "menuai.io":
+                await menuai.auth.async_update_user(user, name=menuaiIO_USER_NAME)
 
     if refresh_token is None:
-        user = await hass.auth.async_create_system_user(
-            HASSIO_USER_NAME, group_ids=[GROUP_ID_ADMIN]
+        user = await menuai.auth.async_create_system_user(
+            menuaiIO_USER_NAME, group_ids=[GROUP_ID_ADMIN]
         )
-        refresh_token = await hass.auth.async_create_refresh_token(user)
-        config_store.update(hassio_user=user.id)
+        refresh_token = await menuai.auth.async_create_refresh_token(user)
+        config_store.update(menuaiio_user=user.id)
 
     # This overrides the normal API call that would be forwarded
     development_repo = config.get(DOMAIN, {}).get(CONF_FRONTEND_REPO)
     if development_repo is not None:
-        await hass.http.async_register_static_paths(
+        await menuai.http.async_register_static_paths(
             [
                 StaticPathConfig(
-                    "/api/hassio/app",
-                    os.path.join(development_repo, "hassio/build"),
+                    "/api/menuaiio/app",
+                    os.path.join(development_repo, "menuaiio/build"),
                     False,
                 )
             ]
         )
 
-    hass.http.register_view(HassIOView(host, websession))
+    menuai.http.register_view(menuaiIOView(host, websession))
 
     await panel_custom.async_register_panel(
-        hass,
-        frontend_url_path="hassio",
-        webcomponent_name="hassio-main",
-        js_url="/api/hassio/app/entrypoint.js",
+        menuai,
+        frontend_url_path="menuaiio",
+        webcomponent_name="menuaiio-main",
+        js_url="/api/menuaiio/app/entrypoint.js",
         embed_iframe=True,
         require_admin=True,
     )
 
-    update_hass_api_task = hass.async_create_task(
-        hassio.update_hass_api(config.get("http", {}), refresh_token), eager_start=True
+    update_menuai_api_task = menuai.async_create_task(
+        menuaiio.update_menuai_api(config.get("http", {}), refresh_token), eager_start=True
     )
 
     last_timezone = None
     last_country = None
 
     async def push_config(_: Event | None) -> None:
-        """Push core config to Hass.io."""
+        """Push core config to menuai.io."""
         nonlocal last_timezone
         nonlocal last_country
 
-        new_timezone = str(hass.config.time_zone)
-        new_country = str(hass.config.country)
+        new_timezone = str(menuai.config.time_zone)
+        new_country = str(menuai.config.country)
 
         if new_timezone != last_timezone or new_country != last_country:
             last_timezone = new_timezone
             last_country = new_country
-            await hassio.update_hass_config(new_timezone, new_country)
+            await menuaiio.update_menuai_config(new_timezone, new_country)
 
-    hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, push_config)
+    menuai.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, push_config)
 
-    push_config_task = hass.async_create_task(push_config(None), eager_start=True)
+    push_config_task = menuai.async_create_task(push_config(None), eager_start=True)
     # Start listening for problems with supervisor and making issues
-    hass.data[DATA_KEY_SUPERVISOR_ISSUES] = issues = SupervisorIssues(hass, hassio)
-    issues_task = hass.async_create_task(issues.setup(), eager_start=True)
+    menuai.data[DATA_KEY_SUPERVISOR_ISSUES] = issues = SupervisorIssues(menuai, menuaiio)
+    issues_task = menuai.async_create_task(issues.setup(), eager_start=True)
 
     async def async_service_handler(service: ServiceCall) -> None:
-        """Handle service calls for Hass.io."""
+        """Handle service calls for menuai.io."""
         api_endpoint = MAP_SERVICE_API[service.service]
 
         data = service.data.copy()
@@ -416,93 +416,93 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         slug = data.pop(ATTR_SLUG, None)
         payload = None
 
-        # Pass data to Hass.io API
+        # Pass data to menuai.io API
         if service.service == SERVICE_ADDON_STDIN:
             payload = data[ATTR_INPUT]
         elif api_endpoint.pass_data:
             payload = data
 
         # Call API
-        # The exceptions are logged properly in hassio.send_command
-        with suppress(HassioAPIError):
-            await hassio.send_command(
+        # The exceptions are logged properly in menuaiio.send_command
+        with suppress(menuaiioAPIError):
+            await menuaiio.send_command(
                 api_endpoint.command.format(addon=addon, slug=slug),
                 payload=payload,
                 timeout=api_endpoint.timeout,
             )
 
     for service, settings in MAP_SERVICE_API.items():
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN, service, async_service_handler, schema=settings.schema
         )
 
     async def update_info_data(_: datetime | None = None) -> None:
         """Update last available supervisor information."""
-        supervisor_client = get_supervisor_client(hass)
+        supervisor_client = get_supervisor_client(menuai)
 
         try:
             (
-                hass.data[DATA_INFO],
-                hass.data[DATA_HOST_INFO],
+                menuai.data[DATA_INFO],
+                menuai.data[DATA_HOST_INFO],
                 store_info,
-                hass.data[DATA_CORE_INFO],
-                hass.data[DATA_SUPERVISOR_INFO],
-                hass.data[DATA_OS_INFO],
-                hass.data[DATA_NETWORK_INFO],
+                menuai.data[DATA_CORE_INFO],
+                menuai.data[DATA_SUPERVISOR_INFO],
+                menuai.data[DATA_OS_INFO],
+                menuai.data[DATA_NETWORK_INFO],
             ) = await asyncio.gather(
-                create_eager_task(hassio.get_info()),
-                create_eager_task(hassio.get_host_info()),
+                create_eager_task(menuaiio.get_info()),
+                create_eager_task(menuaiio.get_host_info()),
                 create_eager_task(supervisor_client.store.info()),
-                create_eager_task(hassio.get_core_info()),
-                create_eager_task(hassio.get_supervisor_info()),
-                create_eager_task(hassio.get_os_info()),
-                create_eager_task(hassio.get_network_info()),
+                create_eager_task(menuaiio.get_core_info()),
+                create_eager_task(menuaiio.get_supervisor_info()),
+                create_eager_task(menuaiio.get_os_info()),
+                create_eager_task(menuaiio.get_network_info()),
             )
 
-        except HassioAPIError as err:
+        except menuaiioAPIError as err:
             _LOGGER.warning("Can't read Supervisor data: %s", err)
         else:
-            hass.data[DATA_STORE] = store_info.to_dict()
+            menuai.data[DATA_STORE] = store_info.to_dict()
 
         async_call_later(
-            hass,
-            HASSIO_UPDATE_INTERVAL,
-            HassJob(update_info_data, cancel_on_shutdown=True),
+            menuai,
+            menuaiIO_UPDATE_INTERVAL,
+            menuaiJob(update_info_data, cancel_on_shutdown=True),
         )
 
     # Fetch data
-    update_info_task = hass.async_create_task(update_info_data(), eager_start=True)
+    update_info_task = menuai.async_create_task(update_info_data(), eager_start=True)
 
-    async def _async_stop(hass: HomeAssistant, restart: bool) -> None:
-        """Stop or restart home assistant."""
+    async def _async_stop(menuai: menuai, restart: bool) -> None:
+        """Stop or restart MenuAI."""
         if restart:
-            await supervisor_client.homeassistant.restart()
+            await supervisor_client.menuai.restart()
         else:
-            await supervisor_client.homeassistant.stop()
+            await supervisor_client.menuai.stop()
 
-    # Set a custom handler for the homeassistant.restart and homeassistant.stop services
-    async_set_stop_handler(hass, _async_stop)
+    # Set a custom handler for the menuai.restart and menuai.stop services
+    async_set_stop_handler(menuai, _async_stop)
 
-    # Init discovery Hass.io feature
-    async_setup_discovery_view(hass, hassio)
+    # Init discovery menuai.io feature
+    async_setup_discovery_view(menuai, menuaiio)
 
-    # Init auth Hass.io feature
+    # Init auth menuai.io feature
     assert user is not None
-    async_setup_auth_view(hass, user)
+    async_setup_auth_view(menuai, user)
 
-    # Init ingress Hass.io feature
-    async_setup_ingress_view(hass, host)
+    # Init ingress menuai.io feature
+    async_setup_ingress_view(menuai, host)
 
     # Init add-on ingress panels
-    panels_task = hass.async_create_task(
-        async_setup_addon_panel(hass, hassio), eager_start=True
+    panels_task = menuai.async_create_task(
+        async_setup_addon_panel(menuai, menuaiio), eager_start=True
     )
 
     # Make sure to await the update_info task before
     # _async_setup_hardware_integration is called
     # so the hardware integration can be set up
     # and does not fallback to calling later
-    await update_hass_api_task
+    await update_menuai_api_task
     await panels_task
     await update_info_task
     await push_config_task
@@ -512,11 +512,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     @callback
     def _async_setup_hardware_integration(_: datetime | None = None) -> None:
         """Set up hardware integration for the detected board type."""
-        if (os_info := get_os_info(hass)) is None:
+        if (os_info := get_os_info(menuai)) is None:
             # os info not yet fetched from supervisor, retry later
             async_call_later(
-                hass,
-                HASSIO_UPDATE_INTERVAL,
+                menuai,
+                menuaiIO_UPDATE_INTERVAL,
                 async_setup_hardware_integration_job,
             )
             return
@@ -525,38 +525,38 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         if (hw_integration := HARDWARE_INTEGRATIONS.get(board)) is None:
             return
         discovery_flow.async_create_flow(
-            hass, hw_integration, context={"source": SOURCE_SYSTEM}, data={}
+            menuai, hw_integration, context={"source": SOURCE_SYSTEM}, data={}
         )
 
-    async_setup_hardware_integration_job = HassJob(
+    async_setup_hardware_integration_job = menuaiJob(
         _async_setup_hardware_integration, cancel_on_shutdown=True
     )
 
     _async_setup_hardware_integration()
     discovery_flow.async_create_flow(
-        hass, DOMAIN, context={"source": SOURCE_SYSTEM}, data={}
+        menuai, DOMAIN, context={"source": SOURCE_SYSTEM}, data={}
     )
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    dev_reg = dr.async_get(hass)
-    coordinator = HassioDataUpdateCoordinator(hass, entry, dev_reg)
+    dev_reg = dr.async_get(menuai)
+    coordinator = menuaiioDataUpdateCoordinator(menuai, entry, dev_reg)
     await coordinator.async_config_entry_first_refresh()
-    hass.data[ADDONS_COORDINATOR] = coordinator
+    menuai.data[ADDONS_COORDINATOR] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     # Pop add-on data
-    hass.data.pop(ADDONS_COORDINATOR, None)
+    menuai.data.pop(ADDONS_COORDINATOR, None)
 
     return unload_ok
 

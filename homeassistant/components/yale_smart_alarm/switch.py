@@ -6,9 +6,9 @@ from typing import Any
 
 from yalesmartalarmclient import YaleLock
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import YaleConfigEntry
 from .coordinator import YaleDataUpdateCoordinator
@@ -16,7 +16,7 @@ from .entity import YaleLockEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: YaleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -44,13 +44,13 @@ class YaleAutolockSwitch(YaleLockEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        if await self.hass.async_add_executor_job(self.lock_data.set_autolock, True):
+        if await self.menuai.async_add_executor_job(self.lock_data.set_autolock, True):
             self._attr_is_on = True
             self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        if await self.hass.async_add_executor_job(self.lock_data.set_autolock, False):
+        if await self.menuai.async_add_executor_job(self.lock_data.set_autolock, False):
             self._attr_is_on = False
             self.async_write_ha_state()
 

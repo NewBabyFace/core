@@ -7,9 +7,9 @@ from datetime import datetime
 
 from bring_api import ActivityType, BringList
 
-from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BringConfigEntry
 from .coordinator import BringActivityCoordinator
@@ -19,7 +19,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BringConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -102,9 +102,9 @@ class BringEventEntity(BringBaseEntity, EventEntity):
             else super().entity_picture
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks with your device API/library."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._async_handle_event()
 
     def _handle_coordinator_update(self) -> None:

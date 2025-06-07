@@ -12,13 +12,13 @@ import getmac
 from samsungtvws.encrypted.authenticator import SamsungTVEncryptedWSAsyncAuthenticator
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_METHOD,
@@ -27,18 +27,18 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_TOKEN,
 )
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MANUFACTURER,
     ATTR_UPNP_MODEL_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .bridge import SamsungTVBridge, async_get_device_info, mac_from_device_info
 from .const import (
@@ -204,14 +204,14 @@ class SamsungTVConfigFlow(ConfigFlow, domain=DOMAIN):
             LOGGER.debug("No working config found for %s", self._host)
             raise AbortFlow(result)
         assert method is not None
-        self._bridge = SamsungTVBridge.get_bridge(self.hass, method, self._host)
+        self._bridge = SamsungTVBridge.get_bridge(self.menuai, method, self._host)
 
     async def _async_get_device_info_and_method(
         self,
     ) -> tuple[str, str | None, dict[str, Any] | None]:
         """Get device info and method only once."""
         if self._connect_result is None:
-            result, _, method, info = await async_get_device_info(self.hass, self._host)
+            result, _, method, info = await async_get_device_info(self.menuai, self._host)
             self._connect_result = result
             self._method = method
             self._device_info = info
@@ -244,7 +244,7 @@ class SamsungTVConfigFlow(ConfigFlow, domain=DOMAIN):
             # this should be ignored - but also shouldn't trigger getmac
             if mac != "none":
                 self._mac = mac
-        elif mac := await self.hass.async_add_executor_job(
+        elif mac := await self.menuai.async_add_executor_job(
             partial(getmac.get_mac_address, ip=self._host)
         ):
             self._mac = mac
@@ -252,7 +252,7 @@ class SamsungTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_set_name_host_from_input(self, user_input: dict[str, Any]) -> bool:
         try:
-            self._host = await self.hass.async_add_executor_job(
+            self._host = await self.menuai.async_add_executor_job(
                 socket.gethostbyname, user_input[CONF_HOST]
             )
         except socket.gaierror as err:
@@ -411,12 +411,12 @@ class SamsungTVConfigFlow(ConfigFlow, domain=DOMAIN):
         if not entry_kw_args:
             return None
         LOGGER.debug("Updating existing config entry with %s", entry_kw_args)
-        self.hass.config_entries.async_update_entry(entry, **entry_kw_args)
+        self.menuai.config_entries.async_update_entry(entry, **entry_kw_args)
         if entry.state != ConfigEntryState.LOADED:
             # If its loaded it already has a reload listener in place
             # and we do not want to trigger multiple reloads
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(entry.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(entry.entry_id)
             )
         return entry
 
@@ -431,7 +431,7 @@ class SamsungTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @callback
     def _async_abort_if_host_already_in_progress(self) -> None:
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             raise AbortFlow("already_in_progress")
 
     def is_matching(self, other_flow: Self) -> bool:
@@ -546,7 +546,7 @@ class SamsungTVConfigFlow(ConfigFlow, domain=DOMAIN):
             if method == METHOD_ENCRYPTED_WEBSOCKET:
                 return await self.async_step_reauth_confirm_encrypted()
             bridge = SamsungTVBridge.get_bridge(
-                self.hass,
+                self.menuai,
                 method,
                 reauth_entry.data[CONF_HOST],
             )
@@ -575,7 +575,7 @@ class SamsungTVConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._authenticator is None:
             self._authenticator = SamsungTVEncryptedWSAsyncAuthenticator(
                 host,
-                web_session=async_get_clientsession(self.hass),
+                web_session=async_get_clientsession(self.menuai),
             )
             await self._authenticator.start_pairing()
 

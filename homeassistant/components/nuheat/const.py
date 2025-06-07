@@ -1,6 +1,6 @@
 """Constants for NuHeat thermostats."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "nuheat"
 

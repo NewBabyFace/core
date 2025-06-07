@@ -1,16 +1,16 @@
 """The zodiac component."""
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Load a config entry."""
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
+    await menuai.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR])
+    return await menuai.config_entries.async_unload_platforms(entry, [Platform.SENSOR])

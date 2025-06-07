@@ -8,14 +8,14 @@ from nibe.coil_groups import UNIT_COILGROUPS
 from nibe.heatpump import Model
 import pytest
 
-from homeassistant.components.button import DOMAIN as PLATFORM_DOMAIN, SERVICE_PRESS
-from homeassistant.const import (
+from menuai.components.button import DOMAIN as PLATFORM_DOMAIN, SERVICE_PRESS
+from menuai.const import (
     ATTR_ENTITY_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import async_add_model
 
@@ -23,7 +23,7 @@ from . import async_add_model
 @pytest.fixture(autouse=True)
 async def fixture_single_platform():
     """Only allow this platform to load."""
-    with patch("homeassistant.components.nibe_heatpump.PLATFORMS", [Platform.BUTTON]):
+    with patch("menuai.components.nibe_heatpump.PLATFORMS", [Platform.BUTTON]):
         yield
 
 
@@ -35,7 +35,7 @@ async def fixture_single_platform():
     ],
 )
 async def test_reset_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection: AsyncMock,
     model: Model,
     entity_id: str,
@@ -50,9 +50,9 @@ async def test_reset_button(
     coils[unit.alarm_reset] = 0
     coils[unit.alarm] = 0
 
-    await async_add_model(hass, model)
+    await async_add_model(menuai, model)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -61,18 +61,18 @@ async def test_reset_button(
 
     await freezer_ticker(60)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
 
     # Press button
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify reset was written
     args = mock_connection.write_coil.call_args

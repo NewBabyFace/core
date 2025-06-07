@@ -11,26 +11,26 @@ from unittest.mock import patch
 from habluetooth.advertisement_tracker import TRACKER_BUFFERING_WOBBLE_SECONDS
 import pytest
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth import (
     BaseHaRemoteScanner,
     HaBluetoothConnector,
     storage,
 )
-from homeassistant.components.bluetooth.const import (
+from menuai.components.bluetooth.const import (
     CONNECTABLE_FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
     SCANNER_WATCHDOG_INTERVAL,
     SCANNER_WATCHDOG_TIMEOUT,
     UNAVAILABLE_TRACK_SECONDS,
 )
-from homeassistant.components.bluetooth.manager import HomeAssistantBluetoothManager
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import json_loads
+from menuai.components.bluetooth.manager import menuaiBluetoothManager
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.json import json_loads
 
 from . import (
     FakeRemoteScanner as FakeScanner,
@@ -46,7 +46,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed, async_load_fi
 
 @pytest.mark.parametrize("name_2", [None, "w"])
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_remote_scanner(hass: HomeAssistant, name_2: str | None) -> None:
+async def test_remote_scanner(menuai: menuai, name_2: str | None) -> None:
     """Test the remote scanner base class merges advertisement_data."""
     manager = _get_manager()
 
@@ -138,7 +138,7 @@ async def test_remote_scanner(hass: HomeAssistant, name_2: str | None) -> None:
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_remote_scanner_expires_connectable(hass: HomeAssistant) -> None:
+async def test_remote_scanner_expires_connectable(menuai: menuai) -> None:
     """Test the remote scanner expires stale connectable data."""
     manager = _get_manager()
 
@@ -179,8 +179,8 @@ async def test_remote_scanner_expires_connectable(hass: HomeAssistant) -> None:
         seconds=CONNECTABLE_FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1
     )
     with patch_bluetooth_time(expire_monotonic):
-        async_fire_time_changed(hass, expire_utc)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, expire_utc)
+        await menuai.async_block_till_done()
 
     devices = scanner.discovered_devices
     assert len(scanner.discovered_devices) == 0
@@ -191,7 +191,7 @@ async def test_remote_scanner_expires_connectable(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_remote_scanner_expires_non_connectable(hass: HomeAssistant) -> None:
+async def test_remote_scanner_expires_non_connectable(menuai: menuai) -> None:
     """Test the remote scanner expires stale non connectable data."""
     manager = _get_manager()
 
@@ -240,8 +240,8 @@ async def test_remote_scanner_expires_non_connectable(hass: HomeAssistant) -> No
         seconds=CONNECTABLE_FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1
     )
     with patch_bluetooth_time(expire_monotonic):
-        async_fire_time_changed(hass, expire_utc)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, expire_utc)
+        await menuai.async_block_till_done()
 
     assert len(scanner.discovered_devices) == 0
     assert len(scanner.discovered_devices_and_advertisement_data) == 0
@@ -253,8 +253,8 @@ async def test_remote_scanner_expires_non_connectable(hass: HomeAssistant) -> No
         seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1
     )
     with patch_bluetooth_time(expire_monotonic):
-        async_fire_time_changed(hass, expire_utc)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, expire_utc)
+        await menuai.async_block_till_done()
 
     assert len(scanner.discovered_devices) == 0
     assert len(scanner.discovered_devices_and_advertisement_data) == 0
@@ -264,7 +264,7 @@ async def test_remote_scanner_expires_non_connectable(hass: HomeAssistant) -> No
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_base_scanner_connecting_behavior(hass: HomeAssistant) -> None:
+async def test_base_scanner_connecting_behavior(menuai: menuai) -> None:
     """Test that the default behavior is to mark the scanner as not scanning when connecting."""
     manager = _get_manager()
 
@@ -308,12 +308,12 @@ async def test_base_scanner_connecting_behavior(hass: HomeAssistant) -> None:
 
 
 async def test_restore_history_remote_adapter(
-    hass: HomeAssistant, hass_storage: dict[str, Any], disable_new_discovery_flows
+    menuai: menuai, menuai_storage: dict[str, Any], disable_new_discovery_flows
 ) -> None:
     """Test we can restore history for a remote adapter."""
 
-    data = hass_storage[storage.REMOTE_SCANNER_STORAGE_KEY] = json_loads(
-        await async_load_fixture(hass, "bluetooth.remote_scanners", bluetooth.DOMAIN)
+    data = menuai_storage[storage.REMOTE_SCANNER_STORAGE_KEY] = json_loads(
+        await async_load_fixture(menuai, "bluetooth.remote_scanners", bluetooth.DOMAIN)
     )
     now = time.time()
     timestamps = data["data"]["atom-bluetooth-proxy-ceaac4"][
@@ -332,8 +332,8 @@ async def test_restore_history_remote_adapter(
             "bluetooth_adapters.systems.linux.LinuxAdapters.refresh",
         ),
     ):
-        assert await async_setup_component(hass, bluetooth.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, bluetooth.DOMAIN, {})
+        await menuai.async_block_till_done()
 
     connector = (
         HaBluetoothConnector(MockBleakClient, "mock_bleak_client", lambda: False),
@@ -368,7 +368,7 @@ async def test_restore_history_remote_adapter(
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_device_with_ten_minute_advertising_interval(hass: HomeAssistant) -> None:
+async def test_device_with_ten_minute_advertising_interval(menuai: menuai) -> None:
     """Test a device with a 10 minute advertising interval."""
     manager = _get_manager()
 
@@ -405,7 +405,7 @@ async def test_device_with_ten_minute_advertising_interval(hass: HomeAssistant) 
     advertising_interval = 60 * 10
 
     bparasite_device_unavailable_cancel = bluetooth.async_track_unavailable(
-        hass,
+        menuai,
         _bparasite_device_unavailable_callback,
         bparasite_device.address,
         connectable=False,
@@ -435,12 +435,12 @@ async def test_device_with_ten_minute_advertising_interval(hass: HomeAssistant) 
 
     future_time = new_time
     assert (
-        bluetooth.async_address_present(hass, bparasite_device.address, False) is True
+        bluetooth.async_address_present(menuai, bparasite_device.address, False) is True
     )
     assert bparasite_device_went_unavailable is False
     with patch_bluetooth_time(new_time):
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=future_time))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=future_time))
+        await menuai.async_block_till_done()
 
     assert bparasite_device_went_unavailable is False
 
@@ -451,17 +451,17 @@ async def test_device_with_ten_minute_advertising_interval(hass: HomeAssistant) 
     with patch_bluetooth_time(missed_advertisement_future_time):
         # Fire once for the scanner to expire the device
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
+            menuai, dt_util.utcnow() + timedelta(seconds=UNAVAILABLE_TRACK_SECONDS)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         # Fire again for the manager to expire the device
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=missed_advertisement_future_time)
+            menuai, dt_util.utcnow() + timedelta(seconds=missed_advertisement_future_time)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert (
-        bluetooth.async_address_present(hass, bparasite_device.address, False) is False
+        bluetooth.async_address_present(menuai, bparasite_device.address, False) is False
     )
     assert bparasite_device_went_unavailable is True
     bparasite_device_unavailable_cancel()
@@ -471,7 +471,7 @@ async def test_device_with_ten_minute_advertising_interval(hass: HomeAssistant) 
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_scanner_stops_responding(hass: HomeAssistant) -> None:
+async def test_scanner_stops_responding(menuai: menuai) -> None:
     """Test we mark a scanner are not scanning when it stops responding."""
     manager = _get_manager()
 
@@ -492,8 +492,8 @@ async def test_scanner_stops_responding(hass: HomeAssistant) -> None:
     )
     # We hit the timer with no detections, so we reset the adapter and restart the scanner
     with patch_bluetooth_time(failure_reached_time):
-        async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+        await menuai.async_block_till_done()
 
     assert scanner.scanning is False
 
@@ -533,13 +533,13 @@ async def test_scanner_stops_responding(hass: HomeAssistant) -> None:
     ],
 )
 async def test_remote_scanner_bluetooth_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     manufacturer: str,
     source: str,
 ) -> None:
     """Test the remote scanner gets a bluetooth config entry."""
-    manager: HomeAssistantBluetoothManager = _get_manager()
+    manager: menuaiBluetoothManager = _get_manager()
 
     switchbot_device = generate_ble_device(
         "44:44:33:11:23:45",
@@ -561,14 +561,14 @@ async def test_remote_scanner_bluetooth_config_entry(
     unsetup = scanner.async_setup()
     assert scanner.source == source
     entry = MockConfigEntry(domain="test")
-    entry.add_to_hass(hass)
-    cancel = manager.async_register_hass_scanner(
+    entry.add_to_menuai(menuai)
+    cancel = manager.async_register_menuai_scanner(
         scanner,
         source_domain="test",
         source_model="test",
         source_config_entry_id=entry.entry_id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     scanner.inject_advertisement(switchbot_device, switchbot_device_adv)
     assert len(scanner.discovered_devices) == 1
@@ -576,7 +576,7 @@ async def test_remote_scanner_bluetooth_config_entry(
     cancel()
     unsetup()
 
-    adapter_entry = hass.config_entries.async_entry_for_domain_unique_id(
+    adapter_entry = menuai.config_entries.async_entry_for_domain_unique_id(
         "bluetooth", scanner.source
     )
     assert adapter_entry is not None
@@ -590,7 +590,7 @@ async def test_remote_scanner_bluetooth_config_entry(
     assert dev.manufacturer == manufacturer
 
     manager.async_remove_scanner(scanner.source)
-    await hass.async_block_till_done()
-    assert not hass.config_entries.async_entry_for_domain_unique_id(
+    await menuai.async_block_till_done()
+    assert not menuai.config_entries.async_entry_for_domain_unique_id(
         "bluetooth", scanner.source
     )

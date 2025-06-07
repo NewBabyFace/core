@@ -9,10 +9,10 @@ from pymystrom.bulb import MyStromBulb
 from pymystrom.exceptions import MyStromConnectionError
 from pymystrom.switch import MyStromSwitch
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .models import MyStromData
@@ -41,7 +41,7 @@ def _get_mystrom_switch(host: str) -> MyStromSwitch:
     return MyStromSwitch(host)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up myStrom from a config entry."""
     host = entry.data[CONF_HOST]
     try:
@@ -73,24 +73,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Unsupported myStrom device type: %s", device_type)
         return False
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = MyStromData(
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = MyStromData(
         device=device,
         info=info,
     )
-    await hass.config_entries.async_forward_entry_setups(entry, platforms)
+    await menuai.config_entries.async_forward_entry_setups(entry, platforms)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    device_type = hass.data[DOMAIN][entry.entry_id].info["type"]
+    device_type = menuai.data[DOMAIN][entry.entry_id].info["type"]
     platforms = []
     if device_type in [101, 106, 107, 120]:
         platforms.extend(PLATFORMS_PLUGS)
     elif device_type in [102, 105]:
         platforms.extend(PLATFORMS_BULB)
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, platforms):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

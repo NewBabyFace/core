@@ -11,12 +11,12 @@ from uuid import UUID
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ABOVE,
     CONF_BELOW,
     CONF_DEVICE_CLASS,
@@ -29,20 +29,20 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.exceptions import ConditionError, TemplateError
-from homeassistant.helpers import condition, config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.exceptions import ConditionError, TemplateError
+from menuai.helpers import condition, config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import (
     TrackTemplate,
     TrackTemplateResult,
     TrackTemplateResultInfo,
     async_track_state_change_event,
     async_track_template_result,
 )
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.template import Template, result_as_boolean
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.template import Template, result_as_boolean
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, PLATFORMS
 from .const import (
@@ -189,13 +189,13 @@ def update_probability(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Bayesian Binary sensor."""
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    await async_setup_reload_service(menuai, DOMAIN, PLATFORMS)
 
     name: str = config[CONF_NAME]
     unique_id: str | None = config.get(CONF_UNIQUE_ID)
@@ -212,7 +212,7 @@ async def async_setup_platform(
                 f"{name}/{observation.get(CONF_ENTITY_ID, '')}"
                 f"{observation.get(CONF_VALUE_TEMPLATE, '')}"
             )
-            raise_no_prob_given_false(hass, text)
+            raise_no_prob_given_false(menuai, text)
             _LOGGER.error("Missing prob_given_false YAML entry for %s", text)
             broken_observations.append(observation)
     observations = [x for x in observations if x not in broken_observations]
@@ -282,7 +282,7 @@ class BayesianBinarySensor(BinarySensorEntity):
             "state": self._process_state,
         }
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity about to be added.
 
         All relevant update logic for instance attributes occurs within this closure.
@@ -290,7 +290,7 @@ class BayesianBinarySensor(BinarySensorEntity):
         attributes, by instead focusing on returning relevant data back to this method.
 
         The goal of this method is to ensure that `self.current_observations` and `self.probability`
-        are set on a best-effort basis when this entity is register with hass.
+        are set on a best-effort basis when this entity is register with menuai.
 
         In addition, this method must register the state listener defined within, which
         will be called any time a relevant entity changes its state.
@@ -316,7 +316,7 @@ class BayesianBinarySensor(BinarySensorEntity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass,
+                self.menuai,
                 list(self.observations_by_entity),
                 async_threshold_sensor_state_listener,
             )
@@ -358,7 +358,7 @@ class BayesianBinarySensor(BinarySensorEntity):
 
         for template in self.observations_by_template:
             info = async_track_template_result(
-                self.hass,
+                self.menuai,
                 [TrackTemplate(template, None)],
                 _async_template_result_changed,
             )
@@ -374,7 +374,7 @@ class BayesianBinarySensor(BinarySensorEntity):
         # detect mirrored entries
         for entity, observations in self.observations_by_entity.items():
             raise_mirrored_entries(
-                self.hass, observations, text=f"{self._attr_name}/{entity}"
+                self.menuai, observations, text=f"{self._attr_name}/{entity}"
             )
 
         all_template_observations: list[Observation] = [
@@ -382,7 +382,7 @@ class BayesianBinarySensor(BinarySensorEntity):
         ]
         if len(all_template_observations) == 2:
             raise_mirrored_entries(
-                self.hass,
+                self.menuai,
                 all_template_observations,
                 text=f"{self._attr_name}/{all_template_observations[0].value_template}",
             )
@@ -510,15 +510,15 @@ class BayesianBinarySensor(BinarySensorEntity):
         if TYPE_CHECKING:
             assert entity_id is not None
 
-        entity = self.hass.states.get(entity_id)
+        entity = self.menuai.states.get(entity_id)
         if entity is None:
             return None
 
         try:
-            if condition.state(self.hass, entity, [STATE_UNKNOWN, STATE_UNAVAILABLE]):
+            if condition.state(self.menuai, entity, [STATE_UNKNOWN, STATE_UNAVAILABLE]):
                 return None
             result = condition.async_numeric_state(
-                self.hass,
+                self.menuai,
                 entity,
                 entity_observation.below,
                 entity_observation.above,
@@ -551,10 +551,10 @@ class BayesianBinarySensor(BinarySensorEntity):
         entity = entity_observation.entity_id
 
         try:
-            if condition.state(self.hass, entity, [STATE_UNKNOWN, STATE_UNAVAILABLE]):
+            if condition.state(self.menuai, entity, [STATE_UNKNOWN, STATE_UNAVAILABLE]):
                 return None
 
-            result = condition.state(self.hass, entity, entity_observation.to_state)
+            result = condition.state(self.menuai, entity, entity_observation.to_state)
             if multi and not result:
                 return None
         except ConditionError:

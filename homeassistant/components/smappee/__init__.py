@@ -3,17 +3,17 @@
 from pysmappee import Smappee, helper, mqtt
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_IP_ADDRESS,
     CONF_PLATFORM,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow, config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle
 
 from . import api, config_flow
 from .const import (
@@ -40,29 +40,29 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Smappee component."""
-    hass.data[DOMAIN] = {}
+    menuai.data[DOMAIN] = {}
 
     if DOMAIN not in config:
         return True
 
     client_id = config[DOMAIN][CONF_CLIENT_ID]
-    hass.data[DOMAIN][client_id] = {}
+    menuai.data[DOMAIN][client_id] = {}
 
     # decide platform
     platform = "PRODUCTION"
-    if client_id == "homeassistant_f2":
+    if client_id == "menuai_f2":
         platform = "ACCEPTANCE"
-    elif client_id == "homeassistant_f3":
+    elif client_id == "menuai_f3":
         platform = "DEVELOPMENT"
 
-    hass.data[DOMAIN][CONF_PLATFORM] = platform
+    menuai.data[DOMAIN][CONF_PLATFORM] = platform
 
     config_flow.SmappeeFlowHandler.async_register_implementation(
-        hass,
+        menuai,
         config_entry_oauth2_flow.LocalOAuth2Implementation(
-            hass,
+            menuai,
             DOMAIN,
             config[DOMAIN][CONF_CLIENT_ID],
             config[DOMAIN][CONF_CLIENT_SECRET],
@@ -74,7 +74,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SmappeeConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SmappeeConfigEntry) -> bool:
     """Set up Smappee from a zeroconf or config entry."""
     if CONF_IP_ADDRESS in entry.data:
         if helper.is_smappee_genius(entry.data[CONF_SERIALNUMBER]):
@@ -82,7 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmappeeConfigEntry) -> b
             smappee_mqtt = mqtt.SmappeeLocalMqtt(
                 serial_number=entry.data[CONF_SERIALNUMBER]
             )
-            await hass.async_add_executor_job(smappee_mqtt.start_and_wait_for_config)
+            await menuai.async_add_executor_job(smappee_mqtt.start_and_wait_for_config)
             smappee = Smappee(
                 api=smappee_mqtt, serialnumber=entry.data[CONF_SERIALNUMBER]
             )
@@ -92,42 +92,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmappeeConfigEntry) -> b
             smappee = Smappee(
                 api=smappee_api, serialnumber=entry.data[CONF_SERIALNUMBER]
             )
-        await hass.async_add_executor_job(smappee.load_local_service_location)
+        await menuai.async_add_executor_job(smappee.load_local_service_location)
     else:
         implementation = (
             await config_entry_oauth2_flow.async_get_config_entry_implementation(
-                hass, entry
+                menuai, entry
             )
         )
 
-        smappee_api = api.ConfigEntrySmappeeApi(hass, entry, implementation)
+        smappee_api = api.ConfigEntrySmappeeApi(menuai, entry, implementation)
 
         smappee = Smappee(api=smappee_api)
-        await hass.async_add_executor_job(smappee.load_service_locations)
+        await menuai.async_add_executor_job(smappee.load_service_locations)
 
-    entry.runtime_data = SmappeeBase(hass, smappee)
+    entry.runtime_data = SmappeeBase(menuai, smappee)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SmappeeConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SmappeeConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class SmappeeBase:
     """An object to hold the PySmappee instance."""
 
-    def __init__(self, hass: HomeAssistant, smappee: Smappee) -> None:
+    def __init__(self, menuai: menuai, smappee: Smappee) -> None:
         """Initialize the Smappee API wrapper class."""
-        self.hass = hass
+        self.menuai = menuai
         self.smappee = smappee
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self) -> None:
         """Update all Smappee trends and appliance states."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.smappee.update_trends_and_appliance_states
         )

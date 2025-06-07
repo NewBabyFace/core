@@ -3,12 +3,12 @@
 from agent import AgentError
 from agent.a import Agent
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, SERVER_URL
 
@@ -21,12 +21,12 @@ AgentDVRConfigEntry = ConfigEntry[Agent]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: AgentDVRConfigEntry
+    menuai: menuai, config_entry: AgentDVRConfigEntry
 ) -> bool:
     """Set up the Agent component."""
     server_origin = config_entry.data[SERVER_URL]
 
-    agent_client = Agent(server_origin, async_get_clientsession(hass))
+    agent_client = Agent(server_origin, async_get_clientsession(menuai))
     try:
         await agent_client.update()
     except AgentError as err:
@@ -42,7 +42,7 @@ async def async_setup_entry(
 
     config_entry.runtime_data = agent_client
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -53,13 +53,13 @@ async def async_setup_entry(
         sw_version=agent_client.version,
     )
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: AgentDVRConfigEntry
+    menuai: menuai, config_entry: AgentDVRConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)

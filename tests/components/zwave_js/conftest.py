@@ -14,12 +14,12 @@ from zwave_js_server.model.node import Node
 from zwave_js_server.model.node.data_model import NodeDataType
 from zwave_js_server.version import VersionInfo
 
-from homeassistant.components.zwave_js import PLATFORMS
-from homeassistant.components.zwave_js.const import DOMAIN
-from homeassistant.components.zwave_js.helpers import SERVER_VERSION_TIMEOUT
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonArrayType
+from menuai.components.zwave_js import PLATFORMS
+from menuai.components.zwave_js.const import DOMAIN
+from menuai.components.zwave_js.helpers import SERVER_VERSION_TIMEOUT
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.util.json import JsonArrayType
 
 from tests.common import (
     MockConfigEntry,
@@ -546,7 +546,7 @@ def mock_client_fixture(
 ):
     """Mock a client."""
     with patch(
-        "homeassistant.components.zwave_js.ZwaveClient", autospec=True
+        "menuai.components.zwave_js.ZwaveClient", autospec=True
     ) as client_class:
         client = client_class.return_value
 
@@ -609,12 +609,12 @@ def mock_get_server_version(
     )
     with (
         patch(
-            "homeassistant.components.zwave_js.helpers.get_server_version",
+            "menuai.components.zwave_js.helpers.get_server_version",
             side_effect=server_version_side_effect,
             return_value=version_info,
         ) as mock_version,
         patch(
-            "homeassistant.components.zwave_js.helpers.SERVER_VERSION_TIMEOUT",
+            "menuai.components.zwave_js.helpers.SERVER_VERSION_TIMEOUT",
             new=server_version_timeout,
         ),
     ):
@@ -878,7 +878,7 @@ def nortek_thermostat_removed_event_fixture(client) -> Node:
 
 @pytest.fixture(name="integration")
 async def integration_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     platforms: list[Platform],
 ) -> MockConfigEntry:
@@ -888,10 +888,10 @@ async def integration_fixture(
         data={"url": "ws://test.org"},
         unique_id=str(client.driver.controller.home_id),
     )
-    entry.add_to_hass(hass)
-    with patch("homeassistant.components.zwave_js.PLATFORMS", platforms):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    with patch("menuai.components.zwave_js.PLATFORMS", platforms):
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     client.async_send_command.reset_mock()
 

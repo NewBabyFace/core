@@ -13,15 +13,15 @@ from typing import Any
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ID, ATTR_NAME
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.const import ATTR_DEVICE_ID, ATTR_ID, ATTR_NAME
+from menuai.core import Context, menuai, callback
+from menuai.helpers import (
     area_registry as ar,
     config_validation as cv,
     device_registry as dr,
     intent,
 )
-from homeassistant.util import ulid as ulid_util
+from menuai.util import ulid as ulid_util
 
 from .const import TIMER_DATA
 
@@ -206,9 +206,9 @@ class TimersNotSupportedError(intent.IntentHandleError):
 class TimerManager:
     """Manager for intent timers."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize timer manager."""
-        self.hass = hass
+        self.menuai = menuai
 
         # timer id -> timer
         self.timers: dict[str, TimerInfo] = {}
@@ -279,10 +279,10 @@ class TimerManager:
         )
 
         # Fill in area/floor info
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         if device_id and (device := device_registry.async_get(device_id)):
             timer.area_id = device.area_id
-            area_registry = ar.async_get(self.hass)
+            area_registry = ar.async_get(self.menuai)
             if device.area_id and (
                 area := area_registry.async_get_area(device.area_id)
             ):
@@ -290,7 +290,7 @@ class TimerManager:
                 timer.floor_id = area.floor_id
 
         self.timers[timer_id] = timer
-        self.timer_tasks[timer_id] = self.hass.async_create_background_task(
+        self.timer_tasks[timer_id] = self.menuai.async_create_background_task(
             self._wait_for_timer(timer_id, total_seconds, created_at),
             name=f"Timer {timer_id}",
         )
@@ -358,7 +358,7 @@ class TimerManager:
         if timer.is_active:
             task = self.timer_tasks.pop(timer_id)
             task.cancel()
-            self.timer_tasks[timer_id] = self.hass.async_create_background_task(
+            self.timer_tasks[timer_id] = self.menuai.async_create_background_task(
                 self._wait_for_timer(timer_id, timer.seconds, timer.updated_at),
                 name=f"Timer {timer_id}",
             )
@@ -422,7 +422,7 @@ class TimerManager:
             return
 
         timer.unpause()
-        self.timer_tasks[timer_id] = self.hass.async_create_background_task(
+        self.timer_tasks[timer_id] = self.menuai.async_create_background_task(
             self._wait_for_timer(timer_id, timer.seconds_left, timer.updated_at),
             name=f"Timer {timer.id}",
         )
@@ -445,11 +445,11 @@ class TimerManager:
 
         if timer.conversation_command:
             # pylint: disable-next=import-outside-toplevel
-            from homeassistant.components.conversation import async_converse
+            from menuai.components.conversation import async_converse
 
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 async_converse(
-                    self.hass,
+                    self.menuai,
                     timer.conversation_command,
                     conversation_id=None,
                     context=Context(),
@@ -475,9 +475,9 @@ class TimerManager:
 
 
 @callback
-def async_device_supports_timers(hass: HomeAssistant, device_id: str) -> bool:
+def async_device_supports_timers(menuai: menuai, device_id: str) -> bool:
     """Return True if device has been registered to handle timer events."""
-    timer_manager: TimerManager | None = hass.data.get(TIMER_DATA)
+    timer_manager: TimerManager | None = menuai.data.get(TIMER_DATA)
     if timer_manager is None:
         return False
     return timer_manager.is_timer_device(device_id)
@@ -485,13 +485,13 @@ def async_device_supports_timers(hass: HomeAssistant, device_id: str) -> bool:
 
 @callback
 def async_register_timer_handler(
-    hass: HomeAssistant, device_id: str, handler: TimerHandler
+    menuai: menuai, device_id: str, handler: TimerHandler
 ) -> Callable[[], None]:
     """Register a handler for timer events.
 
     Returns a callable to unregister.
     """
-    timer_manager: TimerManager = hass.data[TIMER_DATA]
+    timer_manager: TimerManager = menuai.data[TIMER_DATA]
     return timer_manager.register_handler(device_id, handler)
 
 
@@ -506,13 +506,13 @@ class FindTimerFilter(StrEnum):
 
 
 def _find_timer(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_id: str | None,
     slots: dict[str, Any],
     find_filter: FindTimerFilter | None = None,
 ) -> TimerInfo:
     """Match a single timer with constraints or raise an error."""
-    timer_manager: TimerManager = hass.data[TIMER_DATA]
+    timer_manager: TimerManager = menuai.data[TIMER_DATA]
 
     # Ignore delayed command timers
     matching_timers: list[TimerInfo] = [
@@ -603,8 +603,8 @@ def _find_timer(
             return matching_device_timers[0]
 
         # Try area/floor
-        device_registry = dr.async_get(hass)
-        area_registry = ar.async_get(hass)
+        device_registry = dr.async_get(menuai)
+        area_registry = ar.async_get(menuai)
         if (
             (device := device_registry.async_get(device_id))
             and device.area_id
@@ -643,10 +643,10 @@ def _find_timer(
 
 
 def _find_timers(
-    hass: HomeAssistant, device_id: str | None, slots: dict[str, Any]
+    menuai: menuai, device_id: str | None, slots: dict[str, Any]
 ) -> list[TimerInfo]:
     """Match multiple timers with constraints or raise an error."""
-    timer_manager: TimerManager = hass.data[TIMER_DATA]
+    timer_manager: TimerManager = menuai.data[TIMER_DATA]
 
     # Ignore delayed command timers
     matching_timers: list[TimerInfo] = [
@@ -711,12 +711,12 @@ def _find_timers(
         return matching_timers
 
     # Use device id to order remaining timers
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = device_registry.async_get(device_id)
     if (device is None) or (device.area_id is None):
         return matching_timers
 
-    area_registry = ar.async_get(hass)
+    area_registry = ar.async_get(menuai)
     area = area_registry.async_get_area(device.area_id)
     if area is None:
         return matching_timers
@@ -818,8 +818,8 @@ class StartTimerIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
-        timer_manager: TimerManager = hass.data[TIMER_DATA]
+        menuai = intent_obj.menuai
+        timer_manager: TimerManager = menuai.data[TIMER_DATA]
         slots = self.async_validate_slots(intent_obj.slots)
 
         conversation_command: str | None = None
@@ -878,11 +878,11 @@ class CancelTimerIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
-        timer_manager: TimerManager = hass.data[TIMER_DATA]
+        menuai = intent_obj.menuai
+        timer_manager: TimerManager = menuai.data[TIMER_DATA]
         slots = self.async_validate_slots(intent_obj.slots)
 
-        timer = _find_timer(hass, intent_obj.device_id, slots)
+        timer = _find_timer(menuai, intent_obj.device_id, slots)
         timer_manager.cancel_timer(timer.id)
         return intent_obj.create_response()
 
@@ -898,12 +898,12 @@ class CancelAllTimersIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
-        timer_manager: TimerManager = hass.data[TIMER_DATA]
+        menuai = intent_obj.menuai
+        timer_manager: TimerManager = menuai.data[TIMER_DATA]
         slots = self.async_validate_slots(intent_obj.slots)
         canceled = 0
 
-        for timer in _find_timers(hass, intent_obj.device_id, slots):
+        for timer in _find_timers(menuai, intent_obj.device_id, slots):
             timer_manager.cancel_timer(timer.id)
             canceled += 1
 
@@ -931,12 +931,12 @@ class IncreaseTimerIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
-        timer_manager: TimerManager = hass.data[TIMER_DATA]
+        menuai = intent_obj.menuai
+        timer_manager: TimerManager = menuai.data[TIMER_DATA]
         slots = self.async_validate_slots(intent_obj.slots)
 
         total_seconds = _get_total_seconds(slots)
-        timer = _find_timer(hass, intent_obj.device_id, slots)
+        timer = _find_timer(menuai, intent_obj.device_id, slots)
         timer_manager.add_time(timer.id, total_seconds)
         return intent_obj.create_response()
 
@@ -955,12 +955,12 @@ class DecreaseTimerIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
-        timer_manager: TimerManager = hass.data[TIMER_DATA]
+        menuai = intent_obj.menuai
+        timer_manager: TimerManager = menuai.data[TIMER_DATA]
         slots = self.async_validate_slots(intent_obj.slots)
 
         total_seconds = _get_total_seconds(slots)
-        timer = _find_timer(hass, intent_obj.device_id, slots)
+        timer = _find_timer(menuai, intent_obj.device_id, slots)
         timer_manager.remove_time(timer.id, total_seconds)
         return intent_obj.create_response()
 
@@ -978,12 +978,12 @@ class PauseTimerIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
-        timer_manager: TimerManager = hass.data[TIMER_DATA]
+        menuai = intent_obj.menuai
+        timer_manager: TimerManager = menuai.data[TIMER_DATA]
         slots = self.async_validate_slots(intent_obj.slots)
 
         timer = _find_timer(
-            hass, intent_obj.device_id, slots, find_filter=FindTimerFilter.ONLY_ACTIVE
+            menuai, intent_obj.device_id, slots, find_filter=FindTimerFilter.ONLY_ACTIVE
         )
         timer_manager.pause_timer(timer.id)
         return intent_obj.create_response()
@@ -1002,12 +1002,12 @@ class UnpauseTimerIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
-        timer_manager: TimerManager = hass.data[TIMER_DATA]
+        menuai = intent_obj.menuai
+        timer_manager: TimerManager = menuai.data[TIMER_DATA]
         slots = self.async_validate_slots(intent_obj.slots)
 
         timer = _find_timer(
-            hass, intent_obj.device_id, slots, find_filter=FindTimerFilter.ONLY_INACTIVE
+            menuai, intent_obj.device_id, slots, find_filter=FindTimerFilter.ONLY_INACTIVE
         )
         timer_manager.unpause_timer(timer.id)
         return intent_obj.create_response()
@@ -1026,11 +1026,11 @@ class TimerStatusIntentHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
 
         statuses: list[dict[str, Any]] = []
-        for timer in _find_timers(hass, intent_obj.device_id, slots):
+        for timer in _find_timers(menuai, intent_obj.device_id, slots):
             total_seconds = timer.seconds_left
 
             minutes, seconds = divmod(total_seconds, 60)

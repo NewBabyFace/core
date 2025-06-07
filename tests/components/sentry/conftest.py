@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.sentry.const import DOMAIN
+from menuai.components.sentry.const import DOMAIN
 
 from tests.common import MockConfigEntry
 
@@ -19,5 +19,5 @@ def config_entry_fixture() -> MockConfigEntry:
 
 @pytest.fixture(name="config")
 def config_fixture() -> dict[str, Any]:
-    """Create hass config fixture."""
+    """Create menuai config fixture."""
     return {DOMAIN: {"dsn": "http://public@sentry.local/1"}}

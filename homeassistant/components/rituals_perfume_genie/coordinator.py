@@ -5,9 +5,9 @@ import logging
 
 from pyrituals import Diffuser
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -21,7 +21,7 @@ class RitualsDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         diffuser: Diffuser,
         update_interval: timedelta,
@@ -29,7 +29,7 @@ class RitualsDataUpdateCoordinator(DataUpdateCoordinator[None]):
         """Initialize global Rituals Perfume Genie data updater."""
         self.diffuser = diffuser
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}-{diffuser.hublot}",

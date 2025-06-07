@@ -5,16 +5,16 @@ from unittest.mock import AsyncMock, patch
 from afsapi import ConnectionError, InvalidPinException, NotImplementedException
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.frontier_silicon.const import (
+from menuai import config_entries
+from menuai.components.frontier_silicon.const import (
     CONF_WEBFSAPI_URL,
     DEFAULT_PIN,
     DOMAIN,
 )
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -45,13 +45,13 @@ INVALID_MOCK_DISCOVERY = SsdpServiceInfo(
     [("mock_radio_id", None), (None, NotImplementedException)],
 )
 async def test_form_default_pin(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     radio_id_return_value: str | None,
     radio_id_side_effect: Exception | None,
 ) -> None:
     """Test manual device add with default pin."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -59,15 +59,15 @@ async def test_form_default_pin(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_radio_id",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_radio_id",
         return_value=radio_id_return_value,
         side_effect=radio_id_side_effect,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.1.1.1", CONF_PORT: 80},
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Name of the device"
@@ -83,13 +83,13 @@ async def test_form_default_pin(
     [("mock_radio_id", None), (None, NotImplementedException)],
 )
 async def test_form_nondefault_pin(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     radio_id_return_value: str | None,
     radio_id_side_effect: Exception | None,
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -97,29 +97,29 @@ async def test_form_nondefault_pin(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
         side_effect=InvalidPinException,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.1.1.1", CONF_PORT: 80},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "device_config"
     assert result2["errors"] is None
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_radio_id",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_radio_id",
         return_value=radio_id_return_value,
         side_effect=radio_id_side_effect,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_PIN: "4321"},
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Name of the device"
@@ -139,13 +139,13 @@ async def test_form_nondefault_pin(
     ],
 )
 async def test_form_nondefault_pin_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     friendly_name_error: Exception,
     result_error: str,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we get the proper errors when trying to validate an user-provided PIN."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -153,38 +153,38 @@ async def test_form_nondefault_pin_invalid(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
         side_effect=InvalidPinException,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.1.1.1", CONF_PORT: 80},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "device_config"
     assert result2["errors"] is None
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
         side_effect=friendly_name_error,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_PIN: "4321"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.FORM
     assert result2["step_id"] == "device_config"
     assert result3["errors"] == {"base": result_error}
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"],
         {CONF_PIN: "4321"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result4["type"] is FlowResultType.CREATE_ENTRY
     assert result4["title"] == "Name of the device"
@@ -203,13 +203,13 @@ async def test_form_nondefault_pin_invalid(
     ],
 )
 async def test_invalid_device_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     webfsapi_endpoint_error: Exception,
     result_error: str,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test flow when the user provides an invalid device IP/hostname."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -217,24 +217,24 @@ async def test_invalid_device_url(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_webfsapi_endpoint",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_webfsapi_endpoint",
         side_effect=webfsapi_endpoint_error,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.1.1.1", CONF_PORT: 80},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
     assert result2["errors"] == {"base": result_error}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {CONF_HOST: "1.1.1.1", CONF_PORT: 80},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Name of the device"
@@ -250,18 +250,18 @@ async def test_invalid_device_url(
     [("mock_radio_id", None), (None, NotImplementedException)],
 )
 async def test_ssdp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MockConfigEntry,
     radio_id_return_value: str | None,
     radio_id_side_effect: Exception | None,
 ) -> None:
     """Test a device being discovered."""
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_radio_id",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_radio_id",
         return_value=radio_id_return_value,
         side_effect=radio_id_side_effect,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_SSDP},
             data=MOCK_DISCOVERY,
@@ -270,12 +270,12 @@ async def test_ssdp(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     flow = flows[0]
     assert flow["context"]["title_placeholders"] == {"name": "Speaker Name"}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -289,10 +289,10 @@ async def test_ssdp(
     mock_setup_entry.assert_called_once()
 
 
-async def test_ssdp_invalid_location(hass: HomeAssistant) -> None:
+async def test_ssdp_invalid_location(menuai: menuai) -> None:
     """Test a device being discovered."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=INVALID_MOCK_DISCOVERY,
@@ -303,13 +303,13 @@ async def test_ssdp_invalid_location(hass: HomeAssistant) -> None:
 
 
 async def test_ssdp_already_configured(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test an already known device being discovered."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=MOCK_DISCOVERY,
@@ -324,14 +324,14 @@ async def test_ssdp_already_configured(
     [(ValueError, "unknown"), (ConnectionError, "cannot_connect")],
 )
 async def test_ssdp_fail(
-    hass: HomeAssistant, webfsapi_endpoint_error: Exception, result_error: str
+    menuai: menuai, webfsapi_endpoint_error: Exception, result_error: str
 ) -> None:
     """Test a device being discovered but failing to reply."""
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_webfsapi_endpoint",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_webfsapi_endpoint",
         side_effect=webfsapi_endpoint_error,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_SSDP},
             data=MOCK_DISCOVERY,
@@ -341,14 +341,14 @@ async def test_ssdp_fail(
     assert result["reason"] == result_error
 
 
-async def test_ssdp_nondefault_pin(hass: HomeAssistant) -> None:
+async def test_ssdp_nondefault_pin(menuai: menuai) -> None:
     """Test a device being discovered."""
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
         side_effect=InvalidPinException,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_SSDP},
             data=MOCK_DISCOVERY,
@@ -358,16 +358,16 @@ async def test_ssdp_nondefault_pin(hass: HomeAssistant) -> None:
     assert result["reason"] == "invalid_auth"
 
 
-async def test_reauth_flow(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def test_reauth_flow(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Test reauth flow."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     assert config_entry.data[CONF_PIN] == "1234"
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "device_config"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PIN: "4242"},
     )
@@ -385,34 +385,34 @@ async def test_reauth_flow(hass: HomeAssistant, config_entry: MockConfigEntry) -
     ],
 )
 async def test_reauth_flow_friendly_name_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     reason: str,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow with failures."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     assert config_entry.data[CONF_PIN] == "1234"
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "device_config"
 
     with patch(
-        "homeassistant.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
+        "menuai.components.frontier_silicon.config_flow.AFSAPI.get_friendly_name",
         side_effect=exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_PIN: "4321"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "device_config"
     assert result2["errors"] == {"base": reason}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PIN: "4242"},
     )

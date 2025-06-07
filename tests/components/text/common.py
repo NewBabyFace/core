@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.components.text import RestoreText, TextEntity
+from menuai.components.text import RestoreText, TextEntity
 
 
 class MockTextEntity(TextEntity):
@@ -35,9 +35,9 @@ class MockRestoreText(MockTextEntity, RestoreText):
 
         self._attr_name = name
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore native_*."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (last_text_data := await self.async_get_last_text_data()) is None:
             return
         self._attr_native_max = last_text_data.native_max

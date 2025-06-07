@@ -17,10 +17,10 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import literal
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 
-from homeassistant.const import COMPRESSED_STATE_LAST_UPDATED, COMPRESSED_STATE_STATE
-from homeassistant.core import HomeAssistant, State, split_entity_id
-from homeassistant.helpers.recorder import get_instance
-from homeassistant.util import dt as dt_util
+from menuai.const import COMPRESSED_STATE_LAST_UPDATED, COMPRESSED_STATE_STATE
+from menuai.core import menuai, State, split_entity_id
+from menuai.helpers.recorder import get_instance
+from menuai.util import dt as dt_util
 
 from ..db_schema import StateAttributes, States
 from ..filters import Filters
@@ -154,7 +154,7 @@ def _lambda_stmt_and_join_attributes(
 
 
 def get_significant_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: datetime,
     end_time: datetime | None = None,
     entity_ids: list[str] | None = None,
@@ -166,9 +166,9 @@ def get_significant_states(
     compressed_state_format: bool = False,
 ) -> dict[str, list[State | dict[str, Any]]]:
     """Wrap get_significant_states_with_session with an sql session."""
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         return get_significant_states_with_session(
-            hass,
+            menuai,
             session,
             start_time,
             end_time,
@@ -232,7 +232,7 @@ def _significant_states_stmt(
 
 
 def get_significant_states_with_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     start_time: datetime,
     end_time: datetime | None = None,
@@ -268,7 +268,7 @@ def get_significant_states_with_session(
     )
     states = execute_stmt_lambda_element(session, stmt, None, end_time)
     return _sorted_states_to_dict(
-        hass,
+        menuai,
         session,
         states,
         start_time,
@@ -281,7 +281,7 @@ def get_significant_states_with_session(
 
 
 def get_full_significant_states_with_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     start_time: datetime,
     end_time: datetime | None = None,
@@ -299,7 +299,7 @@ def get_full_significant_states_with_session(
     return cast(
         dict[str, list[State]],
         get_significant_states_with_session(
-            hass=hass,
+            menuai=menuai,
             session=session,
             start_time=start_time,
             end_time=end_time,
@@ -351,7 +351,7 @@ def _state_changed_during_period_stmt(
 
 
 def state_changes_during_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: datetime,
     end_time: datetime | None = None,
     entity_id: str | None = None,
@@ -364,7 +364,7 @@ def state_changes_during_period(
     if not entity_id:
         raise ValueError("entity_id must be provided")
     entity_ids = [entity_id.lower()]
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stmt = _state_changed_during_period_stmt(
             start_time,
             end_time,
@@ -377,7 +377,7 @@ def state_changes_during_period(
         return cast(
             dict[str, list[State]],
             _sorted_states_to_dict(
-                hass,
+                menuai,
                 session,
                 states,
                 start_time,
@@ -413,19 +413,19 @@ def _get_last_state_changes_stmt(
 
 
 def get_last_state_changes(
-    hass: HomeAssistant, number_of_states: int, entity_id: str
+    menuai: menuai, number_of_states: int, entity_id: str
 ) -> dict[str, list[State]]:
     """Return the last number_of_states."""
     entity_id_lower = entity_id.lower()
     entity_ids = [entity_id_lower]
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stmt = _get_last_state_changes_stmt(number_of_states, entity_id_lower)
         states = list(execute_stmt_lambda_element(session, stmt))
         return cast(
             dict[str, list[State]],
             _sorted_states_to_dict(
-                hass,
+                menuai,
                 session,
                 reversed(states),
                 dt_util.utcnow(),
@@ -478,7 +478,7 @@ def _get_states_for_entities_stmt(
 
 
 def _get_rows_with_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     utc_point_in_time: datetime,
     entity_ids: list[str],
@@ -494,7 +494,7 @@ def _get_rows_with_session(
             ),
         )
 
-    oldest_ts = get_instance(hass).states_manager.oldest_ts
+    oldest_ts = get_instance(menuai).states_manager.oldest_ts
 
     if oldest_ts is None or oldest_ts > utc_point_in_time.timestamp():
         # We don't have any states for the requested time
@@ -535,7 +535,7 @@ def _get_single_entity_states_stmt(
 
 
 def _sorted_states_to_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     states: Iterable[Row],
     start_time: datetime,
@@ -580,7 +580,7 @@ def _sorted_states_to_dict(
         initial_states = {
             row.entity_id: row
             for row in _get_rows_with_session(
-                hass,
+                menuai,
                 session,
                 start_time,
                 entity_ids,

@@ -7,7 +7,7 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_MILLIGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
@@ -44,7 +44,7 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
     UnitOfVolumetricFlux,
 )
-from homeassistant.util.unit_conversion import (
+from menuai.util.unit_conversion import (
     BaseUnitConverter,
     ReactiveEnergyConverter,
     TemperatureConverter,

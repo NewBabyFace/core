@@ -6,10 +6,10 @@ import logging
 
 from pyws66i import WS66i, get_ws66i
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, EVENT_menuai_STOP, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import CONF_SOURCES, DOMAIN
 from .coordinator import Ws66iDataUpdateCoordinator
@@ -36,7 +36,7 @@ def _get_sources_from_dict(data) -> SourceRep:
     return SourceRep(source_id_name, source_name_id, source_names)
 
 
-def _find_zones(hass: HomeAssistant, ws66i: WS66i) -> list[int]:
+def _find_zones(menuai: menuai, ws66i: WS66i) -> list[int]:
     """Generate zones list by searching for presence of zones."""
     # Zones 11 - 16 are the master amp
     # Zones 21,31 - 26,36 are the daisy-chained amps
@@ -56,7 +56,7 @@ def _find_zones(hass: HomeAssistant, ws66i: WS66i) -> list[int]:
     return zone_list
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Soundavo WS66i 6-Zone Amplifier from a config entry."""
     # Get the source names from the options flow
     options: dict[str, dict[str, str]]
@@ -64,7 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Get the WS66i object and open up a connection to it
     ws66i = get_ws66i(entry.data[CONF_IP_ADDRESS])
     try:
-        await hass.async_add_executor_job(ws66i.open)
+        await menuai.async_add_executor_job(ws66i.open)
     except ConnectionError as err:
         # Amplifier is probably turned off
         raise ConfigEntryNotReady("Could not connect to WS66i Amp. Is it off?") from err
@@ -73,11 +73,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     source_rep: SourceRep = _get_sources_from_dict(options)
 
     # Create a list of discovered zones
-    zones = await hass.async_add_executor_job(_find_zones, hass, ws66i)
+    zones = await menuai.async_add_executor_job(_find_zones, menuai, ws66i)
 
     # Create the coordinator for the WS66i
     coordinator: Ws66iDataUpdateCoordinator = Ws66iDataUpdateCoordinator(
-        hass,
+        menuai,
         entry,
         ws66i,
         zones,
@@ -86,8 +86,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Fetch initial data, retry on failed poll
     await coordinator.async_config_entry_first_refresh()
 
-    # Create the Ws66iData data class save it to hass
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = Ws66iData(
+    # Create the Ws66iData data class save it to menuai
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = Ws66iData(
         host_ip=entry.data[CONF_IP_ADDRESS],
         device=ws66i,
         sources=source_rep,
@@ -102,25 +102,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_update_listener))
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, shutdown)
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        ws66i: WS66i = hass.data[DOMAIN][entry.entry_id].device
+        ws66i: WS66i = menuai.data[DOMAIN][entry.entry_id].device
         ws66i.close()
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

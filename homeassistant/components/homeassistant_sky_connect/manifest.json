@@ -1,10 +1,10 @@
 {
-  "domain": "homeassistant_sky_connect",
-  "name": "Home Assistant Connect ZBT-1",
+  "domain": "menuai_sky_connect",
+  "name": "MenuAI Connect ZBT-1",
   "codeowners": ["@home-assistant/core"],
   "config_flow": true,
-  "dependencies": ["hardware", "usb", "homeassistant_hardware"],
-  "documentation": "https://www.home-assistant.io/integrations/homeassistant_sky_connect",
+  "dependencies": ["hardware", "usb", "menuai_hardware"],
+  "documentation": "https://www.home-assistant.io/integrations/menuai_sky_connect",
   "integration_type": "hardware",
   "usb": [
     {
@@ -16,8 +16,8 @@
     {
       "vid": "10C4",
       "pid": "EA60",
-      "description": "*home assistant connect zbt-1*",
-      "known_devices": ["Home Assistant Connect ZBT-1"]
+      "description": "*MenuAI connect zbt-1*",
+      "known_devices": ["MenuAI Connect ZBT-1"]
     }
   ]
 }

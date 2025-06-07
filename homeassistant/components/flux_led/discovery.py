@@ -23,13 +23,13 @@ from flux_led.const import (
 from flux_led.models_db import get_model_description
 from flux_led.scanner import FluxLEDDiscovery
 
-from homeassistant.components import network
-from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, discovery_flow
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.network import is_ip_address
+from menuai.components import network
+from menuai.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntryState
+from menuai.const import CONF_HOST, CONF_MODEL, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, discovery_flow
+from menuai.util.async_ import create_eager_task
+from menuai.util.network import is_ip_address
 
 from .const import (
     CONF_MINOR_VERSION,
@@ -115,7 +115,7 @@ def async_populate_data_from_discovery(
 
 @callback
 def async_update_entry_from_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FluxLedConfigEntry,
     device: FluxLEDDiscovery,
     model_num: int | None,
@@ -146,14 +146,14 @@ def async_update_entry_from_discovery(
     # If the title has changed and the config entry is loaded, a listener is
     # in place, and we should not reload
     if updates and not ("title" in updates and entry.state is ConfigEntryState.LOADED):
-        return hass.config_entries.async_update_entry(entry, **updates)
+        return menuai.config_entries.async_update_entry(entry, **updates)
     return False
 
 
 @callback
-def async_get_discovery(hass: HomeAssistant, host: str) -> FluxLEDDiscovery | None:
+def async_get_discovery(menuai: menuai, host: str) -> FluxLEDDiscovery | None:
     """Check if a device was already discovered via a broadcast discovery."""
-    discoveries: list[FluxLEDDiscovery] = hass.data[DOMAIN][FLUX_LED_DISCOVERY]
+    discoveries: list[FluxLEDDiscovery] = menuai.data[DOMAIN][FLUX_LED_DISCOVERY]
     for discovery in discoveries:
         if discovery[ATTR_IPADDR] == host:
             return discovery
@@ -161,9 +161,9 @@ def async_get_discovery(hass: HomeAssistant, host: str) -> FluxLEDDiscovery | No
 
 
 @callback
-def async_clear_discovery_cache(hass: HomeAssistant, host: str) -> None:
+def async_clear_discovery_cache(menuai: menuai, host: str) -> None:
     """Clear the host from the discovery cache."""
-    domain_data = hass.data[DOMAIN]
+    domain_data = menuai.data[DOMAIN]
     discoveries: list[FluxLEDDiscovery] = domain_data[FLUX_LED_DISCOVERY]
     domain_data[FLUX_LED_DISCOVERY] = [
         discovery for discovery in discoveries if discovery[ATTR_IPADDR] != host
@@ -171,7 +171,7 @@ def async_clear_discovery_cache(hass: HomeAssistant, host: str) -> None:
 
 
 async def async_discover_devices(
-    hass: HomeAssistant, timeout: int, address: str | None = None
+    menuai: menuai, timeout: int, address: str | None = None
 ) -> list[FluxLEDDiscovery]:
     """Discover flux led devices."""
     if address:
@@ -180,7 +180,7 @@ async def async_discover_devices(
         targets = [
             str(broadcast_address)
             for broadcast_address in await network.async_get_ipv4_broadcast_addresses(
-                hass
+                menuai
             )
         ]
 
@@ -209,12 +209,12 @@ async def async_discover_devices(
 
 
 async def async_discover_device(
-    hass: HomeAssistant, host: str
+    menuai: menuai, host: str
 ) -> FluxLEDDiscovery | None:
     """Direct discovery at a single ip instead of broadcast."""
     # If we are missing the unique_id we should be able to fetch it
     # from the device by doing a directed discovery at the host only
-    for device in await async_discover_devices(hass, DIRECTED_DISCOVERY_TIMEOUT, host):
+    for device in await async_discover_devices(menuai, DIRECTED_DISCOVERY_TIMEOUT, host):
         if device[ATTR_IPADDR] == host:
             return device
     return None
@@ -222,13 +222,13 @@ async def async_discover_device(
 
 @callback
 def async_trigger_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovered_devices: list[FluxLEDDiscovery],
 ) -> None:
     """Trigger config flows for discovered devices."""
     for device in discovered_devices:
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={"source": SOURCE_INTEGRATION_DISCOVERY},
             data={**device},

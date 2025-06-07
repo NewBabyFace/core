@@ -16,8 +16,8 @@ from typing import Any, Generic, Required, TypedDict, TypeVar, cast
 
 import voluptuous as vol
 
-from .core import HomeAssistant, callback
-from .exceptions import HomeAssistantError
+from .core import menuai, callback
+from .exceptions import menuaiError
 from .helpers.frame import ReportBehavior, report_usage
 from .loader import async_suggest_report_issue
 from .util import uuid as uuid_util
@@ -72,7 +72,7 @@ class BaseServiceInfo:
     """Base class for discovery ServiceInfo."""
 
 
-class FlowError(HomeAssistantError):
+class FlowError(menuaiError):
     """Base class for data entry errors."""
 
 
@@ -180,10 +180,10 @@ class FlowManager(abc.ABC, Generic[_FlowContextT, _FlowResultT, _HandlerT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> None:
         """Initialize the flow manager."""
-        self.hass = hass
+        self.menuai = menuai
         self._preview: set[_HandlerT] = set()
         self._progress: dict[
             str, FlowHandler[_FlowContextT, _FlowResultT, _HandlerT]
@@ -306,7 +306,7 @@ class FlowManager(abc.ABC, Generic[_FlowContextT, _FlowResultT, _HandlerT]):
         flow = await self.async_create_flow(handler, context=context, data=data)
         if not flow:
             raise UnknownFlow("Flow was not created")
-        flow.hass = self.hass
+        flow.menuai = self.menuai
         flow.handler = handler
         flow.flow_id = uuid_util.random_uuid_hex()
         flow.context = context
@@ -423,7 +423,7 @@ class FlowManager(abc.ABC, Generic[_FlowContextT, _FlowResultT, _HandlerT]):
                 )
             ):
                 # Tell frontend to reload the flow state.
-                self.hass.bus.async_fire_internal(
+                self.menuai.bus.async_fire_internal(
                     EVENT_DATA_ENTRY_FLOW_PROGRESSED,
                     {"handler": flow.handler, "flow_id": flow_id, "refresh": True},
                 )
@@ -525,7 +525,7 @@ class FlowManager(abc.ABC, Generic[_FlowContextT, _FlowResultT, _HandlerT]):
                     await self._async_configure(flow.flow_id)
 
             def schedule_configure(_: asyncio.Task) -> None:
-                self.hass.async_create_task(call_configure())
+                self.menuai.async_create_task(call_configure())
 
             # The mypy ignores are a consequence of mypy not accepting the pop above
             progress_task.add_done_callback(schedule_configure)  # type: ignore[attr-defined]
@@ -583,7 +583,7 @@ class FlowManager(abc.ABC, Generic[_FlowContextT, _FlowResultT, _HandlerT]):
         """Set up preview for a flow handler."""
         if flow.handler not in self._preview:
             self._preview.add(flow.handler)
-            await flow.async_setup_preview(self.hass)
+            await flow.async_setup_preview(self.menuai)
 
     @callback
     def _async_flow_handler_to_flow_result(
@@ -621,7 +621,7 @@ class FlowHandler(Generic[_FlowContextT, _FlowResultT, _HandlerT]):
     # While not purely typed, it makes typehinting more useful for us
     # and removes the need for constant None checks or asserts.
     flow_id: str = None  # type: ignore[assignment]
-    hass: HomeAssistant = None  # type: ignore[assignment]
+    menuai: menuai = None  # type: ignore[assignment]
     handler: _HandlerT = None  # type: ignore[assignment]
     # Ensure the attribute has a subscriptable, but immutable, default value.
     context: _FlowContextT = MappingProxyType({})  # type: ignore[assignment]
@@ -812,11 +812,11 @@ class FlowHandler(Generic[_FlowContextT, _FlowResultT, _HandlerT]):
         if progress_task is None and not self.__no_progress_task_reported:
             self.__no_progress_task_reported = True
             cls = self.__class__
-            report_issue = async_suggest_report_issue(self.hass, module=cls.__module__)
+            report_issue = async_suggest_report_issue(self.menuai, module=cls.__module__)
             _LOGGER.warning(
                 (
                     "%s::%s calls async_show_progress without passing a progress task, "
-                    "this is not valid and will break in Home Assistant Core 2024.8. "
+                    "this is not valid and will break in MenuAI Core 2024.8. "
                     "Please %s"
                 ),
                 cls.__module__,
@@ -842,7 +842,7 @@ class FlowHandler(Generic[_FlowContextT, _FlowResultT, _HandlerT]):
     @callback
     def async_update_progress(self, progress: float) -> None:
         """Update the progress of a flow. `progress` must be between 0 and 1."""
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE,
             {"handler": self.handler, "flow_id": self.flow_id, "progress": progress},
         )
@@ -887,7 +887,7 @@ class FlowHandler(Generic[_FlowContextT, _FlowResultT, _HandlerT]):
         """Notification that the flow has been removed."""
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview."""
 
     @callback

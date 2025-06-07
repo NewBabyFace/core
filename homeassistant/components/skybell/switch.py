@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import SkybellEntity
@@ -29,14 +29,14 @@ SWITCH_TYPES: tuple[SwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the SkyBell switch."""
     async_add_entities(
         SkybellSwitch(coordinator, description)
-        for coordinator in hass.data[DOMAIN][entry.entry_id]
+        for coordinator in menuai.data[DOMAIN][entry.entry_id]
         for description in SWITCH_TYPES
     )
 

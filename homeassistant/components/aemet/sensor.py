@@ -37,13 +37,13 @@ from aemet_opendata.const import (
 )
 from aemet_opendata.helpers import dict_nested_value
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     DEGREE,
     PERCENTAGE,
     UnitOfPressure,
@@ -51,9 +51,9 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolumetricFlux,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_API_CONDITION,
@@ -356,7 +356,7 @@ WEATHER_SENSORS: Final[tuple[AemetSensorEntityDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AemetConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

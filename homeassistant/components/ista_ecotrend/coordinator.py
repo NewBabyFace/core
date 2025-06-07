@@ -8,11 +8,11 @@ from typing import Any
 
 from pyecotrend_ista import KeycloakError, LoginError, PyEcotrendIsta, ServerError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -28,11 +28,11 @@ class IstaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     details: dict[str, Any]
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: IstaConfigEntry, ista: PyEcotrendIsta
+        self, menuai: menuai, config_entry: IstaConfigEntry, ista: PyEcotrendIsta
     ) -> None:
         """Initialize ista EcoTrend data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -44,7 +44,7 @@ class IstaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Set up the ista EcoTrend coordinator."""
 
         try:
-            self.details = await self.hass.async_add_executor_job(self.get_details)
+            self.details = await self.menuai.async_add_executor_job(self.get_details)
         except ServerError as e:
             raise ConfigEntryNotReady(
                 translation_domain=DOMAIN,
@@ -63,7 +63,7 @@ class IstaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch ista EcoTrend data."""
 
         try:
-            return await self.hass.async_add_executor_job(self.get_consumption_data)
+            return await self.menuai.async_add_executor_job(self.get_consumption_data)
         except ServerError as e:
             raise UpdateFailed(
                 translation_domain=DOMAIN,

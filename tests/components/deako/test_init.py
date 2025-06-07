@@ -4,14 +4,14 @@ from unittest.mock import MagicMock
 
 from pydeako import FindDevicesError
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def test_deako_async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     pydeako_deako_mock: MagicMock,
     pydeako_discoverer_mock: MagicMock,
@@ -23,10 +23,10 @@ async def test_deako_async_setup_entry(
     }
     pydeako_deako_mock.return_value.get_name.return_value = "some device"
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     pydeako_deako_mock.assert_called_once_with(
         pydeako_discoverer_mock.return_value.get_address
@@ -39,19 +39,19 @@ async def test_deako_async_setup_entry(
 
 
 async def test_deako_async_setup_entry_devices_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     pydeako_deako_mock: MagicMock,
     pydeako_discoverer_mock: MagicMock,
 ) -> None:
     """Test async_setup_entry raises ConfigEntryNotReady when pydeako raises DeviceListTimeout."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     pydeako_deako_mock.return_value.find_devices.side_effect = FindDevicesError()
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     pydeako_deako_mock.assert_called_once_with(
         pydeako_discoverer_mock.return_value.get_address

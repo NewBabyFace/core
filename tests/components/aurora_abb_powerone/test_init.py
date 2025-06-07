@@ -2,19 +2,19 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.aurora_abb_powerone.const import (
+from menuai.components.aurora_abb_powerone.const import (
     ATTR_FIRMWARE,
     ATTR_MODEL,
     DOMAIN,
 )
-from homeassistant.const import ATTR_SERIAL_NUMBER, CONF_ADDRESS, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_SERIAL_NUMBER, CONF_ADDRESS, CONF_PORT
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test unloading the aurora_abb_powerone entry."""
 
     with (
@@ -46,8 +46,8 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
                 ATTR_FIRMWARE: "1.2.3.4",
             },
         )
-        mock_entry.add_to_hass(hass)
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
-        assert await hass.config_entries.async_unload(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_entry.add_to_menuai(menuai)
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
+        assert await menuai.config_entries.async_unload(mock_entry.entry_id)
+        await menuai.async_block_till_done()

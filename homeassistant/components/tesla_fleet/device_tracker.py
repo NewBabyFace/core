@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from homeassistant.components.device_tracker.config_entry import TrackerEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_HOME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.device_tracker.config_entry import TrackerEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_HOME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .entity import TeslaFleetVehicleEntity
 from .models import TeslaFleetVehicleData
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -42,9 +42,9 @@ class TeslaFleetDeviceTrackerEntity(
         """Initialize the device tracker."""
         super().__init__(vehicle, self.key)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (
             (state := await self.async_get_last_state()) is not None
             and self._attr_latitude is None

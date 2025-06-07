@@ -8,11 +8,11 @@ from typing import Any
 import requests
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -21,10 +21,10 @@ from homeassistant.const import (
     CONF_SWITCHES,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities_callback: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -60,7 +60,7 @@ def setup_platform(
     for dev_name, properties in switches.items():
         devices.append(
             KankunSwitch(
-                hass,
+                menuai,
                 properties.get(CONF_NAME, dev_name),
                 properties.get(CONF_HOST),
                 properties.get(CONF_PORT, DEFAULT_PORT),
@@ -76,9 +76,9 @@ def setup_platform(
 class KankunSwitch(SwitchEntity):
     """Representation of a Kankun Wifi switch."""
 
-    def __init__(self, hass, name, host, port, path, user, passwd):
+    def __init__(self, menuai, name, host, port, path, user, passwd):
         """Initialize the device."""
-        self._hass = hass
+        self._menuai = menuai
         self._name = name
         self._state = False
         self._url = f"http://{host}:{port}{path}"

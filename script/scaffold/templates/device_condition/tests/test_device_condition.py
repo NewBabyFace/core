@@ -4,25 +4,25 @@ from __future__ import annotations
 
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.NEW_DOMAIN import DOMAIN
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.NEW_DOMAIN import DOMAIN
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
 
 async def test_get_conditions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected conditions from a NEW_DOMAIN."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -47,17 +47,17 @@ async def test_get_conditions(
         },
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
 
-async def test_if_state(hass: HomeAssistant, service_calls: list[ServiceCall]) -> None:
+async def test_if_state(menuai: menuai, service_calls: list[ServiceCall]) -> None:
     """Test for turn_on and turn_off conditions."""
-    hass.states.async_set("NEW_DOMAIN.entity", STATE_ON)
+    menuai.states.async_set("NEW_DOMAIN.entity", STATE_ON)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -100,15 +100,15 @@ async def test_if_state(hass: HomeAssistant, service_calls: list[ServiceCall]) -
             ]
         },
     )
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_on - event - test_event1"
 
-    hass.states.async_set("NEW_DOMAIN.entity", STATE_OFF)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.states.async_set("NEW_DOMAIN.entity", STATE_OFF)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "is_off - event - test_event2"

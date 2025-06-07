@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util import slugify
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.util import slugify
 
 from .account import IcloudAccount
 from .const import (
@@ -55,7 +55,7 @@ def play_sound(service: ServiceCall) -> None:
     device_name: str = service.data[ATTR_DEVICE_NAME]
     device_name = slugify(device_name.replace(" ", "", 99))
 
-    for device in _get_account(service.hass, account).get_devices_with_name(
+    for device in _get_account(service.menuai, account).get_devices_with_name(
         device_name
     ):
         device.play_sound()
@@ -69,7 +69,7 @@ def display_message(service: ServiceCall) -> None:
     message = service.data.get(ATTR_LOST_DEVICE_MESSAGE)
     sound = service.data.get(ATTR_LOST_DEVICE_SOUND, False)
 
-    for device in _get_account(service.hass, account).get_devices_with_name(
+    for device in _get_account(service.menuai, account).get_devices_with_name(
         device_name
     ):
         device.display_message(message, sound)
@@ -83,7 +83,7 @@ def lost_device(service: ServiceCall) -> None:
     number = service.data.get(ATTR_LOST_DEVICE_NUMBER)
     message = service.data.get(ATTR_LOST_DEVICE_MESSAGE)
 
-    for device in _get_account(service.hass, account).get_devices_with_name(
+    for device in _get_account(service.menuai, account).get_devices_with_name(
         device_name
     ):
         device.lost_device(number, message)
@@ -92,19 +92,19 @@ def lost_device(service: ServiceCall) -> None:
 def update_account(service: ServiceCall) -> None:
     """Call the update function of an iCloud account."""
     if (account := service.data.get(ATTR_ACCOUNT)) is None:
-        for account in service.hass.data[DOMAIN].values():
+        for account in service.menuai.data[DOMAIN].values():
             account.keep_alive()
     else:
-        _get_account(service.hass, account).keep_alive()
+        _get_account(service.menuai, account).keep_alive()
 
 
-def _get_account(hass: HomeAssistant, account_identifier: str) -> IcloudAccount:
+def _get_account(menuai: menuai, account_identifier: str) -> IcloudAccount:
     if account_identifier is None:
         return None
 
-    icloud_account: IcloudAccount | None = hass.data[DOMAIN].get(account_identifier)
+    icloud_account: IcloudAccount | None = menuai.data[DOMAIN].get(account_identifier)
     if icloud_account is None:
-        for account in hass.data[DOMAIN].values():
+        for account in menuai.data[DOMAIN].values():
             if account.username == account_identifier:
                 icloud_account = account
 
@@ -115,27 +115,27 @@ def _get_account(hass: HomeAssistant, account_identifier: str) -> IcloudAccount:
     return icloud_account
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register iCloud services."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ICLOUD_PLAY_SOUND, play_sound, schema=SERVICE_SCHEMA_PLAY_SOUND
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ICLOUD_DISPLAY_MESSAGE,
         display_message,
         schema=SERVICE_SCHEMA_DISPLAY_MESSAGE,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ICLOUD_LOST_DEVICE,
         lost_device,
         schema=SERVICE_SCHEMA_LOST_DEVICE,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ICLOUD_UPDATE, update_account, schema=SERVICE_SCHEMA
     )

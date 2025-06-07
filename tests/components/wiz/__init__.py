@@ -11,10 +11,10 @@ from pywizlight import SCENES, BulbType, PilotParser, wizlight
 from pywizlight.bulblibrary import BulbClass, Features, KelvinRange
 from pywizlight.discovery import DiscoveredBulb
 
-from homeassistant.components.wiz.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.wiz.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -175,8 +175,8 @@ FAKE_OLD_FIRMWARE_DIMMABLE_BULB = BulbType(
 )
 
 
-async def setup_integration(hass: HomeAssistant) -> MockConfigEntry:
-    """Mock ConfigEntry in Home Assistant."""
+async def setup_integration(menuai: menuai) -> MockConfigEntry:
+    """Mock ConfigEntry in MenuAI."""
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -187,10 +187,10 @@ async def setup_integration(hass: HomeAssistant) -> MockConfigEntry:
         },
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 
@@ -242,9 +242,9 @@ def _patch_wizlight(
     def _patcher() -> Generator[None]:
         bulb = device or _mocked_wizlight(device, extended_white_range, bulb_type)
         with (
-            patch("homeassistant.components.wiz.wizlight", return_value=bulb),
+            patch("menuai.components.wiz.wizlight", return_value=bulb),
             patch(
-                "homeassistant.components.wiz.config_flow.wizlight",
+                "menuai.components.wiz.config_flow.wizlight",
                 return_value=bulb,
             ),
         ):
@@ -257,7 +257,7 @@ def _patch_discovery() -> _GeneratorContextManager[None]:
     @contextmanager
     def _patcher() -> Generator[None]:
         with patch(
-            "homeassistant.components.wiz.discovery.find_wizlights",
+            "menuai.components.wiz.discovery.find_wizlights",
             return_value=[DiscoveredBulb(FAKE_IP, FAKE_MAC)],
         ):
             yield
@@ -266,7 +266,7 @@ def _patch_discovery() -> _GeneratorContextManager[None]:
 
 
 async def async_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     wizlight: wizlight | None = None,
     device: dict[str, Any] | None = None,
     extended_white_range: list[int] | None = None,
@@ -278,19 +278,19 @@ async def async_setup_integration(
         unique_id=FAKE_MAC,
         data={CONF_HOST: FAKE_IP},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     bulb = wizlight or _mocked_wizlight(device, extended_white_range, bulb_type)
     with _patch_discovery(), _patch_wizlight(device=bulb):
-        await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+        await menuai.async_block_till_done()
     return bulb, entry
 
 
 async def async_push_update(
-    hass: HomeAssistant, device: wizlight, params: dict[str, Any]
+    menuai: menuai, device: wizlight, params: dict[str, Any]
 ) -> None:
     """Push an update to the device."""
     device.state = PilotParser(params)
     device.status = params.get("state")
     device.push_callback(device.state)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

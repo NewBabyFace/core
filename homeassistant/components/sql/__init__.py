@@ -7,14 +7,14 @@ import logging
 import sqlparse
 import voluptuous as vol
 
-from homeassistant.components.recorder import CONF_DB_URL, get_instance
-from homeassistant.components.sensor import (
+from menuai.components.recorder import CONF_DB_URL, get_instance
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASSES_SCHEMA,
     STATE_CLASSES_SCHEMA,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
@@ -23,14 +23,14 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_COLUMN_NAME, CONF_QUERY, DOMAIN, PLATFORMS
 from .util import redact_credentials
@@ -76,10 +76,10 @@ CONFIG_SCHEMA = vol.Schema(
 
 
 def remove_configured_db_url_if_not_needed(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> None:
     """Remove db url from config if it matches recorder database."""
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         options={
             key: value for key, value in entry.options.items() if key != CONF_DB_URL
@@ -87,42 +87,42 @@ def remove_configured_db_url_if_not_needed(
     )
 
 
-async def async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Update listener for options."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up SQL from yaml config."""
     if (conf := config.get(DOMAIN)) is None:
         return True
 
     for sensor_conf in conf:
         await discovery.async_load_platform(
-            hass, Platform.SENSOR, DOMAIN, sensor_conf, config
+            menuai, Platform.SENSOR, DOMAIN, sensor_conf, config
         )
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up SQL from a config entry."""
     _LOGGER.debug(
         "Comparing %s and %s",
         redact_credentials(entry.options.get(CONF_DB_URL)),
-        redact_credentials(get_instance(hass).db_url),
+        redact_credentials(get_instance(menuai).db_url),
     )
-    if entry.options.get(CONF_DB_URL) == get_instance(hass).db_url:
-        remove_configured_db_url_if_not_needed(hass, entry)
+    if entry.options.get(CONF_DB_URL) == get_instance(menuai).db_url:
+        remove_configured_db_url_if_not_needed(menuai, entry)
 
     entry.async_on_unload(entry.add_update_listener(async_update_listener))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload SQL config entry."""
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

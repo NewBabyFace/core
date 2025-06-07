@@ -14,7 +14,7 @@ def mock_device():
     """Mock connecting to a devolo home network device."""
     device = MockDevice(ip=IP)
     with patch(
-        "homeassistant.components.devolo_home_network.Device",
+        "menuai.components.devolo_home_network.Device",
         side_effect=cycle([device]),
     ):
         yield device
@@ -50,7 +50,7 @@ def mock_validate_input():
     }
 
     with patch(
-        "homeassistant.components.devolo_home_network.config_flow.validate_input",
+        "menuai.components.devolo_home_network.config_flow.validate_input",
         return_value=info,
     ):
         yield info

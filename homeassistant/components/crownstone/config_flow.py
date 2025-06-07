@@ -14,16 +14,16 @@ import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 import voluptuous as vol
 
-from homeassistant.components import usb
-from homeassistant.config_entries import (
+from menuai.components import usb
+from menuai.config_entries import (
     ConfigEntryBaseFlow,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import callback
+from menuai.helpers import aiohttp_client
 
 from .const import (
     CONF_USB_MANUAL_PATH,
@@ -61,7 +61,7 @@ class BaseCrownstoneFlowHandler(ConfigEntryBaseFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Set up a Crownstone USB dongle."""
-        list_of_ports = await self.hass.async_add_executor_job(
+        list_of_ports = await self.menuai.async_add_executor_job(
             serial.tools.list_ports.comports
         )
         if self.flow_type == CONFIG_FLOW:
@@ -83,7 +83,7 @@ class BaseCrownstoneFlowHandler(ConfigEntryBaseFlow):
                     index = ports_as_string.index(selection) - 1
 
                 selected_port: ListPortInfo = list_of_ports[index]
-                self.usb_path = await self.hass.async_add_executor_job(
+                self.usb_path = await self.menuai.async_add_executor_job(
                     usb.get_serial_by_id, selected_port.device
                 )
                 return await self.async_step_usb_sphere_config()
@@ -166,7 +166,7 @@ class CrownstoneConfigFlowHandler(BaseCrownstoneFlowHandler, ConfigFlow, domain=
         self.cloud = CrownstoneCloud(
             email=user_input[CONF_EMAIL],
             password=user_input[CONF_PASSWORD],
-            clientsession=aiohttp_client.async_get_clientsession(self.hass),
+            clientsession=aiohttp_client.async_get_clientsession(self.menuai),
         )
         # Login & sync all user data
         try:

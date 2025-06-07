@@ -4,17 +4,17 @@ import logging
 
 from pyvesync import VeSync
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_PASSWORD,
     CONF_USERNAME,
     EVENT_LOGGING_CHANGED,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import Event, menuai, ServiceCall, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .common import async_generate_device_list
 from .const import (
@@ -42,12 +42,12 @@ PLATFORMS = [
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up Vesync as config entry."""
     username = config_entry.data[CONF_USERNAME]
     password = config_entry.data[CONF_PASSWORD]
 
-    time_zone = str(hass.config.time_zone)
+    time_zone = str(menuai.config.time_zone)
 
     manager = VeSync(
         username=username,
@@ -57,68 +57,68 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         redact=True,
     )
 
-    login = await hass.async_add_executor_job(manager.login)
+    login = await menuai.async_add_executor_job(manager.login)
 
     if not login:
         raise ConfigEntryAuthFailed
 
-    hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][VS_MANAGER] = manager
+    menuai.data[DOMAIN] = {}
+    menuai.data[DOMAIN][VS_MANAGER] = manager
 
-    coordinator = VeSyncDataCoordinator(hass, config_entry, manager)
+    coordinator = VeSyncDataCoordinator(menuai, config_entry, manager)
 
     # Store coordinator at domain level since only single integration instance is permitted.
-    hass.data[DOMAIN][VS_COORDINATOR] = coordinator
+    menuai.data[DOMAIN][VS_COORDINATOR] = coordinator
 
-    hass.data[DOMAIN][VS_DEVICES] = await async_generate_device_list(hass, manager)
+    menuai.data[DOMAIN][VS_DEVICES] = await async_generate_device_list(menuai, manager)
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     @callback
     def _async_handle_logging_changed(_event: Event) -> None:
         """Handle when the logging level changes."""
         manager.debug = logging.getLogger("pyvesync.vesync").level == logging.DEBUG
 
-    cleanup = hass.bus.async_listen(
+    cleanup = menuai.bus.async_listen(
         EVENT_LOGGING_CHANGED, _async_handle_logging_changed
     )
 
-    hass.data[DOMAIN][VS_LISTENERS] = cleanup
+    menuai.data[DOMAIN][VS_LISTENERS] = cleanup
 
     async def async_new_device_discovery(service: ServiceCall) -> None:
         """Discover if new devices should be added."""
-        manager = hass.data[DOMAIN][VS_MANAGER]
-        devices = hass.data[DOMAIN][VS_DEVICES]
+        manager = menuai.data[DOMAIN][VS_MANAGER]
+        devices = menuai.data[DOMAIN][VS_DEVICES]
 
-        new_devices = await async_generate_device_list(hass, manager)
+        new_devices = await async_generate_device_list(menuai, manager)
 
         device_set = set(new_devices)
         new_devices = list(device_set.difference(devices))
         if new_devices and devices:
             devices.extend(new_devices)
-            async_dispatcher_send(hass, VS_DISCOVERY.format(VS_DEVICES), new_devices)
+            async_dispatcher_send(menuai, VS_DISCOVERY.format(VS_DEVICES), new_devices)
             return
         if new_devices and not devices:
             devices.extend(new_devices)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_UPDATE_DEVS, async_new_device_discovery
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    hass.data[DOMAIN][VS_LISTENERS]()
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    menuai.data[DOMAIN][VS_LISTENERS]()
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data.pop(DOMAIN)
+        menuai.data.pop(DOMAIN)
 
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
         "Migrating VeSync config entry: %s minor version: %s",
@@ -128,7 +128,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     if config_entry.minor_version == 1:
         # Migrate switch/outlets entity to a new unique ID
         _LOGGER.debug("Migrating VeSync config entry from version 1 to version 2")
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         registry_entries = er.async_entries_for_config_entry(
             entity_registry, config_entry.entry_id
         )
@@ -147,6 +147,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 )
             else:
                 _LOGGER.debug("Skipping entity with unique_id: %s", reg_entry.unique_id)
-        hass.config_entries.async_update_entry(config_entry, minor_version=2)
+        menuai.config_entries.async_update_entry(config_entry, minor_version=2)
 
     return True

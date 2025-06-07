@@ -17,18 +17,18 @@ from tesla_powerwall import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.util.network import is_ip_address
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.util.network import is_ip_address
 
 from . import async_last_update_was_successful
 from .const import CONFIG_ENTRY_COOKIE, DOMAIN
@@ -66,13 +66,13 @@ async def _powerwall_is_reachable(ip_address: str, password: str) -> bool:
     return True
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, str]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, str]) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from schema with values provided by the user.
     """
     session = async_create_clientsession(
-        hass, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
+        menuai, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
     )
     async with Powerwall(data[CONF_IP_ADDRESS], http_session=session) as power_wall:
         password = data[CONF_PASSWORD]
@@ -112,7 +112,7 @@ class PowerwallConfigFlow(ConfigFlow, domain=DOMAIN):
         password = entry.data[CONF_PASSWORD]
         return bool(
             entry.state in ENTRY_FAILURE_STATES
-            or not async_last_update_was_successful(self.hass, entry)
+            or not async_last_update_was_successful(self.menuai, entry)
         ) and not await _powerwall_is_reachable(ip_address, password)
 
     async def async_step_dhcp(
@@ -126,17 +126,17 @@ class PowerwallConfigFlow(ConfigFlow, domain=DOMAIN):
         for entry in self._async_current_entries(include_ignore=False):
             if entry.data[CONF_IP_ADDRESS] == discovery_info.ip:
                 if entry.unique_id is not None and is_ip_address(entry.unique_id):
-                    if self.hass.config_entries.async_update_entry(
+                    if self.menuai.config_entries.async_update_entry(
                         entry, unique_id=gateway_din
                     ):
-                        self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                        self.menuai.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
             if entry.unique_id == gateway_din:
                 if await self._async_powerwall_is_offline(entry):
-                    if self.hass.config_entries.async_update_entry(
+                    if self.menuai.config_entries.async_update_entry(
                         entry, data={**entry.data, CONF_IP_ADDRESS: self.ip_address}
                     ):
-                        self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                        self.menuai.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
         # Still need to abort for ignored entries
         self._abort_if_unique_id_configured()
@@ -165,7 +165,7 @@ class PowerwallConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         description_placeholders: dict[str, str] = {}
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except (PowerwallUnreachableError, TimeoutError) as ex:
             errors[CONF_IP_ADDRESS] = "cannot_connect"
             description_placeholders = {"error": str(ex)}
@@ -281,5 +281,5 @@ class PowerwallConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_reauth_confirm()
 
 
-class WrongVersion(HomeAssistantError):
+class WrongVersion(menuaiError):
     """Error indicating we cannot interact with the powerwall software version."""

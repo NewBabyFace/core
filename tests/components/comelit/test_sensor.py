@@ -7,10 +7,10 @@ from aiocomelit.const import AlarmAreaState, AlarmZoneState
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.comelit.const import SCAN_INTERVAL
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.comelit.const import SCAN_INTERVAL
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -20,18 +20,18 @@ ENTITY_ID = "sensor.zone0"
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.comelit.VEDO_PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, mock_vedo_config_entry)
+    with patch("menuai.components.comelit.VEDO_PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, mock_vedo_config_entry)
 
     await snapshot_platform(
-        hass,
+        menuai,
         entity_registry,
         snapshot,
         mock_vedo_config_entry.entry_id,
@@ -39,16 +39,16 @@ async def test_all_entities(
 
 
 async def test_sensor_state_unknown(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
 ) -> None:
     """Test sensor unknown state."""
 
-    await setup_integration(hass, mock_vedo_config_entry)
+    await setup_integration(menuai, mock_vedo_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == AlarmZoneState.REST.value
 
     vedo_query = AlarmDataObject(
@@ -83,8 +83,8 @@ async def test_sensor_state_unknown(
     mock_vedo.get_all_areas_and_zones.return_value = vedo_query
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_UNKNOWN

@@ -10,10 +10,10 @@ from aioairzone_cloud.const import AZD_ID, AZD_NAME, AZD_WEBSERVERS
 from aioairzone_cloud.exceptions import AirzoneCloudError, LoginError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ID, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ID, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers import aiohttp_client
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -90,7 +90,7 @@ class AirZoneCloudConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_inst_pick(user_input)
 
             self.airzone = AirzoneCloudApi(
-                aiohttp_client.async_get_clientsession(self.hass),
+                aiohttp_client.async_get_clientsession(self.menuai),
                 ConnectionOptions(
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],

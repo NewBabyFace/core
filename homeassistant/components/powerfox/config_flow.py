@@ -8,9 +8,9 @@ from typing import Any
 from powerfox import Powerfox, PowerfoxAuthenticationError, PowerfoxConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -42,7 +42,7 @@ class PowerfoxConfigFlow(ConfigFlow, domain=DOMAIN):
             client = Powerfox(
                 username=user_input[CONF_EMAIL],
                 password=user_input[CONF_PASSWORD],
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             try:
                 await client.all_devices()
@@ -81,7 +81,7 @@ class PowerfoxConfigFlow(ConfigFlow, domain=DOMAIN):
             client = Powerfox(
                 username=reauth_entry.data[CONF_EMAIL],
                 password=user_input[CONF_PASSWORD],
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             try:
                 await client.all_devices()
@@ -112,7 +112,7 @@ class PowerfoxConfigFlow(ConfigFlow, domain=DOMAIN):
             client = Powerfox(
                 username=user_input[CONF_EMAIL],
                 password=user_input[CONF_PASSWORD],
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             try:
                 await client.all_devices()

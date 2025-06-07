@@ -4,7 +4,7 @@ from datetime import timedelta
 import logging
 from typing import Final
 
-from homeassistant.helpers.typing import StateType
+from menuai.helpers.typing import StateType
 
 DOMAIN: Final = "palazzetti"
 PALAZZETTI: Final = "Palazzetti"

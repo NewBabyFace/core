@@ -8,15 +8,15 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     RestoreSensor,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME,
     CONF_SOURCE,
@@ -24,26 +24,26 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTime,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
     EventStateReportedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_state_change_event,
     async_track_state_report_event,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_ROUND_DIGITS,
@@ -94,19 +94,19 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Derivative config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     # Validate + resolve entity registry id to entity_id
     source_entity_id = er.async_validate_entity_id(
         registry, config_entry.options[CONF_SOURCE]
     )
 
     device_info = async_device_info_to_link_from_entity(
-        hass,
+        menuai,
         source_entity_id,
     )
 
@@ -130,7 +130,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -193,9 +193,9 @@ class DerivativeSensor(RestoreSensor, SensorEntity):
         self._unit_time = UNIT_TIME[unit_time]
         self._time_window = time_window.total_seconds()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         restored_data = await self.async_get_last_sensor_data()
         if restored_data:
             self._attr_native_unit_of_measurement = (
@@ -314,12 +314,12 @@ class DerivativeSensor(RestoreSensor, SensorEntity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, self._sensor_source_id, on_state_changed
+                self.menuai, self._sensor_source_id, on_state_changed
             )
         )
 
         self.async_on_remove(
             async_track_state_report_event(
-                self.hass, self._sensor_source_id, on_state_reported
+                self.menuai, self._sensor_source_id, on_state_reported
             )
         )

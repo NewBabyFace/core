@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_CONNECTIONS, ATTR_IDENTIFIERS, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_CONNECTIONS, ATTR_IDENTIFIERS, CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.entity_component import DEFAULT_SCAN_INTERVAL
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, LOGGER
 from .helpers import get_instance_from_options, get_sorted_mac_addresses
@@ -26,18 +26,18 @@ class WebminUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     mac_address: str
     unique_id: str
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the Webmin data update coordinator."""
 
         super().__init__(
-            hass,
+            menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=DEFAULT_SCAN_INTERVAL,
         )
 
-        self.instance, base_url = get_instance_from_options(hass, config_entry.options)
+        self.instance, base_url = get_instance_from_options(menuai, config_entry.options)
 
         self.device_info = DeviceInfo(
             configuration_url=base_url,

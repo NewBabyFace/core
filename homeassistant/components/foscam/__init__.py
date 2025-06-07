@@ -2,15 +2,15 @@
 
 from libpyfoscam import FoscamCamera
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_registry import RegistryEntry, async_migrate_entries
+from menuai.core import menuai, callback
+from menuai.helpers.entity_registry import RegistryEntry, async_migrate_entries
 
 from .config_flow import DEFAULT_RTSP_PORT
 from .const import CONF_RTSP_PORT, LOGGER
@@ -19,7 +19,7 @@ from .coordinator import FoscamConfigEntry, FoscamCoordinator
 PLATFORMS = [Platform.CAMERA, Platform.SWITCH]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FoscamConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FoscamConfigEntry) -> bool:
     """Set up foscam from a config entry."""
 
     session = FoscamCamera(
@@ -29,26 +29,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: FoscamConfigEntry) -> bo
         entry.data[CONF_PASSWORD],
         verbose=False,
     )
-    coordinator = FoscamCoordinator(hass, entry, session)
+    coordinator = FoscamCoordinator(menuai, entry, session)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
     # Migrate to correct unique IDs for switches
-    await async_migrate_entities(hass, entry)
+    await async_migrate_entities(menuai, entry)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FoscamConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FoscamConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: FoscamConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: FoscamConfigEntry) -> bool:
     """Migrate old entry."""
     LOGGER.debug("Migrating from version %s", entry.version)
 
@@ -58,7 +58,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: FoscamConfigEntry) -> 
         def update_unique_id(entry):
             return {"new_unique_id": entry.entry_id}
 
-        await async_migrate_entries(hass, entry.entry_id, update_unique_id)
+        await async_migrate_entries(menuai, entry.entry_id, update_unique_id)
 
         # Get RTSP port from the camera or use the fallback one and store it in data
         camera = FoscamCamera(
@@ -69,14 +69,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: FoscamConfigEntry) -> 
             verbose=False,
         )
 
-        ret, response = await hass.async_add_executor_job(camera.get_port_info)
+        ret, response = await menuai.async_add_executor_job(camera.get_port_info)
 
         rtsp_port = DEFAULT_RTSP_PORT
 
         if ret != 0:
             rtsp_port = response.get("rtspPort") or response.get("mediaPort")
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={**entry.data, CONF_RTSP_PORT: rtsp_port},
             version=2,
@@ -88,7 +88,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: FoscamConfigEntry) -> 
     return True
 
 
-async def async_migrate_entities(hass: HomeAssistant, entry: FoscamConfigEntry) -> None:
+async def async_migrate_entities(menuai: menuai, entry: FoscamConfigEntry) -> None:
     """Migrate old entry."""
 
     @callback
@@ -106,4 +106,4 @@ async def async_migrate_entities(hass: HomeAssistant, entry: FoscamConfigEntry) 
         return None
 
     # Migrate entities
-    await async_migrate_entries(hass, entry.entry_id, _update_unique_id)
+    await async_migrate_entries(menuai, entry.entry_id, _update_unique_id)

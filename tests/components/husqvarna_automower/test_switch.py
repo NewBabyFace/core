@@ -11,22 +11,22 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.husqvarna_automower.const import (
+from menuai.components.husqvarna_automower.const import (
     DOMAIN,
     EXECUTION_TIME_DELAY,
 )
-from homeassistant.components.husqvarna_automower.coordinator import SCAN_INTERVAL
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.husqvarna_automower.coordinator import SCAN_INTERVAL
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 from .const import TEST_MOWER_ID
@@ -44,14 +44,14 @@ TEST_ZONE_ID = "AAAAAAAA-BBBB-CCCC-DDDD-123456789101"
 
 
 async def test_switch_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     values: dict[str, MowerAttributes],
 ) -> None:
     """Test switch state."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     for mode, expected_state in (
         (MowerModes.HOME, "off"),
@@ -60,9 +60,9 @@ async def test_switch_states(
         values[TEST_MOWER_ID].mower.mode = mode
         mock_automower_client.get_status.return_value = values
         freezer.tick(SCAN_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
-        state = hass.states.get("switch.test_mower_1_enable_schedule")
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
+        state = menuai.states.get("switch.test_mower_1_enable_schedule")
         assert state.state == expected_state
 
 
@@ -75,15 +75,15 @@ async def test_switch_states(
     ],
 )
 async def test_switch_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioautomower_command: str,
     service: str,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test switch commands."""
-    await setup_integration(hass, mock_config_entry)
-    await hass.services.async_call(
+    await setup_integration(menuai, mock_config_entry)
+    await menuai.services.async_call(
         domain=SWITCH_DOMAIN,
         service=service,
         service_data={ATTR_ENTITY_ID: "switch.test_mower_1_enable_schedule"},
@@ -94,10 +94,10 @@ async def test_switch_commands(
 
     mocked_method.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain=SWITCH_DOMAIN,
             service=service,
             service_data={ATTR_ENTITY_ID: "switch.test_mower_1_enable_schedule"},
@@ -115,7 +115,7 @@ async def test_switch_commands(
     ],
 )
 async def test_stay_out_zone_switch_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     boolean: bool,
     excepted_state: str,
@@ -126,7 +126,7 @@ async def test_stay_out_zone_switch_commands(
 ) -> None:
     """Test switch commands."""
     entity_id = "switch.test_mower_1_avoid_danger_zone"
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     values = mower_list_to_dictionary_dataclass(
         load_json_value_fixture("mower.json", DOMAIN),
         mower_time_zone,
@@ -134,26 +134,26 @@ async def test_stay_out_zone_switch_commands(
     values[TEST_MOWER_ID].stay_out_zones.zones[TEST_ZONE_ID].enabled = boolean
     mock_automower_client.get_status.return_value = values
     mocked_method = mock_automower_client.commands.switch_stay_out_zone
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain=SWITCH_DOMAIN,
         service=service,
         service_data={ATTR_ENTITY_ID: entity_id},
         blocking=False,
     )
     freezer.tick(timedelta(seconds=EXECUTION_TIME_DELAY))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     mocked_method.assert_called_once_with(TEST_MOWER_ID, TEST_ZONE_ID, switch=boolean)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == excepted_state
 
     mocked_method.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain=SWITCH_DOMAIN,
             service=service,
             service_data={ATTR_ENTITY_ID: entity_id},
@@ -171,7 +171,7 @@ async def test_stay_out_zone_switch_commands(
     ],
 )
 async def test_work_area_switch_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     boolean: bool,
     excepted_state: str,
@@ -183,7 +183,7 @@ async def test_work_area_switch_commands(
 ) -> None:
     """Test switch commands."""
     entity_id = "switch.test_mower_1_my_lawn"
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     values = mower_list_to_dictionary_dataclass(
         load_json_value_fixture("mower.json", DOMAIN),
         mower_time_zone,
@@ -192,26 +192,26 @@ async def test_work_area_switch_commands(
     mock_automower_client.get_status.return_value = values
     mocked_method = AsyncMock()
     mock_automower_client.commands.workarea_settings.return_value = mocked_method
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain=SWITCH_DOMAIN,
         service=service,
         service_data={ATTR_ENTITY_ID: entity_id},
         blocking=False,
     )
     freezer.tick(timedelta(seconds=EXECUTION_TIME_DELAY))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     mocked_method.enabled.assert_called_once_with(enabled=boolean)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == excepted_state
 
     mocked_method.enabled.side_effect = ApiError("Test error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send command: Test error",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain=SWITCH_DOMAIN,
             service=service,
             service_data={ATTR_ENTITY_ID: entity_id},
@@ -221,7 +221,7 @@ async def test_work_area_switch_commands(
 
 
 async def test_add_stay_out_zone(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -229,8 +229,8 @@ async def test_add_stay_out_zone(
     values: dict[str, MowerAttributes],
 ) -> None:
     """Test adding a stay out zone in runtime."""
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     current_entites = len(
         er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     )
@@ -244,8 +244,8 @@ async def test_add_stay_out_zone(
     )
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     current_entites_after_addition = len(
         er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     )
@@ -254,8 +254,8 @@ async def test_add_stay_out_zone(
     values[TEST_MOWER_ID].stay_out_zones.zones.pop(TEST_ZONE_ID)
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     current_entites_after_deletion = len(
         er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     )
@@ -263,7 +263,7 @@ async def test_add_stay_out_zone(
 
 
 async def test_switch_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -271,10 +271,10 @@ async def test_switch_snapshot(
 ) -> None:
     """Snapshot tests of the switches."""
     with patch(
-        "homeassistant.components.husqvarna_automower.PLATFORMS",
+        "menuai.components.husqvarna_automower.PLATFORMS",
         [Platform.SWITCH],
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
         await snapshot_platform(
-            hass, entity_registry, snapshot, mock_config_entry.entry_id
+            menuai, entity_registry, snapshot, mock_config_entry.entry_id
         )

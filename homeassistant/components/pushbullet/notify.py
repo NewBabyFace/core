@@ -11,16 +11,16 @@ from pushbullet.channel import Channel
 from pushbullet.device import Device
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .api import PushBulletNotificationProvider
 from .const import ATTR_FILE, ATTR_FILE_URL, ATTR_URL, DOMAIN
@@ -29,25 +29,25 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> PushBulletNotificationService | None:
     """Get the Pushbullet notification service."""
     if TYPE_CHECKING:
         assert discovery_info is not None
-    pb_provider: PushBulletNotificationProvider = hass.data[DOMAIN][
+    pb_provider: PushBulletNotificationProvider = menuai.data[DOMAIN][
         discovery_info["entry_id"]
     ]
-    return PushBulletNotificationService(hass, pb_provider.pushbullet)
+    return PushBulletNotificationService(menuai, pb_provider.pushbullet)
 
 
 class PushBulletNotificationService(BaseNotificationService):
     """Implement the notification service for Pushbullet."""
 
-    def __init__(self, hass: HomeAssistant, pushbullet: PushBullet) -> None:
+    def __init__(self, menuai: menuai, pushbullet: PushBullet) -> None:
         """Initialize the service."""
-        self.hass = hass
+        self.menuai = menuai
         self.pushbullet = pushbullet
 
     @property
@@ -138,7 +138,7 @@ class PushBulletNotificationService(BaseNotificationService):
                 pusher.push_link(url=url, **kwargs)
                 return
             if filepath := data.get(ATTR_FILE):
-                if not self.hass.config.is_allowed_path(filepath):
+                if not self.menuai.config.is_allowed_path(filepath):
                     raise ValueError("Filepath is not valid or allowed")
                 with open(filepath, "rb") as fileh:
                     filedata = self.pushbullet.upload_file(fileh, filepath)
@@ -156,4 +156,4 @@ class PushBulletNotificationService(BaseNotificationService):
             else:
                 pusher.push_note(**kwargs)
         except PushError as err:
-            raise HomeAssistantError(f"Notify failed: {err}") from err
+            raise menuaiError(f"Notify failed: {err}") from err

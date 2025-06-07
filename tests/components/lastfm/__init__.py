@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 from pylast import PyLastError, Track
 
-from homeassistant.components.lastfm.const import CONF_MAIN_USER, CONF_USERS
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.components.lastfm.const import CONF_MAIN_USER, CONF_USERS
+from menuai.const import CONF_API_KEY
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 API_KEY = "asdasdasdasdasd"
 USERNAME_1 = "testaccount1"
@@ -106,4 +106,4 @@ def patch_user(user: MockUser) -> MockUser:
 
 def patch_setup_entry() -> bool:
     """Patch interface."""
-    return patch("homeassistant.components.lastfm.async_setup_entry", return_value=True)
+    return patch("menuai.components.lastfm.async_setup_entry", return_value=True)

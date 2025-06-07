@@ -5,10 +5,10 @@ platform for a function `async_check_significant_change`:
 
 ```python
 from typing import Optional
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 async def async_check_significant_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     old_state: str,
     old_attrs: dict,
     new_state: str,
@@ -33,17 +33,17 @@ from collections.abc import Callable, Mapping
 from types import MappingProxyType
 from typing import Any, Protocol
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai, State, callback
+from menuai.util.menuai_dict import menuaiKey
 
 from .integration_platform import async_process_integration_platforms
 
 PLATFORM = "significant_change"
-DATA_FUNCTIONS: HassKey[dict[str, CheckTypeFunc]] = HassKey("significant_change")
+DATA_FUNCTIONS: menuaiKey[dict[str, CheckTypeFunc]] = menuaiKey("significant_change")
 type CheckTypeFunc = Callable[
     [
-        HomeAssistant,
+        menuai,
         str,
         dict | MappingProxyType,
         str,
@@ -54,7 +54,7 @@ type CheckTypeFunc = Callable[
 
 type ExtraCheckTypeFunc = Callable[
     [
-        HomeAssistant,
+        menuai,
         str,
         dict | MappingProxyType,
         Any,
@@ -71,7 +71,7 @@ class SignificantChangeProtocol(Protocol):
 
     def async_check_significant_change(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         old_state: str,
         old_attrs: Mapping[str, Any],
         new_state: str,
@@ -81,33 +81,33 @@ class SignificantChangeProtocol(Protocol):
 
 
 async def create_checker(
-    hass: HomeAssistant,
+    menuai: menuai,
     _domain: str,
     extra_significant_check: ExtraCheckTypeFunc | None = None,
 ) -> SignificantlyChangedChecker:
     """Create a significantly changed checker for a domain."""
-    await _initialize(hass)
-    return SignificantlyChangedChecker(hass, extra_significant_check)
+    await _initialize(menuai)
+    return SignificantlyChangedChecker(menuai, extra_significant_check)
 
 
 # Marked as singleton so multiple calls all wait for same output.
-async def _initialize(hass: HomeAssistant) -> None:
+async def _initialize(menuai: menuai) -> None:
     """Initialize the functions."""
-    if DATA_FUNCTIONS in hass.data:
+    if DATA_FUNCTIONS in menuai.data:
         return
 
-    functions = hass.data[DATA_FUNCTIONS] = {}
+    functions = menuai.data[DATA_FUNCTIONS] = {}
 
     @callback
     def process_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         component_name: str,
         platform: SignificantChangeProtocol,
     ) -> None:
         """Process a significant change platform."""
         functions[component_name] = platform.async_check_significant_change
 
-    await async_process_integration_platforms(hass, PLATFORM, process_platform)
+    await async_process_integration_platforms(menuai, PLATFORM, process_platform)
 
 
 def either_one_none(val1: Any | None, val2: Any | None) -> bool:
@@ -183,11 +183,11 @@ class SignificantlyChangedChecker:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         extra_significant_check: ExtraCheckTypeFunc | None = None,
     ) -> None:
         """Test if an entity has significantly changed."""
-        self.hass = hass
+        self.menuai = menuai
         self.last_approved_entities: dict[str, tuple[State, Any]] = {}
         self.extra_significant_check = extra_significant_check
 
@@ -223,7 +223,7 @@ class SignificantlyChangedChecker:
             self.last_approved_entities[new_state.entity_id] = (new_state, extra_arg)
             return True
 
-        functions = self.hass.data.get(DATA_FUNCTIONS)
+        functions = self.menuai.data.get(DATA_FUNCTIONS)
 
         if functions is None:
             raise RuntimeError("Significant Change not initialized")
@@ -232,7 +232,7 @@ class SignificantlyChangedChecker:
 
         if check_significantly_changed is not None:
             result = check_significantly_changed(
-                self.hass,
+                self.menuai,
                 old_state.state,
                 old_state.attributes,
                 new_state.state,
@@ -244,7 +244,7 @@ class SignificantlyChangedChecker:
 
         if self.extra_significant_check is not None:
             result = self.extra_significant_check(
-                self.hass,
+                self.menuai,
                 old_state.state,
                 old_state.attributes,
                 old_extra_arg,

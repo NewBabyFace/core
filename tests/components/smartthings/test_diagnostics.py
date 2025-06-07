@@ -6,9 +6,9 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.smartthings.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.smartthings.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import setup_integration
 
@@ -22,8 +22,8 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.parametrize("device_fixture", ["da_ac_rac_000001"])
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     devices: AsyncMock,
     mock_smartthings: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -32,20 +32,20 @@ async def test_config_entry_diagnostics(
     """Test generating diagnostics for a device entry."""
     mock_smartthings.get_raw_devices.return_value = [
         await async_load_json_object_fixture(
-            hass, "devices/da_ac_rac_000001.json", DOMAIN
+            menuai, "devices/da_ac_rac_000001.json", DOMAIN
         )
     ]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
         == snapshot
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["da_ac_rac_000001"])
 async def test_device_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     devices: AsyncMock,
     mock_smartthings: AsyncMock,
@@ -55,14 +55,14 @@ async def test_device_diagnostics(
     """Test generating diagnostics for a device entry."""
     mock_smartthings.get_raw_device_status.return_value = (
         await async_load_json_object_fixture(
-            hass, "device_status/da_ac_rac_000001.json", DOMAIN
+            menuai, "device_status/da_ac_rac_000001.json", DOMAIN
         )
     )
     device_items = await async_load_json_object_fixture(
-        hass, "devices/da_ac_rac_000001.json", DOMAIN
+        menuai, "devices/da_ac_rac_000001.json", DOMAIN
     )
     mock_smartthings.get_raw_device.return_value = device_items["items"][0]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     device = device_registry.async_get_device(
         identifiers={(DOMAIN, "96a5ef74-5832-a84b-f1f7-ca799957065d")}
@@ -70,9 +70,9 @@ async def test_device_diagnostics(
 
     mock_smartthings.get_raw_device_status.reset_mock()
 
-    with patch("homeassistant.components.smartthings.diagnostics.EVENT_WAIT_TIME", 0.1):
+    with patch("menuai.components.smartthings.diagnostics.EVENT_WAIT_TIME", 0.1):
         diag = await get_diagnostics_for_device(
-            hass, hass_client, mock_config_entry, device
+            menuai, menuai_client, mock_config_entry, device
         )
 
     assert diag == snapshot(

@@ -17,12 +17,12 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.husqvarna_automower.const import DOMAIN, OAUTH2_TOKEN
-from homeassistant.components.husqvarna_automower.coordinator import SCAN_INTERVAL
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.husqvarna_automower.const import DOMAIN, OAUTH2_TOKEN
+from menuai.components.husqvarna_automower.coordinator import SCAN_INTERVAL
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import setup_integration
 from .const import TEST_MOWER_ID
@@ -37,18 +37,18 @@ NUMBER_OF_ENTITIES_MOWER_2 = 11
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload entry."""
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
 
@@ -60,14 +60,14 @@ async def test_load_unload_entry(
     ],
 )
 async def test_load_missing_scope(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test if the entry starts a reauth with the missing token scope."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "missing_scope"
@@ -90,7 +90,7 @@ async def test_load_missing_scope(
     ids=["unauthorized", "internal_server_error"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
@@ -104,7 +104,7 @@ async def test_expired_token_refresh_failure(
         status=status,
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is expected_state
 
@@ -117,7 +117,7 @@ async def test_expired_token_refresh_failure(
     ],
 )
 async def test_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     exception: Exception,
@@ -125,13 +125,13 @@ async def test_update_failed(
 ) -> None:
     """Test update failed."""
     mock_automower_client.get_status.side_effect = exception("Test error")
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.state is entry_state
 
 
 @patch(
-    "homeassistant.components.husqvarna_automower.coordinator.DEFAULT_RECONNECT_TIME", 0
+    "menuai.components.husqvarna_automower.coordinator.DEFAULT_RECONNECT_TIME", 0
 )
 @pytest.mark.parametrize(
     ("method_path", "exception", "error_msg"),
@@ -149,7 +149,7 @@ async def test_update_failed(
     ],
 )
 async def test_websocket_not_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
@@ -181,30 +181,30 @@ async def test_websocket_not_available(
     mock.side_effect = mock_function
 
     # Setup integration and verify log error message
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     await mock_called.wait()
     mock_called.clear()
     # Allow the exception to be raised
     mock_stall.set()
     assert mock.call_count == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert f"{error_msg} Trying to reconnect: Boom" in caplog.text
 
     # Simulate a successful connection
     caplog.clear()
     await mock_called.wait()
     mock_called.clear()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock.call_count == 2
     assert "Trying to reconnect: Boom" not in caplog.text
 
-    # Simulate hass shutting down
-    await hass.async_stop()
+    # Simulate menuai shutting down
+    await menuai.async_stop()
     assert mock.call_count == 2
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
@@ -212,9 +212,9 @@ async def test_device_info(
 ) -> None:
     """Test select platform."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     reg_device = device_registry.async_get_device(
         identifiers={(DOMAIN, TEST_MOWER_ID)},
     )
@@ -222,7 +222,7 @@ async def test_device_info(
 
 
 async def test_coordinator_automatic_registry_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
@@ -231,9 +231,9 @@ async def test_coordinator_automatic_registry_cleanup(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test automatic registry cleanup."""
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    await hass.async_block_till_done()
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
+    await menuai.async_block_till_done()
 
     # Count current entitties and devices
     current_entites = len(
@@ -246,8 +246,8 @@ async def test_coordinator_automatic_registry_cleanup(
     mower2 = values.pop("1234")
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
         len(er.async_entries_for_config_entry(entity_registry, entry.entry_id))
@@ -261,8 +261,8 @@ async def test_coordinator_automatic_registry_cleanup(
     values["1234"] = mower2
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert (
         len(er.async_entries_for_config_entry(entity_registry, entry.entry_id))
         == current_entites
@@ -276,8 +276,8 @@ async def test_coordinator_automatic_registry_cleanup(
     mower1 = values.pop(TEST_MOWER_ID)
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
         len(er.async_entries_for_config_entry(entity_registry, entry.entry_id))
@@ -291,11 +291,11 @@ async def test_coordinator_automatic_registry_cleanup(
     values[TEST_MOWER_ID] = mower1
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert (
         len(dr.async_entries_for_config_entry(device_registry, entry.entry_id))
         == current_devices
@@ -307,7 +307,7 @@ async def test_coordinator_automatic_registry_cleanup(
 
 
 async def test_add_and_remove_work_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -315,8 +315,8 @@ async def test_add_and_remove_work_area(
     values: dict[str, MowerAttributes],
 ) -> None:
     """Test adding a work area in runtime."""
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     current_entites_start = len(
         er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     )
@@ -337,8 +337,8 @@ async def test_add_and_remove_work_area(
     )
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     current_entites_after_addition = len(
         er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     )
@@ -360,8 +360,8 @@ async def test_add_and_remove_work_area(
     values[TEST_MOWER_ID].mower.work_area_id = 654321
     mock_automower_client.get_status.return_value = values
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     current_entites_after_deletion = len(
         er.async_entries_for_config_entry(entity_registry, entry.entry_id)
     )

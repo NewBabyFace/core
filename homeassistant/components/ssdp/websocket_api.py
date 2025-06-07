@@ -7,10 +7,10 @@ from typing import Any, Final
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HassJob, HomeAssistant, callback
-from homeassistant.helpers.json import json_bytes
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.components import websocket_api
+from menuai.core import menuaiJob, menuai, callback
+from menuai.helpers.json import json_bytes
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     SsdpServiceInfo,
 )
@@ -23,9 +23,9 @@ FIELD_SSDP_LOCATION: Final = "ssdp_location"
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the ssdp websocket API."""
-    websocket_api.async_register_command(hass, ws_subscribe_discovery)
+    websocket_api.async_register_command(menuai, ws_subscribe_discovery)
 
 
 @websocket_api.require_admin
@@ -36,10 +36,10 @@ def async_setup(hass: HomeAssistant) -> None:
 )
 @websocket_api.async_response
 async def ws_subscribe_discovery(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe advertisements websocket command."""
-    scanner: Scanner = hass.data[DOMAIN][SSDP_SCANNER]
+    scanner: Scanner = menuai.data[DOMAIN][SSDP_SCANNER]
     msg_id: int = msg["id"]
 
     def _async_event_message(message: dict[str, Any]) -> None:
@@ -64,6 +64,6 @@ async def ws_subscribe_discovery(
         }
         _async_event_message({"remove": [remove_msg]})
 
-    job = HassJob(_async_on_data)
+    job = menuaiJob(_async_on_data)
     connection.send_message(json_bytes(websocket_api.result_message(msg_id)))
     connection.subscriptions[msg_id] = await scanner.async_register_callback(job, None)

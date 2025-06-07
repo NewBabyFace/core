@@ -5,8 +5,8 @@ from datetime import timedelta
 from elkm1_lib.const import Max
 import voluptuous as vol
 
-from homeassistant.const import ATTR_CODE, CONF_ZONE
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import ATTR_CODE, CONF_ZONE
+from menuai.helpers.typing import VolDictType
 
 DOMAIN = "elkm1"
 

@@ -6,16 +6,16 @@ import platform
 
 from yalexs_ble import local_name_is_unique
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.components.bluetooth.match import (
+from menuai.components.bluetooth.match import (
     ADDRESS,
     LOCAL_NAME,
     BluetoothCallbackMatcher,
 )
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 
 def bluetooth_callback_matcher(
@@ -35,11 +35,11 @@ def bluetooth_callback_matcher(
 
 @callback
 def async_find_existing_service_info(
-    hass: HomeAssistant, local_name: str, address: str
+    menuai: menuai, local_name: str, address: str
 ) -> BluetoothServiceInfoBleak | None:
     """Return the service info for the given local_name and address."""
     has_unique_local_name = local_name_is_unique(local_name)
-    for service_info in async_discovered_service_info(hass):
+    for service_info in async_discovered_service_info(menuai):
         device = service_info.device
         if (
             has_unique_local_name and device.name == local_name

@@ -4,14 +4,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.wallbox.const import CHARGER_STATUS_ID_KEY, EcoSmartMode
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, HomeAssistantError
+from menuai.components.wallbox.const import CHARGER_STATUS_ID_KEY, EcoSmartMode
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai, menuaiError
 
 from . import (
     authorisation_response,
@@ -37,7 +37,7 @@ TEST_OPTIONS = [
 def mock_authenticate():
     """Fixture to patch Wallbox methods."""
     with patch(
-        "homeassistant.components.wallbox.Wallbox.authenticate",
+        "menuai.components.wallbox.Wallbox.authenticate",
         new=Mock(return_value=authorisation_response),
     ):
         yield
@@ -45,23 +45,23 @@ def mock_authenticate():
 
 @pytest.mark.parametrize(("mode", "response"), TEST_OPTIONS)
 async def test_wallbox_select_solar_charging_class(
-    hass: HomeAssistant, entry: MockConfigEntry, mode, response, mock_authenticate
+    menuai: menuai, entry: MockConfigEntry, mode, response, mock_authenticate
 ) -> None:
     """Test wallbox select class."""
 
     with (
         patch(
-            "homeassistant.components.wallbox.Wallbox.enableEcoSmart",
+            "menuai.components.wallbox.Wallbox.enableEcoSmart",
             new=Mock(return_value={CHARGER_STATUS_ID_KEY: 193}),
         ),
         patch(
-            "homeassistant.components.wallbox.Wallbox.disableEcoSmart",
+            "menuai.components.wallbox.Wallbox.disableEcoSmart",
             new=Mock(return_value={CHARGER_STATUS_ID_KEY: 193}),
         ),
     ):
-        await setup_integration_select(hass, entry, response)
+        await setup_integration_select(menuai, entry, response)
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -71,25 +71,25 @@ async def test_wallbox_select_solar_charging_class(
             blocking=True,
         )
 
-        state = hass.states.get(MOCK_SELECT_ENTITY_ID)
+        state = menuai.states.get(MOCK_SELECT_ENTITY_ID)
         assert state.state == mode
 
 
 async def test_wallbox_select_no_power_boost_class(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox select class."""
 
-    await setup_integration_select(hass, entry, test_response_no_power_boost)
+    await setup_integration_select(menuai, entry, test_response_no_power_boost)
 
-    state = hass.states.get(MOCK_SELECT_ENTITY_ID)
+    state = menuai.states.get(MOCK_SELECT_ENTITY_ID)
     assert state is None
 
 
 @pytest.mark.parametrize(("mode", "response"), TEST_OPTIONS)
 @pytest.mark.parametrize("error", [http_404_error, ConnectionError])
 async def test_wallbox_select_class_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MockConfigEntry,
     mode,
     response,
@@ -98,20 +98,20 @@ async def test_wallbox_select_class_error(
 ) -> None:
     """Test wallbox select class connection error."""
 
-    await setup_integration_select(hass, entry, response)
+    await setup_integration_select(menuai, entry, response)
 
     with (
         patch(
-            "homeassistant.components.wallbox.Wallbox.disableEcoSmart",
+            "menuai.components.wallbox.Wallbox.disableEcoSmart",
             new=Mock(side_effect=error),
         ),
         patch(
-            "homeassistant.components.wallbox.Wallbox.enableEcoSmart",
+            "menuai.components.wallbox.Wallbox.enableEcoSmart",
             new=Mock(side_effect=error),
         ),
-        pytest.raises(HomeAssistantError, match="Error communicating with Wallbox API"),
+        pytest.raises(menuaiError, match="Error communicating with Wallbox API"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {

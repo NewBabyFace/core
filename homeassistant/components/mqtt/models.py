@@ -11,19 +11,19 @@ from enum import StrEnum
 import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_NAME, Platform
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.exceptions import ServiceValidationError, TemplateError
-from homeassistant.helpers import template
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.typing import (
+from menuai.const import ATTR_ENTITY_ID, ATTR_NAME, Platform
+from menuai.core import CALLBACK_TYPE, callback
+from menuai.exceptions import ServiceValidationError, TemplateError
+from menuai.helpers import template
+from menuai.helpers.entity import Entity
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.typing import (
     ConfigType,
     DiscoveryInfoType,
     TemplateVarsType,
     VolSchemaType,
 )
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from paho.mqtt.client import MQTTMessage
@@ -196,9 +196,9 @@ class MqttCommandTemplate:
         if self._entity:
             values[ATTR_ENTITY_ID] = self._entity.entity_id
             values[ATTR_NAME] = self._entity.name
-            if not self._template_state and self._command_template.hass is not None:
+            if not self._template_state and self._command_template.menuai is not None:
                 self._template_state = template.TemplateStateFromEntityId(
-                    self._entity.hass, self._entity.entity_id
+                    self._entity.menuai, self._entity.entity_id
                 )
             values[ATTR_THIS] = self._template_state
 
@@ -294,9 +294,9 @@ class MqttValueTemplate:
         if self._entity:
             values[ATTR_ENTITY_ID] = self._entity.entity_id
             values[ATTR_NAME] = self._entity.name
-            if not self._template_state and self._value_template.hass:
+            if not self._template_state and self._value_template.menuai:
                 self._template_state = template.TemplateStateFromEntityId(
-                    self._value_template.hass, self._entity.entity_id
+                    self._value_template.menuai, self._entity.entity_id
                 )
             values[ATTR_THIS] = self._template_state
 
@@ -456,5 +456,5 @@ class MqttSubentryData(TypedDict, total=False):
     availability: MqttAvailabilityData
 
 
-DATA_MQTT: HassKey[MqttData] = HassKey("mqtt")
-DATA_MQTT_AVAILABLE: HassKey[asyncio.Future[bool]] = HassKey("mqtt_client_available")
+DATA_MQTT: menuaiKey[MqttData] = menuaiKey("mqtt")
+DATA_MQTT_AVAILABLE: menuaiKey[asyncio.Future[bool]] = menuaiKey("mqtt_client_available")

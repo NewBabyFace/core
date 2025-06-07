@@ -7,8 +7,8 @@ from typing import Any, Protocol, runtime_checkable
 from aiohttp import ClientError
 from nice_go import ApiError, AuthFailedError
 
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.exceptions import ConfigEntryAuthFailed, menuaiError
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .const import DOMAIN
 
@@ -16,7 +16,7 @@ from .const import DOMAIN
 @runtime_checkable
 class _ArgsProtocol(Protocol):
     coordinator: Any
-    hass: Any
+    menuai: Any
 
 
 def retry[_R, **P](
@@ -37,7 +37,7 @@ def retry[_R, **P](
             try:
                 return await func(*args, **kwargs)
             except (ApiError, ClientError) as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key=translation_key,
                     translation_placeholders={"exception": str(err)},
@@ -48,14 +48,14 @@ def retry[_R, **P](
                     await instance.coordinator.update_refresh_token()
                     return await func(*args, **kwargs)
                 except (ApiError, ClientError, UpdateFailed) as err:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key=translation_key,
                         translation_placeholders={"exception": str(err)},
                     ) from err
                 except (AuthFailedError, ConfigEntryAuthFailed) as err:
-                    instance.coordinator.config_entry.async_start_reauth(instance.hass)
-                    raise HomeAssistantError(
+                    instance.coordinator.config_entry.async_start_reauth(instance.menuai)
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key=translation_key,
                         translation_placeholders={"exception": str(err)},

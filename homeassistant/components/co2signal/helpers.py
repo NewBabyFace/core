@@ -8,12 +8,12 @@ from typing import Any
 from aioelectricitymaps import ElectricityMaps
 from aioelectricitymaps.models import CarbonIntensityResponse
 
-from homeassistant.const import CONF_COUNTRY_CODE, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_COUNTRY_CODE, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
 
 
 async def fetch_latest_carbon_intensity(
-    hass: HomeAssistant,
+    menuai: menuai,
     em: ElectricityMaps,
     config: Mapping[str, Any],
 ) -> CarbonIntensityResponse:
@@ -24,6 +24,6 @@ async def fetch_latest_carbon_intensity(
         )
 
     return await em.latest_carbon_intensity_by_coordinates(
-        lat=config.get(CONF_LATITUDE, hass.config.latitude),
-        lon=config.get(CONF_LONGITUDE, hass.config.longitude),
+        lat=config.get(CONF_LATITUDE, menuai.config.latitude),
+        lon=config.get(CONF_LONGITUDE, menuai.config.longitude),
     )

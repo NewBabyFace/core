@@ -12,8 +12,8 @@ from pyControl4.account import C4Account
 from pyControl4.director import C4Director
 from pyControl4.error_handling import BadCredentials
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
@@ -21,9 +21,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client, device_registry as dr
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import aiohttp_client, device_registry as dr
 
 from .const import (
     API_RETRY_TIMES,
@@ -66,9 +66,9 @@ async def call_c4_api_retry(func, *func_args):
                 raise ConfigEntryNotReady(exception) from exception
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: Control4ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: Control4ConfigEntry) -> bool:
     """Set up Control4 from a config entry."""
-    account_session = aiohttp_client.async_get_clientsession(hass)
+    account_session = aiohttp_client.async_get_clientsession(menuai)
 
     config = entry.data
     account = C4Account(config[CONF_USERNAME], config[CONF_PASSWORD], account_session)
@@ -93,7 +93,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: Control4ConfigEntry) -> 
         account.getDirectorBearerToken, controller_unique_id
     )
 
-    director_session = aiohttp_client.async_get_clientsession(hass, verify_ssl=False)
+    director_session = aiohttp_client.async_get_clientsession(menuai, verify_ssl=False)
     director = C4Director(
         config[CONF_HOST], director_token_dict[CONF_TOKEN], director_session
     )
@@ -106,7 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: Control4ConfigEntry) -> 
     _, model, mac_address = controller_unique_id.split("_", 3)
     director_model = model.upper()
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, controller_unique_id)},
@@ -143,26 +143,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: Control4ConfigEntry) -> 
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def update_listener(
-    hass: HomeAssistant, config_entry: Control4ConfigEntry
+    menuai: menuai, config_entry: Control4ConfigEntry
 ) -> None:
     """Update when config_entry options update."""
     _LOGGER.debug("Config entry was updated, rerunning setup")
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: Control4ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: Control4ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def get_items_of_category(
-    hass: HomeAssistant, entry: Control4ConfigEntry, category: str
+    menuai: menuai, entry: Control4ConfigEntry, category: str
 ):
     """Return a list of all Control4 items with the specified category."""
     return [

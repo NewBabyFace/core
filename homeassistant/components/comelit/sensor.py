@@ -7,16 +7,16 @@ from typing import Final, cast
 from aiocomelit import ComelitSerialBridgeObject, ComelitVedoZoneObject
 from aiocomelit.const import BRIDGE, OTHER, AlarmZoneState
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import CONF_TYPE, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_TYPE, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import ComelitConfigEntry, ComelitSerialBridge, ComelitVedoSystem
 from .entity import ComelitBridgeBaseEntity
@@ -44,20 +44,20 @@ SENSOR_VEDO_TYPES: Final = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ComelitConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Comelit sensors."""
 
     if config_entry.data.get(CONF_TYPE, BRIDGE) == BRIDGE:
-        await async_setup_bridge_entry(hass, config_entry, async_add_entities)
+        await async_setup_bridge_entry(menuai, config_entry, async_add_entities)
     else:
-        await async_setup_vedo_entry(hass, config_entry, async_add_entities)
+        await async_setup_vedo_entry(menuai, config_entry, async_add_entities)
 
 
 async def async_setup_bridge_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ComelitConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -77,7 +77,7 @@ async def async_setup_bridge_entry(
 
 
 async def async_setup_vedo_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ComelitConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

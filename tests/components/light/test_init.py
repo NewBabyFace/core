@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 import voluptuous as vol
 
-from homeassistant import core
-from homeassistant.components import light
-from homeassistant.const import (
+from menuai import core
+from menuai.components import light
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_PLATFORM,
     ENTITY_MATCH_ALL,
@@ -19,10 +19,10 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, Unauthorized
-from homeassistant.setup import async_setup_component
-from homeassistant.util import color as color_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, Unauthorized
+from menuai.setup import async_setup_component
+from menuai.util import color as color_util
 
 from .common import MockLight
 
@@ -39,19 +39,19 @@ from tests.common import (
 orig_Profiles = light.Profiles
 
 
-async def test_methods(hass: HomeAssistant) -> None:
+async def test_methods(menuai: menuai) -> None:
     """Test if methods call the services as expected."""
     # Test is_on
-    hass.states.async_set("light.test", STATE_ON)
-    assert light.is_on(hass, "light.test")
+    menuai.states.async_set("light.test", STATE_ON)
+    assert light.is_on(menuai, "light.test")
 
-    hass.states.async_set("light.test", STATE_OFF)
-    assert not light.is_on(hass, "light.test")
+    menuai.states.async_set("light.test", STATE_OFF)
+    assert not light.is_on(menuai, "light.test")
 
     # Test turn_on
-    turn_on_calls = async_mock_service(hass, light.DOMAIN, SERVICE_TURN_ON)
+    turn_on_calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TURN_ON)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -80,9 +80,9 @@ async def test_methods(hass: HomeAssistant) -> None:
     assert call.data.get(light.ATTR_COLOR_NAME) == "color_name_val"
 
     # Test turn_off
-    turn_off_calls = async_mock_service(hass, light.DOMAIN, SERVICE_TURN_OFF)
+    turn_off_calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TURN_OFF)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -101,9 +101,9 @@ async def test_methods(hass: HomeAssistant) -> None:
     assert call.data[light.ATTR_TRANSITION] == "transition_val"
 
     # Test toggle
-    toggle_calls = async_mock_service(hass, light.DOMAIN, SERVICE_TOGGLE)
+    toggle_calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TOGGLE)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TOGGLE,
         {ATTR_ENTITY_ID: "entity_id_val", light.ATTR_TRANSITION: "transition_val"},
@@ -120,17 +120,17 @@ async def test_methods(hass: HomeAssistant) -> None:
 
 
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_light_profiles,
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test the provided services."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
     assert await async_setup_component(
-        hass, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
+        menuai, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     ent1, ent2, ent3 = mock_light_entities
     ent1.supported_color_modes = [light.ColorMode.HS]
@@ -149,77 +149,77 @@ async def test_services(
     )
 
     # Test init
-    assert light.is_on(hass, ent1.entity_id)
-    assert not light.is_on(hass, ent2.entity_id)
-    assert not light.is_on(hass, ent3.entity_id)
+    assert light.is_on(menuai, ent1.entity_id)
+    assert not light.is_on(menuai, ent2.entity_id)
+    assert not light.is_on(menuai, ent3.entity_id)
 
     # Test basic turn_on, turn_off, toggle services
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: ent1.entity_id}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ent2.entity_id}, blocking=True
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
-    assert light.is_on(hass, ent2.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
+    assert light.is_on(menuai, ent2.entity_id)
 
     # turn on all lights
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_MATCH_ALL}, blocking=True
     )
 
-    assert light.is_on(hass, ent1.entity_id)
-    assert light.is_on(hass, ent2.entity_id)
-    assert light.is_on(hass, ent3.entity_id)
+    assert light.is_on(menuai, ent1.entity_id)
+    assert light.is_on(menuai, ent2.entity_id)
+    assert light.is_on(menuai, ent3.entity_id)
 
     # turn off all lights
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_MATCH_ALL},
         blocking=True,
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
-    assert not light.is_on(hass, ent2.entity_id)
-    assert not light.is_on(hass, ent3.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
+    assert not light.is_on(menuai, ent2.entity_id)
+    assert not light.is_on(menuai, ent3.entity_id)
 
     # turn off all lights by setting brightness to 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_MATCH_ALL}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_MATCH_ALL, light.ATTR_BRIGHTNESS: 0},
         blocking=True,
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
-    assert not light.is_on(hass, ent2.entity_id)
-    assert not light.is_on(hass, ent3.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
+    assert not light.is_on(menuai, ent2.entity_id)
+    assert not light.is_on(menuai, ent3.entity_id)
 
     # toggle all lights
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TOGGLE, {ATTR_ENTITY_ID: ENTITY_MATCH_ALL}, blocking=True
     )
 
-    assert light.is_on(hass, ent1.entity_id)
-    assert light.is_on(hass, ent2.entity_id)
-    assert light.is_on(hass, ent3.entity_id)
+    assert light.is_on(menuai, ent1.entity_id)
+    assert light.is_on(menuai, ent2.entity_id)
+    assert light.is_on(menuai, ent3.entity_id)
 
     # toggle all lights
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TOGGLE, {ATTR_ENTITY_ID: ENTITY_MATCH_ALL}, blocking=True
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
-    assert not light.is_on(hass, ent2.entity_id)
-    assert not light.is_on(hass, ent3.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
+    assert not light.is_on(menuai, ent2.entity_id)
+    assert not light.is_on(menuai, ent3.entity_id)
 
     # Ensure all attributes process correctly
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -230,7 +230,7 @@ async def test_services(
         },
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -240,7 +240,7 @@ async def test_services(
         },
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -268,7 +268,7 @@ async def test_services(
     assert data == {light.ATTR_FLASH: "short", light.ATTR_HS_COLOR: (71.059, 100)}
 
     # Ensure attributes are filtered when light is turned off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -279,7 +279,7 @@ async def test_services(
         },
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -289,7 +289,7 @@ async def test_services(
         },
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -300,9 +300,9 @@ async def test_services(
         blocking=True,
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
-    assert not light.is_on(hass, ent2.entity_id)
-    assert not light.is_on(hass, ent3.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
+    assert not light.is_on(menuai, ent2.entity_id)
+    assert not light.is_on(menuai, ent3.entity_id)
 
     _, data = ent1.last_call("turn_off")
     assert data == {light.ATTR_TRANSITION: 10}
@@ -318,14 +318,14 @@ async def test_services(
     mock_light_profiles[profile.name] = profile
 
     # Test light profiles
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ent1.entity_id, light.ATTR_PROFILE: profile.name},
         blocking=True,
     )
     # Specify a profile and a brightness attribute to overwrite it
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -352,7 +352,7 @@ async def test_services(
     }
 
     # Test toggle with parameters
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TOGGLE,
         {
@@ -370,7 +370,7 @@ async def test_services(
         light.ATTR_TRANSITION: profile.transition,
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TOGGLE,
         {
@@ -386,24 +386,24 @@ async def test_services(
     }
 
     # Test bad data
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_MATCH_ALL}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ent1.entity_id, light.ATTR_PROFILE: -1},
         blocking=True,
     )
     with pytest.raises(vol.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             light.DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ent2.entity_id, light.ATTR_XY_COLOR: ["bla-di-bla", 5]},
             blocking=True,
         )
     with pytest.raises(vol.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             light.DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ent3.entity_id, light.ATTR_RGB_COLOR: [255, None, 2]},
@@ -421,7 +421,7 @@ async def test_services(
 
     # faulty attributes will not trigger a service call
     with pytest.raises(vol.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             light.DOMAIN,
             SERVICE_TURN_ON,
             {
@@ -432,7 +432,7 @@ async def test_services(
             blocking=True,
         )
     with pytest.raises(vol.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             light.DOMAIN,
             SERVICE_TURN_ON,
             {
@@ -517,7 +517,7 @@ async def test_services(
     ],
 )
 async def test_light_profiles(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_light_profiles,
     profile_name,
     expected_data,
@@ -525,7 +525,7 @@ async def test_light_profiles(
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test light profiles."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
     profile_mock_data = {
         "test": (0.4, 0.6, 100, 0),
@@ -541,15 +541,15 @@ async def test_light_profiles(
         mock_light_profiles[name] = light.Profile(*(name, *data))
 
     assert await async_setup_component(
-        hass, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
+        menuai, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     ent1, _, _ = mock_light_entities
     ent1.supported_color_modes = [light.ColorMode.HS]
     ent1.supported_features = light.LightEntityFeature.TRANSITION
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -561,24 +561,24 @@ async def test_light_profiles(
 
     _, data = ent1.last_call(last_call)
     if last_call == "turn_on":
-        assert light.is_on(hass, ent1.entity_id)
+        assert light.is_on(menuai, ent1.entity_id)
     else:
-        assert not light.is_on(hass, ent1.entity_id)
+        assert not light.is_on(menuai, ent1.entity_id)
     assert data == expected_data
 
 
 async def test_default_profiles_group(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_light_profiles,
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test default turn-on light profile for all lights."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
     assert await async_setup_component(
-        hass, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
+        menuai, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     profile = light.Profile("group.all_lights.default", 0.4, 0.6, 99, 2)
     mock_light_profiles[profile.name] = profile
@@ -586,7 +586,7 @@ async def test_default_profiles_group(
     ent, _, _ = mock_light_entities
     ent.supported_color_modes = [light.ColorMode.HS]
     ent.supported_features = light.LightEntityFeature.TRANSITION
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ent.entity_id}, blocking=True
     )
 
@@ -790,7 +790,7 @@ async def test_default_profiles_group(
     ],
 )
 async def test_default_profiles_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_light_profiles,
     extra_call_params,
     expected_params_state_was_off,
@@ -798,12 +798,12 @@ async def test_default_profiles_light(
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test default turn-on light profile for a specific light."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
     assert await async_setup_component(
-        hass, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
+        menuai, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     profile = light.Profile("group.all_lights.default", 0.3, 0.5, 200, 0)
     mock_light_profiles[profile.name] = profile
@@ -820,7 +820,7 @@ async def test_default_profiles_light(
         light.ColorMode.XY,
     }
     dev.supported_features = light.LightEntityFeature.TRANSITION
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -833,7 +833,7 @@ async def test_default_profiles_light(
     _, data = dev.last_call("turn_on")
     assert data == expected_params_state_was_off
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -846,7 +846,7 @@ async def test_default_profiles_light(
     _, data = dev.last_call("turn_on")
     assert data == expected_params_state_was_on
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -862,67 +862,67 @@ async def test_default_profiles_light(
 
 
 async def test_light_context(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test that light context works."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.ceiling")
+    state = menuai.states.get("light.ceiling")
     assert state is not None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "toggle",
         {"entity_id": state.entity_id},
         blocking=True,
-        context=core.Context(user_id=hass_admin_user.id),
+        context=core.Context(user_id=menuai_admin_user.id),
     )
 
-    state2 = hass.states.get("light.ceiling")
+    state2 = menuai.states.get("light.ceiling")
     assert state2 is not None
     assert state.state != state2.state
-    assert state2.context.user_id == hass_admin_user.id
+    assert state2.context.user_id == menuai_admin_user.id
 
 
 async def test_light_turn_on_auth(
-    hass: HomeAssistant,
-    hass_read_only_user: MockUser,
+    menuai: menuai,
+    menuai_read_only_user: MockUser,
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test that light context works."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.ceiling")
+    state = menuai.states.get("light.ceiling")
     assert state is not None
 
-    hass_read_only_user.mock_policy({})
+    menuai_read_only_user.mock_policy({})
 
     with pytest.raises(Unauthorized):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "light",
             "turn_on",
             {"entity_id": state.entity_id},
             blocking=True,
-            context=core.Context(user_id=hass_read_only_user.id),
+            context=core.Context(user_id=menuai_read_only_user.id),
         )
 
 
-async def test_light_brightness_step(hass: HomeAssistant) -> None:
+async def test_light_brightness_step(menuai: menuai) -> None:
     """Test that light context works."""
     entities = [
         MockLight("Test_0", STATE_ON),
         MockLight("Test_1", STATE_ON),
     ]
 
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_features = light.SUPPORT_BRIGHTNESS
@@ -936,17 +936,17 @@ async def test_light_brightness_step(hass: HomeAssistant) -> None:
     entity1.supported_color_modes = None
     entity1.color_mode = None
     entity1.brightness = 50
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state is not None
     assert state.attributes["brightness"] == 100
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state is not None
     assert state.attributes["brightness"] == 50
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id, entity1.entity_id], "brightness_step": -10},
@@ -958,7 +958,7 @@ async def test_light_brightness_step(hass: HomeAssistant) -> None:
     _, data = entity1.last_call("turn_on")
     assert data["brightness"] == 40  # 50 - 10
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -971,26 +971,26 @@ async def test_light_brightness_step(hass: HomeAssistant) -> None:
     assert entity0.state == "off"  # 40 - 126; brightness is 0, light should turn off
 
 
-async def test_light_brightness_step_pct(hass: HomeAssistant) -> None:
+async def test_light_brightness_step_pct(menuai: menuai) -> None:
     """Test that percentage based brightness steps work as expected."""
     entity = MockLight("Test_0", STATE_ON)
 
-    setup_test_component_platform(hass, light.DOMAIN, [entity])
+    setup_test_component_platform(menuai, light.DOMAIN, [entity])
 
     entity.supported_features = light.SUPPORT_BRIGHTNESS
     # Set color modes to none to trigger backwards compatibility in LightEntity
     entity.supported_color_modes = None
     entity.color_mode = None
     entity.brightness = 255
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
     assert state.attributes["brightness"] == 255  # 100%
 
     def reduce_brightness_by_ten_percent():
-        return hass.services.async_call(
+        return menuai.services.async_call(
             "light",
             "turn_on",
             {
@@ -1015,11 +1015,11 @@ async def test_light_brightness_step_pct(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("enable_custom_integrations")
 async def test_light_brightness_pct_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test that light brightness percent conversion."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
     entity = mock_light_entities[0]
     entity.supported_features = light.SUPPORT_BRIGHTNESS
@@ -1027,14 +1027,14 @@ async def test_light_brightness_pct_conversion(
     entity.supported_color_modes = None
     entity.color_mode = None
     entity.brightness = 100
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
     assert state.attributes["brightness"] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity.entity_id, "brightness_pct": 1},
@@ -1044,7 +1044,7 @@ async def test_light_brightness_pct_conversion(
     _, data = entity.last_call("turn_on")
     assert data["brightness"] == 3
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity.entity_id, "brightness_pct": 2},
@@ -1054,7 +1054,7 @@ async def test_light_brightness_pct_conversion(
     _, data = entity.last_call("turn_on")
     assert data["brightness"] == 5
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity.entity_id, "brightness_pct": 50},
@@ -1064,7 +1064,7 @@ async def test_light_brightness_pct_conversion(
     _, data = entity.last_call("turn_on")
     assert data["brightness"] == 128
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity.entity_id, "brightness_pct": 99},
@@ -1074,7 +1074,7 @@ async def test_light_brightness_pct_conversion(
     _, data = entity.last_call("turn_on")
     assert data["brightness"] == 252
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity.entity_id, "brightness_pct": 100},
@@ -1085,9 +1085,9 @@ async def test_light_brightness_pct_conversion(
     assert data["brightness"] == 255
 
 
-async def test_profiles(hass: HomeAssistant) -> None:
+async def test_profiles(menuai: menuai) -> None:
     """Test profiles loading."""
-    profiles = orig_Profiles(hass)
+    profiles = orig_Profiles(menuai)
     await profiles.async_initialize()
     assert profiles.data == {
         "concentrate": light.Profile("concentrate", 0.5119, 0.4147, 219, None),
@@ -1102,7 +1102,7 @@ async def test_profiles(hass: HomeAssistant) -> None:
 
 
 @patch("os.path.isfile", MagicMock(side_effect=(True, False)))
-async def test_profile_load_optional_hs_color(hass: HomeAssistant) -> None:
+async def test_profile_load_optional_hs_color(menuai: menuai) -> None:
     """Test profile loading with profiles containing no xy color."""
 
     csv_file = """the first line is skipped
@@ -1124,10 +1124,10 @@ invalid_brightness_2,0,0,256
 invalid_no_brightness_no_color_no_transition,,,
 """
 
-    profiles = orig_Profiles(hass)
+    profiles = orig_Profiles(menuai)
     with patch("builtins.open", mock_open(read_data=csv_file)):
         await profiles.async_initialize()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert profiles.data["no_color"].hs_color is None
     assert profiles.data["no_color"].brightness == 100
@@ -1176,7 +1176,7 @@ invalid_no_brightness_no_color_no_transition,,,
 
 @pytest.mark.parametrize("light_state", [STATE_ON, STATE_OFF])
 async def test_light_backwards_compatibility_supported_color_modes(
-    hass: HomeAssistant, light_state: Literal["on", "off"]
+    menuai: menuai, light_state: Literal["on", "off"]
 ) -> None:
     """Test supported_color_modes if not implemented by the entity."""
     entities = [
@@ -1215,40 +1215,40 @@ async def test_light_backwards_compatibility_supported_color_modes(
     entity4.supported_color_modes = None
     entity4.color_mode = None
 
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.ONOFF]
     if light_state == STATE_OFF:
         assert state.attributes["color_mode"] is None
     else:
         assert state.attributes["color_mode"] == light.ColorMode.ONOFF
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.BRIGHTNESS]
     if light_state == STATE_OFF:
         assert state.attributes["color_mode"] is None
     else:
         assert state.attributes["color_mode"] == light.ColorMode.UNKNOWN
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.COLOR_TEMP]
     if light_state == STATE_OFF:
         assert state.attributes["color_mode"] is None
     else:
         assert state.attributes["color_mode"] == light.ColorMode.UNKNOWN
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.HS]
     if light_state == STATE_OFF:
         assert state.attributes["color_mode"] is None
     else:
         assert state.attributes["color_mode"] == light.ColorMode.UNKNOWN
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity4.entity_id)
     assert state.attributes["supported_color_modes"] == [
         light.ColorMode.COLOR_TEMP,
         light.ColorMode.HS,
@@ -1259,7 +1259,7 @@ async def test_light_backwards_compatibility_supported_color_modes(
         assert state.attributes["color_mode"] == light.ColorMode.UNKNOWN
 
 
-async def test_light_backwards_compatibility_color_mode(hass: HomeAssistant) -> None:
+async def test_light_backwards_compatibility_color_mode(menuai: menuai) -> None:
     """Test color_mode if not implemented by the entity."""
     entities = [
         MockLight("Test_0", STATE_ON),
@@ -1302,31 +1302,31 @@ async def test_light_backwards_compatibility_color_mode(hass: HomeAssistant) -> 
     entity4.hs_color = (240, 100)
     entity4.color_temp_kelvin = 10000
 
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.ONOFF]
     assert state.attributes["color_mode"] == light.ColorMode.ONOFF
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.BRIGHTNESS]
     assert state.attributes["color_mode"] == light.ColorMode.BRIGHTNESS
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.COLOR_TEMP]
     assert state.attributes["color_mode"] == light.ColorMode.COLOR_TEMP
     assert state.attributes["rgb_color"] == (202, 218, 255)
     assert state.attributes["hs_color"] == (221.575, 20.9)
     assert state.attributes["xy_color"] == (0.278, 0.287)
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.HS]
     assert state.attributes["color_mode"] == light.ColorMode.HS
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity4.entity_id)
     assert state.attributes["supported_color_modes"] == [
         light.ColorMode.COLOR_TEMP,
         light.ColorMode.HS,
@@ -1335,20 +1335,20 @@ async def test_light_backwards_compatibility_color_mode(hass: HomeAssistant) -> 
     assert state.attributes["color_mode"] == light.ColorMode.HS
 
 
-async def test_light_service_call_rgbw(hass: HomeAssistant) -> None:
+async def test_light_service_call_rgbw(menuai: menuai) -> None:
     """Test rgbw functionality in service calls."""
     entity0 = MockLight("Test_rgbw", STATE_ON)
     entity0.supported_color_modes = {light.ColorMode.RGBW}
 
-    setup_test_component_platform(hass, light.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, light.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.RGBW]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1363,7 +1363,7 @@ async def test_light_service_call_rgbw(hass: HomeAssistant) -> None:
     assert data == {"brightness": 255, "rgbw_color": (10, 20, 30, 40)}
 
 
-async def test_light_state_off(hass: HomeAssistant) -> None:
+async def test_light_state_off(menuai: menuai) -> None:
     """Test rgbw color conversion in state updates."""
     entities = [
         MockLight("Test_onoff", STATE_OFF),
@@ -1371,7 +1371,7 @@ async def test_light_state_off(hass: HomeAssistant) -> None:
         MockLight("Test_ct", STATE_OFF),
         MockLight("Test_rgbw", STATE_OFF),
     ]
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {light.ColorMode.ONOFF}
@@ -1382,10 +1382,10 @@ async def test_light_state_off(hass: HomeAssistant) -> None:
     entity3 = entities[3]
     entity3.supported_color_modes = {light.ColorMode.RGBW}
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes == {
         "color_mode": None,
         "friendly_name": "Test_onoff",
@@ -1393,7 +1393,7 @@ async def test_light_state_off(hass: HomeAssistant) -> None:
         "supported_features": 0,
     }
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes == {
         "color_mode": None,
         "friendly_name": "Test_brightness",
@@ -1402,7 +1402,7 @@ async def test_light_state_off(hass: HomeAssistant) -> None:
         "brightness": None,
     }
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state.attributes == {
         "color_mode": None,
         "friendly_name": "Test_ct",
@@ -1420,7 +1420,7 @@ async def test_light_state_off(hass: HomeAssistant) -> None:
         "min_mireds": 153,
     }
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state.attributes == {
         "color_mode": None,
         "friendly_name": "Test_rgbw",
@@ -1434,10 +1434,10 @@ async def test_light_state_off(hass: HomeAssistant) -> None:
     }
 
 
-async def test_light_state_rgbw(hass: HomeAssistant) -> None:
+async def test_light_state_rgbw(menuai: menuai) -> None:
     """Test rgbw color conversion in state updates."""
     entity0 = MockLight("Test_rgbw", STATE_ON)
-    setup_test_component_platform(hass, light.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, light.DOMAIN, [entity0])
 
     entity0.brightness = 255
     entity0.supported_color_modes = {light.ColorMode.RGBW}
@@ -1448,10 +1448,10 @@ async def test_light_state_rgbw(hass: HomeAssistant) -> None:
     entity0.rgbww_color = "Invalid"  # Should be ignored
     entity0.xy_color = "Invalid"  # Should be ignored
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes == {
         "color_mode": light.ColorMode.RGBW,
         "friendly_name": "Test_rgbw",
@@ -1465,10 +1465,10 @@ async def test_light_state_rgbw(hass: HomeAssistant) -> None:
     }
 
 
-async def test_light_state_rgbww(hass: HomeAssistant) -> None:
+async def test_light_state_rgbww(menuai: menuai) -> None:
     """Test rgbww color conversion in state updates."""
     entity0 = MockLight("Test_rgbww", STATE_ON)
-    setup_test_component_platform(hass, light.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, light.DOMAIN, [entity0])
 
     entity0.supported_color_modes = {light.ColorMode.RGBWW}
     entity0.color_mode = light.ColorMode.RGBWW
@@ -1479,10 +1479,10 @@ async def test_light_state_rgbww(hass: HomeAssistant) -> None:
     entity0.xy_color = "Invalid"  # Should be ignored
     entity0.brightness = 255
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes == {
         "color_mode": light.ColorMode.RGBWW,
         "friendly_name": "Test_rgbww",
@@ -1496,7 +1496,7 @@ async def test_light_state_rgbww(hass: HomeAssistant) -> None:
     }
 
 
-async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
+async def test_light_service_call_color_conversion(menuai: menuai) -> None:
     """Test color conversion in service calls."""
     entities = [
         MockLight("Test_hs", STATE_ON),
@@ -1508,7 +1508,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
         MockLight("Test_rgbww", STATE_ON),
         MockLight("Test_temperature", STATE_ON),
     ]
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {light.ColorMode.HS}
@@ -1541,38 +1541,38 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     entity7 = entities[7]
     entity7.supported_color_modes = {light.ColorMode.COLOR_TEMP}
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.HS]
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.RGB]
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.XY]
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state.attributes["supported_color_modes"] == [
         light.ColorMode.HS,
         light.ColorMode.RGB,
         light.ColorMode.XY,
     ]
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity4.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.HS]
 
-    state = hass.states.get(entity5.entity_id)
+    state = menuai.states.get(entity5.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.RGBW]
 
-    state = hass.states.get(entity6.entity_id)
+    state = menuai.states.get(entity6.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.RGBWW]
 
-    state = hass.states.get(entity7.entity_id)
+    state = menuai.states.get(entity7.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.COLOR_TEMP]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1608,7 +1608,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 255, "color_temp_kelvin": 1739, "color_temp": 575}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1645,7 +1645,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 255, "color_temp_kelvin": 5962, "color_temp": 167}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1681,7 +1681,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp_kelvin": 6279, "color_temp": 159}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1718,7 +1718,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp_kelvin": 5962, "color_temp": 167}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1754,7 +1754,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp_kelvin": 8645, "color_temp": 115}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1791,7 +1791,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp_kelvin": 5962, "color_temp": 167}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1828,7 +1828,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp_kelvin": 3011, "color_temp": 332}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1865,7 +1865,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp_kelvin": 5962, "color_temp": 167}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1901,7 +1901,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
     _, data = entity7.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp_kelvin": 3845, "color_temp": 260}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -1940,7 +1940,7 @@ async def test_light_service_call_color_conversion(hass: HomeAssistant) -> None:
 
 
 async def test_light_service_call_color_conversion_named_tuple(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a named tuple (RGBColor) is handled correctly."""
     entities = [
@@ -1952,7 +1952,7 @@ async def test_light_service_call_color_conversion_named_tuple(
         MockLight("Test_rgbw", STATE_ON),
         MockLight("Test_rgbww", STATE_ON),
     ]
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {light.ColorMode.HS}
@@ -1982,10 +1982,10 @@ async def test_light_service_call_color_conversion_named_tuple(
     entity6 = entities[6]
     entity6.supported_color_modes = {light.ColorMode.RGBWW}
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2019,14 +2019,14 @@ async def test_light_service_call_color_conversion_named_tuple(
     assert data == {"brightness": 64, "rgbww_color": (128, 0, 0, 0, 0)}
 
 
-async def test_light_service_call_color_temp_emulation(hass: HomeAssistant) -> None:
+async def test_light_service_call_color_temp_emulation(menuai: menuai) -> None:
     """Test color conversion in service calls."""
     entities = [
         MockLight("Test_hs_ct", STATE_ON),
         MockLight("Test_hs", STATE_ON),
         MockLight("Test_hs_white", STATE_ON),
     ]
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {light.ColorMode.COLOR_TEMP, light.ColorMode.HS}
@@ -2037,25 +2037,25 @@ async def test_light_service_call_color_temp_emulation(hass: HomeAssistant) -> N
     entity2 = entities[2]
     entity2.supported_color_modes = {light.ColorMode.HS, light.ColorMode.WHITE}
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [
         light.ColorMode.COLOR_TEMP,
         light.ColorMode.HS,
     ]
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.HS]
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state.attributes["supported_color_modes"] == [
         light.ColorMode.HS,
         light.ColorMode.WHITE,
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2077,13 +2077,13 @@ async def test_light_service_call_color_temp_emulation(hass: HomeAssistant) -> N
     assert data == {"brightness": 255, "hs_color": (27.001, 19.243)}
 
 
-async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> None:
+async def test_light_service_call_color_temp_conversion(menuai: menuai) -> None:
     """Test color temp conversion in service calls."""
     entities = [
         MockLight("Test_rgbww_ct", STATE_ON),
         MockLight("Test_rgbww", STATE_ON),
     ]
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {
@@ -2098,10 +2098,10 @@ async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> 
     assert entity1.min_color_temp_kelvin == 2000
     assert entity1.max_color_temp_kelvin == 6535
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [
         light.ColorMode.COLOR_TEMP,
         light.ColorMode.RGBWW,
@@ -2111,10 +2111,10 @@ async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> 
     assert state.attributes["min_color_temp_kelvin"] == 2000
     assert state.attributes["max_color_temp_kelvin"] == 6535
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.RGBWW]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2130,10 +2130,10 @@ async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> 
     _, data = entity0.last_call("turn_on")
     assert data == {"brightness": 255, "color_temp": 153, "color_temp_kelvin": 6535}
     _, data = entity1.last_call("turn_on")
-    # Home Assistant uses RGBCW so a mireds of 153 should be maximum cold at 100% brightness so 255
+    # MenuAI uses RGBCW so a mireds of 153 should be maximum cold at 100% brightness so 255
     assert data == {"brightness": 255, "rgbww_color": (0, 0, 0, 255, 0)}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2149,10 +2149,10 @@ async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> 
     _, data = entity0.last_call("turn_on")
     assert data == {"brightness": 128, "color_temp": 500, "color_temp_kelvin": 2000}
     _, data = entity1.last_call("turn_on")
-    # Home Assistant uses RGBCW so a mireds of 500 should be maximum warm at 50% brightness so 128
+    # MenuAI uses RGBCW so a mireds of 500 should be maximum warm at 50% brightness so 128
     assert data == {"brightness": 128, "rgbww_color": (0, 0, 0, 0, 128)}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2168,10 +2168,10 @@ async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> 
     _, data = entity0.last_call("turn_on")
     assert data == {"brightness": 255, "color_temp": 327, "color_temp_kelvin": 3058}
     _, data = entity1.last_call("turn_on")
-    # Home Assistant uses RGBCW so a mireds of 328 should be the midway point at 100% brightness so 127 (rounding), 128
+    # MenuAI uses RGBCW so a mireds of 328 should be the midway point at 100% brightness so 127 (rounding), 128
     assert data == {"brightness": 255, "rgbww_color": (0, 0, 0, 127, 128)}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2189,7 +2189,7 @@ async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> 
     _, data = entity1.last_call("turn_on")
     assert data == {"brightness": 255, "rgbww_color": (0, 0, 0, 191, 64)}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2208,13 +2208,13 @@ async def test_light_service_call_color_temp_conversion(hass: HomeAssistant) -> 
     assert data == {"brightness": 255, "rgbww_color": (0, 0, 0, 66, 189)}
 
 
-async def test_light_mired_color_temp_conversion(hass: HomeAssistant) -> None:
+async def test_light_mired_color_temp_conversion(menuai: menuai) -> None:
     """Test color temp conversion from K to legacy mired."""
     entities = [
         MockLight("Test_rgbww_ct", STATE_ON),
         MockLight("Test_rgbww", STATE_ON),
     ]
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {
@@ -2223,17 +2223,17 @@ async def test_light_mired_color_temp_conversion(hass: HomeAssistant) -> None:
     entity0._attr_min_color_temp_kelvin = 1800
     entity0._attr_max_color_temp_kelvin = 6700
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.COLOR_TEMP]
     assert state.attributes["min_mireds"] == 149
     assert state.attributes["max_mireds"] == 555
     assert state.attributes["min_color_temp_kelvin"] == 1800
     assert state.attributes["max_color_temp_kelvin"] == 6700
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2248,28 +2248,28 @@ async def test_light_mired_color_temp_conversion(hass: HomeAssistant) -> None:
     _, data = entity0.last_call("turn_on")
     assert data == {"brightness": 255, "color_temp": 285, "color_temp_kelvin": 3500}
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["color_mode"] == light.ColorMode.COLOR_TEMP
     assert state.attributes["color_temp"] == 285
     assert state.attributes["color_temp_kelvin"] == 3500
 
 
-async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
+async def test_light_service_call_white_mode(menuai: menuai) -> None:
     """Test color_mode white in service calls."""
     entity0 = MockLight("Test_white", STATE_ON)
     entity0.supported_color_modes = {light.ColorMode.HS, light.ColorMode.WHITE}
-    setup_test_component_platform(hass, light.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, light.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["supported_color_modes"] == [
         light.ColorMode.HS,
         light.ColorMode.WHITE,
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -2283,7 +2283,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {"brightness": 255, "hs_color": (240.0, 100.0)}
 
     entity0.calls = []
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id], "white": 50},
@@ -2293,7 +2293,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {"white": 50}
 
     entity0.calls = []
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id], "white": 0},
@@ -2303,7 +2303,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {}
 
     entity0.calls = []
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id], "brightness_pct": 100, "white": 50},
@@ -2313,7 +2313,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {"white": 255}
 
     entity0.calls = []
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id], "brightness": 100, "white": 0},
@@ -2323,7 +2323,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {"white": 100}
 
     entity0.calls = []
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id], "brightness_pct": 0, "white": 50},
@@ -2333,7 +2333,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {}
 
     entity0.calls = []
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id], "white": True},
@@ -2343,7 +2343,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {"white": 100}
 
     entity0.calls = []
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id], "brightness_pct": 50, "white": True},
@@ -2353,7 +2353,7 @@ async def test_light_service_call_white_mode(hass: HomeAssistant) -> None:
     assert data == {"white": 128}
 
 
-async def test_light_state_color_conversion(hass: HomeAssistant) -> None:
+async def test_light_state_color_conversion(menuai: menuai) -> None:
     """Test color conversion in state updates."""
     entities = [
         MockLight("Test_hs", STATE_ON),
@@ -2361,7 +2361,7 @@ async def test_light_state_color_conversion(hass: HomeAssistant) -> None:
         MockLight("Test_xy", STATE_ON),
         MockLight("Test_legacy", STATE_ON),
     ]
-    setup_test_component_platform(hass, light.DOMAIN, entities)
+    setup_test_component_platform(menuai, light.DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {light.ColorMode.HS}
@@ -2391,28 +2391,28 @@ async def test_light_state_color_conversion(hass: HomeAssistant) -> None:
     entity3.supported_color_modes = None
     entity3.color_mode = None
 
-    assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "light", {"light": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.attributes["color_mode"] == light.ColorMode.HS
     assert state.attributes["hs_color"] == (240, 100)
     assert state.attributes["rgb_color"] == (0, 0, 255)
     assert state.attributes["xy_color"] == (0.136, 0.04)
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes["color_mode"] == light.ColorMode.RGB
     assert state.attributes["hs_color"] == (0.0, 100.0)
     assert state.attributes["rgb_color"] == (128, 0, 0)
     assert state.attributes["xy_color"] == (0.701, 0.299)
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state.attributes["color_mode"] == light.ColorMode.XY
     assert state.attributes["hs_color"] == (125.176, 100.0)
     assert state.attributes["rgb_color"] == (0, 255, 22)
     assert state.attributes["xy_color"] == (0.1, 0.8)
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state.attributes["color_mode"] == light.ColorMode.HS
     assert state.attributes["hs_color"] == (240, 100)
     assert state.attributes["rgb_color"] == (0, 0, 255)
@@ -2420,36 +2420,36 @@ async def test_light_state_color_conversion(hass: HomeAssistant) -> None:
 
 
 async def test_services_filter_parameters(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_light_profiles,
     mock_light_entities: list[MockLight],
 ) -> None:
     """Test turn_on and turn_off filters unsupported parameters."""
-    setup_test_component_platform(hass, light.DOMAIN, mock_light_entities)
+    setup_test_component_platform(menuai, light.DOMAIN, mock_light_entities)
 
     assert await async_setup_component(
-        hass, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
+        menuai, light.DOMAIN, {light.DOMAIN: {CONF_PLATFORM: "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     ent1, _, _ = mock_light_entities
 
     # turn off the light by setting brightness to 0, this should work even if the light
     # doesn't support brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_MATCH_ALL}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_MATCH_ALL, light.ATTR_BRIGHTNESS: 0},
         blocking=True,
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
 
     # Ensure all unsupported attributes are filtered when light is turned on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2464,7 +2464,7 @@ async def test_services_filter_parameters(
     _, data = ent1.last_call("turn_on")
     assert data == {}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2476,7 +2476,7 @@ async def test_services_filter_parameters(
     _, data = ent1.last_call("turn_on")
     assert data == {}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2488,7 +2488,7 @@ async def test_services_filter_parameters(
     _, data = ent1.last_call("turn_on")
     assert data == {}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2500,7 +2500,7 @@ async def test_services_filter_parameters(
     _, data = ent1.last_call("turn_on")
     assert data == {}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2512,7 +2512,7 @@ async def test_services_filter_parameters(
     _, data = ent1.last_call("turn_on")
     assert data == {}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2524,7 +2524,7 @@ async def test_services_filter_parameters(
     _, data = ent1.last_call("turn_on")
     assert data == {}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2537,7 +2537,7 @@ async def test_services_filter_parameters(
     assert data == {}
 
     # Ensure all unsupported attributes are filtered when light is turned off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2550,12 +2550,12 @@ async def test_services_filter_parameters(
         blocking=True,
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
 
     _, data = ent1.last_call("turn_off")
     assert data == {}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -2566,7 +2566,7 @@ async def test_services_filter_parameters(
         blocking=True,
     )
 
-    assert not light.is_on(hass, ent1.entity_id)
+    assert not light.is_on(menuai, ent1.entity_id)
 
     _, data = ent1.last_call("turn_off")
     assert data == {}
@@ -2618,16 +2618,16 @@ def test_filter_supported_color_modes() -> None:
 
     # Supported color modes must not be empty
     supported = set()
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         light.filter_supported_color_modes(supported)
 
     # ColorMode.WHITE must be combined with a color mode supporting color
     supported = {light.ColorMode.WHITE}
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         light.filter_supported_color_modes(supported)
 
     supported = {light.ColorMode.WHITE, light.ColorMode.COLOR_TEMP}
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         light.filter_supported_color_modes(supported)
 
     supported = {light.ColorMode.WHITE, light.ColorMode.HS}
@@ -2653,7 +2653,7 @@ def test_filter_supported_color_modes() -> None:
 
 
 def test_deprecated_supported_features_ints(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test deprecated supported features ints."""
 
@@ -2664,8 +2664,8 @@ def test_deprecated_supported_features_ints(
             return 1
 
     entity = MockLightEntityEntity()
-    entity.hass = hass
-    entity.platform = MockEntityPlatform(hass, domain="test", platform_name="test")
+    entity.menuai = menuai
+    entity.platform = MockEntityPlatform(menuai, domain="test", platform_name="test")
     assert entity.supported_features_compat is light.LightEntityFeature(1)
     assert "MockLightEntityEntity" in caplog.text
     assert "is using deprecated supported features values" in caplog.text
@@ -2685,7 +2685,7 @@ def test_deprecated_supported_features_ints(
     ],
 )
 async def test_report_no_color_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     color_mode: str,
     supported_color_modes: set[str],
@@ -2700,7 +2700,7 @@ async def test_report_no_color_mode(
         _attr_supported_color_modes = supported_color_modes
 
     entity = MockLightEntityEntity()
-    platform = MockEntityPlatform(hass, domain="test", platform_name="test")
+    platform = MockEntityPlatform(menuai, domain="test", platform_name="test")
     await platform.async_add_entities([entity])
     entity._async_calculate_state()
     expected_warning = "does not report a color mode"
@@ -2715,7 +2715,7 @@ async def test_report_no_color_mode(
     ],
 )
 async def test_report_no_color_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     color_mode: str,
     supported_color_modes: set[str],
@@ -2730,7 +2730,7 @@ async def test_report_no_color_modes(
         _attr_supported_color_modes = supported_color_modes
 
     entity = MockLightEntityEntity()
-    platform = MockEntityPlatform(hass, domain="test", platform_name="test")
+    platform = MockEntityPlatform(menuai, domain="test", platform_name="test")
     await platform.async_add_entities([entity])
     entity._async_calculate_state()
     expected_warning = "does not set supported color modes"
@@ -2763,7 +2763,7 @@ async def test_report_no_color_modes(
     ],
 )
 async def test_report_invalid_color_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     color_mode: str,
     supported_color_modes: set[str],
@@ -2780,7 +2780,7 @@ async def test_report_invalid_color_mode(
         _attr_supported_color_modes = supported_color_modes
 
     entity = MockLightEntityEntity()
-    platform = MockEntityPlatform(hass, domain="test", platform_name="test")
+    platform = MockEntityPlatform(menuai, domain="test", platform_name="test")
     await platform.async_add_entities([entity])
     entity._async_calculate_state()
     expected_warning = f"set to unsupported color mode {color_mode}"
@@ -2823,7 +2823,7 @@ async def test_report_invalid_color_mode(
     ],
 )
 def test_report_invalid_color_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     color_mode: str,
     supported_color_modes: set[str],
@@ -2837,7 +2837,7 @@ def test_report_invalid_color_modes(
         _attr_is_on = True
         _attr_supported_features = light.LightEntityFeature.EFFECT
         _attr_supported_color_modes = supported_color_modes
-        platform = MockEntityPlatform(hass, platform_name=platform_name)
+        platform = MockEntityPlatform(menuai, platform_name=platform_name)
 
     entity = MockLightEntityEntity()
     entity._async_calculate_state()
@@ -2873,7 +2873,7 @@ def test_report_invalid_color_modes(
     ids=["with_kelvin", "with_mired_values", "with_mired_defaults"],
 )
 def test_missing_kelvin_property_warnings(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     attributes: dict[str, int | None],
     expected_warnings: dict[str, bool],
@@ -2886,7 +2886,7 @@ def test_missing_kelvin_property_warnings(
         _attr_is_on = True
         _attr_supported_features = light.LightEntityFeature.EFFECT
         _attr_supported_color_modes = {light.ColorMode.COLOR_TEMP}
-        platform = MockEntityPlatform(hass, platform_name="test")
+        platform = MockEntityPlatform(menuai, platform_name="test")
 
     entity = MockLightEntityEntity()
     for k, v in attributes.items():
@@ -2979,22 +2979,22 @@ def test_deprecated_color_mode_constants_enums(
 
 
 async def test_deprecated_turn_on_arguments(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test color temp conversion in service calls."""
     entity = MockLight("Test_ct", STATE_ON, {light.ColorMode.COLOR_TEMP})
-    setup_test_component_platform(hass, light.DOMAIN, [entity])
+    setup_test_component_platform(menuai, light.DOMAIN, [entity])
 
     assert await async_setup_component(
-        hass, light.DOMAIN, {light.DOMAIN: {"platform": "test"}}
+        menuai, light.DOMAIN, {light.DOMAIN: {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state.attributes["supported_color_modes"] == [light.ColorMode.COLOR_TEMP]
 
     caplog.clear()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -3008,7 +3008,7 @@ async def test_deprecated_turn_on_arguments(
     assert data == {"color_temp": 200, "color_temp_kelvin": 5000}
 
     caplog.clear()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -3022,7 +3022,7 @@ async def test_deprecated_turn_on_arguments(
     assert data == {"color_temp": 200, "color_temp_kelvin": 5000}
 
     caplog.clear()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {

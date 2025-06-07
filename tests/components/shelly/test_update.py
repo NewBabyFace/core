@@ -6,13 +6,13 @@ from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCal
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.shelly.const import (
+from menuai.components.shelly.const import (
     DOMAIN,
     GEN1_RELEASE_URL,
     GEN2_BETA_RELEASE_URL,
     GEN2_RELEASE_URL,
 )
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
@@ -22,18 +22,18 @@ from homeassistant.components.update import (
     SERVICE_INSTALL,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.core import menuai, State
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import (
     init_integration,
@@ -48,7 +48,7 @@ from tests.common import mock_restore_cache
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_block_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_block_device: Mock,
     entity_registry: EntityRegistry,
@@ -59,9 +59,9 @@ async def test_block_update(
     monkeypatch.setitem(mock_block_device.status["update"], "old_version", "1.0.0")
     monkeypatch.setitem(mock_block_device.status["update"], "new_version", "2.0.0")
     monkeypatch.setitem(mock_block_device.status, "cloud", {"connected": False})
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "2.0.0"
@@ -72,7 +72,7 @@ async def test_block_update(
         == UpdateEntityFeature.INSTALL | UpdateEntityFeature.PROGRESS
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -80,7 +80,7 @@ async def test_block_update(
     )
     assert mock_block_device.trigger_ota_update.call_count == 1
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "2.0.0"
@@ -89,9 +89,9 @@ async def test_block_update(
     assert state.attributes[ATTR_RELEASE_URL] == GEN1_RELEASE_URL
 
     monkeypatch.setitem(mock_block_device.status["update"], "old_version", "2.0.0")
-    await mock_rest_update(hass, freezer)
+    await mock_rest_update(menuai, freezer)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "2.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "2.0.0"
@@ -104,7 +104,7 @@ async def test_block_update(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_block_beta_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_block_device: Mock,
     entity_registry: EntityRegistry,
@@ -116,9 +116,9 @@ async def test_block_beta_update(
     monkeypatch.setitem(mock_block_device.status["update"], "new_version", "2.0.0")
     monkeypatch.setitem(mock_block_device.status["update"], "beta_version", "")
     monkeypatch.setitem(mock_block_device.status, "cloud", {"connected": False})
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "1.0.0"
@@ -128,9 +128,9 @@ async def test_block_beta_update(
     monkeypatch.setitem(
         mock_block_device.status["update"], "beta_version", "2.0.0-beta"
     )
-    await mock_rest_update(hass, freezer)
+    await mock_rest_update(menuai, freezer)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "2.0.0-beta"
@@ -138,7 +138,7 @@ async def test_block_beta_update(
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] is None
     assert state.attributes[ATTR_RELEASE_URL] is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -146,7 +146,7 @@ async def test_block_beta_update(
     )
     assert mock_block_device.trigger_ota_update.call_count == 1
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1.0.0"
     assert state.attributes[ATTR_LATEST_VERSION] == "2.0.0-beta"
@@ -154,9 +154,9 @@ async def test_block_beta_update(
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] is None
 
     monkeypatch.setitem(mock_block_device.status["update"], "old_version", "2.0.0-beta")
-    await mock_rest_update(hass, freezer)
+    await mock_rest_update(menuai, freezer)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "2.0.0-beta"
     assert state.attributes[ATTR_LATEST_VERSION] == "2.0.0-beta"
@@ -169,7 +169,7 @@ async def test_block_beta_update(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_block_update_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
@@ -182,13 +182,13 @@ async def test_block_update_connection_error(
         "trigger_ota_update",
         AsyncMock(side_effect=DeviceConnectionError),
     )
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Device communication error occurred while triggering OTA update for Test name",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: "update.test_name_firmware"},
@@ -198,7 +198,7 @@ async def test_block_update_connection_error(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_block_update_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -210,11 +210,11 @@ async def test_block_update_auth_error(
         "trigger_ota_update",
         AsyncMock(side_effect=InvalidAuthError),
     )
-    entry = await init_integration(hass, 1)
+    entry = await init_integration(menuai, 1)
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.test_name_firmware"},
@@ -223,7 +223,7 @@ async def test_block_update_auth_error(
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -237,7 +237,7 @@ async def test_block_update_auth_error(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_block_version_compare(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_block_device: Mock,
     entity_registry: EntityRegistry,
@@ -254,14 +254,14 @@ async def test_block_version_compare(
     monkeypatch.setitem(mock_block_device.status["update"], "new_version", "")
     monkeypatch.setitem(mock_block_device.status["update"], "beta_version", BETA)
     monkeypatch.setitem(mock_block_device.status, "cloud", {"connected": False})
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
-    assert (state := hass.states.get(entity_id_latest))
+    assert (state := menuai.states.get(entity_id_latest))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == STABLE
     assert state.attributes[ATTR_LATEST_VERSION] == STABLE
 
-    assert (state := hass.states.get(entity_id_beta))
+    assert (state := menuai.states.get(entity_id_beta))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == STABLE
     assert state.attributes[ATTR_LATEST_VERSION] == BETA
@@ -269,21 +269,21 @@ async def test_block_version_compare(
     monkeypatch.setitem(mock_block_device.status["update"], "old_version", BETA)
     monkeypatch.setitem(mock_block_device.status["update"], "new_version", STABLE)
     monkeypatch.setitem(mock_block_device.status["update"], "beta_version", BETA)
-    await mock_rest_update(hass, freezer)
+    await mock_rest_update(menuai, freezer)
 
-    assert (state := hass.states.get(entity_id_latest))
+    assert (state := menuai.states.get(entity_id_latest))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == BETA
     assert state.attributes[ATTR_LATEST_VERSION] == STABLE
 
-    assert (state := hass.states.get(entity_id_beta))
+    assert (state := menuai.states.get(entity_id_beta))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == BETA
     assert state.attributes[ATTR_LATEST_VERSION] == BETA
 
 
 async def test_rpc_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     monkeypatch: pytest.MonkeyPatch,
@@ -298,9 +298,9 @@ async def test_rpc_update(
             "stable": {"version": "2"},
         },
     )
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -309,7 +309,7 @@ async def test_rpc_update(
     supported_feat = state.attributes[ATTR_SUPPORTED_FEATURES]
     assert supported_feat == UpdateEntityFeature.INSTALL | UpdateEntityFeature.PROGRESS
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -318,7 +318,7 @@ async def test_rpc_update(
 
     assert mock_rpc_device.trigger_ota_update.call_count == 1
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -341,7 +341,7 @@ async def test_rpc_update(
         },
     )
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.attributes[ATTR_IN_PROGRESS] is True
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] == 0
 
@@ -361,7 +361,7 @@ async def test_rpc_update(
         },
     )
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.attributes[ATTR_IN_PROGRESS] is True
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] == 50
 
@@ -382,7 +382,7 @@ async def test_rpc_update(
     monkeypatch.setitem(mock_rpc_device.shelly, "ver", "2")
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "2"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -394,7 +394,7 @@ async def test_rpc_update(
 
 
 async def test_rpc_sleeping_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     monkeypatch: pytest.MonkeyPatch,
@@ -411,16 +411,16 @@ async def test_rpc_sleeping_update(
         },
     )
     entity_id = f"{UPDATE_DOMAIN}.test_name_firmware"
-    await init_integration(hass, 2, sleep_period=1000)
+    await init_integration(menuai, 2, sleep_period=1000)
 
     # Entity should be created when device is online
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
     # Make device online
     mock_rpc_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -432,7 +432,7 @@ async def test_rpc_sleeping_update(
     monkeypatch.setitem(mock_rpc_device.shelly, "ver", "2")
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "2"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -445,16 +445,16 @@ async def test_rpc_sleeping_update(
 
 
 async def test_rpc_restored_sleeping_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     device_registry: DeviceRegistry,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test RPC restored update entity."""
-    entry = await init_integration(hass, 2, sleep_period=1000, skip_setup=True)
+    entry = await init_integration(menuai, 2, sleep_period=1000, skip_setup=True)
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         UPDATE_DOMAIN,
         "test_name_firmware",
         "sys-fwupdate",
@@ -463,15 +463,15 @@ async def test_rpc_restored_sleeping_update(
     )
 
     attr = {ATTR_INSTALLED_VERSION: "1", ATTR_LATEST_VERSION: "2"}
-    mock_restore_cache(hass, [State(entity_id, STATE_ON, attributes=attr)])
+    mock_restore_cache(menuai, [State(entity_id, STATE_ON, attributes=attr)])
     monkeypatch.setitem(mock_rpc_device.shelly, "ver", "2")
     monkeypatch.setitem(mock_rpc_device.status["sys"], "available_updates", {})
     monkeypatch.setattr(mock_rpc_device, "initialized", False)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -482,13 +482,13 @@ async def test_rpc_restored_sleeping_update(
     # Make device online
     monkeypatch.setattr(mock_rpc_device, "initialized", True)
     mock_rpc_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Mock update
     mock_rpc_device.mock_update()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "2"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -498,7 +498,7 @@ async def test_rpc_restored_sleeping_update(
 
 
 async def test_rpc_restored_sleeping_update_no_last_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     device_registry: DeviceRegistry,
     monkeypatch: pytest.MonkeyPatch,
@@ -512,10 +512,10 @@ async def test_rpc_restored_sleeping_update_no_last_state(
             "stable": {"version": "2"},
         },
     )
-    entry = await init_integration(hass, 2, sleep_period=1000, skip_setup=True)
+    entry = await init_integration(menuai, 2, sleep_period=1000, skip_setup=True)
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         UPDATE_DOMAIN,
         "test_name_firmware",
         "sys-fwupdate",
@@ -524,22 +524,22 @@ async def test_rpc_restored_sleeping_update_no_last_state(
     )
 
     monkeypatch.setattr(mock_rpc_device, "initialized", False)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     # Make device online
     monkeypatch.setattr(mock_rpc_device, "initialized", True)
     mock_rpc_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Mock update
     mock_rpc_device.mock_update()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "2"
@@ -550,7 +550,7 @@ async def test_rpc_restored_sleeping_update_no_last_state(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_rpc_beta_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
@@ -567,9 +567,9 @@ async def test_rpc_beta_update(
             "beta": {"version": ""},
         },
     )
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "1"
@@ -584,16 +584,16 @@ async def test_rpc_beta_update(
             "beta": {"version": "2b"},
         },
     )
-    await mock_rest_update(hass, freezer)
+    await mock_rest_update(menuai, freezer)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "2b"
     assert state.attributes[ATTR_IN_PROGRESS] is False
     assert state.attributes[ATTR_RELEASE_URL] == GEN2_BETA_RELEASE_URL
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -616,7 +616,7 @@ async def test_rpc_beta_update(
 
     assert mock_rpc_device.trigger_ota_update.call_count == 1
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "1"
     assert state.attributes[ATTR_LATEST_VERSION] == "2b"
@@ -639,7 +639,7 @@ async def test_rpc_beta_update(
         },
     )
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.attributes[ATTR_IN_PROGRESS] is True
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] == 40
 
@@ -658,9 +658,9 @@ async def test_rpc_beta_update(
         },
     )
     monkeypatch.setitem(mock_rpc_device.shelly, "ver", "2b")
-    await mock_rest_update(hass, freezer)
+    await mock_rest_update(menuai, freezer)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "2b"
     assert state.attributes[ATTR_LATEST_VERSION] == "2b"
@@ -686,7 +686,7 @@ async def test_rpc_beta_update(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_rpc_update_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     exc: Exception,
     error: str,
     mock_rpc_device: Mock,
@@ -706,10 +706,10 @@ async def test_rpc_update_errors(
     monkeypatch.setattr(
         mock_rpc_device, "trigger_ota_update", AsyncMock(side_effect=exc)
     )
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
-    with pytest.raises(HomeAssistantError, match=error):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: "update.test_name_firmware"},
@@ -719,7 +719,7 @@ async def test_rpc_update_errors(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_rpc_update_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     monkeypatch: pytest.MonkeyPatch,
@@ -739,11 +739,11 @@ async def test_rpc_update_auth_error(
         "trigger_ota_update",
         AsyncMock(side_effect=InvalidAuthError),
     )
-    entry = await init_integration(hass, 2)
+    entry = await init_integration(menuai, 2)
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.test_name_firmware"},
@@ -752,7 +752,7 @@ async def test_rpc_update_auth_error(
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

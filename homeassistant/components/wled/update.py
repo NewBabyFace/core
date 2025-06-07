@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WLED_KEY, WLEDConfigEntry
 from .coordinator import WLEDDataUpdateCoordinator, WLEDReleasesDataUpdateCoordinator
@@ -19,12 +19,12 @@ from .helpers import wled_exception_handler
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: WLEDConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up WLED update based on a config entry."""
-    async_add_entities([WLEDUpdateEntity(entry.runtime_data, hass.data[WLED_KEY])])
+    async_add_entities([WLEDUpdateEntity(entry.runtime_data, menuai.data[WLED_KEY])])
 
 
 class WLEDUpdateEntity(WLEDEntity, UpdateEntity):
@@ -46,12 +46,12 @@ class WLEDUpdateEntity(WLEDEntity, UpdateEntity):
         self.releases_coordinator = releases_coordinator
         self._attr_unique_id = coordinator.data.info.mac_address
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass.
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai.
 
         Register extra update listener for the releases coordinator.
         """
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.releases_coordinator.async_add_listener(
                 self._handle_coordinator_update

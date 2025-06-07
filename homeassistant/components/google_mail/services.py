@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 from googleapiclient.http import HttpRequest
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service import async_extract_config_entry_ids
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service import async_extract_config_entry_ids
 
 from .const import (
     ATTR_ENABLED,
@@ -46,7 +46,7 @@ SERVICE_VACATION_SCHEMA = vol.All(
 )
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
+async def async_setup_services(menuai: menuai) -> None:
     """Set up services for Google Mail integration."""
 
     async def extract_gmail_config_entries(
@@ -54,8 +54,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     ) -> list[GoogleMailConfigEntry]:
         return [
             entry
-            for entry_id in await async_extract_config_entry_ids(hass, call)
-            if (entry := hass.config_entries.async_get_entry(entry_id))
+            for entry_id in await async_extract_config_entry_ids(menuai, call)
+            if (entry := menuai.config_entries.async_get_entry(entry_id))
             and entry.domain == DOMAIN
         ]
 
@@ -91,9 +91,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 .settings()
                 .updateVacation(userId=ATTR_ME, body=_settings)
             )
-            await hass.async_add_executor_job(settings.execute)
+            await menuai.async_add_executor_job(settings.execute)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain=DOMAIN,
         service=SERVICE_SET_VACATION,
         schema=SERVICE_VACATION_SCHEMA,

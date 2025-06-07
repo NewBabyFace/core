@@ -7,10 +7,10 @@ import logging
 from pycoolmasternet_async import CoolMasterNet
 from pycoolmasternet_async.coolmasternet import CoolMasterNetUnit
 
-from homeassistant.components.climate import SCAN_INTERVAL
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.climate import SCAN_INTERVAL
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -27,7 +27,7 @@ class CoolmasterDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: CoolmasterConfigEntry,
         coolmaster: CoolMasterNet,
         info: dict[str, str],
@@ -37,7 +37,7 @@ class CoolmasterDataUpdateCoordinator(
         self.info = info
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

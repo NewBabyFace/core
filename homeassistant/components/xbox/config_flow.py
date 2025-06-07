@@ -3,8 +3,8 @@
 import logging
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.config_entries import ConfigFlowResult
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN
 

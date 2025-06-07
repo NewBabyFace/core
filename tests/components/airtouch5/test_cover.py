@@ -10,7 +10,7 @@ from airtouch5py.packets.zone_status import (
 )
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
     DOMAIN as COVER_DOMAIN,
@@ -19,9 +19,9 @@ from homeassistant.components.cover import (
     SERVICE_SET_COVER_POSITION,
     CoverState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -31,7 +31,7 @@ COVER_ENTITY_ID = "cover.zone_1_damper"
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_airtouch5_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -39,22 +39,22 @@ async def test_all_entities(
 ) -> None:
     """Test all entities."""
 
-    with patch("homeassistant.components.airtouch5.PLATFORMS", [Platform.COVER]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.airtouch5.PLATFORMS", [Platform.COVER]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_cover_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_airtouch5_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the actions of the Airtouch5 covers."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: COVER_ENTITY_ID},
@@ -63,7 +63,7 @@ async def test_cover_actions(
     mock_airtouch5_client.send_packet.assert_called_once()
     mock_airtouch5_client.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: COVER_ENTITY_ID},
@@ -72,7 +72,7 @@ async def test_cover_actions(
     mock_airtouch5_client.send_packet.assert_called_once()
     mock_airtouch5_client.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: COVER_ENTITY_ID, ATTR_POSITION: 50},
@@ -83,13 +83,13 @@ async def test_cover_actions(
 
 
 async def test_cover_callbacks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_airtouch5_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the callbacks of the Airtouch5 covers."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # We find the callback method on the mock client
     zone_status_callback: Callable[[dict[int, ZoneStatusZone]], None] = (
@@ -110,34 +110,34 @@ async def test_cover_callbacks(
             is_low_battery=False,
         )
         zone_status_callback({1: zsz})
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # And call it to effectively launch the callback as the server would do
 
     # Partly open
     await _call_zone_status_callback(0.7)
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 70
 
     # Fully open
     await _call_zone_status_callback(1)
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 100
 
     # Fully closed
     await _call_zone_status_callback(0.0)
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.state == CoverState.CLOSED
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 0
 
     # Partly reopened
     await _call_zone_status_callback(0.3)
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 30

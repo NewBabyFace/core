@@ -7,8 +7,8 @@ from miio import Device as MiioDevice
 from miio.gateway.gateway import Gateway
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 
 class ServiceMethodDetails(NamedTuple):

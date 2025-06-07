@@ -10,15 +10,15 @@ from cookidoo_api import (
     CookidooIngredientItem,
 )
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import CookidooConfigEntry, CookidooDataUpdateCoordinator
@@ -28,7 +28,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: CookidooConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -75,7 +75,7 @@ class CookidooIngredientsTodoListEntity(CookidooBaseEntity, TodoListEntity):
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update an ingredient to the To-do list.
 
-        Cookidoo ingredients can be changed in state, but not in summary or description. This is currently not possible to distinguish in home assistant and just fails silently.
+        Cookidoo ingredients can be changed in state, but not in summary or description. This is currently not possible to distinguish in MenuAI and just fails silently.
         """
         try:
             if TYPE_CHECKING:
@@ -91,7 +91,7 @@ class CookidooIngredientsTodoListEntity(CookidooBaseEntity, TodoListEntity):
                 ]
             )
         except CookidooException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="todo_update_item_failed",
                 translation_placeholders={"name": item.summary or ""},
@@ -141,7 +141,7 @@ class CookidooAdditionalItemTodoListEntity(CookidooBaseEntity, TodoListEntity):
                 assert item.summary
             await self.coordinator.cookidoo.add_additional_items([item.summary])
         except CookidooException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="todo_save_item_failed",
                 translation_placeholders={"name": item.summary or ""},
@@ -164,7 +164,7 @@ class CookidooAdditionalItemTodoListEntity(CookidooBaseEntity, TodoListEntity):
             await self.coordinator.cookidoo.edit_additional_items_ownership([new_item])
             await self.coordinator.cookidoo.edit_additional_items([new_item])
         except CookidooException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="todo_update_item_failed",
                 translation_placeholders={"name": item.summary or ""},
@@ -178,7 +178,7 @@ class CookidooAdditionalItemTodoListEntity(CookidooBaseEntity, TodoListEntity):
         try:
             await self.coordinator.cookidoo.remove_additional_items(uids)
         except CookidooException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="todo_delete_item_failed",
                 translation_placeholders={"count": str(len(uids))},

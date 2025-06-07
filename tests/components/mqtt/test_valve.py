@@ -5,18 +5,18 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import mqtt, valve
-from homeassistant.components.mqtt.valve import (
+from menuai.components import mqtt, valve
+from menuai.components.mqtt.valve import (
     MQTT_VALVE_ATTRIBUTES_BLOCKED,
     ValveEntityFeature,
 )
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
     SERVICE_SET_VALVE_POSITION,
     ValveState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
@@ -25,7 +25,7 @@ from homeassistant.const import (
     SERVICE_STOP_VALVE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import (
     help_custom_config,
@@ -84,7 +84,7 @@ DEFAULT_CONFIG_REPORTS_POSITION = {
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -111,7 +111,7 @@ DEFAULT_CONFIG_REPORTS_POSITION = {
     ],
 )
 async def test_state_via_state_topic_no_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     message: str,
     asserted_state: str,
@@ -119,23 +119,23 @@ async def test_state_via_state_topic_no_position(
     """Test the controlling state via topic without position and without template."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", message)
+    async_fire_mqtt_message(menuai, "state-topic", message)
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
 
-    async_fire_mqtt_message(hass, "state-topic", "None")
+    async_fire_mqtt_message(menuai, "state-topic", "None")
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -159,7 +159,7 @@ async def test_state_via_state_topic_no_position(
     ],
 )
 async def test_state_via_state_topic_with_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     message: str,
     asserted_state: str,
@@ -167,18 +167,18 @@ async def test_state_via_state_topic_with_template(
     """Test the controlling state via topic with template."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", message)
+    async_fire_mqtt_message(menuai, "state-topic", message)
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -205,7 +205,7 @@ async def test_state_via_state_topic_with_template(
     ],
 )
 async def test_state_via_state_topic_with_position_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     message: str,
     asserted_state: str,
@@ -213,18 +213,18 @@ async def test_state_via_state_topic_with_position_template(
     """Test the controlling state via topic with position template."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", message)
+    async_fire_mqtt_message(menuai, "state-topic", message)
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -262,7 +262,7 @@ async def test_state_via_state_topic_with_position_template(
     ],
 )
 async def test_state_via_state_topic_through_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     message: str,
     asserted_state: str,
@@ -276,19 +276,19 @@ async def test_state_via_state_topic_through_position(
     """
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", message)
+    async_fire_mqtt_message(menuai, "state-topic", message)
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == valve_position
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -303,7 +303,7 @@ async def test_state_via_state_topic_through_position(
     ],
 )
 async def test_opening_closing_state_is_reset(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the controlling state via topic through position.
 
@@ -311,7 +311,7 @@ async def test_opening_closing_state_is_reset(
     """
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
@@ -331,15 +331,15 @@ async def test_opening_closing_state_is_reset(
     ]
 
     for message, asserted_state, valve_position in messages:
-        async_fire_mqtt_message(hass, "state-topic", message)
+        async_fire_mqtt_message(menuai, "state-topic", message)
 
-        state = hass.states.get("valve.test")
+        state = menuai.states.get("valve.test")
         assert state.state == asserted_state
         assert state.attributes.get(ATTR_CURRENT_POSITION) == valve_position
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "message", "err_message"),
+    ("menuai_config", "message", "err_message"),
     [
         (
             {
@@ -372,7 +372,7 @@ async def test_opening_closing_state_is_reset(
     ],
 )
 async def test_invalid_state_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     message: str,
@@ -384,17 +384,17 @@ async def test_invalid_state_updates(
     """
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", message)
-    state = hass.states.get("valve.test")
+    async_fire_mqtt_message(menuai, "state-topic", message)
+    state = menuai.states.get("valve.test")
     assert err_message in caplog.text
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -429,7 +429,7 @@ async def test_invalid_state_updates(
     ],
 )
 async def test_state_via_state_trough_position_with_alt_range(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     message: str,
     asserted_state: str,
@@ -443,19 +443,19 @@ async def test_state_via_state_trough_position_with_alt_range(
     """
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", message)
+    async_fire_mqtt_message(menuai, "state-topic", message)
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == valve_position
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -480,7 +480,7 @@ async def test_state_via_state_trough_position_with_alt_range(
     ],
 )
 async def test_controlling_valve_by_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     service: str,
     asserted_message: str,
@@ -488,10 +488,10 @@ async def test_controlling_valve_by_state(
     """Test controlling a valve by state."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         service,
         {ATTR_ENTITY_ID: "valve.test"},
@@ -502,12 +502,12 @@ async def test_controlling_valve_by_state(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "supported_features"),
+    ("menuai_config", "supported_features"),
     [
         (DEFAULT_CONFIG, ValveEntityFeature.OPEN | ValveEntityFeature.CLOSE),
         (
@@ -556,20 +556,20 @@ async def test_controlling_valve_by_state(
     ],
 )
 async def test_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     supported_features: ValveEntityFeature,
 ) -> None:
     """Test the valve's supported features."""
     assert await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state is not None
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) == supported_features
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             valve.DOMAIN, DEFAULT_CONFIG_REPORTS_POSITION, ({"payload_open": "OPEN"},)
@@ -586,14 +586,14 @@ async def test_supported_features(
     ],
 )
 async def test_open_close_payload_config_not_allowed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test open or close payload configs fail if valve reports position."""
     assert await mqtt_mock_entry()
 
-    assert hass.states.get("valve.test") is None
+    assert menuai.states.get("valve.test") is None
 
     assert (
         "Options `payload_open`, `payload_close`, `state_open` and "
@@ -602,7 +602,7 @@ async def test_open_close_payload_config_not_allowed(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -634,7 +634,7 @@ async def test_open_close_payload_config_not_allowed(
     ],
 )
 async def test_controlling_valve_by_state_optimistic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     service: str,
     asserted_message: str,
@@ -643,10 +643,10 @@ async def test_controlling_valve_by_state_optimistic(
     """Test controlling a valve by state explicit and implicit optimistic."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         service,
         {ATTR_ENTITY_ID: "valve.test"},
@@ -657,12 +657,12 @@ async def test_controlling_valve_by_state_optimistic(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -686,7 +686,7 @@ async def test_controlling_valve_by_state_optimistic(
     ],
 )
 async def test_controlling_valve_by_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     service: str,
     asserted_message: str,
@@ -694,10 +694,10 @@ async def test_controlling_valve_by_position(
     """Test controlling a valve by position."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         service,
         {ATTR_ENTITY_ID: "valve.test"},
@@ -708,12 +708,12 @@ async def test_controlling_valve_by_position(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -733,7 +733,7 @@ async def test_controlling_valve_by_position(
     [(0, "0"), (30, "30"), (100, "100")],
 )
 async def test_controlling_valve_by_set_valve_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     position: int,
     asserted_message: str,
@@ -741,10 +741,10 @@ async def test_controlling_valve_by_set_valve_position(
     """Test controlling a valve by position."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         SERVICE_SET_VALVE_POSITION,
         {ATTR_ENTITY_ID: "valve.test", ATTR_POSITION: position},
@@ -755,12 +755,12 @@ async def test_controlling_valve_by_set_valve_position(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -785,7 +785,7 @@ async def test_controlling_valve_by_set_valve_position(
     ],
 )
 async def test_controlling_valve_optimistic_by_set_valve_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     position: int,
     asserted_message: str,
@@ -795,10 +795,10 @@ async def test_controlling_valve_optimistic_by_set_valve_position(
     """Test controlling a valve optimistic by position."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         SERVICE_SET_VALVE_POSITION,
         {ATTR_ENTITY_ID: "valve.test", ATTR_POSITION: position},
@@ -809,13 +809,13 @@ async def test_controlling_valve_optimistic_by_set_valve_position(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == asserted_position
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -837,7 +837,7 @@ async def test_controlling_valve_optimistic_by_set_valve_position(
     [(0, "-128"), (30, "-52"), (80, "76"), (100, "127")],
 )
 async def test_controlling_valve_with_alt_range_by_set_valve_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     position: int,
     asserted_message: str,
@@ -845,10 +845,10 @@ async def test_controlling_valve_with_alt_range_by_set_valve_position(
     """Test controlling a valve with an alt range by position."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         SERVICE_SET_VALVE_POSITION,
         {ATTR_ENTITY_ID: "valve.test", ATTR_POSITION: position},
@@ -859,12 +859,12 @@ async def test_controlling_valve_with_alt_range_by_set_valve_position(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -888,7 +888,7 @@ async def test_controlling_valve_with_alt_range_by_set_valve_position(
     ],
 )
 async def test_controlling_valve_with_alt_range_by_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     service: str,
     asserted_message: str,
@@ -896,10 +896,10 @@ async def test_controlling_valve_with_alt_range_by_position(
     """Test controlling a valve with an alt range by position."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         service,
         {ATTR_ENTITY_ID: "valve.test"},
@@ -910,12 +910,12 @@ async def test_controlling_valve_with_alt_range_by_position(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -949,7 +949,7 @@ async def test_controlling_valve_with_alt_range_by_position(
     ],
 )
 async def test_controlling_valve_by_position_optimistic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     service: str,
     asserted_message: str,
@@ -959,11 +959,11 @@ async def test_controlling_valve_by_position_optimistic(
     """Test controlling a valve by state explicit and implicit optimistic."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_CURRENT_POSITION) is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         service,
         {ATTR_ENTITY_ID: "valve.test"},
@@ -974,13 +974,13 @@ async def test_controlling_valve_by_position_optimistic(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
     assert state.attributes[ATTR_CURRENT_POSITION] == asserted_position
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1008,7 +1008,7 @@ async def test_controlling_valve_by_position_optimistic(
     ],
 )
 async def test_controlling_valve_optimistic_alt_range_by_set_valve_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     position: int,
     asserted_message: str,
@@ -1018,10 +1018,10 @@ async def test_controlling_valve_optimistic_alt_range_by_set_valve_position(
     """Test controlling a valve optimistic and alt range by position."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         valve.DOMAIN,
         SERVICE_SET_VALVE_POSITION,
         {ATTR_ENTITY_ID: "valve.test", ATTR_POSITION: position},
@@ -1032,51 +1032,51 @@ async def test_controlling_valve_optimistic_alt_range_by_set_valve_position(
         "command-topic", asserted_message, 0, False
     )
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.state == asserted_state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == asserted_position
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
     await help_test_availability_when_connection_lost(
-        hass, mqtt_mock_entry, valve.DOMAIN
+        menuai, mqtt_mock_entry, valve.DOMAIN
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     await help_test_default_availability_payload(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     await help_test_custom_availability_payload(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1090,17 +1090,17 @@ async def test_custom_availability_payload(
     ],
 )
 async def test_valid_device_class(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of a valid device class."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("valve.test")
+    state = menuai.states.get("valve.test")
     assert state.attributes.get("device_class") == "water"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1122,20 +1122,20 @@ async def test_invalid_device_class(
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         valve.DOMAIN,
         DEFAULT_CONFIG,
@@ -1144,47 +1144,47 @@ async def test_setting_blocked_attribute_via_mqtt_json_message(
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -1205,114 +1205,114 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique_id option only creates one valve per id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, valve.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, valve.DOMAIN)
 
 
 async def test_discovery_removal_valve(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered valve."""
     data = '{ "name": "test", "command_topic": "test_topic" }'
-    await help_test_discovery_removal(hass, mqtt_mock_entry, valve.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, valve.DOMAIN, data)
 
 
 async def test_discovery_update_valve(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered valve."""
     config1 = {"name": "Beer", "command_topic": "test_topic"}
     config2 = {"name": "Milk", "command_topic": "test_topic"}
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, valve.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, valve.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_valve(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered valve."""
     data1 = '{ "name": "Beer", "command_topic": "test_topic" }'
     with patch(
-        "homeassistant.components.mqtt.valve.MqttValve.discovery_update"
+        "menuai.components.mqtt.valve.MqttValve.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, valve.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, valve.DOMAIN, data1, discovery_update
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer", "command_topic": "test_topic#" }'
     data2 = '{ "name": "Milk", "command_topic": "test_topic" }'
-    await help_test_discovery_broken(hass, mqtt_mock_entry, valve.DOMAIN, data1, data2)
+    await help_test_discovery_broken(menuai, mqtt_mock_entry, valve.DOMAIN, data1, data2)
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT valve device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT valve device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, valve.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_debug_info_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT debug info."""
     await help_test_entity_debug_info_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         valve.DOMAIN,
         DEFAULT_CONFIG,
@@ -1334,7 +1334,7 @@ async def test_entity_debug_info_message(
     ],
 )
 async def test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -1348,7 +1348,7 @@ async def test_publishing_with_custom_encoding(
     config = DEFAULT_CONFIG
 
     await help_test_publishing_with_custom_encoding(
-        hass,
+        menuai,
         mqtt_mock_entry,
         caplog,
         domain,
@@ -1362,12 +1362,12 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    menuai: menuai, mqtt_client_mock: MqttMockPahoClient
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = valve.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
@@ -1378,7 +1378,7 @@ async def test_reloadable(
     ],
 )
 async def test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     value: str,
@@ -1387,7 +1387,7 @@ async def test_encoding_subscribable_topics(
 ) -> None:
     """Test handling of incoming encoded payload."""
     await help_test_encoding_subscribable_topics(
-        hass,
+        menuai,
         mqtt_mock_entry,
         valve.DOMAIN,
         DEFAULT_CONFIG[mqtt.DOMAIN][valve.DOMAIN],
@@ -1400,32 +1400,32 @@ async def test_encoding_subscribable_topics(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = valve.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unloading the config entry."""
     domain = valve.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_unload_config_entry_with_platform(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             valve.DOMAIN,
@@ -1449,7 +1449,7 @@ async def test_unload_entry(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -1457,11 +1457,11 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             valve.DOMAIN,
@@ -1476,13 +1476,13 @@ async def test_skipped_async_ha_write_state(
     ],
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text

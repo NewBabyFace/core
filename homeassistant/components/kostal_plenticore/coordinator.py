@@ -16,14 +16,14 @@ from pykoplenti import (
     ExtendedApiClient,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, EVENT_menuai_STOP
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.event import async_call_later
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_SERVICE_CODE, DOMAIN
 from .helper import get_hostname_id
@@ -34,9 +34,9 @@ _LOGGER = logging.getLogger(__name__)
 class Plenticore:
     """Manages the Plenticore API."""
 
-    def __init__(self, hass, config_entry):
+    def __init__(self, menuai, config_entry):
         """Create a new plenticore manager instance."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
 
         self._client = None
@@ -57,7 +57,7 @@ class Plenticore:
     async def async_setup(self) -> bool:
         """Set up Plenticore API client."""
         self._client = ExtendedApiClient(
-            async_get_clientsession(self.hass), host=self.host
+            async_get_clientsession(self.menuai), host=self.host
         )
         try:
             await self._client.login(
@@ -75,8 +75,8 @@ class Plenticore:
         else:
             _LOGGER.debug("Log-in successfully to %s", self.host)
 
-        self._shutdown_remove_listener = self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, self._async_shutdown
+        self._shutdown_remove_listener = self.menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, self._async_shutdown
         )
 
         # get some device meta data
@@ -113,7 +113,7 @@ class Plenticore:
         return True
 
     async def _async_shutdown(self, event):
-        """Call from Homeassistant shutdown event."""
+        """Call from menuai shutdown event."""
         # unset remove listener otherwise calling it would raise an exception
         self._shutdown_remove_listener = None
         await self.async_unload()
@@ -170,7 +170,7 @@ class PlenticoreUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         logger: logging.Logger,
         name: str,
@@ -179,7 +179,7 @@ class PlenticoreUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
     ) -> None:
         """Create a new update coordinator for plenticore data."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             config_entry=config_entry,
             name=name,
@@ -198,7 +198,7 @@ class PlenticoreUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         async def force_refresh(event_time: datetime) -> None:
             await self.async_request_refresh()
 
-        return async_call_later(self.hass, 2, force_refresh)
+        return async_call_later(self.menuai, 2, force_refresh)
 
     def stop_fetch_data(self, module_id: str, data_id: str) -> None:
         """Stop fetching the given data (module-id and data-id)."""
@@ -252,7 +252,7 @@ class PlenticoreSelectUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         logger: logging.Logger,
         name: str,
@@ -261,7 +261,7 @@ class PlenticoreSelectUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
     ) -> None:
         """Create a new update coordinator for plenticore data."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             config_entry=config_entry,
             name=name,
@@ -283,7 +283,7 @@ class PlenticoreSelectUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         async def force_refresh(event_time: datetime) -> None:
             await self.async_request_refresh()
 
-        return async_call_later(self.hass, 2, force_refresh)
+        return async_call_later(self.menuai, 2, force_refresh)
 
     def stop_fetch_data(
         self, module_id: str, data_id: str, all_options: list[str]

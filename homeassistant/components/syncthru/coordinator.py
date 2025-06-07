@@ -6,11 +6,11 @@ import logging
 
 from pysyncthru import ConnectionMode, SyncThru
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -22,17 +22,17 @@ type SyncThruConfigEntry = ConfigEntry[SyncthruCoordinator]
 class SyncthruCoordinator(DataUpdateCoordinator[SyncThru]):
     """Class to manage fetching Syncthru data."""
 
-    def __init__(self, hass: HomeAssistant, entry: SyncThruConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: SyncThruConfigEntry) -> None:
         """Initialize the Syncthru coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=30),
         )
         self.syncthru = SyncThru(
             entry.data[CONF_URL],
-            async_get_clientsession(hass),
+            async_get_clientsession(menuai),
             connection_mode=ConnectionMode.API,
         )
 

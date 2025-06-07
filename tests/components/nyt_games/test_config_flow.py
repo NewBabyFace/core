@@ -5,29 +5,29 @@ from unittest.mock import AsyncMock
 from nyt_games import NYTGamesAuthenticationError, NYTGamesError
 import pytest
 
-from homeassistant.components.nyt_games.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.nyt_games.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_nyt_games_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "token"},
     )
@@ -38,19 +38,19 @@ async def test_full_flow(
 
 
 async def test_stripping_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_nyt_games_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test stripping token."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: " token "},
     )
@@ -67,7 +67,7 @@ async def test_stripping_token(
     ],
 )
 async def test_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_nyt_games_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
@@ -76,14 +76,14 @@ async def test_flow_errors(
     """Test flow errors."""
     mock_nyt_games_client.get_user_id.side_effect = exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "token"},
     )
@@ -93,7 +93,7 @@ async def test_flow_errors(
 
     mock_nyt_games_client.get_user_id.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "token"},
     )
@@ -101,22 +101,22 @@ async def test_flow_errors(
 
 
 async def test_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_nyt_games_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test duplicate flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "token"},
     )

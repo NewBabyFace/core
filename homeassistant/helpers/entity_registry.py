@@ -21,15 +21,15 @@ from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 import attr
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
     ATTR_RESTORED,
     ATTR_SUPPORTED_FEATURES,
     ATTR_UNIT_OF_MEASUREMENT,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
     MAX_LENGTH_STATE_DOMAIN,
     MAX_LENGTH_STATE_ENTITY_ID,
     STATE_UNAVAILABLE,
@@ -37,21 +37,21 @@ from homeassistant.const import (
     EntityCategory,
     Platform,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
-    HomeAssistant,
+    menuai,
     callback,
     split_entity_id,
     valid_entity_id,
 )
-from homeassistant.exceptions import MaxLengthExceeded
-from homeassistant.loader import async_suggest_report_issue
-from homeassistant.util import slugify, uuid as uuid_util
-from homeassistant.util.dt import utc_from_timestamp, utcnow
-from homeassistant.util.event_type import EventType
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import format_unserializable_data
-from homeassistant.util.read_only_dict import ReadOnlyDict
+from menuai.exceptions import MaxLengthExceeded
+from menuai.loader import async_suggest_report_issue
+from menuai.util import slugify, uuid as uuid_util
+from menuai.util.dt import utc_from_timestamp, utcnow
+from menuai.util.event_type import EventType
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import format_unserializable_data
+from menuai.util.read_only_dict import ReadOnlyDict
 
 from . import device_registry as dr, storage
 from .device_registry import (
@@ -67,11 +67,11 @@ if TYPE_CHECKING:
     # mypy cannot workout _cache Protocol with attrs
     from propcache.api import cached_property as under_cached_property
 
-    from homeassistant.config_entries import ConfigEntry
+    from menuai.config_entries import ConfigEntry
 else:
     from propcache.api import under_cached_property
 
-DATA_REGISTRY: HassKey[EntityRegistry] = HassKey("entity_registry")
+DATA_REGISTRY: menuaiKey[EntityRegistry] = menuaiKey("entity_registry")
 EVENT_ENTITY_REGISTRY_UPDATED: EventType[EventEntityRegistryUpdatedData] = EventType(
     "entity_registry_updated"
 )
@@ -108,7 +108,7 @@ class RegistryEntryDisabler(StrEnum):
 
     CONFIG_ENTRY = "config_entry"
     DEVICE = "device"
-    HASS = "hass"
+    menuai = "menuai"
     INTEGRATION = "integration"
     USER = "user"
 
@@ -371,7 +371,7 @@ class RegistryEntry:
         )
 
     @callback
-    def write_unavailable_state(self, hass: HomeAssistant) -> None:
+    def write_unavailable_state(self, menuai: menuai) -> None:
         """Write the unavailable state to the state machine."""
         attrs: dict[str, Any] = {ATTR_RESTORED: True}
 
@@ -396,7 +396,7 @@ class RegistryEntry:
         if self.unit_of_measurement is not None:
             attrs[ATTR_UNIT_OF_MEASUREMENT] = self.unit_of_measurement
 
-        hass.states.async_set(self.entity_id, STATE_UNAVAILABLE, attrs)
+        menuai.states.async_set(self.entity_id, STATE_UNAVAILABLE, attrs)
 
 
 @attr.s(frozen=True, slots=True)
@@ -659,7 +659,7 @@ class EntityRegistryItems(BaseRegistryItems[RegistryEntry]):
 
 
 def _validate_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     platform: str,
     *,
@@ -682,7 +682,7 @@ def _validate_item(
         and not isinstance(unique_id, str)
     ):
         # In HA Core 2025.10, we should fail if unique_id is not a string
-        report_issue = async_suggest_report_issue(hass, integration_domain=platform)
+        report_issue = async_suggest_report_issue(menuai, integration_domain=platform)
         _LOGGER.error(
             "'%s' from integration %s has a non string unique_id '%s', please %s",
             domain,
@@ -691,7 +691,7 @@ def _validate_item(
             report_issue,
         )
     if config_entry_id and config_entry_id is not UNDEFINED:
-        if not hass.config_entries.async_get_entry(config_entry_id):
+        if not menuai.config_entries.async_get_entry(config_entry_id):
             raise ValueError(
                 f"Can't link entity to unknown config entry {config_entry_id}"
             )
@@ -709,14 +709,14 @@ def _validate_item(
         and config_subentry_id is not UNDEFINED
     ):
         if (
-            not (config_entry := hass.config_entries.async_get_entry(config_entry_id))
+            not (config_entry := menuai.config_entries.async_get_entry(config_entry_id))
             or config_subentry_id not in config_entry.subentries
         ):
             raise ValueError(
                 f"Config entry {config_entry_id} has no subentry {config_subentry_id}"
             )
     if device_id and device_id is not UNDEFINED:
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         if not device_registry.async_get(device_id):
             raise ValueError(f"Device {device_id} does not exist")
     if (
@@ -752,17 +752,17 @@ class EntityRegistry(BaseRegistry):
     entities: EntityRegistryItems
     _entities_data: dict[str, RegistryEntry]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the registry."""
-        self.hass = hass
+        self.menuai = menuai
         self._store = EntityRegistryStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
             minor_version=STORAGE_VERSION_MINOR,
         )
-        self.hass.bus.async_listen(
+        self.menuai.bus.async_listen(
             EVENT_DEVICE_REGISTRY_UPDATED,
             self.async_device_modified,
         )
@@ -805,7 +805,7 @@ class EntityRegistry(BaseRegistry):
         Note that an entity_id which belongs to a deleted entity is considered
         available.
         """
-        return entity_id not in self.entities and self.hass.states.async_available(
+        return entity_id not in self.entities and self.menuai.states.async_available(
             entity_id
         )
 
@@ -899,9 +899,9 @@ class EntityRegistry(BaseRegistry):
                 unit_of_measurement=unit_of_measurement,
             )
 
-        self.hass.verify_event_loop_thread("entity_registry.async_get_or_create")
+        self.menuai.verify_event_loop_thread("entity_registry.async_get_or_create")
         _validate_item(
-            self.hass,
+            self.menuai,
             domain,
             platform,
             config_entry_id=config_entry_id,
@@ -967,7 +967,7 @@ class EntityRegistry(BaseRegistry):
         _LOGGER.info("Registered new %s.%s entity: %s", domain, platform, entity_id)
         self.async_schedule_save()
 
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_ENTITY_REGISTRY_UPDATED,
             _EventEntityRegistryUpdatedData_CreateRemove(
                 action="create", entity_id=entity_id
@@ -979,7 +979,7 @@ class EntityRegistry(BaseRegistry):
     @callback
     def async_remove(self, entity_id: str) -> None:
         """Remove an entity from registry."""
-        self.hass.verify_event_loop_thread("entity_registry.async_remove")
+        self.menuai.verify_event_loop_thread("entity_registry.async_remove")
         entity = self.entities.pop(entity_id)
         config_entry_id = entity.config_entry_id
         key = (entity.domain, entity.platform, entity.unique_id)
@@ -996,7 +996,7 @@ class EntityRegistry(BaseRegistry):
             platform=entity.platform,
             unique_id=entity.unique_id,
         )
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_ENTITY_REGISTRY_UPDATED,
             _EventEntityRegistryUpdatedData_CreateRemove(
                 action="remove", entity_id=entity_id
@@ -1028,7 +1028,7 @@ class EntityRegistry(BaseRegistry):
             # Ignore "create" action
             return
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device = device_registry.async_get(event.data["device_id"])
 
         # The device may be deleted already if the event handling is late, do nothing
@@ -1154,7 +1154,7 @@ class EntityRegistry(BaseRegistry):
         # Only validate if data has changed
         if new_values or new_unique_id is not UNDEFINED:
             _validate_item(
-                self.hass,
+                self.menuai,
                 old.domain,
                 old.platform,
                 config_entry_id=config_entry_id,
@@ -1199,7 +1199,7 @@ class EntityRegistry(BaseRegistry):
 
         new_values["modified_at"] = utcnow()
 
-        self.hass.verify_event_loop_thread("entity_registry.async_update_entity")
+        self.menuai.verify_event_loop_thread("entity_registry.async_update_entity")
 
         new = self.entities[entity_id] = attr.evolve(old, **new_values)
 
@@ -1214,7 +1214,7 @@ class EntityRegistry(BaseRegistry):
         if old.entity_id != entity_id:
             data["old_entity_id"] = old.entity_id
 
-        self.hass.bus.async_fire_internal(EVENT_ENTITY_REGISTRY_UPDATED, data)
+        self.menuai.bus.async_fire_internal(EVENT_ENTITY_REGISTRY_UPDATED, data)
 
         return new
 
@@ -1292,7 +1292,7 @@ class EntityRegistry(BaseRegistry):
         integrations.
         """
         if (
-            state := self.hass.states.get(entity_id)
+            state := self.menuai.states.get(entity_id)
         ) is not None and state.state != STATE_UNKNOWN:
             raise ValueError("Only entities that haven't been loaded can be migrated")
 
@@ -1330,8 +1330,8 @@ class EntityRegistry(BaseRegistry):
 
     async def async_load(self) -> None:
         """Load the entity registry."""
-        _async_setup_cleanup(self.hass, self)
-        _async_setup_entity_restore(self.hass, self)
+        _async_setup_cleanup(self.menuai, self)
+        _async_setup_entity_restore(self.menuai, self)
 
         data = await self._store.async_load()
         entities = EntityRegistryItems()
@@ -1342,7 +1342,7 @@ class EntityRegistry(BaseRegistry):
                 try:
                     domain = split_entity_id(entity["entity_id"])[0]
                     _validate_item(
-                        self.hass,
+                        self.menuai,
                         domain,
                         entity["platform"],
                         report_non_string_unique_id=False,
@@ -1350,7 +1350,7 @@ class EntityRegistry(BaseRegistry):
                     )
                 except (TypeError, ValueError) as err:
                     report_issue = async_suggest_report_issue(
-                        self.hass, integration_domain=entity["platform"]
+                        self.menuai, integration_domain=entity["platform"]
                     )
                     _LOGGER.error(
                         (
@@ -1406,7 +1406,7 @@ class EntityRegistry(BaseRegistry):
                 try:
                     domain = split_entity_id(entity["entity_id"])[0]
                     _validate_item(
-                        self.hass,
+                        self.menuai,
                         domain,
                         entity["platform"],
                         report_non_string_unique_id=False,
@@ -1529,15 +1529,15 @@ class EntityRegistry(BaseRegistry):
 
 @callback
 @singleton(DATA_REGISTRY)
-def async_get(hass: HomeAssistant) -> EntityRegistry:
+def async_get(menuai: menuai) -> EntityRegistry:
     """Get entity registry."""
-    return EntityRegistry(hass)
+    return EntityRegistry(menuai)
 
 
-async def async_load(hass: HomeAssistant) -> None:
+async def async_load(menuai: menuai) -> None:
     """Load entity registry."""
-    assert DATA_REGISTRY not in hass.data
-    await async_get(hass).async_load()
+    assert DATA_REGISTRY not in menuai.data
+    await async_get(menuai).async_load()
 
 
 @callback
@@ -1620,7 +1620,7 @@ def async_config_entry_disabled_by_changed(
 
 
 @callback
-def _async_setup_cleanup(hass: HomeAssistant, registry: EntityRegistry) -> None:
+def _async_setup_cleanup(menuai: menuai, registry: EntityRegistry) -> None:
     """Clean up device registry when entities removed."""
     # pylint: disable-next=import-outside-toplevel
     from . import category_registry as cr, event, label_registry as lr
@@ -1638,7 +1638,7 @@ def _async_setup_cleanup(hass: HomeAssistant, registry: EntityRegistry) -> None:
         """Update entity that have a label that has been removed."""
         registry.async_clear_label_id(event.data["label_id"])
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         event_type=lr.EVENT_LABEL_REGISTRY_UPDATED,
         event_filter=_removed_from_registry_filter,
         listener=_handle_label_registry_update,
@@ -1651,7 +1651,7 @@ def _async_setup_cleanup(hass: HomeAssistant, registry: EntityRegistry) -> None:
         """Update entity that have a category that has been removed."""
         registry.async_clear_category_id(event.data["scope"], event.data["category_id"])
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         event_type=cr.EVENT_CATEGORY_REGISTRY_UPDATED,
         event_filter=_removed_from_registry_filter,
         listener=_handle_category_registry_update,
@@ -1665,19 +1665,19 @@ def _async_setup_cleanup(hass: HomeAssistant, registry: EntityRegistry) -> None:
         registry.async_purge_expired_orphaned_entities()
 
     cancel = event.async_track_time_interval(
-        hass, cleanup, timedelta(seconds=CLEANUP_INTERVAL)
+        menuai, cleanup, timedelta(seconds=CLEANUP_INTERVAL)
     )
 
     @callback
-    def _on_homeassistant_stop(event: Event) -> None:
+    def _on_menuai_stop(event: Event) -> None:
         """Cancel cleanup."""
         cancel()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_homeassistant_stop)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _on_menuai_stop)
 
 
 @callback
-def _async_setup_entity_restore(hass: HomeAssistant, registry: EntityRegistry) -> None:
+def _async_setup_entity_restore(menuai: menuai, registry: EntityRegistry) -> None:
     """Set up the entity restore mechanism."""
 
     @callback
@@ -1688,38 +1688,38 @@ def _async_setup_entity_restore(hass: HomeAssistant, registry: EntityRegistry) -
     @callback
     def cleanup_restored_states(event: Event[EventEntityRegistryUpdatedData]) -> None:
         """Clean up restored states."""
-        state = hass.states.get(event.data["entity_id"])
+        state = menuai.states.get(event.data["entity_id"])
 
         if state is None or not state.attributes.get(ATTR_RESTORED):
             return
 
-        hass.states.async_remove(event.data["entity_id"], context=event.context)
+        menuai.states.async_remove(event.data["entity_id"], context=event.context)
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         EVENT_ENTITY_REGISTRY_UPDATED,
         cleanup_restored_states,
         event_filter=cleanup_restored_states_filter,
     )
 
-    if hass.is_running:
+    if menuai.is_running:
         return
 
     @callback
     def _write_unavailable_states(_: Event) -> None:
         """Make sure state machine contains entry for each registered entity."""
-        existing = set(hass.states.async_entity_ids())
+        existing = set(menuai.states.async_entity_ids())
 
         for entry in registry.entities.values():
             if entry.entity_id in existing or entry.disabled:
                 continue
 
-            entry.write_unavailable_state(hass)
+            entry.write_unavailable_state(menuai)
 
-    hass.bus.async_listen(EVENT_HOMEASSISTANT_START, _write_unavailable_states)
+    menuai.bus.async_listen(EVENT_menuai_START, _write_unavailable_states)
 
 
 async def async_migrate_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_id: str,
     entry_callback: Callable[[RegistryEntry], dict[str, Any] | None],
 ) -> None:
@@ -1728,7 +1728,7 @@ async def async_migrate_entries(
     Can be used as a migrator of unique_ids or to update other entity registry data.
     Can also be used to remove duplicated entity registry entries.
     """
-    ent_reg = async_get(hass)
+    ent_reg = async_get(menuai)
     entities = ent_reg.entities
     for entry in entities.get_entries_for_config_entry_id(config_entry_id):
         if (

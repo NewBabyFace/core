@@ -7,7 +7,7 @@ from typing import Any, Concatenate
 
 from peblar import PeblarAuthenticationError, PeblarConnectionError, PeblarError
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 from .entity import PeblarEntity
@@ -30,23 +30,23 @@ def peblar_exception_handler[_PeblarEntityT: PeblarEntity, **_P](
 
         except PeblarAuthenticationError as error:
             # Reload the config entry to trigger reauth flow
-            self.hass.config_entries.async_schedule_reload(
+            self.menuai.config_entries.async_schedule_reload(
                 self.coordinator.config_entry.entry_id
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="authentication_error",
             ) from error
 
         except PeblarConnectionError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
                 translation_placeholders={"error": str(error)},
             ) from error
 
         except PeblarError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unknown_error",
                 translation_placeholders={"error": str(error)},

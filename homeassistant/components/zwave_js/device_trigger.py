@@ -7,27 +7,27 @@ from typing import Any
 import voluptuous as vol
 from zwave_js_server.const import CommandClass
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.homeassistant.triggers import event, state
-from homeassistant.const import (
+from menuai.components.menuai.triggers import event, state
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import trigger
 from .config_validation import VALUE_SCHEMA
@@ -205,7 +205,7 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     config = TRIGGER_SCHEMA(config)
@@ -214,7 +214,7 @@ async def async_validate_trigger_config(
     # validate the value without knowing the state of the device
     try:
         bypass_dynamic_config_validation = async_bypass_dynamic_config_validation(
-            hass, config[CONF_DEVICE_ID]
+            menuai, config[CONF_DEVICE_ID]
         )
     except ValueError as err:
         raise InvalidDeviceAutomationConfig(
@@ -227,7 +227,7 @@ async def async_validate_trigger_config(
     trigger_type = config[CONF_TYPE]
     if get_trigger_platform_from_type(trigger_type) == VALUE_UPDATED_PLATFORM_TYPE:
         try:
-            node = async_get_node_from_device_id(hass, config[CONF_DEVICE_ID])
+            node = async_get_node_from_device_id(menuai, config[CONF_DEVICE_ID])
             get_zwave_value_from_config(node, config)
         except vol.Invalid as err:
             raise InvalidDeviceAutomationConfig(err.msg) from err
@@ -246,7 +246,7 @@ def get_trigger_platform_from_type(trigger_type: str) -> str:
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
     """List device triggers for Z-Wave JS devices."""
     triggers: list[dict] = []
@@ -256,16 +256,16 @@ async def async_get_triggers(
         CONF_DOMAIN: DOMAIN,
     }
 
-    dev_reg = dr.async_get(hass)
-    node = async_get_node_from_device_id(hass, device_id, dev_reg)
+    dev_reg = dr.async_get(menuai)
+    node = async_get_node_from_device_id(menuai, device_id, dev_reg)
 
     if node.client.driver and node.client.driver.controller.own_node == node:
         return triggers
 
     # We can add a node status trigger if the node status sensor is enabled
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entity_id = async_get_node_status_sensor_entity_id(
-        hass, device_id, ent_reg, dev_reg
+        menuai, device_id, ent_reg, dev_reg
     )
     if (
         entity_id
@@ -365,7 +365,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -408,11 +408,11 @@ async def async_attach_trigger(
             if ATTR_VALUE in config:
                 event_data[ATTR_VALUE_RAW] = config[ATTR_VALUE]
         else:
-            raise HomeAssistantError(f"Unhandled trigger type {trigger_type}")
+            raise menuaiError(f"Unhandled trigger type {trigger_type}")
 
         event_config = event.TRIGGER_SCHEMA(event_config)
         return await event.async_attach_trigger(
-            hass, event_config, action, trigger_info, platform_type="device"
+            menuai, event_config, action, trigger_info, platform_type="device"
         )
 
     if trigger_platform == "state":
@@ -424,11 +424,11 @@ async def async_attach_trigger(
                 config, state_config, [state.CONF_FOR, state.CONF_FROM, state.CONF_TO]
             )
         else:
-            raise HomeAssistantError(f"Unhandled trigger type {trigger_type}")
+            raise menuaiError(f"Unhandled trigger type {trigger_type}")
 
-        state_config = await state.async_validate_trigger_config(hass, state_config)
+        state_config = await state.async_validate_trigger_config(menuai, state_config)
         return await state.async_attach_trigger(
-            hass, state_config, action, trigger_info, platform_type="device"
+            menuai, state_config, action, trigger_info, platform_type="device"
         )
 
     if trigger_platform == VALUE_UPDATED_PLATFORM_TYPE:
@@ -449,22 +449,22 @@ async def async_attach_trigger(
             ],
         )
         zwave_js_config = await trigger.async_validate_trigger_config(
-            hass, zwave_js_config
+            menuai, zwave_js_config
         )
         return await trigger.async_attach_trigger(
-            hass, zwave_js_config, action, trigger_info
+            menuai, zwave_js_config, action, trigger_info
         )
 
-    raise HomeAssistantError(f"Unhandled trigger type {trigger_type}")
+    raise menuaiError(f"Unhandled trigger type {trigger_type}")
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     trigger_type = config[CONF_TYPE]
 
-    node = async_get_node_from_device_id(hass, config[CONF_DEVICE_ID])
+    node = async_get_node_from_device_id(menuai, config[CONF_DEVICE_ID])
 
     # Add additional fields to the automation trigger UI
     if trigger_type == NOTIFICATION_NOTIFICATION:

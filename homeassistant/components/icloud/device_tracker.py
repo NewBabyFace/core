@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.device_tracker import TrackerEntity
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import TrackerEntity
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .account import IcloudAccount, IcloudConfigEntry, IcloudDevice
 from .const import (
@@ -20,7 +20,7 @@ from .const import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IcloudConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -34,7 +34,7 @@ async def async_setup_entry(
         add_entities(account, async_add_entities, tracked)
 
     account.listeners.append(
-        async_dispatcher_connect(hass, account.signal_device_new, update_account)
+        async_dispatcher_connect(menuai, account.signal_device_new, update_account)
     )
 
     update_account()
@@ -115,13 +115,13 @@ class IcloudTrackerEntity(TrackerEntity):
             name=self._device.name,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
         self._unsub_dispatcher = async_dispatcher_connect(
-            self.hass, self._account.signal_device_update, self.async_write_ha_state
+            self.menuai, self._account.signal_device_update, self.async_write_ha_state
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Clean up after entity before removal."""
         if self._unsub_dispatcher:
             self._unsub_dispatcher()

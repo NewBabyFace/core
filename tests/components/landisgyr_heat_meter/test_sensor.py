@@ -9,18 +9,18 @@ import serial
 from syrupy.assertion import SnapshotAssertion
 from ultraheat_api.response import HeatMeterResponse
 
-from homeassistant.components.homeassistant import DOMAIN as HA_DOMAIN
-from homeassistant.components.landisgyr_heat_meter.const import DOMAIN, POLLING_INTERVAL
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.menuai import DOMAIN as HA_DOMAIN
+from menuai.components.landisgyr_heat_meter.const import DOMAIN, POLLING_INTERVAL
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 API_HEAT_METER_SERVICE = (
-    "homeassistant.components.landisgyr_heat_meter.ultraheat_api.HeatMeterService"
+    "menuai.components.landisgyr_heat_meter.ultraheat_api.HeatMeterService"
 )
 
 MOCK_RESPONSE_GJ = {
@@ -98,7 +98,7 @@ MOCK_RESPONSE_MWH = {
 @patch(API_HEAT_METER_SERVICE)
 async def test_create_sensors(
     mock_heat_meter,
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_heat_meter_response,
@@ -110,22 +110,22 @@ async def test_create_sensors(
         "device_number": "123456789",
     }
     mock_entry = MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN, data=entry_data)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     mock_heat_meter_response = HeatMeterResponse(**mock_heat_meter_response)
 
     mock_heat_meter().read.return_value = mock_heat_meter_response
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await async_setup_component(hass, HA_DOMAIN, {})
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await async_setup_component(menuai, HA_DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    assert hass.states.async_all() == snapshot
+    assert menuai.states.async_all() == snapshot
 
 
 @patch(API_HEAT_METER_SERVICE)
 async def test_exception_on_polling(
-    mock_heat_meter, hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    mock_heat_meter, menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test sensor."""
     entry_data = {
@@ -134,28 +134,28 @@ async def test_exception_on_polling(
         "device_number": "123456789",
     }
     mock_entry = MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN, data=entry_data)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     # First setup normally
     mock_heat_meter_response = HeatMeterResponse(**MOCK_RESPONSE_GJ)
 
     mock_heat_meter().read.return_value = mock_heat_meter_response
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await async_setup_component(hass, HA_DOMAIN, {})
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await async_setup_component(menuai, HA_DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # check if initial setup succeeded
-    state = hass.states.get("sensor.heat_meter_heat_usage_gj")
+    state = menuai.states.get("sensor.heat_meter_heat_usage_gj")
     assert state
     assert state.state == "123.0"
 
     # Now 'disable' the connection and wait for polling and see if it fails
     mock_heat_meter().read.side_effect = serial.SerialException
     freezer.tick(POLLING_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.heat_meter_heat_usage_gj")
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.heat_meter_heat_usage_gj")
     assert state.state == STATE_UNAVAILABLE
 
     # # Now 'enable' and see if next poll succeeds
@@ -165,8 +165,8 @@ async def test_exception_on_polling(
     mock_heat_meter().read.return_value = mock_heat_meter_response
     mock_heat_meter().read.side_effect = None
     freezer.tick(POLLING_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.heat_meter_heat_usage_gj")
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.heat_meter_heat_usage_gj")
     assert state
     assert state.state == "124.0"

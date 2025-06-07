@@ -2,19 +2,19 @@
 
 from typing import Any
 
-from homeassistant.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import _LOGGER
 
 
 async def cleanup_device_tracker(
-    hass: HomeAssistant, config_entry: ConfigEntry, devices: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, devices: dict[str, Any]
 ) -> None:
     """Cleanup stale device tracker."""
-    entity_reg: er.EntityRegistry = er.async_get(hass)
+    entity_reg: er.EntityRegistry = er.async_get(menuai)
 
     entities_removed: bool = False
 
@@ -52,15 +52,15 @@ async def cleanup_device_tracker(
         entities_removed = True
 
     if entities_removed:
-        _async_remove_empty_devices(hass, entity_reg, config_entry)
+        _async_remove_empty_devices(menuai, entity_reg, config_entry)
 
 
 def _async_remove_empty_devices(
-    hass: HomeAssistant, entity_reg: er.EntityRegistry, config_entry: ConfigEntry
+    menuai: menuai, entity_reg: er.EntityRegistry, config_entry: ConfigEntry
 ) -> None:
     """Remove devices with no entities."""
 
-    device_reg = dr.async_get(hass)
+    device_reg = dr.async_get(menuai)
     device_list = dr.async_entries_for_config_entry(device_reg, config_entry.entry_id)
     for device_entry in device_list:
         if not er.async_entries_for_device(

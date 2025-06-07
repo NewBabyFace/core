@@ -9,9 +9,9 @@ from caldav.lib.error import AuthorizationError, DAVError
 import requests
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN
 
@@ -67,7 +67,7 @@ class CalDavConfigFlow(ConfigFlow, domain=DOMAIN):
             ssl_verify_cert=user_input[CONF_VERIFY_SSL],
         )
         try:
-            await self.hass.async_add_executor_job(client.principal)
+            await self.menuai.async_add_executor_job(client.principal)
         except AuthorizationError as err:
             _LOGGER.warning("Authorization Error connecting to CalDAV server: %s", err)
             if err.reason == "Unauthorized":

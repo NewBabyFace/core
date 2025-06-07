@@ -4,17 +4,17 @@ import copy
 import dataclasses
 from unittest.mock import patch
 
-from homeassistant.components.songpal.const import CONF_ENDPOINT, DOMAIN
-from homeassistant.config_entries import (
+from menuai.components.songpal.const import CONF_ENDPOINT, DOMAIN
+from menuai.config_entries import (
     SOURCE_IMPORT,
     SOURCE_SSDP,
     SOURCE_USER,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -51,24 +51,24 @@ SSDP_DATA = SsdpServiceInfo(
 )
 
 
-def _flow_next(hass: HomeAssistant, flow_id: str) -> ConfigFlowResult:
+def _flow_next(menuai: menuai, flow_id: str) -> ConfigFlowResult:
     return next(
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["flow_id"] == flow_id
     )
 
 
 def _patch_setup():
     return patch(
-        "homeassistant.components.songpal.async_setup_entry",
+        "menuai.components.songpal.async_setup_entry",
         return_value=True,
     )
 
 
-async def test_flow_ssdp(hass: HomeAssistant) -> None:
+async def test_flow_ssdp(menuai: menuai) -> None:
     """Test working ssdp flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SSDP_DATA,
@@ -79,11 +79,11 @@ async def test_flow_ssdp(hass: HomeAssistant) -> None:
         CONF_NAME: FRIENDLY_NAME,
         CONF_HOST: HOST,
     }
-    flow = _flow_next(hass, result["flow_id"])
+    flow = _flow_next(menuai, result["flow_id"])
     assert flow["context"]["unique_id"] == UDN
 
     with _patch_setup():
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -91,21 +91,21 @@ async def test_flow_ssdp(hass: HomeAssistant) -> None:
         assert result["data"] == CONF_DATA
 
 
-async def test_flow_user(hass: HomeAssistant) -> None:
+async def test_flow_user(menuai: menuai) -> None:
     """Test working user initialized flow."""
     mocked_device = _create_mocked_device()
 
     with _patch_config_flow_device(mocked_device), _patch_setup():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
         )
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "user"
         assert result["errors"] is None
-        _flow_next(hass, result["flow_id"])
+        _flow_next(menuai, result["flow_id"])
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_ENDPOINT: ENDPOINT},
         )
@@ -120,12 +120,12 @@ async def test_flow_user(hass: HomeAssistant) -> None:
     mocked_device.get_interface_information.assert_called_once()
 
 
-async def test_flow_import(hass: HomeAssistant) -> None:
+async def test_flow_import(menuai: menuai) -> None:
     """Test working import flow."""
     mocked_device = _create_mocked_device()
 
     with _patch_config_flow_device(mocked_device), _patch_setup():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_IMPORT}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -136,12 +136,12 @@ async def test_flow_import(hass: HomeAssistant) -> None:
     mocked_device.get_interface_information.assert_not_called()
 
 
-async def test_flow_import_without_name(hass: HomeAssistant) -> None:
+async def test_flow_import_without_name(menuai: menuai) -> None:
     """Test import flow without optional name."""
     mocked_device = _create_mocked_device()
 
     with _patch_config_flow_device(mocked_device), _patch_setup():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_IMPORT}, data={CONF_ENDPOINT: ENDPOINT}
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -152,22 +152,22 @@ async def test_flow_import_without_name(hass: HomeAssistant) -> None:
     mocked_device.get_interface_information.assert_called_once()
 
 
-def _create_mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def _create_mock_config_entry(menuai: menuai) -> MockConfigEntry:
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="uuid:0000",
         data=CONF_DATA,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
 
-async def test_ssdp_bravia(hass: HomeAssistant) -> None:
+async def test_ssdp_bravia(menuai: menuai) -> None:
     """Test discovering a bravia TV."""
     ssdp_data = dataclasses.replace(SSDP_DATA)
     ssdp_data.upnp = copy.deepcopy(ssdp_data.upnp)
     ssdp_data.upnp["X_ScalarWebAPI_DeviceInfo"]["X_ScalarWebAPI_ServiceList"][
         "X_ScalarWebAPI_ServiceType"
     ].append("videoScreen")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=ssdp_data,
@@ -176,10 +176,10 @@ async def test_ssdp_bravia(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_songpal_device"
 
 
-async def test_sddp_exist(hass: HomeAssistant) -> None:
+async def test_sddp_exist(menuai: menuai) -> None:
     """Test discovering existed device."""
-    _create_mock_config_entry(hass)
-    result = await hass.config_entries.flow.async_init(
+    _create_mock_config_entry(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SSDP_DATA,
@@ -188,13 +188,13 @@ async def test_sddp_exist(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_user_exist(hass: HomeAssistant) -> None:
+async def test_user_exist(menuai: menuai) -> None:
     """Test user adding existed device."""
     mocked_device = _create_mocked_device()
-    _create_mock_config_entry(hass)
+    _create_mock_config_entry(menuai)
 
     with _patch_config_flow_device(mocked_device):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.ABORT
@@ -204,13 +204,13 @@ async def test_user_exist(hass: HomeAssistant) -> None:
     mocked_device.get_interface_information.assert_called_once()
 
 
-async def test_import_exist(hass: HomeAssistant) -> None:
+async def test_import_exist(menuai: menuai) -> None:
     """Test importing existed device."""
     mocked_device = _create_mocked_device()
-    _create_mock_config_entry(hass)
+    _create_mock_config_entry(menuai)
 
     with _patch_config_flow_device(mocked_device):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_IMPORT}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.ABORT
@@ -220,13 +220,13 @@ async def test_import_exist(hass: HomeAssistant) -> None:
     mocked_device.get_interface_information.assert_not_called()
 
 
-async def test_user_invalid(hass: HomeAssistant) -> None:
+async def test_user_invalid(menuai: menuai) -> None:
     """Test using adding invalid config."""
     mocked_device = _create_mocked_device(True)
-    _create_mock_config_entry(hass)
+    _create_mock_config_entry(menuai)
 
     with _patch_config_flow_device(mocked_device):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.FORM
@@ -237,13 +237,13 @@ async def test_user_invalid(hass: HomeAssistant) -> None:
     mocked_device.get_interface_information.assert_not_called()
 
 
-async def test_import_invalid(hass: HomeAssistant) -> None:
+async def test_import_invalid(menuai: menuai) -> None:
     """Test importing invalid config."""
     mocked_device = _create_mocked_device(True)
-    _create_mock_config_entry(hass)
+    _create_mock_config_entry(menuai)
 
     with _patch_config_flow_device(mocked_device):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_IMPORT}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.ABORT

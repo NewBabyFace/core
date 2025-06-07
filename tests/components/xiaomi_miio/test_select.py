@@ -9,19 +9,19 @@ from miio.integrations.airpurifier.dmaker.airfresh_t2017 import (
 )
 import pytest
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.xiaomi_miio import UPDATE_INTERVAL
-from homeassistant.components.xiaomi_miio.const import (
+from menuai.components.xiaomi_miio import UPDATE_INTERVAL
+from menuai.components.xiaomi_miio.const import (
     CONF_FLOW_TYPE,
     DOMAIN,
     MODEL_AIRFRESH_T2017,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE,
     CONF_HOST,
@@ -30,8 +30,8 @@ from homeassistant.const import (
     CONF_TOKEN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from . import TEST_MAC
 
@@ -39,7 +39,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 @pytest.fixture(autouse=True)
-async def setup_test(hass: HomeAssistant):
+async def setup_test(menuai: menuai):
     """Initialize test xiaomi_miio for select entity."""
 
     mock_airfresh = MagicMock()
@@ -48,100 +48,100 @@ async def setup_test(hass: HomeAssistant):
 
     with (
         patch(
-            "homeassistant.components.xiaomi_miio.get_platforms",
+            "menuai.components.xiaomi_miio.get_platforms",
             return_value=[
                 Platform.SELECT,
             ],
         ),
         patch(
-            "homeassistant.components.xiaomi_miio.AirFreshT2017"
+            "menuai.components.xiaomi_miio.AirFreshT2017"
         ) as mock_airfresh_cls,
     ):
         mock_airfresh_cls.return_value = mock_airfresh
         yield mock_airfresh
 
 
-async def test_select_params(hass: HomeAssistant) -> None:
+async def test_select_params(menuai: menuai) -> None:
     """Test the initial parameters."""
 
     entity_name = "test_airfresh_select"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
-    select_entity = hass.states.get(entity_id + "_display_orientation")
+    select_entity = menuai.states.get(entity_id + "_display_orientation")
     assert select_entity
     assert select_entity.state == "forward"
     assert select_entity.attributes.get(ATTR_OPTIONS) == ["forward", "left", "right"]
 
 
-async def test_select_bad_attr(hass: HomeAssistant) -> None:
+async def test_select_bad_attr(menuai: menuai) -> None:
     """Test selecting a different option with invalid option value."""
 
     entity_name = "test_airfresh_select"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
-    state = hass.states.get(entity_id + "_display_orientation")
+    state = menuai.states.get(entity_id + "_display_orientation")
     assert state
     assert state.state == "forward"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "select",
             SERVICE_SELECT_OPTION,
             {ATTR_OPTION: "up", ATTR_ENTITY_ID: entity_id + "_display_orientation"},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id + "_display_orientation")
+    state = menuai.states.get(entity_id + "_display_orientation")
     assert state
     assert state.state == "forward"
 
 
-async def test_select_option(hass: HomeAssistant) -> None:
+async def test_select_option(menuai: menuai) -> None:
     """Test selecting of a option."""
 
     entity_name = "test_airfresh_select"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
-    state = hass.states.get(entity_id + "_display_orientation")
+    state = menuai.states.get(entity_id + "_display_orientation")
     assert state
     assert state.state == "forward"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         SERVICE_SELECT_OPTION,
         {ATTR_OPTION: "left", ATTR_ENTITY_ID: entity_id + "_display_orientation"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id + "_display_orientation")
+    state = menuai.states.get(entity_id + "_display_orientation")
     assert state
     assert state.state == "left"
 
 
-async def test_select_coordinator_update(hass: HomeAssistant, setup_test) -> None:
+async def test_select_coordinator_update(menuai: menuai, setup_test) -> None:
     """Test coordinator update of a option."""
 
     entity_name = "test_airfresh_select"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
-    state = hass.states.get(entity_id + "_display_orientation")
+    state = menuai.states.get(entity_id + "_display_orientation")
     assert state
     assert state.state == "forward"
 
     # emulate someone change state from device maybe used app
     setup_test.status().display_orientation = DisplayOrientation.LandscapeLeft
 
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id + "_display_orientation")
+    state = menuai.states.get(entity_id + "_display_orientation")
     assert state
     assert state.state == "left"
 
 
-async def setup_component(hass: HomeAssistant, entity_name: str) -> str:
+async def setup_component(menuai: menuai, entity_name: str) -> str:
     """Set up component."""
     entity_id = f"{SELECT_DOMAIN}.{entity_name}"
 
@@ -158,8 +158,8 @@ async def setup_component(hass: HomeAssistant, entity_name: str) -> str:
         },
     )
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entity_id

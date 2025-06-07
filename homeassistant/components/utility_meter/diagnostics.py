@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import DATA_TARIFF_SENSORS, DATA_UTILITY
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 
     tariff_sensors = []
 
-    for sensor in hass.data[DATA_UTILITY][entry.entry_id][DATA_TARIFF_SENSORS]:
+    for sensor in menuai.data[DATA_UTILITY][entry.entry_id][DATA_TARIFF_SENSORS]:
         restored_last_extra_data = await sensor.async_get_last_extra_data()
 
         tariff_sensors.append(

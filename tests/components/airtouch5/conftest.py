@@ -14,8 +14,8 @@ from airtouch5py.packets.zone_status import (
 )
 import pytest
 
-from homeassistant.components.airtouch5.const import DOMAIN
-from homeassistant.const import CONF_HOST
+from menuai.components.airtouch5.const import DOMAIN
+from menuai.const import CONF_HOST
 
 from tests.common import MockConfigEntry
 
@@ -24,7 +24,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.airtouch5.async_setup_entry", return_value=True
+        "menuai.components.airtouch5.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -47,11 +47,11 @@ def mock_airtouch5_client() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.airtouch5.Airtouch5SimpleClient",
+            "menuai.components.airtouch5.Airtouch5SimpleClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.airtouch5.config_flow.Airtouch5SimpleClient",
+            "menuai.components.airtouch5.config_flow.Airtouch5SimpleClient",
             new=mock_client,
         ),
     ):

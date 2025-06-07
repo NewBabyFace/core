@@ -8,13 +8,13 @@ import aiohttp
 from madvr.madvr import HeartBeatError, Madvr
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from .const import DEFAULT_NAME, DEFAULT_PORT, DOMAIN
 from .errors import CannotConnect
@@ -60,7 +60,7 @@ class MadVRConfigFlow(ConfigFlow, domain=DOMAIN):
             port = user_input[CONF_PORT]
 
             try:
-                mac = await test_connection(self.hass, host, port)
+                mac = await test_connection(self.menuai, host, port)
             except CannotConnect:
                 _LOGGER.error("CannotConnect error caught")
                 errors["base"] = "cannot_connect"
@@ -97,9 +97,9 @@ class MadVRConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-async def test_connection(hass: HomeAssistant, host: str, port: int) -> str:
+async def test_connection(menuai: menuai, host: str, port: int) -> str:
     """Test if we can connect to the device and grab the mac."""
-    madvr_client = Madvr(host=host, port=port, loop=hass.loop)
+    madvr_client = Madvr(host=host, port=port, loop=menuai.loop)
     _LOGGER.debug("Testing connection to madVR at %s:%s", host, port)
     # try to connect
     try:

@@ -9,8 +9,8 @@ from mcstatus.responses import BedrockStatusResponse, JavaStatusResponse
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_OFF
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF
+from menuai.core import menuai
 
 from .const import (
     TEST_BEDROCK_STATUS_RESPONSE,
@@ -40,7 +40,7 @@ from tests.common import async_fire_time_changed
     ],
 )
 async def test_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: str,
     server: JavaServer | BedrockServer,
     lookup_function_name: str,
@@ -50,22 +50,22 @@ async def test_binary_sensor(
 ) -> None:
     """Test binary sensor."""
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
+            f"menuai.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
             return_value=server(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+            f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert (
-            hass.states.get("binary_sensor.mc_dummyserver_com_25566_status") == snapshot
+            menuai.states.get("binary_sensor.mc_dummyserver_com_25566_status") == snapshot
         )
 
 
@@ -87,7 +87,7 @@ async def test_binary_sensor(
     ],
 )
 async def test_binary_sensor_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: str,
     server: JavaServer | BedrockServer,
     lookup_function_name: str,
@@ -98,25 +98,25 @@ async def test_binary_sensor_update(
 ) -> None:
     """Test binary sensor update."""
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
+            f"menuai.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
             return_value=server(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+            f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         freezer.tick(timedelta(minutes=1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         assert (
-            hass.states.get("binary_sensor.mc_dummyserver_com_25566_status") == snapshot
+            menuai.states.get("binary_sensor.mc_dummyserver_com_25566_status") == snapshot
         )
 
 
@@ -138,7 +138,7 @@ async def test_binary_sensor_update(
     ],
 )
 async def test_binary_sensor_update_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: str,
     server: JavaServer | BedrockServer,
     lookup_function_name: str,
@@ -148,29 +148,29 @@ async def test_binary_sensor_update_failure(
 ) -> None:
     """Test failed binary sensor update."""
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
+            f"menuai.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
             return_value=server(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+            f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     with patch(
-        f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+        f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
         side_effect=OSError,
     ):
         freezer.tick(timedelta(minutes=1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         assert (
-            hass.states.get("binary_sensor.mc_dummyserver_com_25566_status").state
+            menuai.states.get("binary_sensor.mc_dummyserver_com_25566_status").state
             == STATE_OFF
         )

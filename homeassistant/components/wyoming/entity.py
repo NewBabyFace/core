@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers import entity
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers import entity
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
 
 from .const import DOMAIN
 from .devices import SatelliteDevice

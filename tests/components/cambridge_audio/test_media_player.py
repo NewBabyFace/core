@@ -10,7 +10,7 @@ from aiostreammagic import (
 )
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_ARTIST,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -23,7 +23,7 @@ from homeassistant.components.media_player import (
     MediaPlayerEntityFeature,
     RepeatMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_MEDIA_NEXT_TRACK,
@@ -47,8 +47,8 @@ from homeassistant.const import (
     STATE_PLAYING,
     STATE_STANDBY,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from . import mock_state_update, setup_integration
 from .const import ENTITY_ID
@@ -57,16 +57,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_entity_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stream_magic_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test entity attributes."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     attrs = state.attributes
 
     # Ensure volume isn't available when pre-amp is disabled
@@ -104,9 +104,9 @@ async def test_entity_supported_features(
         TransportControl.SEEK,
     ]
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     attrs = state.attributes
 
     assert (
@@ -118,9 +118,9 @@ async def test_entity_supported_features(
 
     mock_stream_magic_client.state.pre_amp_mode = True
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     attrs = state.attributes
     assert (
         MediaPlayerEntityFeature.VOLUME_SET
@@ -131,20 +131,20 @@ async def test_entity_supported_features(
 
 
 async def test_entity_supported_features_with_control_bus(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stream_magic_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test entity attributes with control bus state."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_stream_magic_client.state.pre_amp_mode = False
     mock_stream_magic_client.state.control_bus = ControlBusMode.AMPLIFIER
 
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     attrs = state.attributes
     assert MediaPlayerEntityFeature.VOLUME_STEP in attrs[ATTR_SUPPORTED_FEATURES]
     assert (
@@ -168,7 +168,7 @@ async def test_entity_supported_features_with_control_bus(
     ],
 )
 async def test_entity_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stream_magic_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     power_state: bool,
@@ -176,31 +176,31 @@ async def test_entity_state(
     media_player_state: str,
 ) -> None:
     """Test media player state."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_stream_magic_client.state.power = power_state
     mock_stream_magic_client.play_state.state = play_state
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == media_player_state
 
 
 async def test_media_play_pause_stop(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test media next previous track service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     data = {ATTR_ENTITY_ID: ENTITY_ID}
 
     # Test for play/pause command when separate play and pause controls are unavailable
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PAUSE, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PAUSE, data, True)
     mock_stream_magic_client.play_pause.assert_called_once()
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PLAY, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PLAY, data, True)
     assert mock_stream_magic_client.play_pause.call_count == 2
 
     # Test for separate play and pause controls
@@ -210,44 +210,44 @@ async def test_media_play_pause_stop(
         TransportControl.STOP,
     ]
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PAUSE, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PAUSE, data, True)
     mock_stream_magic_client.pause.assert_called_once()
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PLAY, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PLAY, data, True)
     mock_stream_magic_client.play.assert_called_once()
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_STOP, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_STOP, data, True)
     mock_stream_magic_client.stop.assert_called_once()
 
 
 async def test_media_next_previous_track(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test media next previous track service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     data = {ATTR_ENTITY_ID: ENTITY_ID}
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_NEXT_TRACK, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_NEXT_TRACK, data, True)
 
     mock_stream_magic_client.next_track.assert_called_once()
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PREVIOUS_TRACK, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PREVIOUS_TRACK, data, True)
 
     mock_stream_magic_client.previous_track.assert_called_once()
 
 
 async def test_shuffle_repeat_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test shuffle and repeat set service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_stream_magic_client.now_playing.controls = [
         TransportControl.TOGGLE_SHUFFLE,
@@ -255,7 +255,7 @@ async def test_shuffle_repeat_set(
     ]
 
     # Test shuffle
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SHUFFLE_SET,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_MEDIA_SHUFFLE: False},
@@ -263,7 +263,7 @@ async def test_shuffle_repeat_set(
 
     mock_stream_magic_client.set_shuffle.assert_called_with(ShuffleMode.OFF)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SHUFFLE_SET,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_MEDIA_SHUFFLE: True},
@@ -272,7 +272,7 @@ async def test_shuffle_repeat_set(
     mock_stream_magic_client.set_shuffle.assert_called_with(ShuffleMode.ALL)
 
     # Test repeat
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_REPEAT_SET,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_MEDIA_REPEAT: RepeatMode.OFF},
@@ -280,7 +280,7 @@ async def test_shuffle_repeat_set(
 
     mock_stream_magic_client.set_repeat.assert_called_with(CambridgeRepeatMode.OFF)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_REPEAT_SET,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_MEDIA_REPEAT: RepeatMode.ALL},
@@ -290,67 +290,67 @@ async def test_shuffle_repeat_set(
 
 
 async def test_shuffle_repeat_get(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test shuffle and repeat get service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_stream_magic_client.play_state.mode_shuffle = None
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_MEDIA_SHUFFLE] is False
 
     mock_stream_magic_client.play_state.mode_shuffle = ShuffleMode.ALL
 
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_MEDIA_SHUFFLE] is True
 
     mock_stream_magic_client.play_state.mode_repeat = CambridgeRepeatMode.ALL
 
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_MEDIA_REPEAT] == RepeatMode.ALL
 
 
 async def test_power_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test power service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     data = {ATTR_ENTITY_ID: ENTITY_ID}
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_TURN_ON, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_TURN_ON, data, True)
 
     mock_stream_magic_client.power_on.assert_called_once()
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_TURN_OFF, data, True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_TURN_OFF, data, True)
 
     mock_stream_magic_client.power_off.assert_called_once()
 
 
 async def test_media_seek(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test media seek service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_stream_magic_client.now_playing.controls = [
         TransportControl.SEEK,
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_SEEK,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_MEDIA_SEEK_POSITION: 100},
@@ -360,17 +360,17 @@ async def test_media_seek(
 
 
 async def test_media_volume(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test volume service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_stream_magic_client.state.pre_amp_mode = True
 
     # Test volume up
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_UP,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -379,7 +379,7 @@ async def test_media_volume(
     mock_stream_magic_client.volume_up.assert_called_once()
 
     # Test volume down
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -387,7 +387,7 @@ async def test_media_volume(
 
     mock_stream_magic_client.volume_down.assert_called_once()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_SET,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_MEDIA_VOLUME_LEVEL: 0.30},
@@ -397,14 +397,14 @@ async def test_media_volume(
 
 
 async def test_play_media_preset_item_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test playing media with a preset item id."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -418,7 +418,7 @@ async def test_play_media_preset_item_id(
     assert mock_stream_magic_client.recall_preset.call_args_list[0].args[0] == 1
 
     with pytest.raises(ServiceValidationError, match="Missing preset for media_id: 10"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -432,7 +432,7 @@ async def test_play_media_preset_item_id(
     with pytest.raises(
         ServiceValidationError, match="Preset must be an integer, got: UNKNOWN_PRESET"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -445,14 +445,14 @@ async def test_play_media_preset_item_id(
 
 
 async def test_play_media_airable_radio_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test playing media with an airable radio id."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -469,14 +469,14 @@ async def test_play_media_airable_radio_id(
 
 
 async def test_play_media_internet_radio(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test playing media with a url."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -493,18 +493,18 @@ async def test_play_media_internet_radio(
 
 
 async def test_play_media_unknown_type(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stream_magic_client: AsyncMock,
 ) -> None:
     """Test playing media with an unsupported content type."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Unsupported media type for Cambridge Audio device: unsupported_content_type",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -528,7 +528,7 @@ async def test_play_media_unknown_type(
     ],
 )
 async def test_media_artist(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stream_magic_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     source_id: str,
@@ -537,15 +537,15 @@ async def test_media_artist(
     display: str,
 ) -> None:
     """Test media player state."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_stream_magic_client.play_state.metadata.artist = artist
     mock_stream_magic_client.play_state.metadata.station = station
     mock_stream_magic_client.state.source = source_id
 
     await mock_state_update(mock_stream_magic_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     if (artist is None and source_id != "IR") or (
         source_id == "IR" and station is None
     ):

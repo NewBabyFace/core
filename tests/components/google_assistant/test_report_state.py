@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.google_assistant import error, report_state
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components.google_assistant import error, report_state
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from . import BASIC_CONFIG, MockConfig
 
@@ -17,13 +17,13 @@ from tests.common import async_fire_time_changed
 
 
 async def test_report_state(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test report state works."""
-    assert await async_setup_component(hass, "switch", {})
-    hass.states.async_set("light.ceiling", "off")
-    hass.states.async_set("switch.ac", "on")
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "switch", {})
+    menuai.states.async_set("light.ceiling", "off")
+    menuai.states.async_set("switch.ac", "on")
+    menuai.states.async_set(
         "event.doorbell", "unknown", attributes={"device_class": "doorbell"}
     )
 
@@ -33,10 +33,10 @@ async def test_report_state(
         ) as mock_report,
         patch.object(report_state, "INITIAL_REPORT_DELAY", 0),
     ):
-        unsub = report_state.async_enable_report_state(hass, BASIC_CONFIG)
+        unsub = report_state.async_enable_report_state(menuai, BASIC_CONFIG)
 
-        async_fire_time_changed(hass, utcnow())
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow())
+        await menuai.async_block_till_done()
 
     # Test that enabling report state does a report on all entities
     assert len(mock_report.mock_calls) == 1
@@ -53,18 +53,18 @@ async def test_report_state(
     with patch.object(
         BASIC_CONFIG, "async_report_state_all", AsyncMock()
     ) as mock_report:
-        hass.states.async_set("light.kitchen", "on")
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.kitchen", "on")
+        await menuai.async_block_till_done()
 
-        hass.states.async_set("light.kitchen_2", "on")
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.kitchen_2", "on")
+        await menuai.async_block_till_done()
 
         assert len(mock_report.mock_calls) == 0
 
         async_fire_time_changed(
-            hass, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
+            menuai, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(mock_report.mock_calls) == 1
         assert mock_report.mock_calls[0][1][0] == {
@@ -79,7 +79,7 @@ async def test_report_state(
     # Test that if serialize returns same value, we don't send
     with (
         patch(
-            "homeassistant.components.google_assistant.helpers.GoogleEntity.query_serialize",
+            "menuai.components.google_assistant.helpers.GoogleEntity.query_serialize",
             return_value={"same": "info"},
         ),
         patch.object(
@@ -87,15 +87,15 @@ async def test_report_state(
         ) as mock_report,
     ):
         # New state, so reported
-        hass.states.async_set("light.double_report", "on")
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.double_report", "on")
+        await menuai.async_block_till_done()
 
         # Changed, but serialize is same, so filtered out by extra check
-        hass.states.async_set("light.double_report", "off")
+        menuai.states.async_set("light.double_report", "off")
         async_fire_time_changed(
-            hass, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
+            menuai, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(mock_report.mock_calls) == 1
         assert mock_report.mock_calls[0][1][0] == {
@@ -106,11 +106,11 @@ async def test_report_state(
     with patch.object(
         BASIC_CONFIG, "async_report_state_all", AsyncMock()
     ) as mock_report:
-        hass.states.async_set("switch.ac", "on", {"something": "else"})
+        menuai.states.async_set("switch.ac", "on", {"something": "else"})
         async_fire_time_changed(
-            hass, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
+            menuai, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_report.mock_calls) == 0
 
@@ -120,15 +120,15 @@ async def test_report_state(
             BASIC_CONFIG, "async_report_state_all", AsyncMock()
         ) as mock_report,
         patch(
-            "homeassistant.components.google_assistant.helpers.GoogleEntity.query_serialize",
+            "menuai.components.google_assistant.helpers.GoogleEntity.query_serialize",
             side_effect=error.SmartHomeError("mock-error", "mock-msg"),
         ),
     ):
-        hass.states.async_set("light.kitchen", "off")
+        menuai.states.async_set("light.kitchen", "off")
         async_fire_time_changed(
-            hass, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
+            menuai, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert "Not reporting state for light.kitchen: mock-error" in caplog.text
     assert len(mock_report.mock_calls) == 0
@@ -138,24 +138,24 @@ async def test_report_state(
     with patch.object(
         BASIC_CONFIG, "async_report_state_all", AsyncMock()
     ) as mock_report:
-        hass.states.async_set("light.kitchen", "on")
+        menuai.states.async_set("light.kitchen", "on")
         async_fire_time_changed(
-            hass, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
+            menuai, utcnow() + timedelta(seconds=report_state.REPORT_STATE_WINDOW)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_report.mock_calls) == 0
 
 
 @pytest.mark.freeze_time("2023-08-01 00:00:00+00:00")
 async def test_report_notifications(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test report state works."""
     config = MockConfig(agent_user_ids={"1"})
 
-    assert await async_setup_component(hass, "event", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "event", {})
+    menuai.states.async_set(
         "event.doorbell", "unknown", attributes={"device_class": "doorbell"}
     )
 
@@ -163,12 +163,12 @@ async def test_report_notifications(
         patch.object(config, "async_report_state_all", AsyncMock()) as mock_report,
         patch.object(report_state, "INITIAL_REPORT_DELAY", 0),
     ):
-        report_state.async_enable_report_state(hass, config)
+        report_state.async_enable_report_state(menuai, config)
 
         async_fire_time_changed(
-            hass, datetime.fromisoformat("2023-08-01T00:01:00+00:00")
+            menuai, datetime.fromisoformat("2023-08-01T00:01:00+00:00")
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Test that enabling report state does a report on event entities
     assert len(mock_report.mock_calls) == 1
@@ -185,15 +185,15 @@ async def test_report_notifications(
     ) as mock_report_state:
         event_time = datetime.fromisoformat("2023-08-01T00:02:57+00:00")
         epoc_event_time = event_time.timestamp()
-        hass.states.async_set(
+        menuai.states.async_set(
             "event.doorbell",
             "2023-08-01T00:02:57+00:00",
             attributes={"device_class": "doorbell"},
         )
         async_fire_time_changed(
-            hass, datetime.fromisoformat("2023-08-01T00:03:00+00:00")
+            menuai, datetime.fromisoformat("2023-08-01T00:03:00+00:00")
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(mock_report_state.mock_calls) == 1
         notifications_payload = mock_report_state.mock_calls[0][1][0]["devices"][
@@ -209,13 +209,13 @@ async def test_report_notifications(
         assert "Sending event notification for entity event.doorbell" in caplog.text
         assert "Unable to send notification with result code" not in caplog.text
 
-        hass.states.async_set(
+        menuai.states.async_set(
             "event.doorbell", "unknown", attributes={"device_class": "doorbell"}
         )
         async_fire_time_changed(
-            hass, datetime.fromisoformat("2023-08-01T01:01:00+00:00")
+            menuai, datetime.fromisoformat("2023-08-01T01:01:00+00:00")
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         for call in mock_report_state.mock_calls:
             if "states" in call[1][0]["devices"]:
                 states = call[1][0]["devices"]["states"]
@@ -228,15 +228,15 @@ async def test_report_notifications(
     ) as mock_report_state:
         event_time = datetime.fromisoformat("2023-08-01T01:02:57+00:00")
         epoc_event_time = event_time.timestamp()
-        hass.states.async_set(
+        menuai.states.async_set(
             "event.doorbell",
             "2023-08-01T01:02:57+00:00",
             attributes={"device_class": "doorbell"},
         )
         async_fire_time_changed(
-            hass, datetime.fromisoformat("2023-08-01T01:03:00+00:00")
+            menuai, datetime.fromisoformat("2023-08-01T01:03:00+00:00")
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_report_state.mock_calls) == 1
         for call in mock_report_state.mock_calls:
             if "notifications" in call[1][0]["devices"]:
@@ -264,15 +264,15 @@ async def test_report_notifications(
     ):
         event_time = datetime.fromisoformat("2023-08-01T01:03:57+00:00")
         epoc_event_time = event_time.timestamp()
-        hass.states.async_set(
+        menuai.states.async_set(
             "event.doorbell",
             "2023-08-01T01:03:57+00:00",
             attributes={"device_class": "doorbell"},
         )
         async_fire_time_changed(
-            hass, datetime.fromisoformat("2023-08-01T01:04:00+00:00")
+            menuai, datetime.fromisoformat("2023-08-01T01:04:00+00:00")
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_report_state.mock_calls) == 2
         for call in mock_report_state.mock_calls:
             if "notifications" in call[1][0]["devices"]:

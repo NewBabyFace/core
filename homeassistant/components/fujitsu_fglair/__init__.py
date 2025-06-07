@@ -7,9 +7,9 @@ from contextlib import suppress
 from ayla_iot_unofficial import new_ayla_api
 from ayla_iot_unofficial.fujitsu_consts import FGLAIR_APP_CREDENTIALS
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
 
 from .const import API_TIMEOUT, CONF_EUROPE, CONF_REGION, REGION_DEFAULT, REGION_EU
 from .coordinator import FGLairConfigEntry, FGLairCoordinator
@@ -17,7 +17,7 @@ from .coordinator import FGLairConfigEntry, FGLairCoordinator
 PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FGLairConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FGLairConfigEntry) -> bool:
     """Set up Fujitsu HVAC (based on Ayla IOT) from a config entry."""
     app_id, app_secret = FGLAIR_APP_CREDENTIALS[entry.data[CONF_REGION]]
     api = new_ayla_api(
@@ -26,29 +26,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: FGLairConfigEntry) -> bo
         app_id,
         app_secret,
         europe=entry.data[CONF_REGION] == REGION_EU,
-        websession=aiohttp_client.async_get_clientsession(hass),
+        websession=aiohttp_client.async_get_clientsession(menuai),
         timeout=API_TIMEOUT,
     )
 
-    coordinator = FGLairCoordinator(hass, entry, api)
+    coordinator = FGLairCoordinator(menuai, entry, api)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FGLairConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FGLairConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     with suppress(TimeoutError):
         await entry.runtime_data.api.async_sign_out()
 
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: FGLairConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: FGLairConfigEntry) -> bool:
     """Migrate old entry."""
     if entry.version > 1:
         return False
@@ -62,7 +62,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: FGLairConfigEntry) -> 
             else:
                 new_data[CONF_REGION] = REGION_DEFAULT
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data=new_data, minor_version=2, version=1
         )
 

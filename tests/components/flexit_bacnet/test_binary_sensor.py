@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_with_selected_platforms
 
@@ -14,7 +14,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_flexit_bacnet: AsyncMock,
@@ -23,6 +23,6 @@ async def test_binary_sensors(
     """Test binary sensor states are correctly collected from library."""
 
     await setup_with_selected_platforms(
-        hass, mock_config_entry, [Platform.BINARY_SENSOR]
+        menuai, mock_config_entry, [Platform.BINARY_SENSOR]
     )
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

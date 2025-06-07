@@ -6,9 +6,9 @@ import logging
 
 from bring_api import Bring
 
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import (
     BringActivityCoordinator,
@@ -22,25 +22,25 @@ PLATFORMS: list[Platform] = [Platform.EVENT, Platform.SENSOR, Platform.TODO]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BringConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BringConfigEntry) -> bool:
     """Set up Bring! from a config entry."""
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     bring = Bring(session, entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD])
 
-    coordinator = BringDataUpdateCoordinator(hass, entry, bring)
+    coordinator = BringDataUpdateCoordinator(menuai, entry, bring)
     await coordinator.async_config_entry_first_refresh()
 
-    activity_coordinator = BringActivityCoordinator(hass, entry, coordinator)
+    activity_coordinator = BringActivityCoordinator(menuai, entry, coordinator)
     await activity_coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = BringCoordinators(coordinator, activity_coordinator)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BringConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BringConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

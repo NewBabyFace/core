@@ -7,13 +7,13 @@ from screenlogicpy import ScreenLogicError, ScreenLogicGateway
 from screenlogicpy.const.common import ScreenLogicConnectionError
 from screenlogicpy.const.data import SHARED_VALUES
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.typing import ConfigType
+from menuai.util import slugify
 
 from .const import DOMAIN
 from .coordinator import ScreenlogicDataUpdateCoordinator, async_get_connect_info
@@ -45,22 +45,22 @@ PLATFORMS = [
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Screenlogic."""
 
-    async_load_screenlogic_services(hass)
+    async_load_screenlogic_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ScreenLogicConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ScreenLogicConfigEntry) -> bool:
     """Set up Screenlogic from a config entry."""
 
-    await _async_migrate_entries(hass, entry)
+    await _async_migrate_entries(menuai, entry)
 
     gateway = ScreenLogicGateway()
 
-    connect_info = await async_get_connect_info(hass, entry)
+    connect_info = await async_get_connect_info(menuai, entry)
 
     try:
         await gateway.async_connect(**connect_info)
@@ -69,7 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ScreenLogicConfigEntry) 
         raise ConfigEntryNotReady(ex.msg) from ex
 
     coordinator = ScreenlogicDataUpdateCoordinator(
-        hass, config_entry=entry, gateway=gateway
+        menuai, config_entry=entry, gateway=gateway
     )
 
     await coordinator.async_config_entry_first_refresh()
@@ -78,16 +78,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ScreenLogicConfigEntry) 
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: ScreenLogicConfigEntry
+    menuai: menuai, entry: ScreenLogicConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         coordinator = entry.runtime_data
         await coordinator.gateway.async_disconnect()
@@ -95,17 +95,17 @@ async def async_unload_entry(
 
 
 async def async_update_listener(
-    hass: HomeAssistant, entry: ScreenLogicConfigEntry
+    menuai: menuai, entry: ScreenLogicConfigEntry
 ) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 async def _async_migrate_entries(
-    hass: HomeAssistant, config_entry: ScreenLogicConfigEntry
+    menuai: menuai, config_entry: ScreenLogicConfigEntry
 ) -> None:
     """Migrate to new entity names."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     for entry in er.async_entries_for_config_entry(
         entity_registry, config_entry.entry_id

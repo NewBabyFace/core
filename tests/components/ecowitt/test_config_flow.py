@@ -2,32 +2,32 @@
 
 from unittest.mock import patch
 
-from homeassistant import config_entries
-from homeassistant.components.ecowitt.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai import config_entries
+from menuai.components.ecowitt.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 
-async def test_create_entry(hass: HomeAssistant) -> None:
+async def test_create_entry(menuai: menuai) -> None:
     """Test we can create a config entry."""
-    await async_setup_component(hass, "http", {})
+    await async_setup_component(menuai, "http", {})
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.ecowitt.async_setup_entry",
+        "menuai.components.ecowitt.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Ecowitt"

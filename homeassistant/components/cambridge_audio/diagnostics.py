@@ -2,13 +2,13 @@
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import CambridgeAudioConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: CambridgeAudioConfigEntry
+    menuai: menuai, entry: CambridgeAudioConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for the provided config entry."""
     client = entry.runtime_data

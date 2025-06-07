@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     async_get_entity_registry_entry_or_raise,
     async_validate_entity_schema,
     toggle_entity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     CONF_DEVICE_ID,
@@ -17,11 +17,11 @@ from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_TYPE,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import get_capability, get_supported_features
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType, VolDictType
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import get_capability, get_supported_features
+from menuai.helpers.typing import ConfigType, TemplateVarsType, VolDictType
 
 from . import DOMAIN, const
 
@@ -49,25 +49,25 @@ _ACTION_SCHEMA = vol.Any(SET_HUMIDITY_SCHEMA, SET_MODE_SCHEMA, ONOFF_SCHEMA)
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    return async_validate_entity_schema(hass, config, _ACTION_SCHEMA)
+    return async_validate_entity_schema(menuai, config, _ACTION_SCHEMA)
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for Humidifier devices."""
-    registry = er.async_get(hass)
-    actions = await toggle_entity.async_get_actions(hass, device_id, DOMAIN)
+    registry = er.async_get(menuai)
+    actions = await toggle_entity.async_get_actions(menuai, device_id, DOMAIN)
 
     # Get all the integrations entities for this device
     for entry in er.async_entries_for_device(registry, device_id):
         if entry.domain != DOMAIN:
             continue
 
-        supported_features = get_supported_features(hass, entry.entity_id)
+        supported_features = get_supported_features(menuai, entry.entity_id)
 
         base_action = {
             CONF_DEVICE_ID: device_id,
@@ -83,7 +83,7 @@ async def async_get_actions(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
@@ -99,17 +99,17 @@ async def async_call_action_from_config(
         service_data[ATTR_MODE] = config[ATTR_MODE]
     else:
         await toggle_entity.async_call_action_from_config(
-            hass, config, variables, context, DOMAIN
+            menuai, config, variables, context, DOMAIN
         )
         return
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, blocking=True, context=context
     )
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     action_type = config[CONF_TYPE]
@@ -121,12 +121,12 @@ async def async_get_action_capabilities(
     elif action_type == "set_mode":
         try:
             entry = async_get_entity_registry_entry_or_raise(
-                hass, config[CONF_ENTITY_ID]
+                menuai, config[CONF_ENTITY_ID]
             )
             available_modes = (
-                get_capability(hass, entry.entity_id, const.ATTR_AVAILABLE_MODES) or []
+                get_capability(menuai, entry.entity_id, const.ATTR_AVAILABLE_MODES) or []
             )
-        except HomeAssistantError:
+        except menuaiError:
             available_modes = []
         fields[vol.Required(ATTR_MODE)] = vol.In(available_modes)
     else:

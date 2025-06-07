@@ -8,20 +8,20 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import event
-from homeassistant.components.event import (
+from menuai.components import event
+from menuai.components.event import (
     ENTITY_ID_FORMAT,
     EventDeviceClass,
     EventEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_NAME, CONF_VALUE_TEMPLATE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads_object
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE_CLASS, CONF_NAME, CONF_VALUE_TEMPLATE
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads_object
 
 from . import subscription
 from .config import MQTT_RO_SCHEMA
@@ -71,13 +71,13 @@ DISCOVERY_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT event through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttEvent,
         event.DOMAIN,
@@ -178,7 +178,7 @@ class MqttEvent(MqttEntity, EventEntity):
                 payload,
             )
             return
-        mqtt_data = self.hass.data[DATA_MQTT]
+        mqtt_data = self.menuai.data[DATA_MQTT]
         mqtt_data.state_write_requests.write_state_request(self)
 
     @callback
@@ -188,4 +188,4 @@ class MqttEvent(MqttEntity, EventEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)

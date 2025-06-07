@@ -8,7 +8,7 @@ from dns.resolver import LifetimeTimeout
 from mcstatus import BedrockServer, JavaServer
 from mcstatus.responses import BedrockStatusResponse, JavaStatusResponse
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,11 +63,11 @@ class MinecraftServer:
     _server: BedrockServer | JavaServer | None
 
     def __init__(
-        self, hass: HomeAssistant, server_type: MinecraftServerType, address: str
+        self, menuai: menuai, server_type: MinecraftServerType, address: str
     ) -> None:
         """Initialize server instance."""
         self._server = None
-        self._hass = hass
+        self._menuai = menuai
         self._server_type = server_type
         self._address = address
 
@@ -77,7 +77,7 @@ class MinecraftServer:
             if self._server_type == MinecraftServerType.JAVA_EDITION:
                 self._server = await JavaServer.async_lookup(self._address)
             else:
-                self._server = await self._hass.async_add_executor_job(
+                self._server = await self._menuai.async_add_executor_job(
                     BedrockServer.lookup, self._address
                 )
         except (ValueError, LifetimeTimeout) as error:

@@ -6,15 +6,15 @@ from inflection import underscore
 from mozart_api.models import ButtonEvent
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.bang_olufsen.const import (
+from menuai.components.bang_olufsen.const import (
     DEVICE_BUTTON_EVENTS,
     DEVICE_BUTTONS,
     EVENT_TRANSLATION_MAP,
 )
-from homeassistant.components.event import ATTR_EVENT_TYPE, ATTR_EVENT_TYPES
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.event import ATTR_EVENT_TYPE, ATTR_EVENT_TYPES
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers.entity_registry import EntityRegistry
 
 from .const import TEST_BUTTON_EVENT_ENTITY_ID
 
@@ -22,7 +22,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_button_event_creation(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: None,
     entity_registry: EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -50,7 +50,7 @@ async def test_button_event_creation(
 
 
 async def test_button_event_creation_beoconnect_core(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_core: MockConfigEntry,
     mock_mozart_client: AsyncMock,
     entity_registry: EntityRegistry,
@@ -59,8 +59,8 @@ async def test_button_event_creation_beoconnect_core(
     """Test button event entities are not created when using a Beoconnect Core."""
 
     # Load entry
-    mock_config_entry_core.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry_core.entry_id)
+    mock_config_entry_core.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry_core.entry_id)
 
     # Check number of entities
     # The media_player entity should be the only available
@@ -71,7 +71,7 @@ async def test_button_event_creation_beoconnect_core(
 
 
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: None,
     mock_config_entry: MockConfigEntry,
     mock_mozart_client: AsyncMock,
@@ -81,9 +81,9 @@ async def test_button(
 
     # Enable the entity
     entity_registry.async_update_entity(TEST_BUTTON_EVENT_ENTITY_ID, disabled_by=None)
-    hass.config_entries.async_schedule_reload(mock_config_entry.entry_id)
+    menuai.config_entries.async_schedule_reload(mock_config_entry.entry_id)
 
-    assert (states := hass.states.get(TEST_BUTTON_EVENT_ENTITY_ID))
+    assert (states := menuai.states.get(TEST_BUTTON_EVENT_ENTITY_ID))
     assert states.state is STATE_UNKNOWN
     assert states.attributes[ATTR_EVENT_TYPES] == list(DEVICE_BUTTON_EVENTS)
 
@@ -91,9 +91,9 @@ async def test_button(
     notification_callback = mock_mozart_client.get_button_notifications.call_args[0][0]
 
     notification_callback(ButtonEvent(button="PlayPause", state="shortPress (Release)"))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (states := hass.states.get(TEST_BUTTON_EVENT_ENTITY_ID))
+    assert (states := menuai.states.get(TEST_BUTTON_EVENT_ENTITY_ID))
     assert states.state is not None
     assert (
         states.attributes[ATTR_EVENT_TYPE]

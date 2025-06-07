@@ -11,7 +11,7 @@ from huawei_lte_api.Session import GetResponseType
 import requests
 from urllib3.exceptions import InsecureRequestWarning
 
-from homeassistant.helpers.device_registry import format_mac
+from menuai.helpers.device_registry import format_mac
 
 
 def get_device_macs(

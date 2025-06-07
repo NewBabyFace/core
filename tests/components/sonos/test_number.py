@@ -2,48 +2,48 @@
 
 from unittest.mock import PropertyMock, patch
 
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN, SERVICE_SET_VALUE
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.number import DOMAIN as NUMBER_DOMAIN, SERVICE_SET_VALUE
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 CROSSOVER_ENTITY = "number.zone_a_sub_crossover_frequency"
 
 
 async def test_number_entities(
-    hass: HomeAssistant, async_autosetup_sonos, soco, entity_registry: er.EntityRegistry
+    menuai: menuai, async_autosetup_sonos, soco, entity_registry: er.EntityRegistry
 ) -> None:
     """Test number entities."""
     balance_number = entity_registry.entities["number.zone_a_balance"]
-    balance_state = hass.states.get(balance_number.entity_id)
+    balance_state = menuai.states.get(balance_number.entity_id)
     assert balance_state.state == "39"
 
     bass_number = entity_registry.entities["number.zone_a_bass"]
-    bass_state = hass.states.get(bass_number.entity_id)
+    bass_state = menuai.states.get(bass_number.entity_id)
     assert bass_state.state == "1"
 
     treble_number = entity_registry.entities["number.zone_a_treble"]
-    treble_state = hass.states.get(treble_number.entity_id)
+    treble_state = menuai.states.get(treble_number.entity_id)
     assert treble_state.state == "-1"
 
     audio_delay_number = entity_registry.entities["number.zone_a_audio_delay"]
-    audio_delay_state = hass.states.get(audio_delay_number.entity_id)
+    audio_delay_state = menuai.states.get(audio_delay_number.entity_id)
     assert audio_delay_state.state == "2"
 
     surround_level_number = entity_registry.entities["number.zone_a_surround_level"]
-    surround_level_state = hass.states.get(surround_level_number.entity_id)
+    surround_level_state = menuai.states.get(surround_level_number.entity_id)
     assert surround_level_state.state == "3"
 
     music_surround_level_number = entity_registry.entities[
         "number.zone_a_music_surround_level"
     ]
-    music_surround_level_state = hass.states.get(music_surround_level_number.entity_id)
+    music_surround_level_state = menuai.states.get(music_surround_level_number.entity_id)
     assert music_surround_level_state.state == "4"
 
     with patch.object(
         type(soco), "audio_delay", new_callable=PropertyMock
     ) as mock_audio_delay:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: audio_delay_number.entity_id, "value": 3},
@@ -52,13 +52,13 @@ async def test_number_entities(
         mock_audio_delay.assert_called_once_with(3)
 
     sub_gain_number = entity_registry.entities["number.zone_a_sub_gain"]
-    sub_gain_state = hass.states.get(sub_gain_number.entity_id)
+    sub_gain_state = menuai.states.get(sub_gain_number.entity_id)
     assert sub_gain_state.state == "5"
 
     with patch.object(
         type(soco), "sub_gain", new_callable=PropertyMock
     ) as mock_sub_gain:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: sub_gain_number.entity_id, "value": -8},
@@ -71,7 +71,7 @@ async def test_number_entities(
 
 
 async def test_amp_number_entities(
-    hass: HomeAssistant, async_setup_sonos, soco, entity_registry: er.EntityRegistry
+    menuai: menuai, async_setup_sonos, soco, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the sub_crossover feature only available on Sonos Amp devices.
 
@@ -81,13 +81,13 @@ async def test_amp_number_entities(
         await async_setup_sonos()
 
     sub_crossover_number = entity_registry.entities[CROSSOVER_ENTITY]
-    sub_crossover_state = hass.states.get(sub_crossover_number.entity_id)
+    sub_crossover_state = menuai.states.get(sub_crossover_number.entity_id)
     assert sub_crossover_state.state == "50"
 
     with patch.object(
         type(soco), "sub_crossover", new_callable=PropertyMock
     ) as mock_sub_crossover:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: sub_crossover_number.entity_id, "value": 110},

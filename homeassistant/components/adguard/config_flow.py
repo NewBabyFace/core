@@ -7,8 +7,8 @@ from typing import Any
 from adguardhome import AdGuardHome, AdGuardHomeConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -16,8 +16,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
 
 from .const import DOMAIN
 
@@ -27,7 +27,7 @@ class AdGuardHomeFlowHandler(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    _hassio_discovery: dict[str, Any] | None = None
+    _menuaiio_discovery: dict[str, Any] | None = None
 
     async def _show_setup_form(
         self, errors: dict[str, str] | None = None
@@ -48,14 +48,14 @@ class AdGuardHomeFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors or {},
         )
 
-    async def _show_hassio_form(
+    async def _show_menuaiio_form(
         self, errors: dict[str, str] | None = None
     ) -> ConfigFlowResult:
-        """Show the Hass.io confirmation form to the user."""
-        assert self._hassio_discovery
+        """Show the menuai.io confirmation form to the user."""
+        assert self._menuaiio_discovery
         return self.async_show_form(
-            step_id="hassio_confirm",
-            description_placeholders={"addon": self._hassio_discovery["addon"]},
+            step_id="menuaiio_confirm",
+            description_placeholders={"addon": self._menuaiio_discovery["addon"]},
             errors=errors or {},
         )
 
@@ -72,7 +72,7 @@ class AdGuardHomeFlowHandler(ConfigFlow, domain=DOMAIN):
 
         errors = {}
 
-        session = async_get_clientsession(self.hass, user_input[CONF_VERIFY_SSL])
+        session = async_get_clientsession(self.menuai, user_input[CONF_VERIFY_SSL])
 
         username: str | None = user_input.get(CONF_USERNAME)
         password: str | None = user_input.get(CONF_PASSWORD)
@@ -104,33 +104,33 @@ class AdGuardHomeFlowHandler(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
-        """Prepare configuration for a Hass.io AdGuard Home add-on.
+        """Prepare configuration for a menuai.io AdGuard Home add-on.
 
         This flow is triggered by the discovery component.
         """
         await self._async_handle_discovery_without_unique_id()
 
-        self._hassio_discovery = discovery_info.config
-        return await self.async_step_hassio_confirm()
+        self._menuaiio_discovery = discovery_info.config
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm Supervisor discovery."""
         if user_input is None:
-            return await self._show_hassio_form()
+            return await self._show_menuaiio_form()
 
         errors = {}
 
-        session = async_get_clientsession(self.hass, False)
+        session = async_get_clientsession(self.menuai, False)
 
-        assert self._hassio_discovery
+        assert self._menuaiio_discovery
         adguard = AdGuardHome(
-            self._hassio_discovery[CONF_HOST],
-            port=self._hassio_discovery[CONF_PORT],
+            self._menuaiio_discovery[CONF_HOST],
+            port=self._menuaiio_discovery[CONF_PORT],
             tls=False,
             session=session,
         )
@@ -139,13 +139,13 @@ class AdGuardHomeFlowHandler(ConfigFlow, domain=DOMAIN):
             await adguard.version()
         except AdGuardHomeConnectionError:
             errors["base"] = "cannot_connect"
-            return await self._show_hassio_form(errors)
+            return await self._show_menuaiio_form(errors)
 
         return self.async_create_entry(
-            title=self._hassio_discovery["addon"],
+            title=self._menuaiio_discovery["addon"],
             data={
-                CONF_HOST: self._hassio_discovery[CONF_HOST],
-                CONF_PORT: self._hassio_discovery[CONF_PORT],
+                CONF_HOST: self._menuaiio_discovery[CONF_HOST],
+                CONF_PORT: self._menuaiio_discovery[CONF_PORT],
                 CONF_PASSWORD: None,
                 CONF_SSL: False,
                 CONF_USERNAME: None,

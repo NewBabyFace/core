@@ -2,13 +2,13 @@
 
 from asyncsleepiq import SleepIQBed, SleepIQSleeper
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, ICON_EMPTY, ICON_OCCUPIED, IS_IN_BED
 from .coordinator import SleepIQData, SleepIQDataUpdateCoordinator
@@ -16,12 +16,12 @@ from .entity import SleepIQSleeperEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the SleepIQ bed binary sensors."""
-    data: SleepIQData = hass.data[DOMAIN][entry.entry_id]
+    data: SleepIQData = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         IsInBedBinarySensor(data.data_coordinator, bed, sleeper)
         for bed in data.client.beds.values()

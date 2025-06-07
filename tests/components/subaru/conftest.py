@@ -7,9 +7,9 @@ from unittest.mock import patch
 import pytest
 from subarulink.const import COUNTRY_USA
 
-from homeassistant import config_entries
-from homeassistant.components.homeassistant import DOMAIN as HA_DOMAIN
-from homeassistant.components.subaru.const import (
+from menuai import config_entries
+from menuai.components.menuai import DOMAIN as HA_DOMAIN
+from menuai.components.subaru.const import (
     CONF_UPDATE_ENABLED,
     DOMAIN,
     FETCH_INTERVAL,
@@ -22,24 +22,24 @@ from homeassistant.components.subaru.const import (
     VEHICLE_MODEL_YEAR,
     VEHICLE_NAME,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_COUNTRY,
     CONF_DEVICE_ID,
     CONF_PASSWORD,
     CONF_PIN,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .api_responses import TEST_VIN_2_EV, VEHICLE_DATA, VEHICLE_STATUS_EV
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
-MOCK_API = "homeassistant.components.subaru.SubaruAPI."
+MOCK_API = "menuai.components.subaru.SubaruAPI."
 MOCK_API_DEVICE_REGISTERED = f"{MOCK_API}device_registered"
 MOCK_API_2FA_CONTACTS = f"{MOCK_API}contact_methods"
 MOCK_API_2FA_REQUEST = f"{MOCK_API}request_auth_code"
@@ -100,14 +100,14 @@ TEST_DEVICE_NAME = "test_vehicle_2"
 TEST_ENTITY_ID = f"sensor.{TEST_DEVICE_NAME}_odometer"
 
 
-def advance_time_to_next_fetch(hass: HomeAssistant) -> None:
+def advance_time_to_next_fetch(menuai: menuai) -> None:
     """Fast forward time to next fetch."""
     future = dt_util.utcnow() + timedelta(seconds=FETCH_INTERVAL + 30)
-    async_fire_time_changed(hass, future)
+    async_fire_time_changed(menuai, future)
 
 
 async def setup_subaru_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry,
     vehicle_list: list[str] | UndefinedType = UNDEFINED,
     vehicle_data: dict[str, Any] | UndefinedType = UNDEFINED,
@@ -176,27 +176,27 @@ async def setup_subaru_config_entry(
         ),
         patch(MOCK_API_FETCH, side_effect=fetch_effect),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 @pytest.fixture
-async def subaru_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+async def subaru_config_entry(menuai: menuai) -> MockConfigEntry:
     """Create a Subaru config entry prior to setup."""
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, HA_DOMAIN, {})
     config_entry = MockConfigEntry(**TEST_CONFIG_ENTRY)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 @pytest.fixture
 async def ev_entry(
-    hass: HomeAssistant, subaru_config_entry: MockConfigEntry
+    menuai: menuai, subaru_config_entry: MockConfigEntry
 ) -> MockConfigEntry:
     """Create a Subaru entry representing an EV vehicle with full STARLINK subscription."""
-    await setup_subaru_config_entry(hass, subaru_config_entry)
-    assert DOMAIN in hass.config_entries.async_domains()
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
-    assert hass.config_entries.async_get_entry(subaru_config_entry.entry_id)
+    await setup_subaru_config_entry(menuai, subaru_config_entry)
+    assert DOMAIN in menuai.config_entries.async_domains()
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
+    assert menuai.config_entries.async_get_entry(subaru_config_entry.entry_id)
     assert subaru_config_entry.state is ConfigEntryState.LOADED
     return subaru_config_entry

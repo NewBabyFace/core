@@ -10,7 +10,7 @@ import pytest
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.switcher_kis.async_setup_entry", return_value=True
+        "menuai.components.switcher_kis.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -20,10 +20,10 @@ def mock_bridge(request: pytest.FixtureRequest) -> Generator[MagicMock]:
     """Return a mocked SwitcherBridge."""
     with (
         patch(
-            "homeassistant.components.switcher_kis.SwitcherBridge", autospec=True
+            "menuai.components.switcher_kis.SwitcherBridge", autospec=True
         ) as bridge_mock,
         patch(
-            "homeassistant.components.switcher_kis.utils.SwitcherBridge",
+            "menuai.components.switcher_kis.utils.SwitcherBridge",
             new=bridge_mock,
         ),
     ):
@@ -60,11 +60,11 @@ def mock_api():
 
     patchers = [
         patch(
-            "homeassistant.components.switcher_kis.entity.SwitcherApi.connect",
+            "menuai.components.switcher_kis.entity.SwitcherApi.connect",
             new=api_mock,
         ),
         patch(
-            "homeassistant.components.switcher_kis.entity.SwitcherApi.disconnect",
+            "menuai.components.switcher_kis.entity.SwitcherApi.disconnect",
             new=api_mock,
         ),
     ]

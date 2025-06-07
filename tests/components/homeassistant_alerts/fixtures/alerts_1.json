@@ -8,8 +8,8 @@
         "package": "aladdin_connect"
       }
     ],
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "resolved_in_version": "2022.7"
     },
     "filename": "aladdin_connect.markdown",
@@ -25,24 +25,24 @@
       }
     ],
     "github_issue": "https://github.com/home-assistant/home-assistant.io/pull/12591",
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "affected_from_version": "0.30"
     },
     "filename": "dark_sky.markdown",
     "alert_url": "https://alerts.home-assistant.io/#dark_sky.markdown"
   },
   {
-    "id": "hassio",
-    "title": "Supervisor November beta issue impacting users on Home Assistant beta/dev channels",
+    "id": "menuaiio",
+    "title": "Supervisor November beta issue impacting users on MenuAI beta/dev channels",
     "created": "2022-11-16T06:00:00.000Z",
     "integrations": [
       {
-        "package": "hassio"
+        "package": "menuaiio"
       }
     ],
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "affected_from_version": "0.41"
     },
     "supervisor": {
@@ -50,8 +50,8 @@
       "affected_from_version": "2022.11.0",
       "resolved_in_version": "2022.11.1"
     },
-    "filename": "hassio.markdown",
-    "alert_url": "https://alerts.home-assistant.io/#hassio.markdown"
+    "filename": "menuaiio.markdown",
+    "alert_url": "https://alerts.home-assistant.io/#menuaiio.markdown"
   },
   {
     "id": "hikvision",
@@ -67,8 +67,8 @@
     ],
     "filename": "hikvision.markdown",
     "alert_url": "https://alerts.home-assistant.io/#hikvision.markdown",
-    "homeassistant": {
-      "package": "homeassistant"
+    "menuai": {
+      "package": "menuai"
     }
   },
   {
@@ -80,8 +80,8 @@
         "package": "hive"
       }
     ],
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "affected_from_version": "2021.11.0"
     },
     "filename": "hive_us.markdown",
@@ -101,8 +101,8 @@
         "package": "homematicip"
       }
     ],
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "affected_from_version": "0.7"
     },
     "filename": "homematicip_cloud.markdown",
@@ -118,8 +118,8 @@
       }
     ],
     "github_issue": "https://github.com/home-assistant/core/issues/71945",
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "affected_from_version": "0.92.0"
     },
     "filename": "logi_circle.markdown",
@@ -134,8 +134,8 @@
         "package": "neato"
       }
     ],
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "affected_from_version": "0.30"
     },
     "filename": "neato.markdown",
@@ -153,8 +153,8 @@
     "github_issue": "https://github.com/home-assistant/core/issues/67662#issuecomment-1144425848",
     "filename": "nest.markdown",
     "alert_url": "https://alerts.home-assistant.io/#nest.markdown",
-    "homeassistant": {
-      "package": "homeassistant"
+    "menuai": {
+      "package": "menuai"
     }
   },
   {
@@ -168,8 +168,8 @@
     ],
     "filename": "senseme.markdown",
     "alert_url": "https://alerts.home-assistant.io/#senseme.markdown",
-    "homeassistant": {
-      "package": "homeassistant"
+    "menuai": {
+      "package": "menuai"
     }
   },
   {
@@ -183,8 +183,8 @@
     ],
     "filename": "sochain.markdown",
     "alert_url": "https://alerts.home-assistant.io/#sochain.markdown",
-    "homeassistant": {
-      "package": "homeassistant"
+    "menuai": {
+      "package": "menuai"
     }
   },
   {
@@ -196,8 +196,8 @@
         "package": "yeelight"
       }
     ],
-    "homeassistant": {
-      "package": "homeassistant",
+    "menuai": {
+      "package": "menuai",
       "affected_from_version": "0.89"
     },
     "filename": "yeelight.markdown",

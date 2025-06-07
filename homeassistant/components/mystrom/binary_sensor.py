@@ -5,29 +5,29 @@ from __future__ import annotations
 from http import HTTPStatus
 import logging
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorEntity,
 )
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up myStrom Binary Sensor."""
-    hass.http.register_view(MyStromView(async_add_entities))
+    menuai.http.register_view(MyStromView(async_add_entities))
 
 
-class MyStromView(HomeAssistantView):
+class MyStromView(menuaiView):
     """View to handle requests from myStrom buttons."""
 
     url = "/api/mystrom"
@@ -41,9 +41,9 @@ class MyStromView(HomeAssistantView):
 
     async def get(self, request):
         """Handle the GET request received from a myStrom button."""
-        return await self._handle(request.app[KEY_HASS], request.query)
+        return await self._handle(request.app[KEY_menuai], request.query)
 
-    async def _handle(self, hass, data):
+    async def _handle(self, menuai, data):
         """Handle requests to the myStrom endpoint."""
         button_action = next(
             (parameter for parameter in data if parameter in self.supported_actions),

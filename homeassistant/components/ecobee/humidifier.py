@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     DEFAULT_MAX_HUMIDITY,
     DEFAULT_MIN_HUMIDITY,
     MODE_AUTO,
@@ -14,9 +14,9 @@ from homeassistant.components.humidifier import (
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EcobeeConfigEntry
 from .const import DOMAIN, ECOBEE_MODEL_TO_NAME, MANUFACTURER
@@ -28,7 +28,7 @@ MODE_OFF = "off"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcobeeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -43,7 +43,7 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-ECOBEE_HUMIDIFIER_ACTION_TO_HASS = {
+ECOBEE_HUMIDIFIER_ACTION_TO_menuai = {
     "humidifier": HumidifierAction.HUMIDIFYING,
     "dehumidifier": HumidifierAction.DRYING,
 }
@@ -107,8 +107,8 @@ class EcobeeHumidifier(HumidifierEntity):
     def action(self) -> HumidifierAction:
         """Return the current action."""
         for status in self.thermostat["equipmentStatus"].split(","):
-            if status in ECOBEE_HUMIDIFIER_ACTION_TO_HASS:
-                return ECOBEE_HUMIDIFIER_ACTION_TO_HASS[status]
+            if status in ECOBEE_HUMIDIFIER_ACTION_TO_menuai:
+                return ECOBEE_HUMIDIFIER_ACTION_TO_menuai[status]
         return HumidifierAction.IDLE if self.is_on else HumidifierAction.OFF
 
     @property

@@ -14,13 +14,13 @@ from vulcan import (
 )
 from vulcan.model import Student
 
-from homeassistant import config_entries
-from homeassistant.components.vulcan import config_flow, register
-from homeassistant.components.vulcan.config_flow import ClientConnectionError, Keystore
-from homeassistant.components.vulcan.const import DOMAIN
-from homeassistant.const import CONF_PIN, CONF_REGION, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.vulcan import config_flow, register
+from menuai.components.vulcan.config_flow import ClientConnectionError, Keystore
+from menuai.components.vulcan.const import DOMAIN
+from menuai.const import CONF_PIN, CONF_REGION, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry, async_load_fixture
 
@@ -33,10 +33,10 @@ fake_account = Account(
 )
 
 
-async def test_show_form(hass: HomeAssistant) -> None:
+async def test_show_form(menuai: menuai) -> None:
     """Test that the form is served with no input."""
     flow = config_flow.VulcanFlowHandler()
-    flow.hass = hass
+    flow.menuai = menuai
 
     result = await flow.async_step_user(user_input=None)
 
@@ -44,19 +44,19 @@ async def test_show_form(hass: HomeAssistant) -> None:
     assert result["step_id"] == "auth"
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
-@mock.patch("homeassistant.components.vulcan.config_flow.Account.register")
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Account.register")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
 async def test_config_flow_auth_success(
-    mock_keystore, mock_account, mock_student, hass: HomeAssistant
+    mock_keystore, mock_account, mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow initialized by the user."""
     mock_keystore.return_value = fake_keystore
     mock_account.return_value = fake_account
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN))
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN))
     ]
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -65,25 +65,25 @@ async def test_config_flow_auth_success(
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Jan Kowalski"
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
-@mock.patch("homeassistant.components.vulcan.config_flow.Account.register")
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Account.register")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
 async def test_config_flow_auth_success_with_multiple_students(
-    mock_keystore, mock_account, mock_student, hass: HomeAssistant
+    mock_keystore, mock_account, mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow with multiple students."""
     mock_keystore.return_value = fake_keystore
@@ -91,11 +91,11 @@ async def test_config_flow_auth_success_with_multiple_students(
     mock_student.return_value = [
         Student.load(student)
         for student in (
-            await async_load_fixture(hass, "fake_student_1.json", DOMAIN),
-            await async_load_fixture(hass, "fake_student_2.json", DOMAIN),
+            await async_load_fixture(menuai, "fake_student_1.json", DOMAIN),
+            await async_load_fixture(menuai, "fake_student_2.json", DOMAIN),
         )
     ]
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -103,7 +103,7 @@ async def test_config_flow_auth_success_with_multiple_students(
     assert result["step_id"] == "auth"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
     )
@@ -113,10 +113,10 @@ async def test_config_flow_auth_success_with_multiple_students(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"student": "0"},
         )
@@ -126,35 +126,35 @@ async def test_config_flow_auth_success_with_multiple_students(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
-@mock.patch("homeassistant.components.vulcan.config_flow.Account.register")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Account.register")
 async def test_config_flow_reauth_success(
-    mock_account, mock_keystore, mock_student, hass: HomeAssistant
+    mock_account, mock_keystore, mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow reauth."""
     mock_keystore.return_value = fake_keystore
     mock_account.return_value = fake_account
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN))
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN))
     ]
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="0",
         data={"student_id": "0"},
     )
-    entry.add_to_hass(hass)
-    result = await entry.start_reauth_flow(hass)
+    entry.add_to_menuai(menuai)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -164,31 +164,31 @@ async def test_config_flow_reauth_success(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
-@mock.patch("homeassistant.components.vulcan.config_flow.Account.register")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Account.register")
 async def test_config_flow_reauth_without_matching_entries(
-    mock_account, mock_keystore, mock_student, hass: HomeAssistant
+    mock_account, mock_keystore, mock_student, menuai: menuai
 ) -> None:
     """Test a aborted config flow reauth caused by leak of matching entries."""
     mock_keystore.return_value = fake_keystore
     mock_account.return_value = fake_account
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN))
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN))
     ]
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="0",
         data={"student_id": "1"},
     )
-    entry.add_to_hass(hass)
-    result = await entry.start_reauth_flow(hass)
+    entry.add_to_menuai(menuai)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
     )
@@ -197,10 +197,10 @@ async def test_config_flow_reauth_without_matching_entries(
     assert result["reason"] == "no_matching_entries"
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
-@mock.patch("homeassistant.components.vulcan.config_flow.Account.register")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Account.register")
 async def test_config_flow_reauth_with_errors(
-    mock_account, mock_keystore, hass: HomeAssistant
+    mock_account, mock_keystore, menuai: menuai
 ) -> None:
     """Test reauth config flow with errors."""
     mock_keystore.return_value = fake_keystore
@@ -210,16 +210,16 @@ async def test_config_flow_reauth_with_errors(
         unique_id="0",
         data={"student_id": "0"},
     )
-    entry.add_to_hass(hass)
-    result = await entry.start_reauth_flow(hass)
+    entry.add_to_menuai(menuai)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=InvalidTokenException,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -229,10 +229,10 @@ async def test_config_flow_reauth_with_errors(
         assert result["errors"] == {"base": "invalid_token"}
 
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=ExpiredTokenException,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -242,10 +242,10 @@ async def test_config_flow_reauth_with_errors(
         assert result["errors"] == {"base": "expired_token"}
 
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=InvalidPINException,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -255,10 +255,10 @@ async def test_config_flow_reauth_with_errors(
         assert result["errors"] == {"base": "invalid_pin"}
 
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=InvalidSymbolException,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -268,10 +268,10 @@ async def test_config_flow_reauth_with_errors(
         assert result["errors"] == {"base": "invalid_symbol"}
 
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=ClientConnectionError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -281,10 +281,10 @@ async def test_config_flow_reauth_with_errors(
         assert result["errors"] == {"base": "cannot_connect"}
 
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -294,27 +294,27 @@ async def test_config_flow_reauth_with_errors(
         assert result["errors"] == {"base": "unknown"}
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
-@mock.patch("homeassistant.components.vulcan.config_flow.Account.register")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Account.register")
 async def test_multiple_config_entries(
-    mock_account, mock_keystore, mock_student, hass: HomeAssistant
+    mock_account, mock_keystore, mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow for multiple config entries."""
     mock_keystore.return_value = fake_keystore
     mock_account.return_value = fake_account
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN))
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN))
     ]
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     await register.register("token", "region", "000000")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -322,7 +322,7 @@ async def test_multiple_config_entries(
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": False},
     )
@@ -332,10 +332,10 @@ async def test_multiple_config_entries(
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "token", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -345,23 +345,23 @@ async def test_multiple_config_entries(
     assert len(mock_setup_entry.mock_calls) == 2
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
 async def test_multiple_config_entries_using_saved_credentials(
-    mock_student, hass: HomeAssistant
+    mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow for multiple config entries using saved credentials."""
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN))
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN))
     ]
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -370,10 +370,10 @@ async def test_multiple_config_entries_using_saved_credentials(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"use_saved_credentials": True},
         )
@@ -383,24 +383,24 @@ async def test_multiple_config_entries_using_saved_credentials(
     assert len(mock_setup_entry.mock_calls) == 2
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
 async def test_multiple_config_entries_using_saved_credentials_2(
-    mock_student, hass: HomeAssistant
+    mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow for multiple config entries using saved credentials (different situation)."""
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN)),
-        Student.load(await async_load_fixture(hass, "fake_student_2.json", DOMAIN)),
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN)),
+        Student.load(await async_load_fixture(menuai, "fake_student_2.json", DOMAIN)),
     ]
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -408,7 +408,7 @@ async def test_multiple_config_entries_using_saved_credentials_2(
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": True},
     )
@@ -418,10 +418,10 @@ async def test_multiple_config_entries_using_saved_credentials_2(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"student": "0"},
         )
@@ -431,33 +431,33 @@ async def test_multiple_config_entries_using_saved_credentials_2(
     assert len(mock_setup_entry.mock_calls) == 2
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
 async def test_multiple_config_entries_using_saved_credentials_3(
-    mock_student, hass: HomeAssistant
+    mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow for multiple config entries using saved credentials."""
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN))
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN))
     ]
     MockConfigEntry(
         entry_id="456",
         domain=DOMAIN,
         unique_id="234567",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         )
         | {"student_id": "456"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         entry_id="123",
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -465,7 +465,7 @@ async def test_multiple_config_entries_using_saved_credentials_3(
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": True},
     )
@@ -475,10 +475,10 @@ async def test_multiple_config_entries_using_saved_credentials_3(
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"credentials": "123"},
         )
@@ -488,34 +488,34 @@ async def test_multiple_config_entries_using_saved_credentials_3(
     assert len(mock_setup_entry.mock_calls) == 3
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
 async def test_multiple_config_entries_using_saved_credentials_4(
-    mock_student, hass: HomeAssistant
+    mock_student, menuai: menuai
 ) -> None:
     """Test a successful config flow for multiple config entries using saved credentials (different situation)."""
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN)),
-        Student.load(await async_load_fixture(hass, "fake_student_2.json", DOMAIN)),
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN)),
+        Student.load(await async_load_fixture(menuai, "fake_student_2.json", DOMAIN)),
     ]
     MockConfigEntry(
         entry_id="456",
         domain=DOMAIN,
         unique_id="234567",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         )
         | {"student_id": "456"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         entry_id="123",
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -523,7 +523,7 @@ async def test_multiple_config_entries_using_saved_credentials_4(
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": True},
     )
@@ -532,7 +532,7 @@ async def test_multiple_config_entries_using_saved_credentials_4(
     assert result["step_id"] == "select_saved_credentials"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"credentials": "123"},
     )
@@ -542,10 +542,10 @@ async def test_multiple_config_entries_using_saved_credentials_4(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.vulcan.async_setup_entry",
+        "menuai.components.vulcan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"student": "0"},
         )
@@ -556,7 +556,7 @@ async def test_multiple_config_entries_using_saved_credentials_4(
 
 
 async def test_multiple_config_entries_without_valid_saved_credentials(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a unsuccessful config flow for multiple config entries without valid saved credentials."""
     MockConfigEntry(
@@ -564,20 +564,20 @@ async def test_multiple_config_entries_without_valid_saved_credentials(
         domain=DOMAIN,
         unique_id="234567",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         )
         | {"student_id": "456"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         entry_id="123",
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -585,19 +585,19 @@ async def test_multiple_config_entries_without_valid_saved_credentials(
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": True},
     )
     with patch(
-        "homeassistant.components.vulcan.config_flow.Vulcan.get_students",
+        "menuai.components.vulcan.config_flow.Vulcan.get_students",
         side_effect=UnauthorizedCertificateException,
     ):
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "select_saved_credentials"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"credentials": "123"},
         )
@@ -608,7 +608,7 @@ async def test_multiple_config_entries_without_valid_saved_credentials(
 
 
 async def test_multiple_config_entries_using_saved_credentials_with_connections_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a unsuccessful config flow for multiple config entries without valid saved credentials."""
     MockConfigEntry(
@@ -616,20 +616,20 @@ async def test_multiple_config_entries_using_saved_credentials_with_connections_
         domain=DOMAIN,
         unique_id="234567",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         )
         | {"student_id": "456"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         entry_id="123",
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -637,19 +637,19 @@ async def test_multiple_config_entries_using_saved_credentials_with_connections_
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": True},
     )
     with patch(
-        "homeassistant.components.vulcan.config_flow.Vulcan.get_students",
+        "menuai.components.vulcan.config_flow.Vulcan.get_students",
         side_effect=ClientConnectionError,
     ):
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "select_saved_credentials"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"credentials": "123"},
         )
@@ -660,7 +660,7 @@ async def test_multiple_config_entries_using_saved_credentials_with_connections_
 
 
 async def test_multiple_config_entries_using_saved_credentials_with_unknown_error(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a unsuccessful config flow for multiple config entries without valid saved credentials."""
     MockConfigEntry(
@@ -668,20 +668,20 @@ async def test_multiple_config_entries_using_saved_credentials_with_unknown_erro
         domain=DOMAIN,
         unique_id="234567",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         )
         | {"student_id": "456"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         entry_id="123",
         domain=DOMAIN,
         unique_id="123456",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         ),
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -689,19 +689,19 @@ async def test_multiple_config_entries_using_saved_credentials_with_unknown_erro
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": True},
     )
     with patch(
-        "homeassistant.components.vulcan.config_flow.Vulcan.get_students",
+        "menuai.components.vulcan.config_flow.Vulcan.get_students",
         side_effect=Exception,
     ):
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "select_saved_credentials"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"credentials": "123"},
         )
@@ -711,30 +711,30 @@ async def test_multiple_config_entries_using_saved_credentials_with_unknown_erro
         assert result["errors"] == {"base": "unknown"}
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Vulcan.get_students")
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
-@mock.patch("homeassistant.components.vulcan.config_flow.Account.register")
+@mock.patch("menuai.components.vulcan.config_flow.Vulcan.get_students")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Account.register")
 async def test_student_already_exists(
-    mock_account, mock_keystore, mock_student, hass: HomeAssistant
+    mock_account, mock_keystore, mock_student, menuai: menuai
 ) -> None:
     """Test config entry when student's entry already exists."""
     mock_keystore.return_value = fake_keystore
     mock_account.return_value = fake_account
     mock_student.return_value = [
-        Student.load(await async_load_fixture(hass, "fake_student_1.json", DOMAIN))
+        Student.load(await async_load_fixture(menuai, "fake_student_1.json", DOMAIN))
     ]
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="0",
         data=json.loads(
-            await async_load_fixture(hass, "fake_config_entry_data.json", DOMAIN)
+            await async_load_fixture(menuai, "fake_config_entry_data.json", DOMAIN)
         )
         | {"student_id": "0"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     await register.register("token", "region", "000000")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -742,7 +742,7 @@ async def test_student_already_exists(
     assert result["step_id"] == "add_next_config_entry"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"use_saved_credentials": True},
     )
@@ -751,17 +751,17 @@ async def test_student_already_exists(
     assert result["reason"] == "all_student_already_configured"
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
 async def test_config_flow_auth_invalid_token(
-    mock_keystore, hass: HomeAssistant
+    mock_keystore, menuai: menuai
 ) -> None:
     """Test a config flow initialized by the user using invalid token."""
     mock_keystore.return_value = fake_keystore
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=InvalidTokenException,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -769,7 +769,7 @@ async def test_config_flow_auth_invalid_token(
         assert result["step_id"] == "auth"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "3S20000", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -779,17 +779,17 @@ async def test_config_flow_auth_invalid_token(
         assert result["errors"] == {"base": "invalid_token"}
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
 async def test_config_flow_auth_invalid_region(
-    mock_keystore, hass: HomeAssistant
+    mock_keystore, menuai: menuai
 ) -> None:
     """Test a config flow initialized by the user using invalid region."""
     mock_keystore.return_value = fake_keystore
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=InvalidSymbolException,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -797,7 +797,7 @@ async def test_config_flow_auth_invalid_region(
         assert result["step_id"] == "auth"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "3S10000", CONF_REGION: "invalid_region", CONF_PIN: "000000"},
         )
@@ -807,15 +807,15 @@ async def test_config_flow_auth_invalid_region(
         assert result["errors"] == {"base": "invalid_symbol"}
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
-async def test_config_flow_auth_invalid_pin(mock_keystore, hass: HomeAssistant) -> None:
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
+async def test_config_flow_auth_invalid_pin(mock_keystore, menuai: menuai) -> None:
     """Test a config flow initialized by the with invalid pin."""
     mock_keystore.return_value = fake_keystore
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=InvalidPINException,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -823,7 +823,7 @@ async def test_config_flow_auth_invalid_pin(mock_keystore, hass: HomeAssistant) 
         assert result["step_id"] == "auth"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "3S10000", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -833,17 +833,17 @@ async def test_config_flow_auth_invalid_pin(mock_keystore, hass: HomeAssistant) 
         assert result["errors"] == {"base": "invalid_pin"}
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
 async def test_config_flow_auth_expired_token(
-    mock_keystore, hass: HomeAssistant
+    mock_keystore, menuai: menuai
 ) -> None:
     """Test a config flow initialized by the with expired token."""
     mock_keystore.return_value = fake_keystore
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=ExpiredTokenException,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -851,7 +851,7 @@ async def test_config_flow_auth_expired_token(
         assert result["step_id"] == "auth"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "3S10000", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -861,17 +861,17 @@ async def test_config_flow_auth_expired_token(
         assert result["errors"] == {"base": "expired_token"}
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
 async def test_config_flow_auth_connection_error(
-    mock_keystore, hass: HomeAssistant
+    mock_keystore, menuai: menuai
 ) -> None:
     """Test a config flow with connection error."""
     mock_keystore.return_value = fake_keystore
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=ClientConnectionError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -879,7 +879,7 @@ async def test_config_flow_auth_connection_error(
         assert result["step_id"] == "auth"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "3S10000", CONF_REGION: "region", CONF_PIN: "000000"},
         )
@@ -889,17 +889,17 @@ async def test_config_flow_auth_connection_error(
         assert result["errors"] == {"base": "cannot_connect"}
 
 
-@mock.patch("homeassistant.components.vulcan.config_flow.Keystore.create")
+@mock.patch("menuai.components.vulcan.config_flow.Keystore.create")
 async def test_config_flow_auth_unknown_error(
-    mock_keystore, hass: HomeAssistant
+    mock_keystore, menuai: menuai
 ) -> None:
     """Test a config flow with unknown error."""
     mock_keystore.return_value = fake_keystore
     with patch(
-        "homeassistant.components.vulcan.config_flow.Account.register",
+        "menuai.components.vulcan.config_flow.Account.register",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -907,7 +907,7 @@ async def test_config_flow_auth_unknown_error(
         assert result["step_id"] == "auth"
         assert result["errors"] is None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: "3S10000", CONF_REGION: "invalid_region", CONF_PIN: "000000"},
         )

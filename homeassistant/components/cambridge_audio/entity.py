@@ -7,9 +7,9 @@ from typing import Any, Concatenate
 from aiostreammagic import StreamMagicClient
 from aiostreammagic.models import CallbackType
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN, STREAM_MAGIC_EXCEPTIONS
 
@@ -25,7 +25,7 @@ def command[_EntityT: CambridgeAudioEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except STREAM_MAGIC_EXCEPTIONS as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_error",
                 translation_placeholders={
@@ -61,10 +61,10 @@ class CambridgeAudioEntity(Entity):
         self._attr_available = _client.is_connected()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback handlers."""
         await self.client.register_state_update_callbacks(self._state_update_callback)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove callbacks."""
         self.client.unregister_state_update_callbacks(self._state_update_callback)

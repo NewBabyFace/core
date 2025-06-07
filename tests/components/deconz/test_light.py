@@ -7,8 +7,8 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.deconz.const import CONF_ALLOW_DECONZ_GROUPS
-from homeassistant.components.light import (
+from menuai.components.deconz.const import CONF_ALLOW_DECONZ_GROUPS
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -27,15 +27,15 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     STATE_OFF,
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -284,15 +284,15 @@ from tests.test_util.aiohttp import AiohttpClientMocker
     ],
 )
 async def test_lights(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that different light entities are created with expected values."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.LIGHT]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.LIGHT]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -329,14 +329,14 @@ async def test_lights(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_light_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     light_ws_data: WebsocketDataType,
 ) -> None:
     """Verify light can change state on websocket event."""
-    assert hass.states.get("light.hue_go").state == STATE_ON
+    assert menuai.states.get("light.hue_go").state == STATE_ON
 
     await light_ws_data({"state": {"on": False}})
-    assert hass.states.get("light.hue_go").state == STATE_OFF
+    assert menuai.states.get("light.hue_go").state == STATE_OFF
 
 
 @pytest.mark.parametrize(
@@ -477,7 +477,7 @@ async def test_light_state_change(
     ],
 )
 async def test_light_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     config_entry_factory: ConfigEntryFactoryType,
     light_payload: dict[str, Any],
@@ -517,7 +517,7 @@ async def test_light_service_calls(
 
     aioclient_mock = mock_put_request("/lights/0/state")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         input["service"],
         input["call"],
@@ -559,13 +559,13 @@ async def test_light_service_calls(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_ikea_default_transition_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
 ) -> None:
     """Verify that service calls to IKEA lights always extend with transition tinme 0 if absent."""
     aioclient_mock = mock_put_request("/lights/0/state")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -580,7 +580,7 @@ async def test_ikea_default_transition_time(
         "transitiontime": 0,
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -625,13 +625,13 @@ async def test_ikea_default_transition_time(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_lidl_christmas_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
 ) -> None:
     """Test that lights or groups entities are created."""
     aioclient_mock = mock_put_request("/lights/0/state")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -641,7 +641,7 @@ async def test_lidl_christmas_light(
         blocking=True,
     )
     assert aioclient_mock.mock_calls[1][2] == {"on": True, "hue": 3640, "sat": 76}
-    assert hass.states.get("light.lidl_xmas_light")
+    assert menuai.states.get("light.lidl_xmas_light")
 
 
 @pytest.mark.parametrize(
@@ -663,9 +663,9 @@ async def test_lidl_christmas_light(
     ],
 )
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_configuration_tool(hass: HomeAssistant) -> None:
+async def test_configuration_tool(menuai: menuai) -> None:
     """Verify that configuration tool is not created."""
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 @pytest.mark.parametrize(
@@ -716,7 +716,7 @@ async def test_configuration_tool(hass: HomeAssistant) -> None:
     ],
 )
 async def test_groups(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     group_payload: dict[str, Any],
@@ -747,9 +747,9 @@ async def test_groups(
         },
     }
 
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.LIGHT]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.LIGHT]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -851,7 +851,7 @@ async def test_groups(
     ],
 )
 async def test_group_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_factory: ConfigEntryFactoryType,
     group_payload: dict[str, Any],
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
@@ -874,7 +874,7 @@ async def test_group_service_calls(
 
     aioclient_mock = mock_put_request("/groups/0/action")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         input["service"],
         input["call"],
@@ -903,10 +903,10 @@ async def test_group_service_calls(
     ],
 )
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_empty_group(hass: HomeAssistant) -> None:
+async def test_empty_group(menuai: menuai) -> None:
     """Verify that a group without a list of lights is not created."""
-    assert len(hass.states.async_all()) == 0
-    assert not hass.states.get("light.empty_group")
+    assert len(menuai.states.async_all()) == 0
+    assert not menuai.states.get("light.empty_group")
 
 
 @pytest.mark.parametrize(
@@ -949,30 +949,30 @@ async def test_empty_group(hass: HomeAssistant) -> None:
 )
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_DECONZ_GROUPS: False}])
 async def test_disable_light_groups(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
 ) -> None:
     """Test disallowing light groups work."""
-    assert len(hass.states.async_all()) == 1
-    assert hass.states.get("light.tunable_white_light")
-    assert not hass.states.get("light.light_group")
-    assert not hass.states.get("light.empty_group")
+    assert len(menuai.states.async_all()) == 1
+    assert menuai.states.get("light.tunable_white_light")
+    assert not menuai.states.get("light.light_group")
+    assert not menuai.states.get("light.empty_group")
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry_setup, options={CONF_ALLOW_DECONZ_GROUPS: True}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 2
-    assert hass.states.get("light.light_group")
+    assert len(menuai.states.async_all()) == 2
+    assert menuai.states.get("light.light_group")
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry_setup, options={CONF_ALLOW_DECONZ_GROUPS: False}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    assert not hass.states.get("light.light_group")
+    assert len(menuai.states.async_all()) == 1
+    assert not menuai.states.get("light.light_group")
 
 
 @pytest.mark.parametrize(
@@ -1061,7 +1061,7 @@ async def test_disable_light_groups(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_non_color_light_reports_color(
-    hass: HomeAssistant,
+    menuai: menuai,
     light_ws_data: WebsocketDataType,
 ) -> None:
     """Verify hs_color does not crash when a group gets updated with a bad color value.
@@ -1069,17 +1069,17 @@ async def test_non_color_light_reports_color(
     After calling a scene color temp light of certain manufacturers
     report color temp in color space.
     """
-    assert len(hass.states.async_all()) == 3
-    assert hass.states.get("light.group").attributes[ATTR_SUPPORTED_COLOR_MODES] == [
+    assert len(menuai.states.async_all()) == 3
+    assert menuai.states.get("light.group").attributes[ATTR_SUPPORTED_COLOR_MODES] == [
         ColorMode.COLOR_TEMP,
         ColorMode.HS,
         ColorMode.XY,
     ]
     assert (
-        hass.states.get("light.group").attributes[ATTR_COLOR_MODE]
+        menuai.states.get("light.group").attributes[ATTR_COLOR_MODE]
         == ColorMode.COLOR_TEMP
     )
-    assert hass.states.get("light.group").attributes[ATTR_COLOR_TEMP_KELVIN] == 4000
+    assert menuai.states.get("light.group").attributes[ATTR_COLOR_TEMP_KELVIN] == 4000
 
     # Updating a scene will return a faulty color value
     # for a non-color light causing an exception in hs_color
@@ -1096,7 +1096,7 @@ async def test_non_color_light_reports_color(
         "uniqueid": "ec:1b:bd:ff:fe:ee:ed:dd-01",
     }
     await light_ws_data(event_changed_light)
-    group = hass.states.get("light.group")
+    group = menuai.states.get("light.group")
     assert group.attributes[ATTR_COLOR_MODE] == ColorMode.XY
     assert group.attributes[ATTR_HS_COLOR] == (40.571, 41.176)
     assert group.attributes.get(ATTR_COLOR_TEMP_KELVIN) is None
@@ -1153,11 +1153,11 @@ async def test_non_color_light_reports_color(
     ],
 )
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_verify_group_supported_features(hass: HomeAssistant) -> None:
+async def test_verify_group_supported_features(menuai: menuai) -> None:
     """Test that group supported features reflect what included lights support."""
-    assert len(hass.states.async_all()) == 4
+    assert len(menuai.states.async_all()) == 4
 
-    group_state = hass.states.get("light.group")
+    group_state = menuai.states.get("light.group")
     assert group_state.state == STATE_ON
     assert group_state.attributes[ATTR_COLOR_MODE] == ColorMode.COLOR_TEMP
     assert (
@@ -1270,11 +1270,11 @@ async def test_verify_group_supported_features(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_verify_group_color_mode_fallback(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_websocket_data: WebsocketDataType,
 ) -> None:
     """Test that group supported features reflect what included lights support."""
-    group_state = hass.states.get("light.opbergruimte")
+    group_state = menuai.states.get("light.opbergruimte")
     assert group_state.state == STATE_OFF
     assert group_state.attributes[ATTR_COLOR_MODE] is None
 
@@ -1299,6 +1299,6 @@ async def test_verify_group_color_mode_fallback(
             "state": {"all_on": True, "any_on": True},
         }
     )
-    group_state = hass.states.get("light.opbergruimte")
+    group_state = menuai.states.get("light.opbergruimte")
     assert group_state.state == STATE_ON
     assert group_state.attributes[ATTR_COLOR_MODE] is ColorMode.BRIGHTNESS

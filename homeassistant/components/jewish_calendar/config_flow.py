@@ -9,8 +9,8 @@ import zoneinfo
 from hdate.translator import Language
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import (
     CONF_ELEVATION,
     CONF_LANGUAGE,
     CONF_LATITUDE,
@@ -18,8 +18,8 @@ from homeassistant.const import (
     CONF_LONGITUDE,
     CONF_TIME_ZONE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.selector import (
+from menuai.core import menuai, callback
+from menuai.helpers.selector import (
     BooleanSelector,
     LanguageSelector,
     LanguageSelectorConfig,
@@ -54,13 +54,13 @@ OPTIONS_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _get_data_schema(hass: HomeAssistant) -> vol.Schema:
+async def _get_data_schema(menuai: menuai) -> vol.Schema:
     default_location = {
-        CONF_LATITUDE: hass.config.latitude,
-        CONF_LONGITUDE: hass.config.longitude,
+        CONF_LATITUDE: menuai.config.latitude,
+        CONF_LONGITUDE: menuai.config.longitude,
     }
     get_timezones: list[str] = list(
-        await hass.async_add_executor_job(zoneinfo.available_timezones)
+        await menuai.async_add_executor_job(zoneinfo.available_timezones)
     )
     return vol.Schema(
         {
@@ -69,8 +69,8 @@ async def _get_data_schema(hass: HomeAssistant) -> vol.Schema:
                 LanguageSelectorConfig(languages=list(get_args(Language)))
             ),
             vol.Optional(CONF_LOCATION, default=default_location): LocationSelector(),
-            vol.Optional(CONF_ELEVATION, default=hass.config.elevation): int,
-            vol.Optional(CONF_TIME_ZONE, default=hass.config.time_zone): SelectSelector(
+            vol.Optional(CONF_ELEVATION, default=menuai.config.elevation): int,
+            vol.Optional(CONF_TIME_ZONE, default=menuai.config.time_zone): SelectSelector(
                 SelectSelectorConfig(options=get_timezones, sort=True)
             ),
         }
@@ -103,7 +103,7 @@ class JewishCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(
-                await _get_data_schema(self.hass), user_input
+                await _get_data_schema(self.menuai), user_input
             ),
         )
 
@@ -115,7 +115,7 @@ class JewishCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
         if not user_input:
             return self.async_show_form(
                 data_schema=self.add_suggested_values_to_schema(
-                    await _get_data_schema(self.hass),
+                    await _get_data_schema(self.menuai),
                     reconfigure_entry.data,
                 ),
                 step_id="reconfigure",

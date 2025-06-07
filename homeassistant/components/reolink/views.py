@@ -10,11 +10,11 @@ from aiohttp import ClientError, ClientTimeout, web
 from reolink_aio.enums import VodRequestType
 from reolink_aio.exceptions import ReolinkError
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.media_source import Unresolvable
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util.ssl import SSLCipherList
+from menuai.components.http import menuaiView
+from menuai.components.media_source import Unresolvable
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.util.ssl import SSLCipherList
 
 from .util import get_host
 
@@ -37,18 +37,18 @@ def async_generate_playback_proxy_url(
     )
 
 
-class PlaybackProxyView(HomeAssistantView):
+class PlaybackProxyView(menuaiView):
     """View to proxy playback video from Reolink."""
 
     requires_auth = True
     url = "/api/reolink/video/{config_entry_id}/{channel}/{stream_res}/{vod_type}/{filename}"
     name = "api:reolink_playback"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize a proxy view."""
-        self.hass = hass
+        self.menuai = menuai
         self.session = async_get_clientsession(
-            hass,
+            menuai,
             verify_ssl=False,
             ssl_cipher=SSLCipherList.INSECURE,
         )
@@ -72,7 +72,7 @@ class PlaybackProxyView(HomeAssistantView):
         if self._vod_type is not None:
             vod_type = self._vod_type
         try:
-            host = get_host(self.hass, config_entry_id)
+            host = get_host(self.menuai, config_entry_id)
         except Unresolvable:
             err_str = f"Reolink playback proxy could not find config entry id: {config_entry_id}"
             _LOGGER.warning(err_str)

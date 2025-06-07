@@ -12,12 +12,12 @@ from pypaperless.exceptions import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.paperless_ngx.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.paperless_ngx.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import USER_INPUT_ONE, USER_INPUT_REAUTH, USER_INPUT_TWO
 
@@ -28,15 +28,15 @@ from tests.common import MockConfigEntry, patch
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.paperless_ngx.async_setup_entry", return_value=True
+        "menuai.components.paperless_ngx.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
-async def test_full_config_flow(hass: HomeAssistant) -> None:
+async def test_full_config_flow(menuai: menuai) -> None:
     """Test registering an integration and finishing flow works."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -44,7 +44,7 @@ async def test_full_config_flow(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         USER_INPUT_ONE,
     )
@@ -56,19 +56,19 @@ async def test_full_config_flow(hass: HomeAssistant) -> None:
 
 
 async def test_full_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test reauth an integration and finishing flow works."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    reauth_flow = await mock_config_entry.start_reauth_flow(hass)
+    reauth_flow = await mock_config_entry.start_reauth_flow(menuai)
     assert reauth_flow["type"] is FlowResultType.FORM
     assert reauth_flow["step_id"] == "reauth_confirm"
 
-    result_configure = await hass.config_entries.flow.async_configure(
+    result_configure = await menuai.config_entries.flow.async_configure(
         reauth_flow["flow_id"], USER_INPUT_REAUTH
     )
 
@@ -78,19 +78,19 @@ async def test_full_reauth_flow(
 
 
 async def test_full_reconfigure_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test reconfigure an integration and finishing flow works."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    reconfigure_flow = await mock_config_entry.start_reconfigure_flow(hass)
+    reconfigure_flow = await mock_config_entry.start_reconfigure_flow(menuai)
     assert reconfigure_flow["type"] is FlowResultType.FORM
     assert reconfigure_flow["step_id"] == "reconfigure"
 
-    result_configure = await hass.config_entries.flow.async_configure(
+    result_configure = await menuai.config_entries.flow.async_configure(
         reconfigure_flow["flow_id"],
         USER_INPUT_TWO,
     )
@@ -112,7 +112,7 @@ async def test_full_reconfigure_flow(
     ],
 )
 async def test_config_flow_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_paperless: AsyncMock,
     side_effect: Exception,
     expected_error: dict[str, str],
@@ -120,7 +120,7 @@ async def test_config_flow_error_handling(
     """Test user step shows correct error for various client initialization issues."""
     mock_paperless.initialize.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=USER_INPUT_ONE,
@@ -132,7 +132,7 @@ async def test_config_flow_error_handling(
 
     mock_paperless.initialize.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=USER_INPUT_ONE,
     )
@@ -154,7 +154,7 @@ async def test_config_flow_error_handling(
     ],
 )
 async def test_reauth_flow_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_paperless: AsyncMock,
     side_effect: Exception,
@@ -162,18 +162,18 @@ async def test_reauth_flow_error_handling(
 ) -> None:
     """Test reauth flow with various initialization errors."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_paperless.initialize.side_effect = side_effect
 
-    reauth_flow = await mock_config_entry.start_reauth_flow(hass)
+    reauth_flow = await mock_config_entry.start_reauth_flow(menuai)
     assert reauth_flow["type"] is FlowResultType.FORM
     assert reauth_flow["step_id"] == "reauth_confirm"
 
-    result_configure = await hass.config_entries.flow.async_configure(
+    result_configure = await menuai.config_entries.flow.async_configure(
         reauth_flow["flow_id"], USER_INPUT_REAUTH
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result_configure["type"] is FlowResultType.FORM
     assert result_configure["errors"] == expected_error
@@ -191,7 +191,7 @@ async def test_reauth_flow_error_handling(
     ],
 )
 async def test_reconfigure_flow_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_paperless: AsyncMock,
     side_effect: Exception,
@@ -199,31 +199,31 @@ async def test_reconfigure_flow_error_handling(
 ) -> None:
     """Test reconfigure flow with various initialization errors."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_paperless.initialize.side_effect = side_effect
 
-    reauth_flow = await mock_config_entry.start_reconfigure_flow(hass)
+    reauth_flow = await mock_config_entry.start_reconfigure_flow(menuai)
     assert reauth_flow["type"] is FlowResultType.FORM
     assert reauth_flow["step_id"] == "reconfigure"
 
-    result_configure = await hass.config_entries.flow.async_configure(
+    result_configure = await menuai.config_entries.flow.async_configure(
         reauth_flow["flow_id"],
         USER_INPUT_TWO,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result_configure["type"] is FlowResultType.FORM
     assert result_configure["errors"] == expected_error
 
 
 async def test_config_already_exists(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we only allow a single config flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=USER_INPUT_ONE,
         context={"source": config_entries.SOURCE_USER},
@@ -233,25 +233,25 @@ async def test_config_already_exists(
 
 
 async def test_config_already_exists_reconfigure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we only allow a single config if reconfiguring an entry."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_config_entry_two = MockConfigEntry(
         entry_id="J87G00V55WEVTJ0CJHM0GADBH5",
         title="Paperless-ngx - Two",
         domain=DOMAIN,
         data=USER_INPUT_TWO,
     )
-    mock_config_entry_two.add_to_hass(hass)
+    mock_config_entry_two.add_to_menuai(menuai)
 
-    reconfigure_flow = await mock_config_entry_two.start_reconfigure_flow(hass)
+    reconfigure_flow = await mock_config_entry_two.start_reconfigure_flow(menuai)
     assert reconfigure_flow["type"] is FlowResultType.FORM
     assert reconfigure_flow["step_id"] == "reconfigure"
 
-    result_configure = await hass.config_entries.flow.async_configure(
+    result_configure = await menuai.config_entries.flow.async_configure(
         reconfigure_flow["flow_id"],
         USER_INPUT_ONE,
     )

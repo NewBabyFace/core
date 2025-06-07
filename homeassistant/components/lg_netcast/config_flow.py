@@ -9,19 +9,19 @@ from typing import TYPE_CHECKING, Any
 from pylgnetcast import AccessTokenError, LgNetCastClient, SessionIdError
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_HOST,
     CONF_ID,
     CONF_MODEL,
     CONF_NAME,
 )
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util.network import is_host_valid
+from menuai.core import CALLBACK_TYPE, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.event import async_track_time_interval
+from menuai.util.network import is_host_valid
 
 from .const import DEFAULT_NAME, DOMAIN
 from .helpers import LGNetCastDetailDiscoveryError, async_discover_netcast_details
@@ -78,7 +78,7 @@ class LGNetCast(config_entries.ConfigFlow, domain=DOMAIN):
             return
 
         try:
-            details = await async_discover_netcast_details(self.hass, self.client)
+            details = await async_discover_netcast_details(self.menuai, self.client)
         except LGNetCastDetailDiscoveryError as err:
             raise AbortFlow("cannot_connect") from err
 
@@ -110,7 +110,7 @@ class LGNetCast(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.client._get_session_id  # noqa: SLF001
             )
         except AccessTokenError:
@@ -122,7 +122,7 @@ class LGNetCast(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_create_device()
 
         self._track_interval = async_track_time_interval(
-            self.hass,
+            self.menuai,
             self.async_display_access_token,
             DISPLAY_ACCESS_TOKEN_INTERVAL,
             cancel_on_shutdown=True,
@@ -142,7 +142,7 @@ class LGNetCast(config_entries.ConfigFlow, domain=DOMAIN):
         """Display access token on screen."""
         assert self.client is not None
         with contextlib.suppress(AccessTokenError, SessionIdError):
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.client._get_session_id  # noqa: SLF001
             )
 

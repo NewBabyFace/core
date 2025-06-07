@@ -13,19 +13,19 @@ from freezegun.api import FrozenDateTimeFactory
 import jinja2
 import pytest
 
-from homeassistant import core as ha
-from homeassistant.const import MATCH_ALL
-from homeassistant.core import (
+from menuai import core as ha
+from menuai.const import MATCH_ALL
+from menuai.core import (
     Event,
     EventStateChangedData,
     EventStateReportedData,
-    HomeAssistant,
+    menuai,
     callback,
 )
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.device_registry import EVENT_DEVICE_REGISTRY_UPDATED
-from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
-from homeassistant.helpers.event import (
+from menuai.exceptions import TemplateError
+from menuai.helpers.device_registry import EVENT_DEVICE_REGISTRY_UPDATED
+from menuai.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
+from menuai.helpers.event import (
     TrackStates,
     TrackTemplate,
     TrackTemplateResult,
@@ -51,16 +51,16 @@ from homeassistant.helpers.event import (
     async_track_utc_time_change,
     track_point_in_utc_time,
 )
-from homeassistant.helpers.template import Template, result_as_boolean
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.helpers.template import Template, result_as_boolean
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed, async_fire_time_changed_exact
 
 DEFAULT_TIME_ZONE = dt_util.get_default_time_zone()
 
 
-async def test_track_point_in_time(hass: HomeAssistant) -> None:
+async def test_track_point_in_time(menuai: menuai) -> None:
     """Test track point in time."""
     before_birthday = datetime(1985, 7, 9, 12, 0, 0, tzinfo=dt_util.UTC)
     birthday_paulus = datetime(1986, 7, 9, 12, 0, 0, tzinfo=dt_util.UTC)
@@ -69,50 +69,50 @@ async def test_track_point_in_time(hass: HomeAssistant) -> None:
     runs = []
 
     async_track_point_in_utc_time(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: runs.append(x)),
         birthday_paulus,
     )
 
-    async_fire_time_changed(hass, before_birthday)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, before_birthday)
+    await menuai.async_block_till_done()
     assert len(runs) == 0
 
-    async_fire_time_changed(hass, birthday_paulus)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, birthday_paulus)
+    await menuai.async_block_till_done()
     assert len(runs) == 1
 
     # A point in time tracker will only fire once, this should do nothing
-    async_fire_time_changed(hass, birthday_paulus)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, birthday_paulus)
+    await menuai.async_block_till_done()
     assert len(runs) == 1
 
     async_track_point_in_utc_time(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: runs.append(x)),
         birthday_paulus,
     )
 
-    async_fire_time_changed(hass, after_birthday)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, after_birthday)
+    await menuai.async_block_till_done()
     assert len(runs) == 2
 
     unsub = async_track_point_in_time(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: runs.append(x)),
         birthday_paulus,
     )
     unsub()
 
-    async_fire_time_changed(hass, after_birthday)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, after_birthday)
+    await menuai.async_block_till_done()
     assert len(runs) == 2
 
 
-async def test_track_point_in_time_drift_rearm(hass: HomeAssistant) -> None:
+async def test_track_point_in_time_drift_rearm(menuai: menuai) -> None:
     """Test tasks with the time rolling backwards."""
     specific_runs = []
 
@@ -123,29 +123,29 @@ async def test_track_point_in_time_drift_rearm(hass: HomeAssistant) -> None:
     )
 
     async_track_point_in_utc_time(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         time_that_will_not_match_right_away,
     )
 
     async_fire_time_changed(
-        hass,
+        menuai,
         datetime(now.year + 1, 5, 24, 21, 59, 00, tzinfo=dt_util.UTC),
         fire_all=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
     async_fire_time_changed(
-        hass,
+        menuai,
         datetime(now.year + 1, 5, 24, 21, 59, 55, tzinfo=dt_util.UTC),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
 
-async def test_track_state_change_from_to_state_match(hass: HomeAssistant) -> None:
+async def test_track_state_change_from_to_state_match(menuai: menuai) -> None:
     """Test track_state_change with from and to state matchers."""
     from_and_to_state_runs = []
     only_from_runs = []
@@ -169,59 +169,59 @@ async def test_track_state_change_from_to_state_match(hass: HomeAssistant) -> No
         no_to_from_specified_runs.append(1)
 
     async_track_state_change(
-        hass, "light.Bowl", from_and_to_state_callback, "on", "off"
+        menuai, "light.Bowl", from_and_to_state_callback, "on", "off"
     )
-    async_track_state_change(hass, "light.Bowl", only_from_state_callback, "on", None)
+    async_track_state_change(menuai, "light.Bowl", only_from_state_callback, "on", None)
     async_track_state_change(
-        hass, "light.Bowl", only_to_state_callback, None, ["off", "standby"]
+        menuai, "light.Bowl", only_to_state_callback, None, ["off", "standby"]
     )
     async_track_state_change(
-        hass, "light.Bowl", match_all_callback, MATCH_ALL, MATCH_ALL
+        menuai, "light.Bowl", match_all_callback, MATCH_ALL, MATCH_ALL
     )
-    async_track_state_change(hass, "light.Bowl", no_to_from_specified_callback)
+    async_track_state_change(menuai, "light.Bowl", no_to_from_specified_callback)
 
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(from_and_to_state_runs) == 0
     assert len(only_from_runs) == 0
     assert len(only_to_runs) == 0
     assert len(match_all_runs) == 1
     assert len(no_to_from_specified_runs) == 1
 
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(from_and_to_state_runs) == 1
     assert len(only_from_runs) == 1
     assert len(only_to_runs) == 1
     assert len(match_all_runs) == 2
     assert len(no_to_from_specified_runs) == 2
 
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(from_and_to_state_runs) == 1
     assert len(only_from_runs) == 1
     assert len(only_to_runs) == 1
     assert len(match_all_runs) == 3
     assert len(no_to_from_specified_runs) == 3
 
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(from_and_to_state_runs) == 1
     assert len(only_from_runs) == 1
     assert len(only_to_runs) == 1
     assert len(match_all_runs) == 3
     assert len(no_to_from_specified_runs) == 3
 
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(from_and_to_state_runs) == 2
     assert len(only_from_runs) == 2
     assert len(only_to_runs) == 2
     assert len(match_all_runs) == 4
     assert len(no_to_from_specified_runs) == 4
 
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(from_and_to_state_runs) == 2
     assert len(only_from_runs) == 2
     assert len(only_to_runs) == 2
@@ -229,7 +229,7 @@ async def test_track_state_change_from_to_state_match(hass: HomeAssistant) -> No
     assert len(no_to_from_specified_runs) == 4
 
 
-async def test_track_state_change(hass: HomeAssistant) -> None:
+async def test_track_state_change(menuai: menuai) -> None:
     """Test track_state_change."""
     # 2 lists to track how often our callbacks get called
     specific_runs = []
@@ -240,23 +240,23 @@ async def test_track_state_change(hass: HomeAssistant) -> None:
         specific_runs.append(1)
 
     # This is the rare use case
-    async_track_state_change(hass, "light.Bowl", specific_run_callback, "on", "off")
+    async_track_state_change(menuai, "light.Bowl", specific_run_callback, "on", "off")
 
     @ha.callback
     def wildcard_run_callback(entity_id, old_state, new_state):
         wildcard_runs.append((old_state, new_state))
 
     # This is the most common use case
-    async_track_state_change(hass, "light.Bowl", wildcard_run_callback)
+    async_track_state_change(menuai, "light.Bowl", wildcard_run_callback)
 
     async def wildercard_run_callback(entity_id, old_state, new_state):
         wildercard_runs.append((old_state, new_state))
 
-    async_track_state_change(hass, MATCH_ALL, wildercard_run_callback)
+    async_track_state_change(menuai, MATCH_ALL, wildercard_run_callback)
 
     # Adding state to state machine
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
     assert len(wildcard_runs) == 1
     assert len(wildercard_runs) == 1
@@ -264,35 +264,35 @@ async def test_track_state_change(hass: HomeAssistant) -> None:
     assert wildcard_runs[-1][1] is not None
 
     # Set same state should not trigger a state change/listener
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
     assert len(wildcard_runs) == 1
     assert len(wildercard_runs) == 1
 
     # State change off -> on
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 2
     assert len(wildercard_runs) == 2
 
     # State change off -> off
-    hass.states.async_set("light.Bowl", "off", {"some_attr": 1})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off", {"some_attr": 1})
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 3
     assert len(wildercard_runs) == 3
 
     # State change off -> on
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 4
     assert len(wildercard_runs) == 4
 
-    hass.states.async_remove("light.bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.bowl")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 5
     assert len(wildercard_runs) == 5
@@ -302,14 +302,14 @@ async def test_track_state_change(hass: HomeAssistant) -> None:
     assert wildercard_runs[-1][1] is None
 
     # Set state for different entity id
-    hass.states.async_set("switch.kitchen", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.kitchen", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 5
     assert len(wildercard_runs) == 6
 
 
-async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
+async def test_async_track_state_change_filtered(menuai: menuai) -> None:
     """Test async_track_state_change_filtered."""
     single_entity_id_tracker = []
     multiple_entity_id_tracker = []
@@ -333,7 +333,7 @@ async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
         raise ValueError
 
     track_single = async_track_state_change_filtered(
-        hass, TrackStates(False, {"light.bowl"}, None), single_run_callback
+        menuai, TrackStates(False, {"light.bowl"}, None), single_run_callback
     )
     assert track_single.listeners == {
         "all": False,
@@ -342,7 +342,7 @@ async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
     }
 
     track_multi = async_track_state_change_filtered(
-        hass, TrackStates(False, {"light.bowl"}, {"switch"}), multiple_run_callback
+        menuai, TrackStates(False, {"light.bowl"}, {"switch"}), multiple_run_callback
     )
     assert track_multi.listeners == {
         "all": False,
@@ -351,7 +351,7 @@ async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
     }
 
     track_throws = async_track_state_change_filtered(
-        hass, TrackStates(False, {"light.bowl"}, {"switch"}), callback_that_throws
+        menuai, TrackStates(False, {"light.bowl"}, {"switch"}), callback_that_throws
     )
     assert track_throws.listeners == {
         "all": False,
@@ -360,8 +360,8 @@ async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
     }
 
     # Adding state to state machine
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert single_entity_id_tracker[-1][0] is None
     assert single_entity_id_tracker[-1][1] is not None
@@ -370,31 +370,31 @@ async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
     assert multiple_entity_id_tracker[-1][1] is not None
 
     # Set same state should not trigger a state change/listener
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 1
 
     # State change off -> on
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 2
     assert len(multiple_entity_id_tracker) == 2
 
     # State change off -> off
-    hass.states.async_set("light.Bowl", "off", {"some_attr": 1})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off", {"some_attr": 1})
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 3
     assert len(multiple_entity_id_tracker) == 3
 
     # State change off -> on
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 4
     assert len(multiple_entity_id_tracker) == 4
 
-    hass.states.async_remove("light.bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.bowl")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 5
     assert single_entity_id_tracker[-1][0] is not None
     assert single_entity_id_tracker[-1][1] is None
@@ -403,15 +403,15 @@ async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
     assert multiple_entity_id_tracker[-1][1] is None
 
     # Set state for different entity id
-    hass.states.async_set("switch.kitchen", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.kitchen", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 5
     assert len(multiple_entity_id_tracker) == 6
 
     track_single.async_remove()
     # Ensure unsubing the listener works
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 5
     assert len(multiple_entity_id_tracker) == 7
 
@@ -426,26 +426,26 @@ async def test_async_track_state_change_filtered(hass: HomeAssistant) -> None:
         "domains": None,
         "entities": {"light.bowl"},
     }
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(multiple_entity_id_tracker) == 8
-    hass.states.async_set("switch.kitchen", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.kitchen", "off")
+    await menuai.async_block_till_done()
     assert len(multiple_entity_id_tracker) == 8
 
     track_multi.async_update_listeners(TrackStates(True, None, None))
-    hass.states.async_set("switch.kitchen", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.kitchen", "off")
+    await menuai.async_block_till_done()
     assert len(multiple_entity_id_tracker) == 8
-    hass.states.async_set("switch.any", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.any", "off")
+    await menuai.async_block_till_done()
     assert len(multiple_entity_id_tracker) == 9
 
     track_multi.async_remove()
     track_throws.async_remove()
 
 
-async def test_async_track_state_change_event(hass: HomeAssistant) -> None:
+async def test_async_track_state_change_event(menuai: menuai) -> None:
     """Test async_track_state_change_event."""
     single_entity_id_tracker = []
     multiple_entity_id_tracker = []
@@ -469,18 +469,18 @@ async def test_async_track_state_change_event(hass: HomeAssistant) -> None:
         raise ValueError
 
     unsub_single = async_track_state_change_event(
-        hass, ["light.Bowl"], single_run_callback, job_type=ha.HassJobType.Callback
+        menuai, ["light.Bowl"], single_run_callback, job_type=ha.menuaiJobType.Callback
     )
     unsub_multi = async_track_state_change_event(
-        hass, ["light.Bowl", "switch.kitchen"], multiple_run_callback
+        menuai, ["light.Bowl", "switch.kitchen"], multiple_run_callback
     )
     unsub_throws = async_track_state_change_event(
-        hass, ["light.Bowl", "switch.kitchen"], callback_that_throws
+        menuai, ["light.Bowl", "switch.kitchen"], callback_that_throws
     )
 
     # Adding state to state machine
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert single_entity_id_tracker[-1][0] is None
     assert single_entity_id_tracker[-1][1] is not None
@@ -489,31 +489,31 @@ async def test_async_track_state_change_event(hass: HomeAssistant) -> None:
     assert multiple_entity_id_tracker[-1][1] is not None
 
     # Set same state should not trigger a state change/listener
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 1
 
     # State change off -> on
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 2
     assert len(multiple_entity_id_tracker) == 2
 
     # State change off -> off
-    hass.states.async_set("light.Bowl", "off", {"some_attr": 1})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off", {"some_attr": 1})
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 3
     assert len(multiple_entity_id_tracker) == 3
 
     # State change off -> on
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 4
     assert len(multiple_entity_id_tracker) == 4
 
-    hass.states.async_remove("light.bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.bowl")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 5
     assert single_entity_id_tracker[-1][0] is not None
     assert single_entity_id_tracker[-1][1] is None
@@ -522,15 +522,15 @@ async def test_async_track_state_change_event(hass: HomeAssistant) -> None:
     assert multiple_entity_id_tracker[-1][1] is None
 
     # Set state for different entity id
-    hass.states.async_set("switch.kitchen", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.kitchen", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 5
     assert len(multiple_entity_id_tracker) == 6
 
     unsub_single()
     # Ensure unsubing the listener works
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 5
     assert len(multiple_entity_id_tracker) == 7
 
@@ -539,21 +539,21 @@ async def test_async_track_state_change_event(hass: HomeAssistant) -> None:
 
 
 async def test_async_track_state_change_event_with_empty_list(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_track_state_change_event passing an empty list of entities."""
     unsub_single = async_track_state_change_event(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
     unsub_single2 = async_track_state_change_event(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
 
     unsub_single2()
     unsub_single()
 
 
-async def test_async_track_state_added_domain(hass: HomeAssistant) -> None:
+async def test_async_track_state_added_domain(menuai: menuai) -> None:
     """Test async_track_state_added_domain."""
     single_entity_id_tracker = []
     multiple_entity_id_tracker = []
@@ -577,18 +577,18 @@ async def test_async_track_state_added_domain(hass: HomeAssistant) -> None:
         raise ValueError
 
     unsub_single = async_track_state_added_domain(
-        hass, "light", single_run_callback, job_type=ha.HassJobType.Callback
+        menuai, "light", single_run_callback, job_type=ha.menuaiJobType.Callback
     )
     unsub_multi = async_track_state_added_domain(
-        hass, ["light", "switch"], multiple_run_callback
+        menuai, ["light", "switch"], multiple_run_callback
     )
     unsub_throws = async_track_state_added_domain(
-        hass, ["light", "switch"], callback_that_throws
+        menuai, ["light", "switch"], callback_that_throws
     )
 
     # Adding state to state machine
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert single_entity_id_tracker[-1][0] is None
     assert single_entity_id_tracker[-1][1] is not None
@@ -597,39 +597,39 @@ async def test_async_track_state_added_domain(hass: HomeAssistant) -> None:
     assert multiple_entity_id_tracker[-1][1] is not None
 
     # Set same state should not trigger a state change/listener
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 1
 
     # State change off -> on - nothing added so no trigger
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 1
 
     # State change off -> off - nothing added so no trigger
-    hass.states.async_set("light.Bowl", "off", {"some_attr": 1})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off", {"some_attr": 1})
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 1
 
     # Removing state does not trigger
-    hass.states.async_remove("light.bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.bowl")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 1
 
     # Set state for different entity id
-    hass.states.async_set("switch.kitchen", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.kitchen", "on")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 2
 
     unsub_single()
     # Ensure unsubing the listener works
-    hass.states.async_set("light.new", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.new", "off")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(multiple_entity_id_tracker) == 3
 
@@ -638,14 +638,14 @@ async def test_async_track_state_added_domain(hass: HomeAssistant) -> None:
 
 
 async def test_async_track_state_added_domain_with_empty_list(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_track_state_added_domain passing an empty list of domains."""
     unsub_single = async_track_state_added_domain(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
     unsub_single2 = async_track_state_added_domain(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
 
     unsub_single2()
@@ -653,21 +653,21 @@ async def test_async_track_state_added_domain_with_empty_list(
 
 
 async def test_async_track_state_removed_domain_with_empty_list(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_track_state_removed_domain passing an empty list of domains."""
     unsub_single = async_track_state_removed_domain(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
     unsub_single2 = async_track_state_removed_domain(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
 
     unsub_single2()
     unsub_single()
 
 
-async def test_async_track_state_removed_domain(hass: HomeAssistant) -> None:
+async def test_async_track_state_removed_domain(menuai: menuai) -> None:
     """Test async_track_state_removed_domain."""
     single_entity_id_tracker = []
     multiple_entity_id_tracker = []
@@ -691,19 +691,19 @@ async def test_async_track_state_removed_domain(hass: HomeAssistant) -> None:
         raise ValueError
 
     unsub_single = async_track_state_removed_domain(
-        hass, "light", single_run_callback, job_type=ha.HassJobType.Callback
+        menuai, "light", single_run_callback, job_type=ha.menuaiJobType.Callback
     )
     unsub_multi = async_track_state_removed_domain(
-        hass, ["light", "switch"], multiple_run_callback
+        menuai, ["light", "switch"], multiple_run_callback
     )
     unsub_throws = async_track_state_removed_domain(
-        hass, ["light", "switch"], callback_that_throws
+        menuai, ["light", "switch"], callback_that_throws
     )
 
     # Adding state to state machine
-    hass.states.async_set("light.Bowl", "on")
-    hass.states.async_remove("light.Bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    menuai.states.async_remove("light.Bowl")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert single_entity_id_tracker[-1][1] is None
     assert single_entity_id_tracker[-1][0] is not None
@@ -712,38 +712,38 @@ async def test_async_track_state_removed_domain(hass: HomeAssistant) -> None:
     assert multiple_entity_id_tracker[-1][0] is not None
 
     # Added and than removed (light)
-    hass.states.async_set("light.Bowl", "on")
-    hass.states.async_remove("light.Bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    menuai.states.async_remove("light.Bowl")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 2
     assert len(multiple_entity_id_tracker) == 2
 
     # Added and than removed (light)
-    hass.states.async_set("light.Bowl", "off")
-    hass.states.async_remove("light.Bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    menuai.states.async_remove("light.Bowl")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 3
     assert len(multiple_entity_id_tracker) == 3
 
     # Added and than removed (light)
-    hass.states.async_set("light.Bowl", "off", {"some_attr": 1})
-    hass.states.async_remove("light.Bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off", {"some_attr": 1})
+    menuai.states.async_remove("light.Bowl")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 4
     assert len(multiple_entity_id_tracker) == 4
 
     # Added and than removed (switch)
-    hass.states.async_set("switch.kitchen", "on")
-    hass.states.async_remove("switch.kitchen")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.kitchen", "on")
+    menuai.states.async_remove("switch.kitchen")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 4
     assert len(multiple_entity_id_tracker) == 5
 
     unsub_single()
     # Ensure unsubing the listener works
-    hass.states.async_set("light.new", "off")
-    hass.states.async_remove("light.new")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.new", "off")
+    menuai.states.async_remove("light.new")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 4
     assert len(multiple_entity_id_tracker) == 6
 
@@ -751,7 +751,7 @@ async def test_async_track_state_removed_domain(hass: HomeAssistant) -> None:
     unsub_throws()
 
 
-async def test_async_track_state_removed_domain_match_all(hass: HomeAssistant) -> None:
+async def test_async_track_state_removed_domain_match_all(menuai: menuai) -> None:
     """Test async_track_state_removed_domain with a match_all."""
     single_entity_id_tracker = []
     match_all_entity_id_tracker = []
@@ -770,109 +770,109 @@ async def test_async_track_state_removed_domain_match_all(hass: HomeAssistant) -
 
         match_all_entity_id_tracker.append((old_state, new_state))
 
-    unsub_single = async_track_state_removed_domain(hass, "light", single_run_callback)
+    unsub_single = async_track_state_removed_domain(menuai, "light", single_run_callback)
     unsub_match_all = async_track_state_removed_domain(
-        hass, MATCH_ALL, match_all_run_callback
+        menuai, MATCH_ALL, match_all_run_callback
     )
-    hass.states.async_set("light.new", "off")
-    hass.states.async_remove("light.new")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.new", "off")
+    menuai.states.async_remove("light.new")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(match_all_entity_id_tracker) == 1
 
-    hass.states.async_set("switch.new", "off")
-    hass.states.async_remove("switch.new")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.new", "off")
+    menuai.states.async_remove("switch.new")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(match_all_entity_id_tracker) == 2
 
     unsub_match_all()
     unsub_single()
-    hass.states.async_set("switch.new", "off")
-    hass.states.async_remove("switch.new")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.new", "off")
+    menuai.states.async_remove("switch.new")
+    await menuai.async_block_till_done()
     assert len(single_entity_id_tracker) == 1
     assert len(match_all_entity_id_tracker) == 2
 
 
-async def test_track_template(hass: HomeAssistant) -> None:
+async def test_track_template(menuai: menuai) -> None:
     """Test tracking template."""
     specific_runs = []
     wildcard_runs = []
     wildercard_runs = []
 
-    template_condition = Template("{{states.switch.test.state == 'on'}}", hass)
+    template_condition = Template("{{states.switch.test.state == 'on'}}", menuai)
     template_condition_var = Template(
-        "{{states.switch.test.state == 'on' and test == 5}}", hass
+        "{{states.switch.test.state == 'on' and test == 5}}", menuai
     )
 
-    hass.states.async_set("switch.test", "off")
+    menuai.states.async_set("switch.test", "off")
 
     def specific_run_callback(entity_id, old_state, new_state):
         specific_runs.append(1)
 
-    async_track_template(hass, template_condition, specific_run_callback)
+    async_track_template(menuai, template_condition, specific_run_callback)
 
     @ha.callback
     def wildcard_run_callback(entity_id, old_state, new_state):
         wildcard_runs.append((old_state, new_state))
 
-    async_track_template(hass, template_condition, wildcard_run_callback)
+    async_track_template(menuai, template_condition, wildcard_run_callback)
 
     async def wildercard_run_callback(entity_id, old_state, new_state):
         wildercard_runs.append((old_state, new_state))
 
     async_track_template(
-        hass, template_condition_var, wildercard_run_callback, {"test": 5}
+        menuai, template_condition_var, wildercard_run_callback, {"test": 5}
     )
 
-    hass.states.async_set("switch.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "on")
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 1
     assert len(wildercard_runs) == 1
 
-    hass.states.async_set("switch.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "on")
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 1
     assert len(wildercard_runs) == 1
 
-    hass.states.async_set("switch.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "off")
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 1
     assert len(wildercard_runs) == 1
 
-    hass.states.async_set("switch.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "off")
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 1
     assert len(wildercard_runs) == 1
 
-    hass.states.async_set("switch.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "on")
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 2
     assert len(wildcard_runs) == 2
     assert len(wildercard_runs) == 2
 
-    template_iterate = Template("{{ (states.switch | length) > 0 }}", hass)
+    template_iterate = Template("{{ (states.switch | length) > 0 }}", menuai)
     iterate_calls = []
 
     @ha.callback
     def iterate_callback(entity_id, old_state, new_state):
         iterate_calls.append((entity_id, old_state, new_state))
 
-    async_track_template(hass, template_iterate, iterate_callback)
-    await hass.async_block_till_done()
+    async_track_template(menuai, template_iterate, iterate_callback)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("switch.new", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.new", "on")
+    await menuai.async_block_till_done()
 
     assert len(iterate_calls) == 1
     assert iterate_calls[0][0] == "switch.new"
@@ -881,21 +881,21 @@ async def test_track_template(hass: HomeAssistant) -> None:
 
 
 async def test_track_template_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test tracking template with error."""
-    template_error = Template("{{ (states.switch | lunch) > 0 }}", hass)
+    template_error = Template("{{ (states.switch | lunch) > 0 }}", menuai)
     error_calls = []
 
     @ha.callback
     def error_callback(entity_id, old_state, new_state):
         error_calls.append((entity_id, old_state, new_state))
 
-    async_track_template(hass, template_error, error_callback)
-    await hass.async_block_till_done()
+    async_track_template(menuai, template_error, error_callback)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("switch.new", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.new", "on")
+    await menuai.async_block_till_done()
 
     assert not error_calls
     assert "lunch" in caplog.text
@@ -906,20 +906,20 @@ async def test_track_template_error(
     with patch.object(Template, "async_render") as render:
         render.return_value = "ok"
 
-        hass.states.async_set("switch.not_exist", "off")
-        await hass.async_block_till_done()
+        menuai.states.async_set("switch.not_exist", "off")
+        await menuai.async_block_till_done()
 
     assert "no filter named 'lunch'" not in caplog.text
     assert "TemplateAssertionError" not in caplog.text
 
 
 async def test_track_template_error_can_recover(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test tracking template with error."""
-    hass.states.async_set("switch.data_system", "cow", {"opmode": 0})
+    menuai.states.async_set("switch.data_system", "cow", {"opmode": 0})
     template_error = Template(
-        "{{ states.sensor.data_system.attributes['opmode'] == '0' }}", hass
+        "{{ states.sensor.data_system.attributes['opmode'] == '0' }}", menuai
     )
     error_calls = []
 
@@ -927,15 +927,15 @@ async def test_track_template_error_can_recover(
     def error_callback(entity_id, old_state, new_state):
         error_calls.append((entity_id, old_state, new_state))
 
-    async_track_template(hass, template_error, error_callback)
-    await hass.async_block_till_done()
+    async_track_template(menuai, template_error, error_callback)
+    await menuai.async_block_till_done()
     assert not error_calls
 
-    hass.states.async_remove("switch.data_system")
+    menuai.states.async_remove("switch.data_system")
 
     assert "UndefinedError" in caplog.text
 
-    hass.states.async_set("switch.data_system", "cow", {"opmode": 0})
+    menuai.states.async_set("switch.data_system", "cow", {"opmode": 0})
 
     caplog.clear()
 
@@ -943,12 +943,12 @@ async def test_track_template_error_can_recover(
 
 
 async def test_track_template_time_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test tracking template with time change."""
-    template_error = Template("{{ utcnow().minute % 2 == 0 }}", hass)
+    template_error = Template("{{ utcnow().minute % 2 == 0 }}", menuai)
     calls = []
 
     @ha.callback
@@ -958,14 +958,14 @@ async def test_track_template_time_change(
     start_time = dt_util.utcnow() + timedelta(hours=24)
     time_that_will_not_match_right_away = start_time.replace(minute=1, second=0)
     freezer.move_to(time_that_will_not_match_right_away)
-    unsub = async_track_template(hass, template_error, error_callback)
-    await hass.async_block_till_done()
+    unsub = async_track_template(menuai, template_error, error_callback)
+    await menuai.async_block_till_done()
     assert not calls
 
     first_time = start_time.replace(minute=2, second=0)
     freezer.move_to(first_time)
-    async_fire_time_changed(hass, first_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, first_time)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0] == (None, None, None)
@@ -973,15 +973,15 @@ async def test_track_template_time_change(
     unsub()
 
 
-async def test_track_template_result(hass: HomeAssistant) -> None:
+async def test_track_template_result(menuai: menuai) -> None:
     """Test tracking template."""
     specific_runs = []
     wildcard_runs = []
     wildercard_runs = []
 
-    template_condition = Template("{{states.sensor.test.state}}", hass)
+    template_condition = Template("{{states.sensor.test.state}}", menuai)
     template_condition_var = Template(
-        "{{(states.sensor.test.state|int) + test }}", hass
+        "{{(states.sensor.test.state|int) + test }}", menuai
     )
 
     def specific_run_callback(
@@ -992,7 +992,7 @@ async def test_track_template_result(hass: HomeAssistant) -> None:
         specific_runs.append(int(track_result.result))
 
     async_track_template_result(
-        hass, [TrackTemplate(template_condition, None)], specific_run_callback
+        menuai, [TrackTemplate(template_condition, None)], specific_run_callback
     )
 
     @ha.callback
@@ -1006,7 +1006,7 @@ async def test_track_template_result(hass: HomeAssistant) -> None:
         )
 
     async_track_template_result(
-        hass, [TrackTemplate(template_condition, None)], wildcard_run_callback
+        menuai, [TrackTemplate(template_condition, None)], wildcard_run_callback
     )
 
     async def wildercard_run_callback(
@@ -1019,64 +1019,64 @@ async def test_track_template_result(hass: HomeAssistant) -> None:
         )
 
     async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_condition_var, {"test": 5})],
         wildercard_run_callback,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test", 5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    await menuai.async_block_till_done()
 
     assert specific_runs == [5]
     assert wildcard_runs == [(0, 5)]
     assert wildercard_runs == [(0, 10)]
 
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert specific_runs == [5, 30]
     assert wildcard_runs == [(0, 5), (5, 30)]
     assert wildercard_runs == [(0, 10), (10, 35)]
 
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 2
     assert len(wildcard_runs) == 2
     assert len(wildercard_runs) == 2
 
-    hass.states.async_set("sensor.test", 5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 3
     assert len(wildcard_runs) == 3
     assert len(wildercard_runs) == 3
 
-    hass.states.async_set("sensor.test", 5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 3
     assert len(wildcard_runs) == 3
     assert len(wildercard_runs) == 3
 
-    hass.states.async_set("sensor.test", 20)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 20)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 4
     assert len(wildcard_runs) == 4
     assert len(wildercard_runs) == 4
 
 
-async def test_track_template_result_none(hass: HomeAssistant) -> None:
+async def test_track_template_result_none(menuai: menuai) -> None:
     """Test tracking template."""
     specific_runs = []
     wildcard_runs = []
     wildercard_runs = []
 
-    template_condition = Template("{{state_attr('sensor.test', 'battery')}}", hass)
+    template_condition = Template("{{state_attr('sensor.test', 'battery')}}", menuai)
     template_condition_var = Template(
-        "{{(state_attr('sensor.test', 'battery')|int(default=0)) + test }}", hass
+        "{{(state_attr('sensor.test', 'battery')|int(default=0)) + test }}", menuai
     )
 
     def specific_run_callback(
@@ -1088,7 +1088,7 @@ async def test_track_template_result_none(hass: HomeAssistant) -> None:
         specific_runs.append(result)
 
     async_track_template_result(
-        hass, [TrackTemplate(template_condition, None)], specific_run_callback
+        menuai, [TrackTemplate(template_condition, None)], specific_run_callback
     )
 
     @ha.callback
@@ -1106,7 +1106,7 @@ async def test_track_template_result_none(hass: HomeAssistant) -> None:
         wildcard_runs.append((last_result, result))
 
     async_track_template_result(
-        hass, [TrackTemplate(template_condition, None)], wildcard_run_callback
+        menuai, [TrackTemplate(template_condition, None)], wildcard_run_callback
     )
 
     async def wildercard_run_callback(
@@ -1123,28 +1123,28 @@ async def test_track_template_result_none(hass: HomeAssistant) -> None:
         wildercard_runs.append((last_result, result))
 
     async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_condition_var, {"test": 5})],
         wildercard_run_callback,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test", "-")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "-")
+    await menuai.async_block_till_done()
 
     assert specific_runs == [None]
     assert wildcard_runs == [(None, None)]
     assert wildercard_runs == [(None, 5)]
 
-    hass.states.async_set("sensor.test", "-", {"battery": 5})
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "-", {"battery": 5})
+    await menuai.async_block_till_done()
 
     assert specific_runs == [None, 5]
     assert wildcard_runs == [(None, None), (None, 5)]
     assert wildercard_runs == [(None, 5), (5, 10)]
 
 
-async def test_track_template_result_super_template(hass: HomeAssistant) -> None:
+async def test_track_template_result_super_template(menuai: menuai) -> None:
     """Test tracking template with super template listening to same entity."""
     specific_runs = []
     specific_runs_availability = []
@@ -1153,10 +1153,10 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
     wildercard_runs = []
     wildercard_runs_availability = []
 
-    template_availability = Template("{{ is_number(states('sensor.test')) }}", hass)
-    template_condition = Template("{{states.sensor.test.state}}", hass)
+    template_availability = Template("{{ is_number(states('sensor.test')) }}", menuai)
+    template_condition = Template("{{states.sensor.test.state}}", menuai)
     template_condition_var = Template(
-        "{{(states.sensor.test.state|int) + test }}", hass
+        "{{(states.sensor.test.state|int) + test }}", menuai
     )
 
     def specific_run_callback(
@@ -1170,7 +1170,7 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
                 specific_runs_availability.append(track_result.result)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1193,7 +1193,7 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
                 wildcard_runs_availability.append(track_result.result)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1215,7 +1215,7 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
                 wildercard_runs_availability.append(track_result.result)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition_var, {"test": 5}),
@@ -1223,10 +1223,10 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
         wildercard_run_callback,
         has_super_template=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test", "unavailable")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "unavailable")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False]
     assert wildcard_runs_availability == [False]
@@ -1235,8 +1235,8 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
     assert wildcard_runs == []
     assert wildercard_runs == []
 
-    hass.states.async_set("sensor.test", 5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False, True]
     assert wildcard_runs_availability == [False, True]
@@ -1245,15 +1245,15 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
     assert wildcard_runs == [(0, 5)]
     assert wildercard_runs == [(0, 10)]
 
-    hass.states.async_set("sensor.test", "unknown")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "unknown")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False, True, False]
     assert wildcard_runs_availability == [False, True, False]
     assert wildercard_runs_availability == [False, True, False]
 
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False, True, False, True]
     assert wildcard_runs_availability == [False, True, False, True]
@@ -1263,21 +1263,11 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
     assert wildcard_runs == [(0, 5), (5, 30)]
     assert wildercard_runs == [(0, 10), (10, 35)]
 
-    hass.states.async_set("sensor.test", "other")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "other")
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
-
-    assert len(specific_runs) == 2
-    assert len(wildcard_runs) == 2
-    assert len(wildercard_runs) == 2
-    assert len(specific_runs_availability) == 6
-    assert len(wildcard_runs_availability) == 6
-    assert len(wildercard_runs_availability) == 6
-
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 2
     assert len(wildcard_runs) == 2
@@ -1286,8 +1276,18 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
     assert len(wildcard_runs_availability) == 6
     assert len(wildercard_runs_availability) == 6
 
-    hass.states.async_set("sensor.test", 31)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
+
+    assert len(specific_runs) == 2
+    assert len(wildcard_runs) == 2
+    assert len(wildercard_runs) == 2
+    assert len(specific_runs_availability) == 6
+    assert len(wildcard_runs_availability) == 6
+    assert len(wildercard_runs_availability) == 6
+
+    menuai.states.async_set("sensor.test", 31)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 3
     assert len(wildcard_runs) == 3
@@ -1298,7 +1298,7 @@ async def test_track_template_result_super_template(hass: HomeAssistant) -> None
 
 
 async def test_track_template_result_super_template_initially_false(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test tracking template with super template listening to same entity."""
     specific_runs = []
@@ -1308,15 +1308,15 @@ async def test_track_template_result_super_template_initially_false(
     wildercard_runs = []
     wildercard_runs_availability = []
 
-    template_availability = Template("{{ is_number(states('sensor.test')) }}", hass)
-    template_condition = Template("{{states.sensor.test.state}}", hass)
+    template_availability = Template("{{ is_number(states('sensor.test')) }}", menuai)
+    template_condition = Template("{{states.sensor.test.state}}", menuai)
     template_condition_var = Template(
-        "{{(states.sensor.test.state|int) + test }}", hass
+        "{{(states.sensor.test.state|int) + test }}", menuai
     )
 
     # Make the super template initially false
-    hass.states.async_set("sensor.test", "unavailable")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "unavailable")
+    await menuai.async_block_till_done()
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -1329,7 +1329,7 @@ async def test_track_template_result_super_template_initially_false(
                 specific_runs_availability.append(track_result.result)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1352,7 +1352,7 @@ async def test_track_template_result_super_template_initially_false(
                 wildcard_runs_availability.append(track_result.result)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1374,7 +1374,7 @@ async def test_track_template_result_super_template_initially_false(
                 wildercard_runs_availability.append(track_result.result)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition_var, {"test": 5}),
@@ -1382,7 +1382,7 @@ async def test_track_template_result_super_template_initially_false(
         wildercard_run_callback,
         has_super_template=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == []
     assert wildcard_runs_availability == []
@@ -1391,8 +1391,8 @@ async def test_track_template_result_super_template_initially_false(
     assert wildcard_runs == []
     assert wildercard_runs == []
 
-    hass.states.async_set("sensor.test", 5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [True]
     assert wildcard_runs_availability == [True]
@@ -1401,15 +1401,15 @@ async def test_track_template_result_super_template_initially_false(
     assert wildcard_runs == [(0, 5)]
     assert wildercard_runs == [(0, 10)]
 
-    hass.states.async_set("sensor.test", "unknown")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "unknown")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [True, False]
     assert wildcard_runs_availability == [True, False]
     assert wildercard_runs_availability == [True, False]
 
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [True, False, True]
     assert wildcard_runs_availability == [True, False, True]
@@ -1419,21 +1419,11 @@ async def test_track_template_result_super_template_initially_false(
     assert wildcard_runs == [(0, 5), (5, 30)]
     assert wildercard_runs == [(0, 10), (10, 35)]
 
-    hass.states.async_set("sensor.test", "other")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "other")
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
-
-    assert len(specific_runs) == 2
-    assert len(wildcard_runs) == 2
-    assert len(wildercard_runs) == 2
-    assert len(specific_runs_availability) == 5
-    assert len(wildcard_runs_availability) == 5
-    assert len(wildercard_runs_availability) == 5
-
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 2
     assert len(wildcard_runs) == 2
@@ -1442,8 +1432,18 @@ async def test_track_template_result_super_template_initially_false(
     assert len(wildcard_runs_availability) == 5
     assert len(wildercard_runs_availability) == 5
 
-    hass.states.async_set("sensor.test", 31)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
+
+    assert len(specific_runs) == 2
+    assert len(wildcard_runs) == 2
+    assert len(wildercard_runs) == 2
+    assert len(specific_runs_availability) == 5
+    assert len(wildcard_runs_availability) == 5
+    assert len(wildercard_runs_availability) == 5
+
+    menuai.states.async_set("sensor.test", 31)
+    await menuai.async_block_till_done()
 
     assert len(specific_runs) == 3
     assert len(wildcard_runs) == 3
@@ -1467,7 +1467,7 @@ async def test_track_template_result_super_template_initially_false(
     ],
 )
 async def test_track_template_result_super_template_2(
-    hass: HomeAssistant, availability_template: str
+    menuai: menuai, availability_template: str
 ) -> None:
     """Test tracking template with super template listening to different entities."""
     specific_runs = []
@@ -1477,10 +1477,10 @@ async def test_track_template_result_super_template_2(
     wildercard_runs = []
     wildercard_runs_availability = []
 
-    template_availability = Template(availability_template, hass)
-    template_condition = Template("{{states.sensor.test.state}}", hass)
+    template_availability = Template(availability_template, menuai)
+    template_condition = Template("{{states.sensor.test.state}}", menuai)
     template_condition_var = Template(
-        "{{(states.sensor.test.state|int) + test }}", hass
+        "{{(states.sensor.test.state|int) + test }}", menuai
     )
 
     def _super_template_as_boolean(result):
@@ -1502,7 +1502,7 @@ async def test_track_template_result_super_template_2(
                 )
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1527,7 +1527,7 @@ async def test_track_template_result_super_template_2(
                 )
 
     info2 = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1551,7 +1551,7 @@ async def test_track_template_result_super_template_2(
                 )
 
     info3 = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition_var, {"test": 5}),
@@ -1559,10 +1559,10 @@ async def test_track_template_result_super_template_2(
         wildercard_run_callback,
         has_super_template=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test2", "unavailable")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test2", "unavailable")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False]
     assert wildcard_runs_availability == [False]
@@ -1571,9 +1571,9 @@ async def test_track_template_result_super_template_2(
     assert wildcard_runs == []
     assert wildercard_runs == []
 
-    hass.states.async_set("sensor.test", 5)
-    hass.states.async_set("sensor.test2", "available")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    menuai.states.async_set("sensor.test2", "available")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False, True]
     assert wildcard_runs_availability == [False, True]
@@ -1582,16 +1582,16 @@ async def test_track_template_result_super_template_2(
     assert wildcard_runs == [(0, 5)]
     assert wildercard_runs == [(0, 10)]
 
-    hass.states.async_set("sensor.test2", "unknown")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test2", "unknown")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False, True]
     assert wildcard_runs_availability == [False, True]
     assert wildercard_runs_availability == [False, True]
 
-    hass.states.async_set("sensor.test2", "available")
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test2", "available")
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [False, True]
     assert wildcard_runs_availability == [False, True]
@@ -1619,7 +1619,7 @@ async def test_track_template_result_super_template_2(
     ],
 )
 async def test_track_template_result_super_template_2_initially_false(
-    hass: HomeAssistant, availability_template: str
+    menuai: menuai, availability_template: str
 ) -> None:
     """Test tracking template with super template listening to different entities."""
     specific_runs = []
@@ -1629,14 +1629,14 @@ async def test_track_template_result_super_template_2_initially_false(
     wildercard_runs = []
     wildercard_runs_availability = []
 
-    template_availability = Template(availability_template, hass)
-    template_condition = Template("{{states.sensor.test.state}}", hass)
+    template_availability = Template(availability_template, menuai)
+    template_condition = Template("{{states.sensor.test.state}}", menuai)
     template_condition_var = Template(
-        "{{(states.sensor.test.state|int) + test }}", hass
+        "{{(states.sensor.test.state|int) + test }}", menuai
     )
 
-    hass.states.async_set("sensor.test2", "unavailable")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test2", "unavailable")
+    await menuai.async_block_till_done()
 
     def _super_template_as_boolean(result):
         if isinstance(result, TemplateError):
@@ -1657,7 +1657,7 @@ async def test_track_template_result_super_template_2_initially_false(
                 )
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1682,7 +1682,7 @@ async def test_track_template_result_super_template_2_initially_false(
                 )
 
     info2 = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition, None),
@@ -1706,7 +1706,7 @@ async def test_track_template_result_super_template_2_initially_false(
                 )
 
     info3 = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_condition_var, {"test": 5}),
@@ -1714,7 +1714,7 @@ async def test_track_template_result_super_template_2_initially_false(
         wildercard_run_callback,
         has_super_template=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == []
     assert wildcard_runs_availability == []
@@ -1723,9 +1723,9 @@ async def test_track_template_result_super_template_2_initially_false(
     assert wildcard_runs == []
     assert wildercard_runs == []
 
-    hass.states.async_set("sensor.test", 5)
-    hass.states.async_set("sensor.test2", "available")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    menuai.states.async_set("sensor.test2", "available")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [True]
     assert wildcard_runs_availability == [True]
@@ -1734,16 +1734,16 @@ async def test_track_template_result_super_template_2_initially_false(
     assert wildcard_runs == [(0, 5)]
     assert wildercard_runs == [(0, 10)]
 
-    hass.states.async_set("sensor.test2", "unknown")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test2", "unknown")
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [True]
     assert wildcard_runs_availability == [True]
     assert wildercard_runs_availability == [True]
 
-    hass.states.async_set("sensor.test2", "available")
-    hass.states.async_set("sensor.test", 30)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test2", "available")
+    menuai.states.async_set("sensor.test", 30)
+    await menuai.async_block_till_done()
 
     assert specific_runs_availability == [True]
     assert wildcard_runs_availability == [True]
@@ -1757,7 +1757,7 @@ async def test_track_template_result_super_template_2_initially_false(
     info3.async_remove()
 
 
-async def test_track_template_result_complex(hass: HomeAssistant) -> None:
+async def test_track_template_result_complex(menuai: menuai) -> None:
     """Test tracking template."""
     specific_runs = []
     template_complex_str = """
@@ -1772,7 +1772,7 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
 {% endif %}
 
 """
-    template_complex = Template(template_complex_str, hass)
+    template_complex = Template(template_complex_str, menuai)
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -1780,15 +1780,15 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
     ) -> None:
         specific_runs.append(updates.pop().result)
 
-    hass.states.async_set("light.one", "on")
-    hass.states.async_set("lock.one", "locked")
+    menuai.states.async_set("light.one", "on")
+    menuai.states.async_set("lock.one", "locked")
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_complex, None, 0)],
         specific_run_callback,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert info.listeners == {
         "all": True,
@@ -1797,8 +1797,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.domain", "light")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.domain", "light")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert specific_runs[0] == ["light.one"]
 
@@ -1809,8 +1809,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.domain", "lock")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.domain", "lock")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
     assert specific_runs[1] == ["lock.one"]
     assert info.listeners == {
@@ -1820,8 +1820,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.domain", "all")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.domain", "all")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
     assert "light.one" in specific_runs[2]
     assert "lock.one" in specific_runs[2]
@@ -1833,8 +1833,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.domain", "light")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.domain", "light")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 4
     assert specific_runs[3] == ["light.one"]
     assert info.listeners == {
@@ -1844,8 +1844,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("light.two", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.two", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 5
     assert "light.one" in specific_runs[4]
     assert "light.two" in specific_runs[4]
@@ -1857,8 +1857,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("light.three", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.three", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 6
     assert "light.one" in specific_runs[5]
     assert "light.two" in specific_runs[5]
@@ -1871,8 +1871,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.domain", "lock")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.domain", "lock")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 7
     assert specific_runs[6] == ["lock.one"]
     assert info.listeners == {
@@ -1882,8 +1882,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.domain", "single_binary_sensor")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.domain", "single_binary_sensor")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 8
     assert specific_runs[7] == "unknown"
     assert info.listeners == {
@@ -1893,8 +1893,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("binary_sensor.single", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.single", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 9
     assert specific_runs[8] == "on"
     assert info.listeners == {
@@ -1904,8 +1904,8 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.domain", "lock")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.domain", "lock")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 10
     assert specific_runs[9] == ["lock.one"]
     assert info.listeners == {
@@ -1916,7 +1916,7 @@ async def test_track_template_result_complex(hass: HomeAssistant) -> None:
     }
 
 
-async def test_track_template_result_with_wildcard(hass: HomeAssistant) -> None:
+async def test_track_template_result_with_wildcard(menuai: menuai) -> None:
     """Test tracking template with a wildcard."""
     specific_runs = []
     template_complex_str = r"""
@@ -1928,7 +1928,7 @@ async def test_track_template_result_with_wildcard(hass: HomeAssistant) -> None:
 {% endfor %}
 
 """
-    template_complex = Template(template_complex_str, hass)
+    template_complex = Template(template_complex_str, menuai)
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -1936,17 +1936,17 @@ async def test_track_template_result_with_wildcard(hass: HomeAssistant) -> None:
     ) -> None:
         specific_runs.append(updates.pop().result)
 
-    hass.states.async_set("cover.office_drapes", "closed")
-    hass.states.async_set("cover.office_window", "closed")
-    hass.states.async_set("cover.office_skylight", "open")
+    menuai.states.async_set("cover.office_drapes", "closed")
+    menuai.states.async_set("cover.office_window", "closed")
+    menuai.states.async_set("cover.office_skylight", "open")
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_complex, None)], specific_run_callback
+        menuai, [TrackTemplate(template_complex, None)], specific_run_callback
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("cover.office_window", "open")
-    await hass.async_block_till_done()
+    menuai.states.async_set("cover.office_window", "open")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert info.listeners == {
         "all": True,
@@ -1960,22 +1960,22 @@ async def test_track_template_result_with_wildcard(hass: HomeAssistant) -> None:
     assert "cover.office_skylight=open" in specific_runs[0]
 
 
-async def test_track_template_result_with_group(hass: HomeAssistant) -> None:
+async def test_track_template_result_with_group(menuai: menuai) -> None:
     """Test tracking template with a group."""
-    hass.states.async_set("sensor.power_1", 0)
-    hass.states.async_set("sensor.power_2", 200.2)
-    hass.states.async_set("sensor.power_3", 400.4)
-    hass.states.async_set("sensor.power_4", 800.8)
+    menuai.states.async_set("sensor.power_1", 0)
+    menuai.states.async_set("sensor.power_2", 200.2)
+    menuai.states.async_set("sensor.power_3", 400.4)
+    menuai.states.async_set("sensor.power_4", 800.8)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "group",
         {"group": {"power_sensors": "sensor.power_1,sensor.power_2,sensor.power_3"}},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("group.power_sensors")
-    assert hass.states.get("group.power_sensors").state
+    assert menuai.states.get("group.power_sensors")
+    assert menuai.states.get("group.power_sensors").state
 
     specific_runs = []
     template_complex_str = r"""
@@ -1983,7 +1983,7 @@ async def test_track_template_result_with_group(hass: HomeAssistant) -> None:
 {{ states.group.power_sensors.attributes.entity_id | expand | map(attribute='state')|map('float')|sum  }}
 
 """
-    template_complex = Template(template_complex_str, hass)
+    template_complex = Template(template_complex_str, menuai)
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -1992,9 +1992,9 @@ async def test_track_template_result_with_group(hass: HomeAssistant) -> None:
         specific_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_complex, None)], specific_run_callback
+        menuai, [TrackTemplate(template_complex, None)], specific_run_callback
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert info.listeners == {
         "all": False,
@@ -2008,42 +2008,42 @@ async def test_track_template_result_with_group(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.power_1", 100.1)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.power_1", 100.1)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     assert specific_runs[0] == 100.1 + 200.2 + 400.4
 
-    hass.states.async_set("sensor.power_3", 0)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.power_3", 0)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     assert specific_runs[1] == 100.1 + 200.2 + 0
 
     with patch(
-        "homeassistant.config.load_yaml_config_file",
+        "menuai.config.load_yaml_config_file",
         return_value={
             "group": {
                 "power_sensors": "sensor.power_1,sensor.power_2,sensor.power_3,sensor.power_4",
             }
         },
     ):
-        await hass.services.async_call("group", "reload")
-        await hass.async_block_till_done()
+        await menuai.services.async_call("group", "reload")
+        await menuai.async_block_till_done()
 
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert specific_runs[-1] == 100.1 + 200.2 + 0 + 800.8
 
 
-async def test_track_template_result_and_conditional(hass: HomeAssistant) -> None:
+async def test_track_template_result_and_conditional(menuai: menuai) -> None:
     """Test tracking template with an and conditional."""
     specific_runs = []
-    hass.states.async_set("light.a", "off")
-    hass.states.async_set("light.b", "off")
+    menuai.states.async_set("light.a", "off")
+    menuai.states.async_set("light.b", "off")
     template_str = '{% if states.light.a.state == "on" and states.light.b.state == "on" %}on{% else %}off{% endif %}'
 
-    template = Template(template_str, hass)
+    template = Template(template_str, menuai)
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -2052,9 +2052,9 @@ async def test_track_template_result_and_conditional(hass: HomeAssistant) -> Non
         specific_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template, None)], specific_run_callback
+        menuai, [TrackTemplate(template, None)], specific_run_callback
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert info.listeners == {
         "all": False,
         "domains": set(),
@@ -2062,12 +2062,12 @@ async def test_track_template_result_and_conditional(hass: HomeAssistant) -> Non
         "time": False,
     }
 
-    hass.states.async_set("light.b", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.b", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
-    hass.states.async_set("light.a", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.a", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert specific_runs[0] == "on"
     assert info.listeners == {
@@ -2077,8 +2077,8 @@ async def test_track_template_result_and_conditional(hass: HomeAssistant) -> Non
         "time": False,
     }
 
-    hass.states.async_set("light.b", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.b", "off")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
     assert specific_runs[1] == "off"
     assert info.listeners == {
@@ -2088,30 +2088,30 @@ async def test_track_template_result_and_conditional(hass: HomeAssistant) -> Non
         "time": False,
     }
 
-    hass.states.async_set("light.a", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.a", "off")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
-    hass.states.async_set("light.b", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.b", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
-    hass.states.async_set("light.a", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.a", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
     assert specific_runs[2] == "on"
 
 
 async def test_track_template_result_and_conditional_upper_case(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test tracking template with an and conditional with an upper case template."""
     specific_runs = []
-    hass.states.async_set("light.a", "off")
-    hass.states.async_set("light.b", "off")
+    menuai.states.async_set("light.a", "off")
+    menuai.states.async_set("light.b", "off")
     template_str = '{% if states.light.A.state == "on" and states.light.B.state == "on" %}on{% else %}off{% endif %}'
 
-    template = Template(template_str, hass)
+    template = Template(template_str, menuai)
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -2120,9 +2120,9 @@ async def test_track_template_result_and_conditional_upper_case(
         specific_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template, None)], specific_run_callback
+        menuai, [TrackTemplate(template, None)], specific_run_callback
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert info.listeners == {
         "all": False,
         "domains": set(),
@@ -2130,12 +2130,12 @@ async def test_track_template_result_and_conditional_upper_case(
         "time": False,
     }
 
-    hass.states.async_set("light.b", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.b", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
-    hass.states.async_set("light.a", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.a", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert specific_runs[0] == "on"
     assert info.listeners == {
@@ -2145,8 +2145,8 @@ async def test_track_template_result_and_conditional_upper_case(
         "time": False,
     }
 
-    hass.states.async_set("light.b", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.b", "off")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
     assert specific_runs[1] == "off"
     assert info.listeners == {
@@ -2156,21 +2156,21 @@ async def test_track_template_result_and_conditional_upper_case(
         "time": False,
     }
 
-    hass.states.async_set("light.a", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.a", "off")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
-    hass.states.async_set("light.b", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.b", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
-    hass.states.async_set("light.a", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.a", "on")
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
     assert specific_runs[2] == "on"
 
 
-async def test_track_template_result_iterator(hass: HomeAssistant) -> None:
+async def test_track_template_result_iterator(menuai: menuai) -> None:
     """Test tracking template."""
     iterator_runs = []
 
@@ -2182,7 +2182,7 @@ async def test_track_template_result_iterator(hass: HomeAssistant) -> None:
         iterator_runs.append(updates.pop().result)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(
                 Template(
@@ -2193,7 +2193,7 @@ async def test_track_template_result_iterator(hass: HomeAssistant) -> None:
                 {% endif %}
             {% endfor %}
             """,
-                    hass,
+                    menuai,
                 ),
                 None,
                 0,
@@ -2201,10 +2201,10 @@ async def test_track_template_result_iterator(hass: HomeAssistant) -> None:
         ],
         iterator_callback,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test", 5)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 5)
+    await menuai.async_block_till_done()
 
     assert iterator_runs == [""]
 
@@ -2218,13 +2218,13 @@ async def test_track_template_result_iterator(hass: HomeAssistant) -> None:
         filter_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(
                 Template(
                     """{{ states.sensor|selectattr("state","equalto","on")
                 |join(",", attribute="entity_id") }}""",
-                    hass,
+                    menuai,
                 ),
                 None,
                 0,
@@ -2232,7 +2232,7 @@ async def test_track_template_result_iterator(hass: HomeAssistant) -> None:
         ],
         filter_callback,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert info.listeners == {
         "all": False,
         "domains": {"sensor"},
@@ -2240,25 +2240,25 @@ async def test_track_template_result_iterator(hass: HomeAssistant) -> None:
         "time": False,
     }
 
-    hass.states.async_set("sensor.test", 6)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 6)
+    await menuai.async_block_till_done()
 
     assert filter_runs == [""]
     assert iterator_runs == [""]
 
-    hass.states.async_set("sensor.new", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.new", "on")
+    await menuai.async_block_till_done()
     assert iterator_runs == ["", "sensor.new,"]
     assert filter_runs == ["", "sensor.new"]
 
 
 async def test_track_template_result_errors(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test tracking template with errors in the template."""
-    template_syntax_error = Template("{{states.switch", hass)
+    template_syntax_error = Template("{{states.switch", menuai)
 
-    template_not_exist = Template("{{states.switch.not_exist.state }}", hass)
+    template_not_exist = Template("{{states.switch.not_exist.state }}", menuai)
 
     syntax_error_runs = []
     not_exist_runs = []
@@ -2279,9 +2279,9 @@ async def test_track_template_result_errors(
         )
 
     async_track_template_result(
-        hass, [TrackTemplate(template_syntax_error, None)], syntax_error_listener
+        menuai, [TrackTemplate(template_syntax_error, None)], syntax_error_listener
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(syntax_error_runs) == 0
     assert "TemplateSyntaxError" in caplog.text
@@ -2302,17 +2302,17 @@ async def test_track_template_result_errors(
         )
 
     async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_not_exist, None)],
         not_exist_runs_error_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(syntax_error_runs) == 0
     assert len(not_exist_runs) == 0
 
-    hass.states.async_set("switch.not_exist", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.not_exist", "off")
+    await menuai.async_block_till_done()
 
     assert len(not_exist_runs) == 1
     assert not_exist_runs[0][0].data.get("entity_id") == "switch.not_exist"
@@ -2320,8 +2320,8 @@ async def test_track_template_result_errors(
     assert not_exist_runs[0][2] is None
     assert not_exist_runs[0][3] == "off"
 
-    hass.states.async_set("switch.not_exist", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.not_exist", "on")
+    await menuai.async_block_till_done()
 
     assert len(syntax_error_runs) == 0
     assert len(not_exist_runs) == 2
@@ -2333,8 +2333,8 @@ async def test_track_template_result_errors(
     with patch.object(Template, "async_render") as render:
         render.side_effect = TemplateError(jinja2.TemplateError())
 
-        hass.states.async_set("switch.not_exist", "off")
-        await hass.async_block_till_done()
+        menuai.states.async_set("switch.not_exist", "off")
+        await menuai.async_block_till_done()
 
         assert len(not_exist_runs) == 3
         assert not_exist_runs[2][0].data.get("entity_id") == "switch.not_exist"
@@ -2344,12 +2344,12 @@ async def test_track_template_result_errors(
 
 
 async def test_track_template_result_transient_errors(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test tracking template with transient errors in the template."""
-    hass.states.async_set("sensor.error", "unknown")
+    menuai.states.async_set("sensor.error", "unknown")
     template_that_raises_sometimes = Template(
-        "{{ states('sensor.error') | float }}", hass
+        "{{ states('sensor.error') | float }}", menuai
     )
 
     sometimes_error_runs = []
@@ -2370,35 +2370,35 @@ async def test_track_template_result_transient_errors(
         )
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_that_raises_sometimes, None)],
         sometimes_error_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert sometimes_error_runs == []
     assert "ValueError" in caplog.text
     assert "ValueError" in repr(info)
     caplog.clear()
 
-    hass.states.async_set("sensor.error", "unavailable")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.error", "unavailable")
+    await menuai.async_block_till_done()
     assert len(sometimes_error_runs) == 1
     assert isinstance(sometimes_error_runs[0][3], TemplateError)
     sometimes_error_runs.clear()
     assert "ValueError" in repr(info)
 
-    hass.states.async_set("sensor.error", "4")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.error", "4")
+    await menuai.async_block_till_done()
     assert len(sometimes_error_runs) == 1
     assert sometimes_error_runs[0][3] == 4.0
     sometimes_error_runs.clear()
     assert "ValueError" not in repr(info)
 
 
-async def test_static_string(hass: HomeAssistant) -> None:
+async def test_static_string(menuai: menuai) -> None:
     """Test a static string."""
-    template_refresh = Template("{{ 'static' }}", hass)
+    template_refresh = Template("{{ 'static' }}", menuai)
 
     refresh_runs = []
 
@@ -2410,18 +2410,18 @@ async def test_static_string(hass: HomeAssistant) -> None:
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_refresh, None)], refresh_listener
+        menuai, [TrackTemplate(template_refresh, None)], refresh_listener
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == ["static"]
 
 
-async def test_track_template_rate_limit(hass: HomeAssistant) -> None:
+async def test_track_template_rate_limit(menuai: menuai) -> None:
     """Test template rate limit."""
-    template_refresh = Template("{{ states | count }}", hass)
+    template_refresh = Template("{{ states | count }}", menuai)
 
     refresh_runs = []
 
@@ -2433,56 +2433,56 @@ async def test_track_template_rate_limit(hass: HomeAssistant) -> None:
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_refresh, None, 0.1)],
         refresh_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [0]
-    hass.states.async_set("sensor.one", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0]
     info.async_refresh()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.TWO", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.TWO", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 2]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 2]
-    hass.states.async_set("sensor.fOuR", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.fOuR", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 2]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125 * 2)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 2, 4]
-    hass.states.async_set("sensor.five", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.five", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 2, 4]
 
     info.async_remove()
 
 
-async def test_track_template_rate_limit_super(hass: HomeAssistant) -> None:
+async def test_track_template_rate_limit_super(menuai: menuai) -> None:
     """Test template rate limit with super template."""
     template_availability = Template(
-        "{{ states('sensor.one') != 'unavailable' }}", hass
+        "{{ states('sensor.one') != 'unavailable' }}", menuai
     )
-    template_refresh = Template("{{ states | count }}", hass)
+    template_refresh = Template("{{ states | count }}", menuai)
 
     availability_runs = []
     refresh_runs = []
@@ -2499,7 +2499,7 @@ async def test_track_template_rate_limit_super(hass: HomeAssistant) -> None:
                 availability_runs.append(track_result.result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None),
             TrackTemplate(template_refresh, None, 0.1),
@@ -2507,58 +2507,58 @@ async def test_track_template_rate_limit_super(hass: HomeAssistant) -> None:
         refresh_listener,
         has_super_template=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [0]
-    hass.states.async_set("sensor.one", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0]
     info.async_refresh()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.one", "unavailable")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "unavailable")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.four", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.four", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
     # The super template renders as true -> trigger rerendering of all templates
-    hass.states.async_set("sensor.one", "available")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "available")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 4]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125 * 2)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 4]
-    hass.states.async_set("sensor.five", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.five", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 4]
 
     info.async_remove()
 
 
-async def test_track_template_rate_limit_super_2(hass: HomeAssistant) -> None:
+async def test_track_template_rate_limit_super_2(menuai: menuai) -> None:
     """Test template rate limit with rate limited super template."""
     # Somewhat forced example of a rate limited template
-    template_availability = Template("{{ states | count % 2 == 1 }}", hass)
-    template_refresh = Template("{{ states | count }}", hass)
+    template_availability = Template("{{ states | count % 2 == 1 }}", menuai)
+    template_refresh = Template("{{ states | count }}", menuai)
 
     availability_runs = []
     refresh_runs = []
@@ -2575,7 +2575,7 @@ async def test_track_template_rate_limit_super_2(hass: HomeAssistant) -> None:
                 availability_runs.append(track_result.result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None, 0.1),
             TrackTemplate(template_refresh, None, 0.1),
@@ -2583,54 +2583,54 @@ async def test_track_template_rate_limit_super_2(hass: HomeAssistant) -> None:
         refresh_listener,
         has_super_template=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == []
-    hass.states.async_set("sensor.one", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == []
     info.async_refresh()
     assert refresh_runs == [1]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [1]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1]
-    hass.states.async_set("sensor.four", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.four", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1]
-    hass.states.async_set("sensor.five", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.five", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125 * 2)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [1, 5]
-    hass.states.async_set("sensor.six", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.six", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 5]
 
     info.async_remove()
 
 
-async def test_track_template_rate_limit_super_3(hass: HomeAssistant) -> None:
+async def test_track_template_rate_limit_super_3(menuai: menuai) -> None:
     """Test template with rate limited super template."""
     # Somewhat forced example of a rate limited template
-    template_availability = Template("{{ states | count % 2 == 1 }}", hass)
-    template_refresh = Template("{{ states | count }}", hass)
+    template_availability = Template("{{ states | count % 2 == 1 }}", menuai)
+    template_refresh = Template("{{ states | count }}", menuai)
 
     availability_runs = []
     refresh_runs = []
@@ -2647,7 +2647,7 @@ async def test_track_template_rate_limit_super_3(hass: HomeAssistant) -> None:
                 availability_runs.append(track_result.result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_availability, None, 0.1),
             TrackTemplate(template_refresh, None),
@@ -2655,57 +2655,57 @@ async def test_track_template_rate_limit_super_3(hass: HomeAssistant) -> None:
         refresh_listener,
         has_super_template=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == []
-    hass.states.async_set("sensor.ONE", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.ONE", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == []
     info.async_refresh()
     assert refresh_runs == [1]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     # The super template is rate limited so stuck at `True`
     assert refresh_runs == [1, 2]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [1, 2]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     # The super template is rate limited so stuck at `False`
     assert refresh_runs == [1, 2]
-    hass.states.async_set("sensor.four", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.four", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2]
-    hass.states.async_set("sensor.FIVE", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.FIVE", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125 * 2)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     assert refresh_runs == [1, 2, 5]
-    hass.states.async_set("sensor.six", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.six", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2, 5, 6]
-    hass.states.async_set("sensor.seven", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.seven", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2, 5, 6, 7]
 
     info.async_remove()
 
 
-async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) -> None:
+async def test_track_template_rate_limit_suppress_listener(menuai: menuai) -> None:
     """Test template rate limit will suppress the listener during the rate limit."""
-    template_refresh = Template("{{ states | count }}", hass)
+    template_refresh = Template("{{ states | count }}", menuai)
 
     refresh_runs = []
 
@@ -2717,11 +2717,11 @@ async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) 
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_refresh, None, 0.1)],
         refresh_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
 
     assert info.listeners == {
@@ -2730,16 +2730,16 @@ async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) 
         "entities": set(),
         "time": False,
     }
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [0]
-    hass.states.async_set("sensor.oNe", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.oNe", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0]
     info.async_refresh()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     # Should be suppressed during the rate limit
     assert info.listeners == {
         "all": False,
@@ -2750,10 +2750,10 @@ async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) 
     assert refresh_runs == [0, 1]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     # Rate limit released and the all listener returns
     assert info.listeners == {
         "all": True,
@@ -2762,11 +2762,11 @@ async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) 
         "time": False,
     }
     assert refresh_runs == [0, 1, 2]
-    hass.states.async_set("sensor.Three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.Three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 2]
-    hass.states.async_set("sensor.four", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.four", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1, 2]
     # Rate limit hit and the all listener is shut off
     assert info.listeners == {
@@ -2777,10 +2777,10 @@ async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) 
     }
     next_time = dt_util.utcnow() + timedelta(seconds=0.125 * 2)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
     # Rate limit released and the all listener returns
     assert info.listeners == {
         "all": True,
@@ -2789,8 +2789,8 @@ async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) 
         "time": False,
     }
     assert refresh_runs == [0, 1, 2, 4]
-    hass.states.async_set("sensor.Five", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.Five", "any")
+    await menuai.async_block_till_done()
     # Rate limit hit and the all listener is shut off
     assert info.listeners == {
         "all": False,
@@ -2803,9 +2803,9 @@ async def test_track_template_rate_limit_suppress_listener(hass: HomeAssistant) 
     info.async_remove()
 
 
-async def test_track_template_rate_limit_five(hass: HomeAssistant) -> None:
+async def test_track_template_rate_limit_five(menuai: menuai) -> None:
     """Test template rate limit of 5 seconds."""
-    template_refresh = Template("{{ states | count }}", hass)
+    template_refresh = Template("{{ states | count }}", menuai)
 
     refresh_runs = []
 
@@ -2817,34 +2817,34 @@ async def test_track_template_rate_limit_five(hass: HomeAssistant) -> None:
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_refresh, None, 5)],
         refresh_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [0]
-    hass.states.async_set("sensor.one", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0]
     info.async_refresh()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [0, 1]
 
     info.async_remove()
 
 
-async def test_track_template_has_default_rate_limit(hass: HomeAssistant) -> None:
+async def test_track_template_has_default_rate_limit(menuai: menuai) -> None:
     """Test template has a rate limit by default."""
-    hass.states.async_set("sensor.zero", "any")
-    template_refresh = Template("{{ states | list | count }}", hass)
+    menuai.states.async_set("sensor.zero", "any")
+    template_refresh = Template("{{ states | list | count }}", menuai)
 
     refresh_runs = []
 
@@ -2856,38 +2856,38 @@ async def test_track_template_has_default_rate_limit(hass: HomeAssistant) -> Non
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_refresh, None)],
         refresh_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [1]
-    hass.states.async_set("sensor.one", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1]
     info.async_refresh()
     assert refresh_runs == [1, 2]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2]
 
     info.async_remove()
 
 
 async def test_track_template_unavailable_states_has_default_rate_limit(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test template watching for unavailable states has a rate limit by default."""
-    hass.states.async_set("sensor.zero", "unknown")
+    menuai.states.async_set("sensor.zero", "unknown")
     template_refresh = Template(
         "{{ states | selectattr('state', 'in', ['unavailable', 'unknown', 'none']) | list | count }}",
-        hass,
+        menuai,
     )
 
     refresh_runs = []
@@ -2900,39 +2900,39 @@ async def test_track_template_unavailable_states_has_default_rate_limit(
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_refresh, None)],
         refresh_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [1]
-    hass.states.async_set("sensor.one", "unknown")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "unknown")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1]
     info.async_refresh()
     assert refresh_runs == [1, 2]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2]
-    hass.states.async_set("sensor.three", "unknown")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "unknown")
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2]
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert refresh_runs == [1, 2, 3]
     info.async_remove()
 
 
 async def test_specifically_referenced_entity_is_not_rate_limited(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test template rate limit of 5 seconds."""
-    hass.states.async_set("sensor.one", "none")
+    menuai.states.async_set("sensor.one", "none")
 
-    template_refresh = Template('{{ states | count }}_{{ states("sensor.one") }}', hass)
+    template_refresh = Template('{{ states | count }}_{{ states("sensor.one") }}', menuai)
 
     refresh_runs = []
 
@@ -2944,38 +2944,38 @@ async def test_specifically_referenced_entity_is_not_rate_limited(
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_refresh, None, 5)],
         refresh_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == ["1_none"]
-    hass.states.async_set("sensor.one", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == ["1_none", "1_any"]
     info.async_refresh()
     assert refresh_runs == ["1_none", "1_any"]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == ["1_none", "1_any"]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs == ["1_none", "1_any"]
-    hass.states.async_set("sensor.one", "none")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "none")
+    await menuai.async_block_till_done()
     assert refresh_runs == ["1_none", "1_any", "3_none"]
     info.async_remove()
 
 
 async def test_track_two_templates_with_different_rate_limits(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test two templates with different rate limits."""
-    template_one = Template("{{ (states | count) + 0 }}", hass)
-    template_five = Template("{{ states | count }}", hass)
+    template_one = Template("{{ (states | count) + 0 }}", menuai)
+    template_five = Template("{{ states | count }}", menuai)
 
     refresh_runs = {
         template_one: [],
@@ -2991,7 +2991,7 @@ async def test_track_two_templates_with_different_rate_limits(
             refresh_runs[update.template].append(update.result)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_one, None, 0.1),
             TrackTemplate(template_five, None, 5),
@@ -2999,50 +2999,50 @@ async def test_track_two_templates_with_different_rate_limits(
         refresh_listener,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs[template_one] == [0]
     assert refresh_runs[template_five] == [0]
-    hass.states.async_set("sensor.one", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs[template_one] == [0]
     assert refresh_runs[template_five] == [0]
     info.async_refresh()
     assert refresh_runs[template_one] == [0, 1]
     assert refresh_runs[template_five] == [0, 1]
-    hass.states.async_set("sensor.two", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.two", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs[template_one] == [0, 1]
     assert refresh_runs[template_five] == [0, 1]
     next_time = dt_util.utcnow() + timedelta(seconds=0.125 * 1)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
-    await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert refresh_runs[template_one] == [0, 1, 2]
     assert refresh_runs[template_five] == [0, 1]
-    hass.states.async_set("sensor.three", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.three", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs[template_one] == [0, 1, 2]
     assert refresh_runs[template_five] == [0, 1]
-    hass.states.async_set("sensor.four", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.four", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs[template_one] == [0, 1, 2]
     assert refresh_runs[template_five] == [0, 1]
-    hass.states.async_set("sensor.five", "any")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.five", "any")
+    await menuai.async_block_till_done()
     assert refresh_runs[template_one] == [0, 1, 2]
     assert refresh_runs[template_five] == [0, 1]
     info.async_remove()
 
 
-async def test_string(hass: HomeAssistant) -> None:
+async def test_string(menuai: menuai) -> None:
     """Test a string."""
-    template_refresh = Template("no_template", hass)
+    template_refresh = Template("no_template", menuai)
 
     refresh_runs = []
 
@@ -3054,18 +3054,18 @@ async def test_string(hass: HomeAssistant) -> None:
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_refresh, None)], refresh_listener
+        menuai, [TrackTemplate(template_refresh, None)], refresh_listener
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == ["no_template"]
 
 
-async def test_track_template_result_refresh_cancel(hass: HomeAssistant) -> None:
+async def test_track_template_result_refresh_cancel(menuai: menuai) -> None:
     """Test cancelling and refreshing result."""
-    template_refresh = Template("{{states.switch.test.state == 'on' and now() }}", hass)
+    template_refresh = Template("{{states.switch.test.state == 'on' and now() }}", menuai)
 
     refresh_runs = []
 
@@ -3077,59 +3077,59 @@ async def test_track_template_result_refresh_cancel(hass: HomeAssistant) -> None
         refresh_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_refresh, None)], refresh_listener
+        menuai, [TrackTemplate(template_refresh, None)], refresh_listener
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("switch.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "off")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [False]
 
     assert len(refresh_runs) == 1
 
     info.async_refresh()
-    hass.states.async_set("switch.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "on")
+    await menuai.async_block_till_done()
 
     assert len(refresh_runs) == 2
     assert refresh_runs[0] != refresh_runs[1]
 
     info.async_remove()
-    hass.states.async_set("switch.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "off")
+    await menuai.async_block_till_done()
 
     assert len(refresh_runs) == 2
 
-    template_refresh = Template("{{ value }}", hass)
+    template_refresh = Template("{{ value }}", menuai)
     refresh_runs = []
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(template_refresh, {"value": "duck"})],
         refresh_listener,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert refresh_runs == ["duck"]
 
     info.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert refresh_runs == ["duck"]
 
 
 async def test_async_track_template_result_multiple_templates(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test tracking multiple templates."""
 
-    template_1 = Template("{{ states.switch.test.state == 'on' }}", hass)
-    template_2 = Template("{{ states.switch.test.state == 'on' }}", hass)
-    template_3 = Template("{{ states.switch.test.state == 'off' }}", hass)
+    template_1 = Template("{{ states.switch.test.state == 'on' }}", menuai)
+    template_2 = Template("{{ states.switch.test.state == 'on' }}", menuai)
+    template_3 = Template("{{ states.switch.test.state == 'off' }}", menuai)
     template_4 = Template(
-        "{{ states.binary_sensor | map(attribute='entity_id') | list }}", hass
+        "{{ states.binary_sensor | map(attribute='entity_id') | list }}", menuai
     )
 
     refresh_runs = []
@@ -3142,7 +3142,7 @@ async def test_async_track_template_result_multiple_templates(
         refresh_runs.append(updates)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_1, None),
             TrackTemplate(template_2, None),
@@ -3152,8 +3152,8 @@ async def test_async_track_template_result_multiple_templates(
         refresh_listener,
     )
 
-    hass.states.async_set("switch.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "on")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3164,8 +3164,8 @@ async def test_async_track_template_result_multiple_templates(
     ]
 
     refresh_runs = []
-    hass.states.async_set("switch.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "off")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3176,8 +3176,8 @@ async def test_async_track_template_result_multiple_templates(
     ]
 
     refresh_runs = []
-    hass.states.async_set("binary_sensor.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.test", "off")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [TrackTemplateResult(template_4, None, ["binary_sensor.test"])]
@@ -3185,16 +3185,16 @@ async def test_async_track_template_result_multiple_templates(
 
 
 async def test_async_track_template_result_multiple_templates_mixing_domain(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test tracking multiple templates when tracking entities and an entire domain."""
 
-    template_1 = Template("{{ states.switch.test.state == 'on' }}", hass)
-    template_2 = Template("{{ states.switch.test.state == 'on' }}", hass)
-    template_3 = Template("{{ states.switch.test.state == 'off' }}", hass)
+    template_1 = Template("{{ states.switch.test.state == 'on' }}", menuai)
+    template_2 = Template("{{ states.switch.test.state == 'on' }}", menuai)
+    template_3 = Template("{{ states.switch.test.state == 'off' }}", menuai)
     template_4 = Template(
         "{{ states.switch | sort(attribute='entity_id') | map(attribute='entity_id') | list }}",
-        hass,
+        menuai,
     )
 
     refresh_runs = []
@@ -3207,7 +3207,7 @@ async def test_async_track_template_result_multiple_templates_mixing_domain(
         refresh_runs.append(updates)
 
     async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_1, None),
             TrackTemplate(template_2, None),
@@ -3217,8 +3217,8 @@ async def test_async_track_template_result_multiple_templates_mixing_domain(
         refresh_listener,
     )
 
-    hass.states.async_set("switch.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "on")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3230,8 +3230,8 @@ async def test_async_track_template_result_multiple_templates_mixing_domain(
     ]
 
     refresh_runs = []
-    hass.states.async_set("switch.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "off")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3242,14 +3242,14 @@ async def test_async_track_template_result_multiple_templates_mixing_domain(
     ]
 
     refresh_runs = []
-    hass.states.async_set("binary_sensor.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.test", "off")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == []
 
     refresh_runs = []
-    hass.states.async_set("switch.new", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.new", "off")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3260,12 +3260,12 @@ async def test_async_track_template_result_multiple_templates_mixing_domain(
     ]
 
 
-async def test_track_template_with_time(hass: HomeAssistant) -> None:
+async def test_track_template_with_time(menuai: menuai) -> None:
     """Test tracking template with time."""
 
-    hass.states.async_set("switch.test", "on")
+    menuai.states.async_set("switch.test", "on")
     specific_runs = []
-    template_complex = Template("{{ states.switch.test.state and now() }}", hass)
+    template_complex = Template("{{ states.switch.test.state and now() }}", menuai)
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -3274,9 +3274,9 @@ async def test_track_template_with_time(hass: HomeAssistant) -> None:
         specific_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_complex, None)], specific_run_callback
+        menuai, [TrackTemplate(template_complex, None)], specific_run_callback
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert info.listeners == {
         "all": False,
@@ -3285,20 +3285,20 @@ async def test_track_template_with_time(hass: HomeAssistant) -> None:
         "time": True,
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     now = dt_util.utcnow()
-    async_fire_time_changed(hass, now + timedelta(seconds=61))
-    async_fire_time_changed(hass, now + timedelta(seconds=61 * 2))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now + timedelta(seconds=61))
+    async_fire_time_changed(menuai, now + timedelta(seconds=61 * 2))
+    await menuai.async_block_till_done()
     assert specific_runs[-1] != specific_runs[0]
     info.async_remove()
 
 
-async def test_track_template_with_time_default(hass: HomeAssistant) -> None:
+async def test_track_template_with_time_default(menuai: menuai) -> None:
     """Test tracking template with time."""
 
     specific_runs = []
-    template_complex = Template("{{ now() }}", hass)
+    template_complex = Template("{{ now() }}", menuai)
 
     def specific_run_callback(
         event: Event[EventStateChangedData] | None,
@@ -3307,9 +3307,9 @@ async def test_track_template_with_time_default(hass: HomeAssistant) -> None:
         specific_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_complex, None)], specific_run_callback
+        menuai, [TrackTemplate(template_complex, None)], specific_run_callback
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert info.listeners == {
         "all": False,
@@ -3318,30 +3318,30 @@ async def test_track_template_with_time_default(hass: HomeAssistant) -> None:
         "time": True,
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     now = dt_util.utcnow()
-    async_fire_time_changed(hass, now + timedelta(seconds=2))
-    async_fire_time_changed(hass, now + timedelta(seconds=4))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now + timedelta(seconds=2))
+    async_fire_time_changed(menuai, now + timedelta(seconds=4))
+    await menuai.async_block_till_done()
     assert len(specific_runs) < 2
-    async_fire_time_changed(hass, now + timedelta(minutes=2))
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, now + timedelta(minutes=4))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now + timedelta(minutes=2))
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, now + timedelta(minutes=4))
+    await menuai.async_block_till_done()
     assert len(specific_runs) >= 2
     assert specific_runs[-1] != specific_runs[0]
     info.async_remove()
 
 
 async def test_track_template_with_time_that_leaves_scope(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test tracking template with time."""
     now = dt_util.utcnow()
     test_time = datetime(now.year + 1, 5, 24, 11, 59, 1, 500000, tzinfo=dt_util.UTC)
     freezer.move_to(test_time)
 
-    hass.states.async_set("binary_sensor.washing_machine", "on")
+    menuai.states.async_set("binary_sensor.washing_machine", "on")
     specific_runs = []
     template_complex = Template(
         """
@@ -3351,7 +3351,7 @@ async def test_track_template_with_time_that_leaves_scope(
             {{ states.binary_sensor.washing_machine.last_updated }}
         {% endif %}
     """,
-        hass,
+        menuai,
     )
 
     def specific_run_callback(
@@ -3361,9 +3361,9 @@ async def test_track_template_with_time_that_leaves_scope(
         specific_runs.append(updates.pop().result)
 
     info = async_track_template_result(
-        hass, [TrackTemplate(template_complex, None)], specific_run_callback
+        menuai, [TrackTemplate(template_complex, None)], specific_run_callback
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert info.listeners == {
         "all": False,
@@ -3372,8 +3372,8 @@ async def test_track_template_with_time_that_leaves_scope(
         "time": True,
     }
 
-    hass.states.async_set("binary_sensor.washing_machine", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.washing_machine", "off")
+    await menuai.async_block_till_done()
 
     assert info.listeners == {
         "all": False,
@@ -3382,8 +3382,8 @@ async def test_track_template_with_time_that_leaves_scope(
         "time": False,
     }
 
-    hass.states.async_set("binary_sensor.washing_machine", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.washing_machine", "on")
+    await menuai.async_block_till_done()
 
     assert info.listeners == {
         "all": False,
@@ -3394,33 +3394,33 @@ async def test_track_template_with_time_that_leaves_scope(
 
     # Verify we do not update before the minute rolls over
     callback_count_before_time_change = len(specific_runs)
-    async_fire_time_changed(hass, test_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, test_time)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == callback_count_before_time_change
 
     new_time = test_time + timedelta(seconds=58)
     freezer.move_to(new_time)
-    async_fire_time_changed(hass, new_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, new_time)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == callback_count_before_time_change
 
     # Verify we do update on the next change of minute
     new_time = test_time + timedelta(seconds=59)
     freezer.move_to(new_time)
-    async_fire_time_changed(hass, new_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, new_time)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == callback_count_before_time_change + 1
 
     info.async_remove()
 
 
 async def test_async_track_template_result_multiple_templates_mixing_listeners(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test tracking multiple templates with mixing listener types."""
 
-    template_1 = Template("{{ states.switch.test.state == 'on' }}", hass)
-    template_2 = Template("{{ now() and True }}", hass)
+    template_1 = Template("{{ states.switch.test.state == 'on' }}", menuai)
+    template_2 = Template("{{ now() and True }}", menuai)
 
     refresh_runs = []
 
@@ -3439,7 +3439,7 @@ async def test_async_track_template_result_multiple_templates_mixing_listeners(
     freezer.move_to(time_that_will_not_match_right_away)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [
             TrackTemplate(template_1, None),
             TrackTemplate(template_2, None),
@@ -3453,8 +3453,8 @@ async def test_async_track_template_result_multiple_templates_mixing_listeners(
         "entities": {"switch.test"},
         "time": True,
     }
-    hass.states.async_set("switch.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "on")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3463,8 +3463,8 @@ async def test_async_track_template_result_multiple_templates_mixing_listeners(
     ]
 
     refresh_runs = []
-    hass.states.async_set("switch.test", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test", "off")
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3475,8 +3475,8 @@ async def test_async_track_template_result_multiple_templates_mixing_listeners(
     refresh_runs = []
     next_time = time_that_will_not_match_right_away + timedelta(hours=25)
     freezer.move_to(next_time)
-    async_fire_time_changed(hass, next_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, next_time)
+    await menuai.async_block_till_done()
 
     assert refresh_runs == [
         [
@@ -3487,7 +3487,7 @@ async def test_async_track_template_result_multiple_templates_mixing_listeners(
     info.async_remove()
 
 
-async def test_track_same_state_simple_no_trigger(hass: HomeAssistant) -> None:
+async def test_track_same_state_simple_no_trigger(menuai: menuai) -> None:
     """Test track_same_change with no trigger."""
     callback_runs = []
     period = timedelta(minutes=1)
@@ -3497,7 +3497,7 @@ async def test_track_same_state_simple_no_trigger(hass: HomeAssistant) -> None:
         callback_runs.append(1)
 
     async_track_same_state(
-        hass,
+        menuai,
         period,
         callback_run_callback,
         callback(lambda _, _2, to_s: to_s.state == "on"),
@@ -3505,23 +3505,23 @@ async def test_track_same_state_simple_no_trigger(hass: HomeAssistant) -> None:
     )
 
     # Adding state to state machine
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
     assert len(callback_runs) == 0
 
     # Change state on state machine
-    hass.states.async_set("light.Bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "off")
+    await menuai.async_block_till_done()
     assert len(callback_runs) == 0
 
     # change time to track and see if they trigger
     future = dt_util.utcnow() + period
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
     assert len(callback_runs) == 0
 
 
-async def test_track_same_state_simple_trigger_check_funct(hass: HomeAssistant) -> None:
+async def test_track_same_state_simple_trigger_check_funct(menuai: menuai) -> None:
     """Test track_same_change with trigger and check funct."""
     callback_runs = []
     check_func = []
@@ -3537,7 +3537,7 @@ async def test_track_same_state_simple_trigger_check_funct(hass: HomeAssistant) 
         return True
 
     async_track_same_state(
-        hass,
+        menuai,
         period,
         callback_run_callback,
         entity_ids="light.Bowl",
@@ -3545,52 +3545,52 @@ async def test_track_same_state_simple_trigger_check_funct(hass: HomeAssistant) 
     )
 
     # Adding state to state machine
-    hass.states.async_set("light.Bowl", "on")
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.Bowl", "on")
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(callback_runs) == 0
     assert check_func[-1][2].state == "on"
     assert check_func[-1][0] == "light.bowl"
 
     # change time to track and see if they trigger
     future = dt_util.utcnow() + period
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
     assert len(callback_runs) == 1
 
 
-async def test_track_time_interval(hass: HomeAssistant) -> None:
+async def test_track_time_interval(menuai: menuai) -> None:
     """Test tracking time interval."""
     specific_runs = []
 
     utc_now = dt_util.utcnow()
     unsub = async_track_time_interval(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         timedelta(seconds=10),
     )
 
-    async_fire_time_changed(hass, utc_now + timedelta(seconds=5))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utc_now + timedelta(seconds=5))
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
-    async_fire_time_changed(hass, utc_now + timedelta(seconds=13))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utc_now + timedelta(seconds=13))
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
-    async_fire_time_changed(hass, utc_now + timedelta(minutes=20))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utc_now + timedelta(minutes=20))
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     unsub()
 
-    async_fire_time_changed(hass, utc_now + timedelta(seconds=30))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utc_now + timedelta(seconds=30))
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
 
-async def test_track_time_interval_name(hass: HomeAssistant) -> None:
+async def test_track_time_interval_name(menuai: menuai) -> None:
     """Test tracking time interval name.
 
     This test is to ensure that when a name is passed to async_track_time_interval,
@@ -3599,31 +3599,31 @@ async def test_track_time_interval_name(hass: HomeAssistant) -> None:
     specific_runs = []
     unique_string = "xZ13"
     unsub = async_track_time_interval(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         timedelta(seconds=10),
         name=unique_string,
     )
-    scheduled = hass.loop._scheduled
+    scheduled = menuai.loop._scheduled
     assert any(handle for handle in scheduled if unique_string in str(handle))
     unsub()
 
     assert all(handle for handle in scheduled if unique_string not in str(handle))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_track_sunrise(hass: HomeAssistant) -> None:
+async def test_track_sunrise(menuai: menuai) -> None:
     """Test track the sunrise."""
     latitude = 32.87336
     longitude = 117.22743
 
     # Setup sun component
-    hass.config.latitude = latitude
-    hass.config.longitude = longitude
+    menuai.config.latitude = latitude
+    menuai.config.longitude = longitude
 
     location = LocationInfo(
-        latitude=hass.config.latitude, longitude=hass.config.longitude
+        latitude=menuai.config.latitude, longitude=menuai.config.longitude
     )
 
     # Get next sunrise/sunset
@@ -3642,31 +3642,31 @@ async def test_track_sunrise(hass: HomeAssistant) -> None:
     # Track sunrise
     runs = []
     with freeze_time(utc_now):
-        unsub = async_track_sunrise(hass, callback(lambda: runs.append(1)))
+        unsub = async_track_sunrise(menuai, callback(lambda: runs.append(1)))
 
     offset_runs = []
     offset = timedelta(minutes=30)
     with freeze_time(utc_now):
         unsub2 = async_track_sunrise(
-            hass, callback(lambda: offset_runs.append(1)), offset
+            menuai, callback(lambda: offset_runs.append(1)), offset
         )
 
     # run tests
     with freeze_time(next_rising - offset):
-        async_fire_time_changed(hass, next_rising - offset)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_rising - offset)
+        await menuai.async_block_till_done()
         assert len(runs) == 0
         assert len(offset_runs) == 0
 
     with freeze_time(next_rising):
-        async_fire_time_changed(hass, next_rising)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_rising)
+        await menuai.async_block_till_done()
         assert len(runs) == 1
         assert len(offset_runs) == 0
 
     with freeze_time(next_rising + offset):
-        async_fire_time_changed(hass, next_rising + offset)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_rising + offset)
+        await menuai.async_block_till_done()
         assert len(runs) == 1
         assert len(offset_runs) == 1
 
@@ -3674,20 +3674,20 @@ async def test_track_sunrise(hass: HomeAssistant) -> None:
     unsub2()
 
     with freeze_time(next_rising + offset):
-        async_fire_time_changed(hass, next_rising + offset)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_rising + offset)
+        await menuai.async_block_till_done()
         assert len(runs) == 1
         assert len(offset_runs) == 1
 
 
-async def test_track_sunrise_update_location(hass: HomeAssistant) -> None:
+async def test_track_sunrise_update_location(menuai: menuai) -> None:
     """Test track the sunrise."""
     # Setup sun component
-    hass.config.latitude = 32.87336
-    hass.config.longitude = 117.22743
+    menuai.config.latitude = 32.87336
+    menuai.config.longitude = 117.22743
 
     location = LocationInfo(
-        latitude=hass.config.latitude, longitude=hass.config.longitude
+        latitude=menuai.config.latitude, longitude=menuai.config.longitude
     )
 
     # Get next sunrise
@@ -3706,28 +3706,28 @@ async def test_track_sunrise_update_location(hass: HomeAssistant) -> None:
     # Track sunrise
     runs = []
     with freeze_time(utc_now):
-        unsub = async_track_sunrise(hass, callback(lambda: runs.append(1)))
+        unsub = async_track_sunrise(menuai, callback(lambda: runs.append(1)))
 
     # Mimic sunrise
     with freeze_time(next_rising):
-        async_fire_time_changed(hass, next_rising)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_rising)
+        await menuai.async_block_till_done()
         assert len(runs) == 1
 
     # Move!
     with freeze_time(utc_now):
-        await hass.config.async_update(latitude=40.755931, longitude=-73.984606)
-        await hass.async_block_till_done()
+        await menuai.config.async_update(latitude=40.755931, longitude=-73.984606)
+        await menuai.async_block_till_done()
 
     # update location for astral
     location = LocationInfo(
-        latitude=hass.config.latitude, longitude=hass.config.longitude
+        latitude=menuai.config.latitude, longitude=menuai.config.longitude
     )
 
     # Mimic sunrise
     with freeze_time(next_rising):
-        async_fire_time_changed(hass, next_rising)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_rising)
+        await menuai.async_block_till_done()
         # Did not increase
         assert len(runs) == 1
 
@@ -3743,14 +3743,14 @@ async def test_track_sunrise_update_location(hass: HomeAssistant) -> None:
 
     with freeze_time(next_rising):
         # Mimic sunrise at new location
-        async_fire_time_changed(hass, next_rising)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_rising)
+        await menuai.async_block_till_done()
         assert len(runs) == 2
 
     unsub()
 
 
-async def test_track_sunset(hass: HomeAssistant) -> None:
+async def test_track_sunset(menuai: menuai) -> None:
     """Test track the sunset."""
     latitude = 32.87336
     longitude = 117.22743
@@ -3758,8 +3758,8 @@ async def test_track_sunset(hass: HomeAssistant) -> None:
     location = LocationInfo(latitude=latitude, longitude=longitude)
 
     # Setup sun component
-    hass.config.latitude = latitude
-    hass.config.longitude = longitude
+    menuai.config.latitude = latitude
+    menuai.config.longitude = longitude
 
     # Get next sunrise/sunset
     utc_now = datetime(2014, 5, 24, 12, 0, 0, tzinfo=dt_util.UTC)
@@ -3777,31 +3777,31 @@ async def test_track_sunset(hass: HomeAssistant) -> None:
     # Track sunset
     runs = []
     with freeze_time(utc_now):
-        unsub = async_track_sunset(hass, callback(lambda: runs.append(1)))
+        unsub = async_track_sunset(menuai, callback(lambda: runs.append(1)))
 
     offset_runs = []
     offset = timedelta(minutes=30)
     with freeze_time(utc_now):
         unsub2 = async_track_sunset(
-            hass, callback(lambda: offset_runs.append(1)), offset
+            menuai, callback(lambda: offset_runs.append(1)), offset
         )
 
     # Run tests
     with freeze_time(next_setting - offset):
-        async_fire_time_changed(hass, next_setting - offset)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_setting - offset)
+        await menuai.async_block_till_done()
         assert len(runs) == 0
         assert len(offset_runs) == 0
 
     with freeze_time(next_setting):
-        async_fire_time_changed(hass, next_setting)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_setting)
+        await menuai.async_block_till_done()
         assert len(runs) == 1
         assert len(offset_runs) == 0
 
     with freeze_time(next_setting + offset):
-        async_fire_time_changed(hass, next_setting + offset)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_setting + offset)
+        await menuai.async_block_till_done()
         assert len(runs) == 1
         assert len(offset_runs) == 1
 
@@ -3809,14 +3809,14 @@ async def test_track_sunset(hass: HomeAssistant) -> None:
     unsub2()
 
     with freeze_time(next_setting + offset):
-        async_fire_time_changed(hass, next_setting + offset)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_setting + offset)
+        await menuai.async_block_till_done()
         assert len(runs) == 1
         assert len(offset_runs) == 1
 
 
 async def test_async_track_time_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test tracking time change."""
@@ -3832,18 +3832,18 @@ async def test_async_track_time_change(
     freezer.move_to(time_that_will_not_match_right_away)
 
     unsub = async_track_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: none_runs.append(x)),
     )
     unsub_utc = async_track_utc_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         second=[0, 30],
     )
     unsub_wildcard = async_track_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: wildcard_runs.append(x)),
         second="*",
@@ -3852,25 +3852,25 @@ async def test_async_track_time_change(
     )
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 1
     assert len(none_runs) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 0, 15, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 0, 15, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
     assert len(wildcard_runs) == 2
     assert len(none_runs) == 2
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 0, 30, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 0, 30, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
     assert len(wildcard_runs) == 3
     assert len(none_runs) == 3
@@ -3880,16 +3880,16 @@ async def test_async_track_time_change(
     unsub_wildcard()
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 0, 30, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 0, 30, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
     assert len(wildcard_runs) == 3
     assert len(none_runs) == 3
 
 
 async def test_periodic_task_minute(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test periodic tasks per minute."""
@@ -3903,7 +3903,7 @@ async def test_periodic_task_minute(
     freezer.move_to(time_that_will_not_match_right_away)
 
     unsub = async_track_utc_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         minute="/5",
@@ -3911,34 +3911,34 @@ async def test_periodic_task_minute(
     )
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 3, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 3, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 5, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 5, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     unsub()
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 5, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 5, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
 
 async def test_periodic_task_hour(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test periodic tasks per hour."""
@@ -3952,7 +3952,7 @@ async def test_periodic_task_hour(
     freezer.move_to(time_that_will_not_match_right_away)
 
     unsub = async_track_utc_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         hour="/2",
@@ -3961,45 +3961,45 @@ async def test_periodic_task_hour(
     )
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 23, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 23, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 25, 0, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 25, 0, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 25, 1, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 25, 1, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 25, 2, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 25, 2, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
 
     unsub()
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 25, 2, 0, 0, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 25, 2, 0, 0, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
 
 
-async def test_periodic_task_wrong_input(hass: HomeAssistant) -> None:
+async def test_periodic_task_wrong_input(menuai: menuai) -> None:
     """Test periodic tasks with wrong input."""
     specific_runs = []
 
@@ -4007,21 +4007,21 @@ async def test_periodic_task_wrong_input(hass: HomeAssistant) -> None:
 
     with pytest.raises(ValueError):
         async_track_utc_time_change(
-            hass,
+            menuai,
             # pylint: disable-next=unnecessary-lambda
             callback(lambda x: specific_runs.append(x)),
             hour="/two",
         )
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 2, 0, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 2, 0, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
 
 async def test_periodic_task_clock_rollback(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test periodic tasks with the time rolling backwards."""
     specific_runs = []
@@ -4033,7 +4033,7 @@ async def test_periodic_task_clock_rollback(
     freezer.move_to(time_that_will_not_match_right_away)
 
     unsub = async_track_utc_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         hour="/2",
@@ -4043,53 +4043,53 @@ async def test_periodic_task_clock_rollback(
 
     new_time = datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
     freezer.move_to(new_time)
-    async_fire_time_changed(hass, new_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, new_time)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     new_time = datetime(now.year + 1, 5, 24, 23, 0, 0, 999999, tzinfo=dt_util.UTC)
     freezer.move_to(new_time)
-    async_fire_time_changed(hass, new_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, new_time)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     new_time = datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
     freezer.move_to(new_time)
     async_fire_time_changed(
-        hass,
+        menuai,
         new_time,
         fire_all=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     new_time = datetime(now.year + 1, 5, 24, 0, 0, 0, 999999, tzinfo=dt_util.UTC)
     freezer.move_to(new_time)
     async_fire_time_changed(
-        hass,
+        menuai,
         new_time,
         fire_all=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     new_time = datetime(now.year + 1, 5, 25, 2, 0, 0, 999999, tzinfo=dt_util.UTC)
     freezer.move_to(new_time)
-    async_fire_time_changed(hass, new_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, new_time)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     unsub()
 
     new_time = datetime(now.year + 1, 5, 25, 2, 0, 0, 999999, tzinfo=dt_util.UTC)
     freezer.move_to(new_time)
-    async_fire_time_changed(hass, new_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, new_time)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
 
 async def test_periodic_task_duplicate_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test periodic tasks not triggering on duplicate time."""
@@ -4103,7 +4103,7 @@ async def test_periodic_task_duplicate_time(
     freezer.move_to(time_that_will_not_match_right_away)
 
     unsub = async_track_utc_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         hour="/2",
@@ -4112,21 +4112,21 @@ async def test_periodic_task_duplicate_time(
     )
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 22, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 25, 0, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 25, 0, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     unsub()
@@ -4135,10 +4135,10 @@ async def test_periodic_task_duplicate_time(
 # DST starts early morning March 28th 2021
 @pytest.mark.freeze_time("2021-03-28 01:28:00+01:00")
 async def test_periodic_task_entering_dst(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test periodic task behavior when entering dst."""
-    await hass.config.async_set_time_zone("Europe/Vienna")
+    await menuai.config.async_set_time_zone("Europe/Vienna")
     specific_runs = []
 
     today = date.today().isoformat()
@@ -4149,7 +4149,7 @@ async def test_periodic_task_entering_dst(
     assert now_local.utcoffset() != (now_local + timedelta(hours=2)).utcoffset()
 
     unsub = async_track_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         hour=2,
@@ -4158,24 +4158,24 @@ async def test_periodic_task_entering_dst(
     )
 
     freezer.move_to(f"{today} 01:50:00.999999+01:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
     # There was no 02:30 today, the event should not fire until tomorrow
     freezer.move_to(f"{today} 03:50:00.999999+02:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
     freezer.move_to(f"{tomorrow} 01:50:00.999999+02:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
     freezer.move_to(f"{tomorrow} 02:50:00.999999+02:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     unsub()
@@ -4184,13 +4184,13 @@ async def test_periodic_task_entering_dst(
 # DST starts early morning March 28th 2021
 @pytest.mark.freeze_time("2021-03-28 01:59:59+01:00")
 async def test_periodic_task_entering_dst_2(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test periodic task behavior when entering dst.
 
     This tests a task firing every second in the range 0..58 (not *:*:59)
     """
-    await hass.config.async_set_time_zone("Europe/Vienna")
+    await menuai.config.async_set_time_zone("Europe/Vienna")
     specific_runs = []
 
     today = date.today().isoformat()
@@ -4201,35 +4201,35 @@ async def test_periodic_task_entering_dst_2(
     assert now_local.utcoffset() != (now_local + timedelta(hours=2)).utcoffset()
 
     unsub = async_track_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         second=list(range(59)),
     )
 
     freezer.move_to(f"{today} 01:59:59.999999+01:00")
-    async_fire_time_changed_exact(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed_exact(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
     freezer.move_to(f"{today} 03:00:00.999999+02:00")
-    async_fire_time_changed_exact(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed_exact(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     freezer.move_to(f"{today} 03:00:01.999999+02:00")
-    async_fire_time_changed_exact(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed_exact(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     freezer.move_to(f"{tomorrow} 01:59:59.999999+02:00")
-    async_fire_time_changed_exact(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed_exact(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
 
     freezer.move_to(f"{tomorrow} 02:00:00.999999+02:00")
-    async_fire_time_changed_exact(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed_exact(menuai)
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 4
 
     unsub()
@@ -4238,10 +4238,10 @@ async def test_periodic_task_entering_dst_2(
 # DST ends early morning October 31st 2021
 @pytest.mark.freeze_time("2021-10-31 02:28:00+02:00")
 async def test_periodic_task_leaving_dst(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test periodic task behavior when leaving dst."""
-    await hass.config.async_set_time_zone("Europe/Vienna")
+    await menuai.config.async_set_time_zone("Europe/Vienna")
     specific_runs = []
 
     today = date.today().isoformat()
@@ -4252,7 +4252,7 @@ async def test_periodic_task_leaving_dst(
     assert now_local.utcoffset() != (now_local + timedelta(hours=1)).utcoffset()
 
     unsub = async_track_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         hour=2,
@@ -4262,51 +4262,51 @@ async def test_periodic_task_leaving_dst(
 
     # The task should not fire yet
     freezer.move_to(f"{today} 02:28:00.999999+02:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
     # The task should fire
     freezer.move_to(f"{today} 02:30:00.999999+02:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     # The task should not fire again
     freezer.move_to(f"{today} 02:55:00.999999+02:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     # DST has ended, the task should not fire yet
     freezer.move_to(f"{today} 02:15:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 1  # DST has ended
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     # The task should fire
     freezer.move_to(f"{today} 02:45:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     # The task should not fire again
     freezer.move_to(f"{today} 02:55:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     # The task should fire again the next day
     freezer.move_to(f"{tomorrow} 02:55:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
 
     unsub()
@@ -4315,10 +4315,10 @@ async def test_periodic_task_leaving_dst(
 # DST ends early morning October 31st 2021
 @pytest.mark.freeze_time("2021-10-31 02:28:00+02:00")
 async def test_periodic_task_leaving_dst_2(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test periodic task behavior when leaving dst."""
-    await hass.config.async_set_time_zone("Europe/Vienna")
+    await menuai.config.async_set_time_zone("Europe/Vienna")
     specific_runs = []
 
     today = date.today().isoformat()
@@ -4328,7 +4328,7 @@ async def test_periodic_task_leaving_dst_2(
     assert now_local.utcoffset() != (now_local + timedelta(hours=1)).utcoffset()
 
     unsub = async_track_time_change(
-        hass,
+        menuai,
         # pylint: disable-next=unnecessary-lambda
         callback(lambda x: specific_runs.append(x)),
         minute=30,
@@ -4337,50 +4337,50 @@ async def test_periodic_task_leaving_dst_2(
 
     # The task should not fire yet
     freezer.move_to(f"{today} 02:28:00.999999+02:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 0
 
     # The task should fire
     freezer.move_to(f"{today} 02:55:00.999999+02:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     # DST has ended, the task should not fire yet
     freezer.move_to(f"{today} 02:15:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 1
 
     # The task should fire
     freezer.move_to(f"{today} 02:45:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     # The task should not fire again
     freezer.move_to(f"{today} 02:55:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 2
 
     # The task should fire again the next hour
     freezer.move_to(f"{today} 03:55:00.999999+01:00")
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     assert dt_util.now().fold == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(specific_runs) == 3
 
     unsub()
 
 
-async def test_call_later(hass: HomeAssistant) -> None:
+async def test_call_later(menuai: menuai) -> None:
     """Test calling an action later."""
     future = asyncio.get_running_loop().create_future()
     delay = 5
@@ -4392,15 +4392,15 @@ async def test_call_later(hass: HomeAssistant) -> None:
         _current_delay = utcnow.timestamp() - schedule_utctime.timestamp()
         future.set_result(delay < _current_delay < (delay + delay_tolerance))
 
-    async_call_later(hass, delay, action)
+    async_call_later(menuai, delay, action)
 
-    async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=delay))
+    async_fire_time_changed_exact(menuai, dt_util.utcnow() + timedelta(seconds=delay))
 
     async with asyncio.timeout(delay + delay_tolerance):
         assert await future, "callback was called but the delay was wrong"
 
 
-async def test_async_call_later(hass: HomeAssistant) -> None:
+async def test_async_call_later(menuai: menuai) -> None:
     """Test calling an action later."""
     future = asyncio.get_running_loop().create_future()
     delay = 5
@@ -4412,9 +4412,9 @@ async def test_async_call_later(hass: HomeAssistant) -> None:
         _current_delay = utcnow.timestamp() - schedule_utctime.timestamp()
         future.set_result(delay < _current_delay < (delay + delay_tolerance))
 
-    remove = async_call_later(hass, delay, action)
+    remove = async_call_later(menuai, delay, action)
 
-    async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=delay))
+    async_fire_time_changed_exact(menuai, dt_util.utcnow() + timedelta(seconds=delay))
 
     async with asyncio.timeout(delay + delay_tolerance):
         assert await future, "callback was called but the delay was wrong"
@@ -4422,7 +4422,7 @@ async def test_async_call_later(hass: HomeAssistant) -> None:
     remove()
 
 
-async def test_async_call_later_timedelta(hass: HomeAssistant) -> None:
+async def test_async_call_later_timedelta(menuai: menuai) -> None:
     """Test calling an action later with a timedelta."""
     future = asyncio.get_running_loop().create_future()
     delay = 5
@@ -4434,9 +4434,9 @@ async def test_async_call_later_timedelta(hass: HomeAssistant) -> None:
         _current_delay = utcnow.timestamp() - schedule_utctime.timestamp()
         future.set_result(delay < _current_delay < (delay + delay_tolerance))
 
-    remove = async_call_later(hass, timedelta(seconds=delay), action)
+    remove = async_call_later(menuai, timedelta(seconds=delay), action)
 
-    async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=delay))
+    async_fire_time_changed_exact(menuai, dt_util.utcnow() + timedelta(seconds=delay))
 
     async with asyncio.timeout(delay + delay_tolerance):
         assert await future, "callback was called but the delay was wrong"
@@ -4444,7 +4444,7 @@ async def test_async_call_later_timedelta(hass: HomeAssistant) -> None:
     remove()
 
 
-async def test_async_call_later_cancel(hass: HomeAssistant) -> None:
+async def test_async_call_later_cancel(menuai: menuai) -> None:
     """Test canceling a call_later action."""
     future = asyncio.get_running_loop().create_future()
     delay = 0.25
@@ -4454,15 +4454,15 @@ async def test_async_call_later_cancel(hass: HomeAssistant) -> None:
     def action(now: datetime, /):
         future.set_result(False)
 
-    remove = async_call_later(hass, delay, action)
+    remove = async_call_later(menuai, delay, action)
     # fast forward time a bit..
     async_fire_time_changed_exact(
-        hass, dt_util.utcnow() + timedelta(seconds=delay - delay_tolerance)
+        menuai, dt_util.utcnow() + timedelta(seconds=delay - delay_tolerance)
     )
     # and remove before firing
     remove()
     # fast forward time beyond scheduled
-    async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=delay))
+    async_fire_time_changed_exact(menuai, dt_util.utcnow() + timedelta(seconds=delay))
 
     with contextlib.suppress(TimeoutError):
         async with asyncio.timeout(delay + delay_tolerance):
@@ -4470,7 +4470,7 @@ async def test_async_call_later_cancel(hass: HomeAssistant) -> None:
 
 
 async def test_track_state_change_event_chain_multple_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that adding a new state tracker inside a tracker does not fire right away."""
     tracker_called = []
@@ -4495,27 +4495,27 @@ async def test_track_state_change_event_chain_multple_entity(
 
         chained_tracker_unsub.append(
             async_track_state_change_event(
-                hass, ["light.bowl", "light.top"], chained_single_run_callback
+                menuai, ["light.bowl", "light.top"], chained_single_run_callback
             )
         )
 
     tracker_unsub.append(
         async_track_state_change_event(
-            hass, ["light.bowl", "light.top"], single_run_callback
+            menuai, ["light.bowl", "light.top"], single_run_callback
         )
     )
 
-    hass.states.async_set("light.bowl", "on")
-    hass.states.async_set("light.top", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on")
+    menuai.states.async_set("light.top", "on")
+    await menuai.async_block_till_done()
 
     assert len(tracker_called) == 2
     assert len(chained_tracker_called) == 1
     assert len(tracker_unsub) == 1
     assert len(chained_tracker_unsub) == 2
 
-    hass.states.async_set("light.bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "off")
+    await menuai.async_block_till_done()
 
     assert len(tracker_called) == 3
     assert len(chained_tracker_called) == 3
@@ -4524,7 +4524,7 @@ async def test_track_state_change_event_chain_multple_entity(
 
 
 async def test_track_state_change_event_chain_single_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that adding a new state tracker inside a tracker does not fire right away."""
     tracker_called = []
@@ -4549,24 +4549,24 @@ async def test_track_state_change_event_chain_single_entity(
 
         chained_tracker_unsub.append(
             async_track_state_change_event(
-                hass, "light.bowl", chained_single_run_callback
+                menuai, "light.bowl", chained_single_run_callback
             )
         )
 
     tracker_unsub.append(
-        async_track_state_change_event(hass, "light.bowl", single_run_callback)
+        async_track_state_change_event(menuai, "light.bowl", single_run_callback)
     )
 
-    hass.states.async_set("light.bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on")
+    await menuai.async_block_till_done()
 
     assert len(tracker_called) == 1
     assert len(chained_tracker_called) == 0
     assert len(tracker_unsub) == 1
     assert len(chained_tracker_unsub) == 1
 
-    hass.states.async_set("light.bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "off")
+    await menuai.async_block_till_done()
 
     assert len(tracker_called) == 2
     assert len(chained_tracker_called) == 1
@@ -4574,7 +4574,7 @@ async def test_track_state_change_event_chain_single_entity(
     assert len(chained_tracker_unsub) == 2
 
 
-async def test_track_point_in_utc_time_cancel(hass: HomeAssistant) -> None:
+async def test_track_point_in_utc_time_cancel(menuai: menuai) -> None:
     """Test cancel of async track point in time."""
 
     times = []
@@ -4589,16 +4589,16 @@ async def test_track_point_in_utc_time_cancel(hass: HomeAssistant) -> None:
         utc_now = dt_util.utcnow()
 
         with pytest.raises(TypeError):
-            track_point_in_utc_time("nothass", run_callback, utc_now)
+            track_point_in_utc_time("notmenuai", run_callback, utc_now)
 
         unsub1 = track_point_in_utc_time(
-            hass, run_callback, utc_now + timedelta(seconds=0.1)
+            menuai, run_callback, utc_now + timedelta(seconds=0.1)
         )
-        track_point_in_utc_time(hass, run_callback, utc_now + timedelta(seconds=0.1))
+        track_point_in_utc_time(menuai, run_callback, utc_now + timedelta(seconds=0.1))
 
         unsub1()
 
-    await hass.async_add_executor_job(_setup_listeners)
+    await menuai.async_add_executor_job(_setup_listeners)
 
     await asyncio.sleep(0.2)
 
@@ -4606,11 +4606,11 @@ async def test_track_point_in_utc_time_cancel(hass: HomeAssistant) -> None:
     assert times[0].tzinfo == dt_util.UTC
 
 
-async def test_async_track_point_in_time_cancel(hass: HomeAssistant) -> None:
+async def test_async_track_point_in_time_cancel(menuai: menuai) -> None:
     """Test cancel of async track point in time."""
 
     times = []
-    await hass.config.async_set_time_zone("US/Hawaii")
+    await menuai.config.async_set_time_zone("US/Hawaii")
     hst_tz = dt_util.get_time_zone("US/Hawaii")
 
     @ha.callback
@@ -4622,9 +4622,9 @@ async def test_async_track_point_in_time_cancel(hass: HomeAssistant) -> None:
     hst_now = utc_now.astimezone(hst_tz)
 
     unsub1 = async_track_point_in_time(
-        hass, run_callback, hst_now + timedelta(seconds=0.1)
+        menuai, run_callback, hst_now + timedelta(seconds=0.1)
     )
-    async_track_point_in_time(hass, run_callback, hst_now + timedelta(seconds=0.1))
+    async_track_point_in_time(menuai, run_callback, hst_now + timedelta(seconds=0.1))
 
     unsub1()
 
@@ -4635,7 +4635,7 @@ async def test_async_track_point_in_time_cancel(hass: HomeAssistant) -> None:
 
 
 async def test_async_track_point_in_time_cancel_in_job(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test cancel of async track point in time during job execution."""
 
@@ -4653,57 +4653,57 @@ async def test_async_track_point_in_time_cancel_in_job(
         times.append(x)
         unsub()
 
-    unsub = async_track_utc_time_change(hass, action, minute=0, second="*")
+    unsub = async_track_utc_time_change(menuai, action, minute=0, second="*")
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 12, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 12, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(times) == 1
 
     async_fire_time_changed(
-        hass, datetime(now.year + 1, 5, 24, 13, 0, 0, 999999, tzinfo=dt_util.UTC)
+        menuai, datetime(now.year + 1, 5, 24, 13, 0, 0, 999999, tzinfo=dt_util.UTC)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(times) == 1
 
 
-async def test_async_track_entity_registry_updated_event(hass: HomeAssistant) -> None:
+async def test_async_track_entity_registry_updated_event(menuai: menuai) -> None:
     """Test tracking entity registry updates for an entity_id."""
 
     entity_id = "switch.puppy_feeder"
     new_entity_id = "switch.dog_feeder"
     untracked_entity_id = "switch.kitty_feeder"
 
-    hass.states.async_set(entity_id, "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, "on")
+    await menuai.async_block_till_done()
     event_data = []
 
     @ha.callback
     def run_callback(event):
         event_data.append(event.data)
 
-    assert async_has_entity_registry_updated_listeners(hass) is False
+    assert async_has_entity_registry_updated_listeners(menuai) is False
 
     unsub1 = async_track_entity_registry_updated_event(
-        hass, entity_id, run_callback, job_type=ha.HassJobType.Callback
+        menuai, entity_id, run_callback, job_type=ha.menuaiJobType.Callback
     )
     unsub2 = async_track_entity_registry_updated_event(
-        hass, new_entity_id, run_callback
+        menuai, new_entity_id, run_callback
     )
 
-    assert async_has_entity_registry_updated_listeners(hass) is True
+    assert async_has_entity_registry_updated_listeners(menuai) is True
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED, {"action": "create", "entity_id": entity_id}
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED,
         {"action": "create", "entity_id": untracked_entity_id},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED,
         {
             "action": "update",
@@ -4712,22 +4712,22 @@ async def test_async_track_entity_registry_updated_event(hass: HomeAssistant) ->
             "changes": {},
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED, {"action": "remove", "entity_id": new_entity_id}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     unsub1()
     unsub2()
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED, {"action": "create", "entity_id": entity_id}
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED, {"action": "create", "entity_id": new_entity_id}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert event_data[0] == {"action": "create", "entity_id": "switch.puppy_feeder"}
     assert event_data[1] == {
@@ -4740,14 +4740,14 @@ async def test_async_track_entity_registry_updated_event(hass: HomeAssistant) ->
 
 
 async def test_async_track_entity_registry_updated_event_with_a_callback_that_throws(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test tracking entity registry updates for an entity_id when one callback throws."""
 
     entity_id = "switch.puppy_feeder"
 
-    hass.states.async_set(entity_id, "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, "on")
+    await menuai.async_block_till_done()
     event_data = []
 
     @ha.callback
@@ -4759,13 +4759,13 @@ async def test_async_track_entity_registry_updated_event_with_a_callback_that_th
         raise ValueError
 
     unsub1 = async_track_entity_registry_updated_event(
-        hass, entity_id, failing_callback
+        menuai, entity_id, failing_callback
     )
-    unsub2 = async_track_entity_registry_updated_event(hass, entity_id, run_callback)
-    hass.bus.async_fire(
+    unsub2 = async_track_entity_registry_updated_event(menuai, entity_id, run_callback)
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED, {"action": "create", "entity_id": entity_id}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     unsub1()
     unsub2()
 
@@ -4773,21 +4773,21 @@ async def test_async_track_entity_registry_updated_event_with_a_callback_that_th
 
 
 async def test_async_track_entity_registry_updated_event_with_empty_list(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_track_entity_registry_updated_event passing an empty list of entities."""
     unsub_single = async_track_entity_registry_updated_event(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
     unsub_single2 = async_track_entity_registry_updated_event(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
 
     unsub_single2()
     unsub_single()
 
 
-async def test_async_track_device_registry_updated_event(hass: HomeAssistant) -> None:
+async def test_async_track_device_registry_updated_event(menuai: menuai) -> None:
     """Test tracking device registry updates for an device_id."""
 
     device_id = "b92c0f06fbc911edacc9eea8ae14f866"
@@ -4806,53 +4806,53 @@ async def test_async_track_device_registry_updated_event(hass: HomeAssistant) ->
         multiple_event_data.append(event.data)
 
     unsub1 = async_track_device_registry_updated_event(
-        hass, device_id, single_device_id_callback
+        menuai, device_id, single_device_id_callback
     )
     unsub2 = async_track_device_registry_updated_event(
-        hass,
+        menuai,
         [device_id, device_id2],
         multiple_device_id_callback,
-        job_type=ha.HassJobType.Callback,
+        job_type=ha.menuaiJobType.Callback,
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_DEVICE_REGISTRY_UPDATED, {"action": "create", "device_id": device_id}
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED,
         {"action": "create", "device_id": untracked_device_id},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(single_event_data) == 1
     assert len(multiple_event_data) == 1
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_DEVICE_REGISTRY_UPDATED, {"action": "create", "device_id": device_id2}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(single_event_data) == 1
     assert len(multiple_event_data) == 2
 
     unsub1()
     unsub2()
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED, {"action": "create", "device_id": device_id}
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_ENTITY_REGISTRY_UPDATED, {"action": "create", "device_id": device_id2}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(single_event_data) == 1
     assert len(multiple_event_data) == 2
 
 
 async def test_async_track_device_registry_updated_event_with_empty_list(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_track_device_registry_updated_event passing an empty list of devices."""
     unsub_single = async_track_device_registry_updated_event(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
     unsub_single2 = async_track_device_registry_updated_event(
-        hass, [], ha.callback(lambda event: None)
+        menuai, [], ha.callback(lambda event: None)
     )
 
     unsub_single2()
@@ -4860,7 +4860,7 @@ async def test_async_track_device_registry_updated_event_with_empty_list(
 
 
 async def test_async_track_device_registry_updated_event_with_a_callback_that_throws(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test tracking device registry updates for an device when one callback throws."""
 
@@ -4877,13 +4877,13 @@ async def test_async_track_device_registry_updated_event_with_a_callback_that_th
         raise ValueError
 
     unsub1 = async_track_device_registry_updated_event(
-        hass, device_id, failing_callback
+        menuai, device_id, failing_callback
     )
-    unsub2 = async_track_device_registry_updated_event(hass, device_id, run_callback)
-    hass.bus.async_fire(
+    unsub2 = async_track_device_registry_updated_event(menuai, device_id, run_callback)
+    menuai.bus.async_fire(
         EVENT_DEVICE_REGISTRY_UPDATED, {"action": "create", "device_id": device_id}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     unsub1()
     unsub2()
 
@@ -4891,22 +4891,22 @@ async def test_async_track_device_registry_updated_event_with_a_callback_that_th
 
 
 async def test_track_state_change_deprecated(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test track_state_change is deprecated."""
     async_track_state_change(
-        hass, "light.Bowl", lambda entity_id, old_state, new_state: None, "on", "off"
+        menuai, "light.Bowl", lambda entity_id, old_state, new_state: None, "on", "off"
     )
 
     assert (
         "Detected code that calls `async_track_state_change` instead "
         "of `async_track_state_change_event` which is deprecated and "
-        "will be removed in Home Assistant 2025.5. Please report this issue"
+        "will be removed in MenuAI 2025.5. Please report this issue"
     ) in caplog.text
 
 
 async def test_track_point_in_time_repr(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test track point in time."""
 
@@ -4914,16 +4914,16 @@ async def test_track_point_in_time_repr(
     def _raise_exception(_):
         raise RuntimeError("something happened and its poorly described")
 
-    async_track_point_in_utc_time(hass, _raise_exception, dt_util.utcnow())
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_track_point_in_utc_time(menuai, _raise_exception, dt_util.utcnow())
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "Exception in callback _TrackPointUTCTime" in caplog.text
     assert "._raise_exception" in caplog.text
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
-async def test_async_track_state_report_event(hass: HomeAssistant) -> None:
+async def test_async_track_state_report_event(menuai: menuai) -> None:
     """Test async_track_state_report_event."""
     tracker_called: list[ha.State] = []
 
@@ -4933,56 +4933,56 @@ async def test_async_track_state_report_event(hass: HomeAssistant) -> None:
         tracker_called.append(new_state)
 
     unsub = async_track_state_report_event(
-        hass, ["light.bowl", "light.top"], single_run_callback
+        menuai, ["light.bowl", "light.top"], single_run_callback
     )
-    hass.states.async_set("light.bowl", "on")
-    hass.states.async_set("light.top", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on")
+    menuai.states.async_set("light.top", "on")
+    await menuai.async_block_till_done()
     assert len(tracker_called) == 0
-    hass.states.async_set("light.bowl", "on")
-    hass.states.async_set("light.top", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on")
+    menuai.states.async_set("light.top", "on")
+    await menuai.async_block_till_done()
     assert len(tracker_called) == 2
     unsub()
 
 
-async def test_async_track_template_no_hass_deprecated(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+async def test_async_track_template_no_menuai_deprecated(
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test async_track_template with a template without hass is deprecated."""
+    """Test async_track_template with a template without menuai is deprecated."""
     message = (
         "Detected code that calls async_track_template_result with template without "
-        "hass. This will stop working in Home Assistant 2025.10, please "
+        "menuai. This will stop working in MenuAI 2025.10, please "
         "report this issue"
     )
 
-    async_track_template(hass, Template("blah"), lambda x, y, z: None)
+    async_track_template(menuai, Template("blah"), lambda x, y, z: None)
     assert message in caplog.text
     caplog.clear()
 
-    async_track_template(hass, Template("blah", hass), lambda x, y, z: None)
+    async_track_template(menuai, Template("blah", menuai), lambda x, y, z: None)
     assert message not in caplog.text
     caplog.clear()
 
 
-async def test_async_track_template_result_no_hass_deprecated(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+async def test_async_track_template_result_no_menuai_deprecated(
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test async_track_template_result with a template without hass is deprecated."""
+    """Test async_track_template_result with a template without menuai is deprecated."""
     message = (
         "Detected code that calls async_track_template_result with template without "
-        "hass. This will stop working in Home Assistant 2025.10, please "
+        "menuai. This will stop working in MenuAI 2025.10, please "
         "report this issue"
     )
 
     async_track_template_result(
-        hass, [TrackTemplate(Template("blah"), None)], lambda x, y, z: None
+        menuai, [TrackTemplate(Template("blah"), None)], lambda x, y, z: None
     )
     assert message in caplog.text
     caplog.clear()
 
     async_track_template_result(
-        hass, [TrackTemplate(Template("blah", hass), None)], lambda x, y, z: None
+        menuai, [TrackTemplate(Template("blah", menuai), None)], lambda x, y, z: None
     )
     assert message not in caplog.text
     caplog.clear()

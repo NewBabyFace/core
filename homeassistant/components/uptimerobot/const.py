@@ -6,7 +6,7 @@ from datetime import timedelta
 from logging import Logger, getLogger
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 LOGGER: Logger = getLogger(__package__)
 

@@ -6,8 +6,8 @@ from unittest.mock import patch
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components.islamic_prayer_times.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.islamic_prayer_times.const import DOMAIN
+from menuai.core import menuai
 
 from . import NOW, PRAYER_TIMES, PRAYER_TIMES_TOMORROW, PRAYER_TIMES_YESTERDAY
 
@@ -15,9 +15,9 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture(autouse=True)
-async def set_utc(hass: HomeAssistant) -> None:
+async def set_utc(menuai: menuai) -> None:
     """Set timezone to UTC."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
 
 
 @pytest.mark.parametrize(
@@ -48,7 +48,7 @@ async def set_utc(hass: HomeAssistant) -> None:
     ],
 )
 async def test_islamic_prayer_times_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     key: str,
     sensor_name: str,
     offset: timedelta,
@@ -56,7 +56,7 @@ async def test_islamic_prayer_times_sensors(
 ) -> None:
     """Test minimum Islamic prayer times configuration."""
     entry = MockConfigEntry(domain=DOMAIN, data={})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with (
         patch(
             "prayer_times_calculator_offline.PrayerTimesCalculator.fetch_prayer_times",
@@ -64,6 +64,6 @@ async def test_islamic_prayer_times_sensors(
         ),
         freeze_time(NOW + offset),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-        assert hass.states.get(sensor_name).state == prayer_times[key]
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
+        assert menuai.states.get(sensor_name).state == prayer_times[key]

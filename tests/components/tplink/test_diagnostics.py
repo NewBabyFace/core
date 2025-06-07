@@ -5,8 +5,8 @@ import json
 from kasa import Device
 import pytest
 
-from homeassistant.components.tplink.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.tplink.const import DOMAIN
+from menuai.core import menuai
 
 from . import _mocked_device, initialize_config_entry_for_device
 
@@ -33,20 +33,20 @@ from tests.typing import ClientSessionGenerator
     ],
 )
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mocked_dev: Device,
     fixture_file: str,
     sysinfo_vars: list[str],
     expected_oui: str | None,
 ) -> None:
     """Test diagnostics for config entry."""
-    diagnostics_data = json.loads(await async_load_fixture(hass, fixture_file, DOMAIN))
+    diagnostics_data = json.loads(await async_load_fixture(menuai, fixture_file, DOMAIN))
 
     mocked_dev.internal_state = diagnostics_data["device_last_response"]
 
-    config_entry = await initialize_config_entry_for_device(hass, mocked_dev)
-    result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    config_entry = await initialize_config_entry_for_device(menuai, mocked_dev)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert isinstance(result, dict)
     assert "device_last_response" in result

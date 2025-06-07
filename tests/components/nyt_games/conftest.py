@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 from nyt_games.models import ConnectionsStats, WordleStats
 import pytest
 
-from homeassistant.components.nyt_games.const import DOMAIN
-from homeassistant.const import CONF_TOKEN
+from menuai.components.nyt_games.const import DOMAIN
+from menuai.const import CONF_TOKEN
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry, load_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.nyt_games.async_setup_entry",
+        "menuai.components.nyt_games.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -27,11 +27,11 @@ def mock_nyt_games_client() -> Generator[AsyncMock]:
     """Mock an NYTGames client."""
     with (
         patch(
-            "homeassistant.components.nyt_games.NYTGamesClient",
+            "menuai.components.nyt_games.NYTGamesClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.nyt_games.config_flow.NYTGamesClient",
+            "menuai.components.nyt_games.config_flow.NYTGamesClient",
             new=mock_client,
         ),
     ):

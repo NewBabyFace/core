@@ -9,8 +9,8 @@ import pytest
 from zeep import Client
 from zeep.transports import Transport
 
-from homeassistant.components.onvif import models, parsers
-from homeassistant.core import HomeAssistant
+from menuai.components.onvif import models, parsers
+from menuai.core import menuai
 
 TEST_UID = "test-unique-id"
 
@@ -50,7 +50,7 @@ async def get_event(notification_data: dict) -> models.Event:
     return await parser(TEST_UID, notif_msg)
 
 
-async def test_line_detector_crossed(hass: HomeAssistant) -> None:
+async def test_line_detector_crossed(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/LineDetector/Crossed."""
     event = await get_event(
         {
@@ -120,7 +120,7 @@ async def test_line_detector_crossed(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_line_crossed(hass: HomeAssistant) -> None:
+async def test_tapo_line_crossed(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/CellMotionDetector/LineCross."""
     event = await get_event(
         {
@@ -196,7 +196,7 @@ async def test_tapo_line_crossed(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_tpsmartevent_vehicle(hass: HomeAssistant) -> None:
+async def test_tapo_tpsmartevent_vehicle(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/TPSmartEventDetector/TPSmartEvent - vehicle."""
     event = await get_event(
         {
@@ -275,7 +275,7 @@ async def test_tapo_tpsmartevent_vehicle(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_cellmotiondetector_vehicle(hass: HomeAssistant) -> None:
+async def test_tapo_cellmotiondetector_vehicle(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/CellMotionDetector/TpSmartEvent - vehicle."""
     event = await get_event(
         {
@@ -351,7 +351,7 @@ async def test_tapo_cellmotiondetector_vehicle(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_tpsmartevent_person(hass: HomeAssistant) -> None:
+async def test_tapo_tpsmartevent_person(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/TPSmartEventDetector/TPSmartEvent - person."""
     event = await get_event(
         {
@@ -427,7 +427,7 @@ async def test_tapo_tpsmartevent_person(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_tpsmartevent_pet(hass: HomeAssistant) -> None:
+async def test_tapo_tpsmartevent_pet(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/TPSmartEventDetector/TPSmartEvent - pet."""
     event = await get_event(
         {
@@ -503,7 +503,7 @@ async def test_tapo_tpsmartevent_pet(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_cellmotiondetector_person(hass: HomeAssistant) -> None:
+async def test_tapo_cellmotiondetector_person(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/CellMotionDetector/People - person."""
     event = await get_event(
         {
@@ -579,7 +579,7 @@ async def test_tapo_cellmotiondetector_person(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_tamper(hass: HomeAssistant) -> None:
+async def test_tapo_tamper(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/CellMotionDetector/Tamper - tamper."""
     event = await get_event(
         {
@@ -655,7 +655,7 @@ async def test_tapo_tamper(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_intrusion(hass: HomeAssistant) -> None:
+async def test_tapo_intrusion(menuai: menuai) -> None:
     """Tests tns1:RuleEngine/CellMotionDetector/Intrusion - intrusion."""
     event = await get_event(
         {
@@ -731,7 +731,7 @@ async def test_tapo_intrusion(hass: HomeAssistant) -> None:
     )
 
 
-async def test_tapo_missing_attributes(hass: HomeAssistant) -> None:
+async def test_tapo_missing_attributes(menuai: menuai) -> None:
     """Tests async_parse_tplink_detector with missing fields."""
     with pytest.raises(AttributeError, match="SimpleItem"):
         await get_event(
@@ -753,7 +753,7 @@ async def test_tapo_missing_attributes(hass: HomeAssistant) -> None:
         )
 
 
-async def test_tapo_unknown_type(hass: HomeAssistant) -> None:
+async def test_tapo_unknown_type(menuai: menuai) -> None:
     """Tests async_parse_tplink_detector with unknown event type."""
     event = await get_event(
         {
@@ -791,7 +791,7 @@ async def test_tapo_unknown_type(hass: HomeAssistant) -> None:
     assert event is None
 
 
-async def test_reolink_package(hass: HomeAssistant) -> None:
+async def test_reolink_package(menuai: menuai) -> None:
     """Tests reolink package event."""
     event = await get_event(
         {
@@ -836,7 +836,7 @@ async def test_reolink_package(hass: HomeAssistant) -> None:
     assert event.uid == (f"{TEST_UID}_tns1:RuleEngine/MyRuleDetector/Package_000")
 
 
-async def test_hikvision_alarm(hass: HomeAssistant) -> None:
+async def test_hikvision_alarm(menuai: menuai) -> None:
     """Tests hikvision camera alarm event."""
     event = await get_event(
         {

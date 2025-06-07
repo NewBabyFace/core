@@ -5,15 +5,15 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import cast
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_MANUFACTURER,
     ATTR_MODEL,
     ATTR_SERIAL_NUMBER,
     ATTR_SW_VERSION,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import (
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )

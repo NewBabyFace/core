@@ -9,9 +9,9 @@ from pytrydan import Trydan
 from pytrydan.exceptions import TrydanError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import DOMAIN
 
@@ -37,7 +37,7 @@ class V2CConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             evse = Trydan(
                 user_input[CONF_HOST],
-                client=get_async_client(self.hass, verify_ssl=False),
+                client=get_async_client(self.menuai, verify_ssl=False),
             )
 
             try:

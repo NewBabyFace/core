@@ -14,14 +14,14 @@ from tesla_fleet_api.exceptions import (
 from tesla_fleet_api.teslemetry import Teslemetry
 from teslemetry_stream import TeslemetryStream
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, LOGGER
 from .coordinator import (
@@ -54,17 +54,17 @@ type TeslemetryConfigEntry = ConfigEntry[TeslemetryData]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Telemetry integration."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TeslemetryConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TeslemetryConfigEntry) -> bool:
     """Set up Teslemetry config."""
 
     access_token = entry.data[CONF_ACCESS_TOKEN]
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     # Create API connection
     teslemetry = Teslemetry(
@@ -88,7 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslemetryConfigEntry) -
     vehicle_metadata = calls[0]["vehicles"]
     products = calls[1]["response"]
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     # Create array of classes
     vehicles: list[TeslemetryVehicleData] = []
@@ -107,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslemetryConfigEntry) -
             product.pop("cached_data", None)
             vin = product["vin"]
             api = teslemetry.vehicles.create(vin)
-            coordinator = TeslemetryVehicleDataCoordinator(hass, entry, api, product)
+            coordinator = TeslemetryVehicleDataCoordinator(menuai, entry, api, product)
             device = DeviceInfo(
                 identifiers={(DOMAIN, vin)},
                 manufacturer="Tesla",
@@ -185,16 +185,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslemetryConfigEntry) -
                     api=api,
                     live_coordinator=(
                         TeslemetryEnergySiteLiveCoordinator(
-                            hass, entry, api, live_status
+                            menuai, entry, api, live_status
                         )
                         if isinstance(live_status, dict)
                         else None
                     ),
                     info_coordinator=TeslemetryEnergySiteInfoCoordinator(
-                        hass, entry, api, product
+                        menuai, entry, api, product
                     ),
                     history_coordinator=(
-                        TeslemetryEnergyHistoryCoordinator(hass, entry, api)
+                        TeslemetryEnergyHistoryCoordinator(menuai, entry, api)
                         if powerwall
                         else None
                     ),
@@ -205,7 +205,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslemetryConfigEntry) -
 
     # Run all first refreshes
     await asyncio.gather(
-        *(async_setup_stream(hass, entry, vehicle) for vehicle in vehicles),
+        *(async_setup_stream(menuai, entry, vehicle) for vehicle in vehicles),
         *(
             vehicle.coordinator.async_config_entry_first_refresh()
             for vehicle in vehicles
@@ -242,21 +242,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslemetryConfigEntry) -
 
     # Setup Platforms
     entry.runtime_data = TeslemetryData(vehicles, energysites, scopes, stream)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     if stream:
-        entry.async_create_background_task(hass, stream.listen(), "Teslemetry Stream")
+        entry.async_create_background_task(menuai, stream.listen(), "Teslemetry Stream")
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TeslemetryConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TeslemetryConfigEntry) -> bool:
     """Unload Teslemetry Config."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: TeslemetryConfigEntry
+    menuai: menuai, config_entry: TeslemetryConfigEntry
 ) -> bool:
     """Migrate config entry."""
     if config_entry.version > 1:
@@ -265,7 +265,7 @@ async def async_migrate_entry(
     if config_entry.version == 1 and config_entry.minor_version < 2:
         # Add unique_id to existing entry
         teslemetry = Teslemetry(
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             access_token=config_entry.data[CONF_ACCESS_TOKEN],
         )
         try:
@@ -274,7 +274,7 @@ async def async_migrate_entry(
             LOGGER.error(e.message)
             return False
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, unique_id=metadata["uid"], version=1, minor_version=2
         )
     return True
@@ -297,13 +297,13 @@ def create_handle_vehicle_stream(vin: str, coordinator) -> Callable[[dict], None
 
 
 async def async_setup_stream(
-    hass: HomeAssistant, entry: TeslemetryConfigEntry, vehicle: TeslemetryVehicleData
+    menuai: menuai, entry: TeslemetryConfigEntry, vehicle: TeslemetryVehicleData
 ):
     """Set up the stream for a vehicle."""
 
     await vehicle.stream_vehicle.get_config()
     entry.async_create_background_task(
-        hass,
+        menuai,
         vehicle.stream_vehicle.prefer_typed(True),
         f"Prefer typed for {vehicle.vin}",
     )

@@ -11,8 +11,8 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.recorder import get_instance, history
-from homeassistant.const import (
+from menuai.components.recorder import get_instance, history
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_SENSORS,
     LIGHT_LUX,
@@ -24,20 +24,20 @@ from homeassistant.const import (
     UnitOfConductivity,
     UnitOfTemperature,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_DICT_OF_UNITS_OF_MEASUREMENT,
@@ -113,9 +113,9 @@ PLANT_SCHEMA = vol.Schema(
 CONFIG_SCHEMA = vol.Schema({DOMAIN: {cv.string: PLANT_SCHEMA}}, extra=vol.ALLOW_EXTRA)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Plant component."""
-    component = EntityComponent[Plant](_LOGGER, DOMAIN, hass)
+    component = EntityComponent[Plant](_LOGGER, DOMAIN, menuai)
 
     entities = []
     for plant_name, plant_config in config[DOMAIN].items():
@@ -230,7 +230,7 @@ class Plant(Entity):
                 self._brightness, new_state.last_updated
             )
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unknown reading from sensor {entity_id}: {value}"
             )
         if ATTR_UNIT_OF_MEASUREMENT in new_state.attributes:
@@ -285,21 +285,21 @@ class Plant(Entity):
                 return f"{sensor_name} high"
         return None
 
-    async def async_added_to_hass(self):
-        """After being added to hass, load from history."""
-        if "recorder" in self.hass.config.components:
+    async def async_added_to_menuai(self):
+        """After being added to menuai, load from history."""
+        if "recorder" in self.menuai.config.components:
             # only use the database if it's configured
-            await get_instance(self.hass).async_add_executor_job(
+            await get_instance(self.menuai).async_add_executor_job(
                 self._load_history_from_db
             )
             self.async_write_ha_state()
 
         async_track_state_change_event(
-            self.hass, list(self._sensormap), self._state_changed_event
+            self.menuai, list(self._sensormap), self._state_changed_event
         )
 
         for entity_id in self._sensormap:
-            if (state := self.hass.states.get(entity_id)) is not None:
+            if (state := self.menuai.states.get(entity_id)) is not None:
                 self.state_changed(entity_id, state)
 
     def _load_history_from_db(self):
@@ -319,7 +319,7 @@ class Plant(Entity):
         _LOGGER.debug("Initializing values for %s from the database", self._name)
         lower_entity_id = entity_id.lower()
         history_list = history.state_changes_during_period(
-            self.hass,
+            self.menuai,
             start_date,
             entity_id=lower_entity_id,
             no_attributes=True,

@@ -3,10 +3,10 @@
 from pyegps import PowerStripUSB, get_device
 from pyegps.exceptions import MissingLibrary, UsbError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError, ConfigEntryNotReady
 
 from .const import CONF_DEVICE_API_ID
 
@@ -15,7 +15,7 @@ PLATFORMS = [Platform.SWITCH]
 type EnergenieConfigEntry = ConfigEntry[PowerStripUSB]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EnergenieConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EnergenieConfigEntry) -> bool:
     """Set up Energenie Power Sockets."""
     try:
         powerstrip: PowerStripUSB | None = get_device(entry.data[CONF_DEVICE_API_ID])
@@ -30,11 +30,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnergenieConfigEntry) ->
 
     entry.runtime_data = powerstrip
     entry.async_on_unload(powerstrip.release)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EnergenieConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EnergenieConfigEntry) -> bool:
     """Unload config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

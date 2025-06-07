@@ -2,7 +2,7 @@
 
 import json
 
-from homeassistant.components.homematicip_cloud.helpers import is_error_response
+from menuai.components.homematicip_cloud.helpers import is_error_response
 
 
 async def test_is_error_response() -> None:

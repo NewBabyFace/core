@@ -9,9 +9,9 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -19,9 +19,9 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import async_fire_time_changed, snapshot_platform
 
@@ -32,24 +32,24 @@ from tests.common import async_fire_time_changed, snapshot_platform
     [[Platform.SWITCH]],
 )
 async def test_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Sensibo switch."""
-    await snapshot_platform(hass, entity_registry, snapshot, load_int.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, load_int.entry_id)
 
 
 async def test_switch_timer(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo switch timer."""
 
-    state = hass.states.get("switch.hallway_timer")
+    state = menuai.states.get("switch.hallway_timer")
     assert state.state == STATE_OFF
     assert state.attributes["id"] is None
     assert state.attributes["turn_on"] is None
@@ -59,7 +59,7 @@ async def test_switch_timer(
         "result": {"id": "SzTGE4oZ4D"},
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -77,10 +77,10 @@ async def test_switch_timer(
     ].timer_state_on = False
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.hallway_timer")
+    state = menuai.states.get("switch.hallway_timer")
     assert state.state == STATE_ON
     assert state.attributes["id"] == "SzTGE4oZ4D"
     assert state.attributes["turn_on"] is False
@@ -90,7 +90,7 @@ async def test_switch_timer(
         "result": {"id": "SzTGE4oZ4D"},
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -102,27 +102,27 @@ async def test_switch_timer(
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].timer_on = False
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.hallway_timer")
+    state = menuai.states.get("switch.hallway_timer")
     assert state.state == STATE_OFF
 
 
 async def test_switch_pure_boost(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo switch pure boost."""
 
-    state = hass.states.get("switch.kitchen_pure_boost")
+    state = menuai.states.get("switch.kitchen_pure_boost")
     assert state.state == STATE_OFF
 
     mock_client.async_set_pureboost.return_value = {"status": "success"}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -139,13 +139,13 @@ async def test_switch_pure_boost(
     ].pure_measure_integration = None
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.kitchen_pure_boost")
+    state = menuai.states.get("switch.kitchen_pure_boost")
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -159,26 +159,26 @@ async def test_switch_pure_boost(
     ].pure_boost_enabled = False
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.kitchen_pure_boost")
+    state = menuai.states.get("switch.kitchen_pure_boost")
     assert state.state == STATE_OFF
 
 
 async def test_switch_command_failure(
-    hass: HomeAssistant, load_int: ConfigEntry, mock_client: MagicMock
+    menuai: menuai, load_int: ConfigEntry, mock_client: MagicMock
 ) -> None:
     """Test the Sensibo switch fails commands."""
 
-    state = hass.states.get("switch.hallway_timer")
+    state = menuai.states.get("switch.hallway_timer")
 
     mock_client.async_set_timer.return_value = {"status": "failure"}
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {
@@ -190,9 +190,9 @@ async def test_switch_command_failure(
     mock_client.async_del_timer.return_value = {"status": "failure"}
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {
@@ -203,19 +203,19 @@ async def test_switch_command_failure(
 
 
 async def test_switch_climate_react(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo switch for climate react."""
 
-    state = hass.states.get("switch.hallway_climate_react")
+    state = menuai.states.get("switch.hallway_climate_react")
     assert state.state == STATE_OFF
 
     mock_client.async_enable_climate_react.return_value = {"status": "success"}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -227,13 +227,13 @@ async def test_switch_climate_react(
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].smart_on = True
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.hallway_climate_react")
+    state = menuai.states.get("switch.hallway_climate_react")
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -245,15 +245,15 @@ async def test_switch_climate_react(
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].smart_on = False
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.hallway_climate_react")
+    state = menuai.states.get("switch.hallway_climate_react")
     assert state.state == STATE_OFF
 
 
 async def test_switch_climate_react_no_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -265,14 +265,14 @@ async def test_switch_climate_react_no_data(
     ].smart_type = None
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.hallway_climate_react")
+    state = menuai.states.get("switch.hallway_climate_react")
     assert state.state == STATE_OFF
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {

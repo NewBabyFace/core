@@ -6,17 +6,17 @@ from pypjlink import MUTE_AUDIO, Projector
 from pypjlink.projector import ProjectorError
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_ENCODING, DEFAULT_ENCODING, DEFAULT_PORT, DOMAIN
 
@@ -34,7 +34,7 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -46,16 +46,16 @@ def setup_platform(
     encoding = config.get(CONF_ENCODING)
     password = config.get(CONF_PASSWORD)
 
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
-    hass_data = hass.data[DOMAIN]
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {}
+    menuai_data = menuai.data[DOMAIN]
 
     device_label = f"{host}:{port}"
-    if device_label in hass_data:
+    if device_label in menuai_data:
         return
 
     device = PjLinkDevice(host, port, name, encoding, password)
-    hass_data[device_label] = device
+    menuai_data[device_label] = device
     add_entities([device], True)
 
 

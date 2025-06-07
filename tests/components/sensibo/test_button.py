@@ -10,19 +10,19 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed, snapshot_platform
 
@@ -34,14 +34,14 @@ from tests.common import async_fire_time_changed, snapshot_platform
     [[Platform.BUTTON]],
 )
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Sensibo button."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, load_int.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, load_int.entry_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -50,16 +50,16 @@ async def test_button(
     [[Platform.BINARY_SENSOR, Platform.BUTTON, Platform.SENSOR]],
 )
 async def test_button_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo button press."""
 
-    state_button = hass.states.get("button.hallway_reset_filter")
-    state_filter_clean = hass.states.get("binary_sensor.hallway_filter_clean_required")
-    state_filter_last_reset = hass.states.get("sensor.hallway_filter_last_reset")
+    state_button = menuai.states.get("button.hallway_reset_filter")
+    state_filter_clean = menuai.states.get("binary_sensor.hallway_filter_clean_required")
+    state_filter_last_reset = menuai.states.get("sensor.hallway_filter_last_reset")
 
     assert state_button.state is STATE_UNKNOWN
     assert state_filter_clean.state is STATE_ON
@@ -72,7 +72,7 @@ async def test_button_update(
 
     mock_client.async_reset_filter.return_value = {"status": "success"}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {
@@ -89,32 +89,32 @@ async def test_button_update(
     ].filter_last_reset = today
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state_button = hass.states.get("button.hallway_reset_filter")
-    state_filter_clean = hass.states.get("binary_sensor.hallway_filter_clean_required")
-    state_filter_last_reset = hass.states.get("sensor.hallway_filter_last_reset")
+    state_button = menuai.states.get("button.hallway_reset_filter")
+    state_filter_clean = menuai.states.get("binary_sensor.hallway_filter_clean_required")
+    state_filter_last_reset = menuai.states.get("sensor.hallway_filter_last_reset")
     assert state_button.state == today_str
     assert state_filter_clean.state is STATE_OFF
     assert state_filter_last_reset.state == today_str
 
 
 async def test_button_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
 ) -> None:
     """Test the Sensibo button failure."""
 
-    state = hass.states.get("button.hallway_reset_filter")
+    state = menuai.states.get("button.hallway_reset_filter")
 
     mock_client.async_reset_filter.return_value = {"status": "failure"}
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {

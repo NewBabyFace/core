@@ -1,6 +1,6 @@
 """The telegram component."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "telegram"
 PLATFORMS = [Platform.NOTIFY]

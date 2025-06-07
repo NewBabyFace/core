@@ -3,16 +3,16 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
-from homeassistant.components.wsdot.sensor import (
+from menuai.components.wsdot.sensor import (
     CONF_API_KEY,
     CONF_ID,
     CONF_NAME,
     CONF_TRAVEL_TIMES,
     DOMAIN,
 )
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_PLATFORM
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 config = {
     CONF_API_KEY: "foo",
@@ -21,14 +21,14 @@ config = {
 
 
 async def test_setup_with_config(
-    hass: HomeAssistant, mock_travel_time: AsyncMock
+    menuai: menuai, mock_travel_time: AsyncMock
 ) -> None:
     """Test the platform setup with configuration."""
     assert await async_setup_component(
-        hass, "sensor", {"sensor": [{CONF_PLATFORM: DOMAIN, **config}]}
+        menuai, "sensor", {"sensor": [{CONF_PLATFORM: DOMAIN, **config}]}
     )
 
-    state = hass.states.get("sensor.i90_eb")
+    state = menuai.states.get("sensor.i90_eb")
     assert state is not None
     assert state.name == "I90 EB"
     assert state.state == "11"

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from aioqsw.const import API_ERROR_CODE, API_ERROR_MESSAGE, API_RESULT, API_VERSION
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_BACKUP,
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
@@ -12,8 +12,8 @@ from homeassistant.components.update import (
     DOMAIN as UPDATE_DOMAIN,
     SERVICE_INSTALL,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from .util import (
     FIRMWARE_INFO_MOCK,
@@ -29,12 +29,12 @@ FIRMWARE_UPDATE_LIVE_MOCK = {
 }
 
 
-async def test_qnap_qsw_update(hass: HomeAssistant) -> None:
+async def test_qnap_qsw_update(menuai: menuai) -> None:
     """Test creation of update entities."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    update = hass.states.get("update.qsw_m408_4c_firmware")
+    update = menuai.states.get("update.qsw_m408_4c_firmware")
     assert update is not None
     assert update.state == STATE_ON
     assert (
@@ -49,19 +49,19 @@ async def test_qnap_qsw_update(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_firmware_update_check",
+            "menuai.components.qnap_qsw.QnapQswApi.get_firmware_update_check",
             return_value=FIRMWARE_UPDATE_CHECK_MOCK,
         ) as mock_firmware_update_check,
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_users_verification",
+            "menuai.components.qnap_qsw.QnapQswApi.get_users_verification",
             return_value=USERS_VERIFICATION_MOCK,
         ) as mock_users_verification,
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.post_firmware_update_live",
+            "menuai.components.qnap_qsw.QnapQswApi.post_firmware_update_live",
             return_value=FIRMWARE_UPDATE_LIVE_MOCK,
         ) as mock_firmware_update_live,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -75,7 +75,7 @@ async def test_qnap_qsw_update(hass: HomeAssistant) -> None:
         mock_firmware_update_live.assert_called_once()
         mock_users_verification.assert_called()
 
-    update = hass.states.get("update.qsw_m408_4c_firmware")
+    update = menuai.states.get("update.qsw_m408_4c_firmware")
     assert update is not None
     assert update.state == STATE_OFF
     assert (

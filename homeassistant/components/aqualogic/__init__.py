@@ -10,16 +10,16 @@ import time
 from aqualogic.core import AquaLogic
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,14 +38,14 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up AquaLogic platform."""
     host = config[DOMAIN][CONF_HOST]
     port = config[DOMAIN][CONF_PORT]
-    processor = AquaLogicProcessor(hass, host, port)
-    hass.data[DOMAIN] = processor
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, processor.start_listen)
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, processor.shutdown)
+    processor = AquaLogicProcessor(menuai, host, port)
+    menuai.data[DOMAIN] = processor
+    menuai.bus.listen_once(EVENT_menuai_START, processor.start_listen)
+    menuai.bus.listen_once(EVENT_menuai_STOP, processor.shutdown)
     _LOGGER.debug("AquaLogicProcessor %s:%i initialized", host, port)
     return True
 
@@ -53,10 +53,10 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class AquaLogicProcessor(threading.Thread):
     """AquaLogic event processor thread."""
 
-    def __init__(self, hass: HomeAssistant, host: str, port: int) -> None:
+    def __init__(self, menuai: menuai, host: str, port: int) -> None:
         """Initialize the data object."""
         super().__init__(daemon=True)
-        self._hass = hass
+        self._menuai = menuai
         self._host = host
         self._port = port
         self._shutdown = False
@@ -74,7 +74,7 @@ class AquaLogicProcessor(threading.Thread):
 
     def data_changed(self, panel: AquaLogic) -> None:
         """Aqualogic data changed callback."""
-        dispatcher_send(self._hass, UPDATE_TOPIC)
+        dispatcher_send(self._menuai, UPDATE_TOPIC)
 
     def run(self) -> None:
         """Event thread."""

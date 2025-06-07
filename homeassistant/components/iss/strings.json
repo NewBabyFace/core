@@ -6,7 +6,7 @@
       }
     },
     "abort": {
-      "latitude_longitude_not_defined": "Latitude and longitude are not defined in Home Assistant."
+      "latitude_longitude_not_defined": "Latitude and longitude are not defined in MenuAI."
     }
   },
   "options": {

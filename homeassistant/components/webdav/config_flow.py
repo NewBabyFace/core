@@ -9,9 +9,9 @@ from aiowebdav2.exceptions import MethodNotSupportedError, UnauthorizedError
 import voluptuous as vol
 import yarl
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -51,7 +51,7 @@ class WebDavConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             client = async_create_client(
-                hass=self.hass,
+                menuai=self.menuai,
                 url=user_input[CONF_URL],
                 username=user_input[CONF_USERNAME],
                 password=user_input[CONF_PASSWORD],

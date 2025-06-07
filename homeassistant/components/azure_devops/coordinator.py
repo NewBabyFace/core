@@ -16,11 +16,11 @@ from aioazuredevops.models.core import Project
 from aioazuredevops.models.work_item_type import Category
 import aiohttp
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_ORG, DOMAIN
 from .data import AzureDevOpsData
@@ -58,7 +58,7 @@ class AzureDevOpsDataUpdateCoordinator(DataUpdateCoordinator[AzureDevOpsData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AzureDevOpsConfigEntry,
         logger: logging.Logger,
     ) -> None:
@@ -66,14 +66,14 @@ class AzureDevOpsDataUpdateCoordinator(DataUpdateCoordinator[AzureDevOpsData]):
         self.title = config_entry.title
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=300),
         )
 
-        self.client = DevOpsClient(session=async_get_clientsession(hass))
+        self.client = DevOpsClient(session=async_get_clientsession(menuai))
         self.organization = config_entry.data[CONF_ORG]
 
     @ado_exception_none_handler

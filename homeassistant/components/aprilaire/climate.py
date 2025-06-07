@@ -6,7 +6,7 @@ from typing import Any
 
 from pyaprilaire.const import Attribute
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_ON,
     PRESET_AWAY,
@@ -16,9 +16,9 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import PRECISION_HALVES, PRECISION_WHOLE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PRECISION_HALVES, PRECISION_WHOLE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     FAN_CIRCULATE,
@@ -61,7 +61,7 @@ FAN_MODE_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AprilaireConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ class AprilaireClimate(BaseAprilaireEntity, ClimateEntity):
         """Get the precision based on the unit."""
         return (
             PRECISION_HALVES
-            if self.hass.config.units.temperature_unit == UnitOfTemperature.CELSIUS
+            if self.menuai.config.units.temperature_unit == UnitOfTemperature.CELSIUS
             else PRECISION_WHOLE
         )
 
@@ -176,7 +176,7 @@ class AprilaireClimate(BaseAprilaireEntity, ClimateEntity):
         """Get the step for the target temperature based on the unit."""
         return (
             0.5
-            if self.hass.config.units.temperature_unit == UnitOfTemperature.CELSIUS
+            if self.menuai.config.units.temperature_unit == UnitOfTemperature.CELSIUS
             else 1
         )
 

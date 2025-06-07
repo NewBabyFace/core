@@ -10,12 +10,12 @@ from python_overseerr import (
 )
 from yarl import URL
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONF_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONF_SSL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -27,10 +27,10 @@ class OverseerrCoordinator(DataUpdateCoordinator[RequestCount]):
 
     config_entry: OverseerrConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: OverseerrConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: OverseerrConfigEntry) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             name=DOMAIN,
             config_entry=entry,
@@ -44,7 +44,7 @@ class OverseerrCoordinator(DataUpdateCoordinator[RequestCount]):
             port,
             entry.data[CONF_API_KEY],
             ssl=ssl,
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
         self.url = URL.build(host=host, port=port, scheme="https" if ssl else "http")
         self.push = False

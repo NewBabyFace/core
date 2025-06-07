@@ -6,16 +6,16 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.homeassistant import exposed_entities
-from homeassistant.components.lock import LockState
-from homeassistant.components.switch_as_x.config_flow import SwitchAsXConfigFlowHandler
-from homeassistant.components.switch_as_x.const import (
+from menuai.components.menuai import exposed_entities
+from menuai.components.lock import LockState
+from menuai.components.switch_as_x.config_flow import SwitchAsXConfigFlowHandler
+from menuai.components.switch_as_x.const import (
     CONF_INVERT,
     CONF_TARGET_DOMAIN,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_ENTITY_ID,
     STATE_CLOSED,
     STATE_OFF,
@@ -24,9 +24,9 @@ from homeassistant.const import (
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import PLATFORMS_TO_TEST
 
@@ -41,7 +41,7 @@ EXPOSE_SETTINGS = {
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_config_entry_unregistered_uuid(
-    hass: HomeAssistant, target_domain: str
+    menuai: menuai, target_domain: str
 ) -> None:
     """Test light switch setup from config entry with unknown entity registry id."""
     fake_uuid = "a266a680b608c32770e6c45bfe6b8411"
@@ -59,12 +59,12 @@ async def test_config_entry_unregistered_uuid(
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 @pytest.mark.parametrize(
@@ -79,7 +79,7 @@ async def test_config_entry_unregistered_uuid(
     ],
 )
 async def test_entity_registry_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: str,
     state_on: str,
@@ -90,7 +90,7 @@ async def test_entity_registry_events(
         "switch", "test", "unique", original_name="ABC"
     )
     switch_entity_id = registry_entry.entity_id
-    hass.states.async_set(switch_entity_id, STATE_ON)
+    menuai.states.async_set(switch_entity_id, STATE_ON)
 
     config_entry = MockConfigEntry(
         data={},
@@ -105,57 +105,57 @@ async def test_entity_registry_events(
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{target_domain}.abc").state == state_on
+    assert menuai.states.get(f"{target_domain}.abc").state == state_on
 
     # Change entity_id
     new_switch_entity_id = f"{switch_entity_id}_new"
     entity_registry.async_update_entity(
         switch_entity_id, new_entity_id=new_switch_entity_id
     )
-    hass.states.async_set(new_switch_entity_id, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(new_switch_entity_id, STATE_OFF)
+    await menuai.async_block_till_done()
 
     # Check tracking the new entity_id
-    await hass.async_block_till_done()
-    assert hass.states.get(f"{target_domain}.abc").state == state_off
+    await menuai.async_block_till_done()
+    assert menuai.states.get(f"{target_domain}.abc").state == state_off
 
     # The old entity_id should no longer be tracked
-    hass.states.async_set(switch_entity_id, STATE_ON)
-    await hass.async_block_till_done()
-    assert hass.states.get(f"{target_domain}.abc").state == state_off
+    menuai.states.async_set(switch_entity_id, STATE_ON)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(f"{target_domain}.abc").state == state_off
 
     # Check changing name does not reload the config entry
     with patch(
-        "homeassistant.components.switch_as_x.async_unload_entry",
+        "menuai.components.switch_as_x.async_unload_entry",
     ) as mock_setup_entry:
         entity_registry.async_update_entity(new_switch_entity_id, name="New name")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     mock_setup_entry.assert_not_called()
 
     # Check removing the entity removes the config entry
     entity_registry.async_remove(new_switch_entity_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{target_domain}.abc") is None
+    assert menuai.states.get(f"{target_domain}.abc") is None
     assert entity_registry.async_get(f"{target_domain}.abc") is None
-    assert len(hass.config_entries.async_entries("switch_as_x")) == 0
+    assert len(menuai.config_entries.async_entries("switch_as_x")) == 0
 
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_device_registry_config_entry_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     target_domain: str,
 ) -> None:
     """Test we add our config entry to the tracked switch's device."""
     switch_config_entry = MockConfigEntry()
-    switch_config_entry.add_to_hass(hass)
+    switch_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=switch_config_entry.entry_id,
@@ -171,7 +171,7 @@ async def test_device_registry_config_entry_1(
     )
     # Add another config entry to the same device
     other_config_entry = MockConfigEntry()
-    other_config_entry.add_to_hass(hass)
+    other_config_entry.add_to_menuai(menuai)
     device_registry.async_update_device(
         device_entry.id, add_config_entry_id=other_config_entry.entry_id
     )
@@ -188,10 +188,10 @@ async def test_device_registry_config_entry_1(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.abc")
     assert entity_entry.device_id == switch_entity_entry.device_id
@@ -203,8 +203,8 @@ async def test_device_registry_config_entry_1(
     device_registry.async_update_device(
         device_entry.id, remove_config_entry_id=switch_config_entry.entry_id
     )
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     # Check that the switch_as_x config entry is removed from the device
     device_entry = device_registry.async_get(device_entry.id)
     assert switch_as_x_config_entry.entry_id not in device_entry.config_entries
@@ -212,14 +212,14 @@ async def test_device_registry_config_entry_1(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_device_registry_config_entry_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     target_domain: str,
 ) -> None:
     """Test we add our config entry to the tracked switch's device."""
     switch_config_entry = MockConfigEntry()
-    switch_config_entry.add_to_hass(hass)
+    switch_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=switch_config_entry.entry_id,
@@ -247,10 +247,10 @@ async def test_device_registry_config_entry_2(
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
 
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.abc")
     assert entity_entry.device_id == switch_entity_entry.device_id
@@ -260,7 +260,7 @@ async def test_device_registry_config_entry_2(
 
     # Remove the wrapped switch from the device
     entity_registry.async_update_entity(switch_entity_entry.entity_id, device_id=None)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # Check that the switch_as_x config entry is removed from the device
     device_entry = device_registry.async_get(device_entry.id)
     assert switch_as_x_config_entry.entry_id not in device_entry.config_entries
@@ -268,7 +268,7 @@ async def test_device_registry_config_entry_2(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_config_entry_entity_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, target_domain: Platform
+    menuai: menuai, entity_registry: er.EntityRegistry, target_domain: Platform
 ) -> None:
     """Test light switch setup from config entry with entity id."""
     config_entry = MockConfigEntry(
@@ -284,14 +284,14 @@ async def test_config_entry_entity_id(
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert DOMAIN in hass.config.components
+    assert DOMAIN in menuai.config.components
 
-    state = hass.states.get(f"{target_domain}.abc")
+    state = menuai.states.get(f"{target_domain}.abc")
     assert state
     assert state.state == "unavailable"
     # Name copied from config entry title
@@ -305,7 +305,7 @@ async def test_config_entry_entity_id(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_config_entry_uuid(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, target_domain: Platform
+    menuai: menuai, entity_registry: er.EntityRegistry, target_domain: Platform
 ) -> None:
     """Test light switch setup from config entry with entity registry id."""
     registry_entry = entity_registry.async_get_or_create(
@@ -325,24 +325,24 @@ async def test_config_entry_uuid(
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{target_domain}.abc")
+    assert menuai.states.get(f"{target_domain}.abc")
 
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
     """Test the entity is added to the wrapped entity's device."""
     test_config_entry = MockConfigEntry()
-    test_config_entry.add_to_hass(hass)
+    test_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=test_config_entry.entry_id,
@@ -365,10 +365,10 @@ async def test_device(
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
 
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.abc")
     assert entity_entry
@@ -377,7 +377,7 @@ async def test_device(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_setup_and_remove_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
@@ -395,20 +395,20 @@ async def test_setup_and_remove_config_entry(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    switch_as_x_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the state and entity registry entry are present
-    assert hass.states.get(f"{target_domain}.abc") is not None
+    assert menuai.states.get(f"{target_domain}.abc") is not None
     assert entity_registry.async_get(f"{target_domain}.abc") is not None
 
     # Remove the config entry
-    assert await hass.config_entries.async_remove(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the state and entity registry entry are removed
-    assert hass.states.get(f"{target_domain}.abc") is None
+    assert menuai.states.get(f"{target_domain}.abc") is None
     assert entity_registry.async_get(f"{target_domain}.abc") is None
 
 
@@ -421,7 +421,7 @@ async def test_setup_and_remove_config_entry(
 )
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_reset_hidden_by(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
     hidden_by_before: er.RegistryEntryHider | None,
@@ -448,11 +448,11 @@ async def test_reset_hidden_by(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
     # Remove the config entry
-    assert await hass.config_entries.async_remove(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check hidden by is reset
     switch_entity_entry = entity_registry.async_get(switch_entity_entry.entity_id)
@@ -461,7 +461,7 @@ async def test_reset_hidden_by(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_entity_category_inheritance(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
@@ -486,10 +486,10 @@ async def test_entity_category_inheritance(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.abc")
     assert entity_entry
@@ -499,7 +499,7 @@ async def test_entity_category_inheritance(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_entity_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
@@ -524,10 +524,10 @@ async def test_entity_options(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.abc")
     assert entity_entry
@@ -539,14 +539,14 @@ async def test_entity_options(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_entity_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
     """Test the source entity has entity_name set to True."""
     switch_config_entry = MockConfigEntry()
-    switch_config_entry.add_to_hass(hass)
+    switch_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=switch_config_entry.entry_id,
@@ -579,10 +579,10 @@ async def test_entity_name(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.device_name")
     assert entity_entry
@@ -597,14 +597,14 @@ async def test_entity_name(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_custom_name_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
     """Test the source entity has a custom name."""
     switch_config_entry = MockConfigEntry()
-    switch_config_entry.add_to_hass(hass)
+    switch_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=switch_config_entry.entry_id,
@@ -639,10 +639,10 @@ async def test_custom_name_1(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(
         f"{target_domain}.device_name_original_entity_name"
@@ -659,7 +659,7 @@ async def test_custom_name_1(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_custom_name_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
@@ -670,7 +670,7 @@ async def test_custom_name_2(
     switch_as_x config entry is setup the first time.
     """
     switch_config_entry = MockConfigEntry()
-    switch_config_entry.add_to_hass(hass)
+    switch_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=switch_config_entry.entry_id,
@@ -705,7 +705,7 @@ async def test_custom_name_2(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
     # Register the switch as x entity in the entity registry, this means
     # the entity has been setup before
@@ -721,8 +721,8 @@ async def test_custom_name_2(
         name="Old custom entity name",
     )
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(
         f"{target_domain}.device_name_original_entity_name"
@@ -740,12 +740,12 @@ async def test_custom_name_2(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_import_expose_settings_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
     """Test importing assistant expose settings."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     switch_entity_entry = entity_registry.async_get_or_create(
         "switch",
@@ -755,7 +755,7 @@ async def test_import_expose_settings_1(
     )
     for assistant, should_expose in EXPOSE_SETTINGS.items():
         exposed_entities.async_expose_entity(
-            hass, assistant, switch_entity_entry.entity_id, should_expose
+            menuai, assistant, switch_entity_entry.entity_id, should_expose
         )
 
     # Add the config entry
@@ -771,24 +771,24 @@ async def test_import_expose_settings_1(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.abc")
     assert entity_entry
 
     # Check switch_as_x expose settings were copied from the switch
     expose_settings = exposed_entities.async_get_entity_settings(
-        hass, entity_entry.entity_id
+        menuai, entity_entry.entity_id
     )
     for assistant, settings in EXPOSE_SETTINGS.items():
         assert expose_settings[assistant]["should_expose"] == settings
 
     # Check the switch is no longer exposed
     expose_settings = exposed_entities.async_get_entity_settings(
-        hass, switch_entity_entry.entity_id
+        menuai, switch_entity_entry.entity_id
     )
     for assistant in EXPOSE_SETTINGS:
         assert expose_settings[assistant]["should_expose"] is False
@@ -796,7 +796,7 @@ async def test_import_expose_settings_1(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_import_expose_settings_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
@@ -806,7 +806,7 @@ async def test_import_expose_settings_2(
     switch_as_x config entry is setup the first time.
     """
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     switch_entity_entry = entity_registry.async_get_or_create(
         "switch",
@@ -816,7 +816,7 @@ async def test_import_expose_settings_2(
     )
     for assistant, should_expose in EXPOSE_SETTINGS.items():
         exposed_entities.async_expose_entity(
-            hass, assistant, switch_entity_entry.entity_id, should_expose
+            menuai, assistant, switch_entity_entry.entity_id, should_expose
         )
 
     # Add the config entry
@@ -832,7 +832,7 @@ async def test_import_expose_settings_2(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
     # Register the switch as x entity in the entity registry, this means
     # the entity has been setup before
@@ -844,25 +844,25 @@ async def test_import_expose_settings_2(
     )
     for assistant, should_expose in EXPOSE_SETTINGS.items():
         exposed_entities.async_expose_entity(
-            hass, assistant, switch_as_x_entity_entry.entity_id, not should_expose
+            menuai, assistant, switch_as_x_entity_entry.entity_id, not should_expose
         )
 
-    assert await hass.config_entries.async_setup(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(f"{target_domain}.abc")
     assert entity_entry
 
     # Check switch_as_x expose settings were not copied from the switch
     expose_settings = exposed_entities.async_get_entity_settings(
-        hass, entity_entry.entity_id
+        menuai, entity_entry.entity_id
     )
     for assistant, settings in EXPOSE_SETTINGS.items():
         assert expose_settings[assistant]["should_expose"] is not settings
 
     # Check the switch settings were not modified
     expose_settings = exposed_entities.async_get_entity_settings(
-        hass, switch_entity_entry.entity_id
+        menuai, switch_entity_entry.entity_id
     )
     for assistant, settings in EXPOSE_SETTINGS.items():
         assert expose_settings[assistant]["should_expose"] == settings
@@ -870,12 +870,12 @@ async def test_import_expose_settings_2(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_restore_expose_settings(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
     """Test removing a config entry restores assistant expose settings."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     switch_entity_entry = entity_registry.async_get_or_create(
         "switch",
@@ -897,7 +897,7 @@ async def test_restore_expose_settings(
         version=SwitchAsXConfigFlowHandler.VERSION,
         minor_version=SwitchAsXConfigFlowHandler.MINOR_VERSION,
     )
-    switch_as_x_config_entry.add_to_hass(hass)
+    switch_as_x_config_entry.add_to_menuai(menuai)
 
     # Register the switch as x entity
     switch_as_x_entity_entry = entity_registry.async_get_or_create(
@@ -909,16 +909,16 @@ async def test_restore_expose_settings(
     )
     for assistant, should_expose in EXPOSE_SETTINGS.items():
         exposed_entities.async_expose_entity(
-            hass, assistant, switch_as_x_entity_entry.entity_id, should_expose
+            menuai, assistant, switch_as_x_entity_entry.entity_id, should_expose
         )
 
     # Remove the config entry
-    assert await hass.config_entries.async_remove(switch_as_x_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(switch_as_x_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the switch expose settings were restored
     expose_settings = exposed_entities.async_get_entity_settings(
-        hass, switch_entity_entry.entity_id
+        menuai, switch_entity_entry.entity_id
     )
     for assistant, settings in EXPOSE_SETTINGS.items():
         assert expose_settings[assistant]["should_expose"] == settings
@@ -926,7 +926,7 @@ async def test_restore_expose_settings(
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_migrate(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
@@ -943,9 +943,9 @@ async def test_migrate(
         version=1,
         minor_version=1,
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check migration was successful and added invert option
     assert config_entry.state is ConfigEntryState.LOADED
@@ -958,13 +958,13 @@ async def test_migrate(
     assert config_entry.minor_version == SwitchAsXConfigFlowHandler.MINOR_VERSION
 
     # Check the state and entity registry entry are present
-    assert hass.states.get(f"{target_domain}.abc") is not None
+    assert menuai.states.get(f"{target_domain}.abc") is not None
     assert entity_registry.async_get(f"{target_domain}.abc") is not None
 
 
 @pytest.mark.parametrize("target_domain", PLATFORMS_TO_TEST)
 async def test_migrate_from_future(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     target_domain: Platform,
 ) -> None:
@@ -981,9 +981,9 @@ async def test_migrate_from_future(
         version=2,
         minor_version=1,
     )
-    config_entry.add_to_hass(hass)
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check migration was not successful and did not add invert option
     assert config_entry.state is ConfigEntryState.MIGRATION_ERROR
@@ -995,5 +995,5 @@ async def test_migrate_from_future(
     assert config_entry.minor_version == 1
 
     # Check the state and entity registry entry are not present
-    assert hass.states.get(f"{target_domain}.abc") is None
+    assert menuai.states.get(f"{target_domain}.abc") is None
     assert entity_registry.async_get(f"{target_domain}.abc") is None

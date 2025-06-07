@@ -4,9 +4,9 @@ from datetime import timedelta
 
 from goalzero import Yeti, exceptions
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -19,11 +19,11 @@ class GoalZeroDataUpdateCoordinator(DataUpdateCoordinator[None]):
     config_entry: GoalZeroConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: GoalZeroConfigEntry, api: Yeti
+        self, menuai: menuai, config_entry: GoalZeroConfigEntry, api: Yeti
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

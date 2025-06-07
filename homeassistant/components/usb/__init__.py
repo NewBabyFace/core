@@ -16,28 +16,28 @@ from typing import Any, overload
 from aiousbwatcher import AIOUSBWatcher, InotifyNotAvailableError
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import (
+from menuai import config_entries
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.const import EVENT_menuai_STARTED, EVENT_menuai_STOP
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
-    HomeAssistant,
-    callback as hass_callback,
+    menuai,
+    callback as menuai_callback,
 )
-from homeassistant.helpers import config_validation as cv, discovery_flow
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.deprecation import (
+from menuai.helpers import config_validation as cv, discovery_flow
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.deprecation import (
     DeprecatedConstant,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.service_info.usb import UsbServiceInfo as _UsbServiceInfo
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import USBMatcher, async_get_usb
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.service_info.usb import UsbServiceInfo as _UsbServiceInfo
+from menuai.helpers.typing import ConfigType
+from menuai.loader import USBMatcher, async_get_usb
 
 from .const import DOMAIN
 from .models import USBDevice
@@ -68,38 +68,38 @@ class USBCallbackMatcher(USBMatcher):
     """Callback matcher for the USB integration."""
 
 
-@hass_callback
+@menuai_callback
 def async_register_scan_request_callback(
-    hass: HomeAssistant, callback: CALLBACK_TYPE
+    menuai: menuai, callback: CALLBACK_TYPE
 ) -> CALLBACK_TYPE:
     """Register to receive a callback when a scan should be initiated."""
-    discovery: USBDiscovery = hass.data[DOMAIN]
+    discovery: USBDiscovery = menuai.data[DOMAIN]
     return discovery.async_register_scan_request_callback(callback)
 
 
-@hass_callback
+@menuai_callback
 def async_register_initial_scan_callback(
-    hass: HomeAssistant, callback: CALLBACK_TYPE
+    menuai: menuai, callback: CALLBACK_TYPE
 ) -> CALLBACK_TYPE:
     """Register to receive a callback when the initial USB scan is done.
 
     If the initial scan is already done, the callback is called immediately.
     """
-    discovery: USBDiscovery = hass.data[DOMAIN]
+    discovery: USBDiscovery = menuai.data[DOMAIN]
     return discovery.async_register_initial_scan_callback(callback)
 
 
-@hass_callback
+@menuai_callback
 def async_register_port_event_callback(
-    hass: HomeAssistant, callback: PORT_EVENT_CALLBACK_TYPE
+    menuai: menuai, callback: PORT_EVENT_CALLBACK_TYPE
 ) -> CALLBACK_TYPE:
     """Register to receive a callback when a USB device is connected or disconnected."""
-    discovery: USBDiscovery = hass.data[DOMAIN]
+    discovery: USBDiscovery = menuai.data[DOMAIN]
     return discovery.async_register_port_event_callback(callback)
 
 
-@hass_callback
-def async_is_plugged_in(hass: HomeAssistant, matcher: USBCallbackMatcher) -> bool:
+@menuai_callback
+def async_is_plugged_in(menuai: menuai, matcher: USBCallbackMatcher) -> bool:
     """Return True is a USB device is present."""
 
     vid = matcher.get("vid", "")
@@ -119,7 +119,7 @@ def async_is_plugged_in(hass: HomeAssistant, matcher: USBCallbackMatcher) -> boo
             f"vid and pid must be uppercase, the rest lowercase in matcher {matcher!r}"
         )
 
-    usb_discovery: USBDiscovery = hass.data[DOMAIN]
+    usb_discovery: USBDiscovery = menuai.data[DOMAIN]
     return any(
         _is_matching(
             USBDevice(
@@ -145,7 +145,7 @@ def async_is_plugged_in(hass: HomeAssistant, matcher: USBCallbackMatcher) -> boo
 
 _DEPRECATED_UsbServiceInfo = DeprecatedConstant(
     _UsbServiceInfo,
-    "homeassistant.helpers.service_info.usb.UsbServiceInfo",
+    "menuai.helpers.service_info.usb.UsbServiceInfo",
     "2026.2",
 )
 
@@ -203,13 +203,13 @@ def get_serial_by_id(dev_path: str) -> str:
     return dev_path
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the USB Discovery integration."""
-    usb = await async_get_usb(hass)
-    usb_discovery = USBDiscovery(hass, usb)
+    usb = await async_get_usb(menuai)
+    usb_discovery = USBDiscovery(menuai, usb)
     await usb_discovery.async_setup()
-    hass.data[DOMAIN] = usb_discovery
-    websocket_api.async_register_command(hass, websocket_usb_scan)
+    menuai.data[DOMAIN] = usb_discovery
+    websocket_api.async_register_command(menuai, websocket_usb_scan)
 
     return True
 
@@ -242,9 +242,9 @@ def _is_matching(device: USBDevice, matcher: USBMatcher | USBCallbackMatcher) ->
     return True
 
 
-async def async_request_scan(hass: HomeAssistant) -> None:
+async def async_request_scan(menuai: menuai) -> None:
     """Request a USB scan."""
-    usb_discovery: USBDiscovery = hass.data[DOMAIN]
+    usb_discovery: USBDiscovery = menuai.data[DOMAIN]
     if not usb_discovery.observer_active:
         await usb_discovery.async_request_scan()
 
@@ -254,11 +254,11 @@ class USBDiscovery:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         usb: list[USBMatcher],
     ) -> None:
         """Init USB Discovery."""
-        self.hass = hass
+        self.menuai = menuai
         self.usb = usb
         self.seen: set[tuple[str, ...]] = set()
         self.observer_active = False
@@ -283,20 +283,20 @@ class USBDiscovery:
             )
             self._async_start_monitor_polling()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self.async_start)
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.async_stop)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STARTED, self.async_start)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self.async_stop)
 
     async def async_start(self, event: Event) -> None:
         """Start USB Discovery and run a manual scan."""
         await self._async_scan_serial()
 
-    @hass_callback
+    @menuai_callback
     def async_stop(self, event: Event) -> None:
         """Stop USB Discovery."""
         if self._request_debouncer:
             self._request_debouncer.async_shutdown()
 
-    @hass_callback
+    @menuai_callback
     def _async_start_monitor_polling(self) -> None:
         """Start monitoring hardware with polling (for development only!)."""
 
@@ -304,14 +304,14 @@ class USBDiscovery:
             await self._async_scan_serial()
 
         stop_callback = async_track_time_interval(
-            self.hass, _scan, POLLING_MONITOR_SCAN_PERIOD
+            self.menuai, _scan, POLLING_MONITOR_SCAN_PERIOD
         )
 
-        @hass_callback
+        @menuai_callback
         def _stop_polling(event: Event) -> None:
             stop_callback()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_polling)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, _stop_polling)
 
     async def _async_start_aiousbwatcher(self) -> None:
         """Start monitoring hardware with aiousbwatcher.
@@ -319,7 +319,7 @@ class USBDiscovery:
         Returns True if successful.
         """
 
-        @hass_callback
+        @menuai_callback
         def _usb_change_callback() -> None:
             self._async_delayed_add_remove_scan()
 
@@ -327,15 +327,15 @@ class USBDiscovery:
         watcher.async_register_callback(_usb_change_callback)
         cancel = watcher.async_start()
 
-        @hass_callback
+        @menuai_callback
         def _async_stop_watcher(event: Event) -> None:
             cancel()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop_watcher)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_stop_watcher)
 
         self.observer_active = True
 
-    @hass_callback
+    @menuai_callback
     def async_register_scan_request_callback(
         self,
         _callback: CALLBACK_TYPE,
@@ -343,13 +343,13 @@ class USBDiscovery:
         """Register a scan request callback."""
         self._request_callbacks.append(_callback)
 
-        @hass_callback
+        @menuai_callback
         def _async_remove_callback() -> None:
             self._request_callbacks.remove(_callback)
 
         return _async_remove_callback
 
-    @hass_callback
+    @menuai_callback
     def async_register_initial_scan_callback(
         self,
         callback: CALLBACK_TYPE,
@@ -361,7 +361,7 @@ class USBDiscovery:
 
         self._initial_scan_callbacks.append(callback)
 
-        @hass_callback
+        @menuai_callback
         def _async_remove_callback() -> None:
             if callback not in self._initial_scan_callbacks:
                 return
@@ -369,7 +369,7 @@ class USBDiscovery:
 
         return _async_remove_callback
 
-    @hass_callback
+    @menuai_callback
     def async_register_port_event_callback(
         self,
         callback: PORT_EVENT_CALLBACK_TYPE,
@@ -377,7 +377,7 @@ class USBDiscovery:
         """Register a port event callback."""
         self._port_event_callbacks.add(callback)
 
-        @hass_callback
+        @menuai_callback
         def _async_remove_callback() -> None:
             self._port_event_callbacks.discard(callback)
 
@@ -408,7 +408,7 @@ class USBDiscovery:
 
             if service_info is None:
                 service_info = _UsbServiceInfo(
-                    device=await self.hass.async_add_executor_job(
+                    device=await self.menuai.async_add_executor_job(
                         get_serial_by_id, device.device
                     ),
                     vid=device.vid,
@@ -419,7 +419,7 @@ class USBDiscovery:
                 )
 
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 matcher["domain"],
                 {"source": config_entries.SOURCE_USB},
                 service_info,
@@ -468,12 +468,12 @@ class USBDiscovery:
         for usb_device in filtered_usb_devices:
             await self._async_process_discovered_usb_device(usb_device)
 
-    @hass_callback
+    @menuai_callback
     def _async_delayed_add_remove_scan(self) -> None:
         """Request a serial scan after a debouncer delay."""
         if not self._add_remove_debouncer:
             self._add_remove_debouncer = Debouncer(
-                self.hass,
+                self.menuai,
                 _LOGGER,
                 cooldown=ADD_REMOVE_SCAN_COOLDOWN,
                 immediate=False,
@@ -487,7 +487,7 @@ class USBDiscovery:
         _LOGGER.debug("Executing comports scan")
         async with self._scan_lock:
             await self._async_process_ports(
-                await self.hass.async_add_executor_job(scan_serial_ports)
+                await self.menuai.async_add_executor_job(scan_serial_ports)
             )
         if self.initial_scan_done:
             return
@@ -506,7 +506,7 @@ class USBDiscovery:
         """Request a serial scan."""
         if not self._request_debouncer:
             self._request_debouncer = Debouncer(
-                self.hass,
+                self.menuai,
                 _LOGGER,
                 cooldown=REQUEST_SCAN_COOLDOWN,
                 immediate=True,
@@ -520,12 +520,12 @@ class USBDiscovery:
 @websocket_api.websocket_command({vol.Required("type"): "usb/scan"})
 @websocket_api.async_response
 async def websocket_usb_scan(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Scan for new usb devices."""
-    await async_request_scan(hass)
+    await async_request_scan(menuai)
     connection.send_result(msg["id"])
 
 

@@ -1,4 +1,4 @@
-"""Rest API for Home Assistant."""
+"""Rest API for MenuAI."""
 
 import asyncio
 from asyncio import shield, timeout
@@ -11,18 +11,18 @@ from aiohttp import web
 from aiohttp.web_exceptions import HTTPBadRequest
 import voluptuous as vol
 
-from homeassistant import core as ha
-from homeassistant.auth.models import User
-from homeassistant.auth.permissions.const import POLICY_READ
-from homeassistant.components.http import (
-    KEY_HASS,
-    KEY_HASS_USER,
-    HomeAssistantView,
+from menuai import core as ha
+from menuai.auth.models import User
+from menuai.auth.permissions.const import POLICY_READ
+from menuai.components.http import (
+    KEY_menuai,
+    KEY_menuai_USER,
+    menuaiView,
     require_admin,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONTENT_TYPE_JSON,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
     KEY_DATA_LOGGING as DATA_LOGGING,
     MATCH_ALL,
@@ -37,20 +37,20 @@ from homeassistant.const import (
     URL_API_STREAM,
     URL_API_TEMPLATE,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant
-from homeassistant.exceptions import (
+from menuai.core import Event, EventStateChangedData, menuai
+from menuai.exceptions import (
     InvalidEntityFormatError,
     InvalidStateError,
     ServiceNotFound,
     TemplateError,
     Unauthorized,
 )
-from homeassistant.helpers import config_validation as cv, recorder, template
-from homeassistant.helpers.json import json_dumps, json_fragment
-from homeassistant.helpers.service import async_get_all_descriptions
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.event_type import EventType
-from homeassistant.util.json import json_loads
+from menuai.helpers import config_validation as cv, recorder, template
+from menuai.helpers.json import json_dumps, json_fragment
+from menuai.helpers.service import async_get_all_descriptions
+from menuai.helpers.typing import ConfigType
+from menuai.util.event_type import EventType
+from menuai.util.json import json_loads
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,28 +71,28 @@ SERVICE_WAIT_TIMEOUT = 10
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Register the API with the HTTP interface."""
-    hass.http.register_view(APIStatusView)
-    hass.http.register_view(APICoreStateView)
-    hass.http.register_view(APIEventStream)
-    hass.http.register_view(APIConfigView)
-    hass.http.register_view(APIStatesView)
-    hass.http.register_view(APIEntityStateView)
-    hass.http.register_view(APIEventListenersView)
-    hass.http.register_view(APIEventView)
-    hass.http.register_view(APIServicesView)
-    hass.http.register_view(APIDomainServicesView)
-    hass.http.register_view(APIComponentsView)
-    hass.http.register_view(APITemplateView)
+    menuai.http.register_view(APIStatusView)
+    menuai.http.register_view(APICoreStateView)
+    menuai.http.register_view(APIEventStream)
+    menuai.http.register_view(APIConfigView)
+    menuai.http.register_view(APIStatesView)
+    menuai.http.register_view(APIEntityStateView)
+    menuai.http.register_view(APIEventListenersView)
+    menuai.http.register_view(APIEventView)
+    menuai.http.register_view(APIServicesView)
+    menuai.http.register_view(APIDomainServicesView)
+    menuai.http.register_view(APIComponentsView)
+    menuai.http.register_view(APITemplateView)
 
-    if DATA_LOGGING in hass.data:
-        hass.http.register_view(APIErrorLog)
+    if DATA_LOGGING in menuai.data:
+        menuai.http.register_view(APIErrorLog)
 
     return True
 
 
-class APIStatusView(HomeAssistantView):
+class APIStatusView(menuaiView):
     """View to handle Status requests."""
 
     url = URL_API
@@ -104,7 +104,7 @@ class APIStatusView(HomeAssistantView):
         return self.json_message("API running.")
 
 
-class APICoreStateView(HomeAssistantView):
+class APICoreStateView(menuaiView):
     """View to handle core state requests."""
 
     url = URL_API_CORE_STATE
@@ -115,17 +115,17 @@ class APICoreStateView(HomeAssistantView):
         """Retrieve the current core state.
 
         This API is intended to be a fast and lightweight way to check if the
-        Home Assistant core is running. Its primary use case is for supervisor
-        to check if Home Assistant is running.
+        MenuAI core is running. Its primary use case is for supervisor
+        to check if MenuAI is running.
         """
-        hass = request.app[KEY_HASS]
-        migration = recorder.async_migration_in_progress(hass)
-        live = recorder.async_migration_is_live(hass)
+        menuai = request.app[KEY_menuai]
+        migration = recorder.async_migration_in_progress(menuai)
+        live = recorder.async_migration_is_live(menuai)
         recorder_state = {"migration_in_progress": migration, "migration_is_live": live}
-        return self.json({"state": hass.state.value, "recorder_state": recorder_state})
+        return self.json({"state": menuai.state.value, "recorder_state": recorder_state})
 
 
-class APIEventStream(HomeAssistantView):
+class APIEventStream(menuaiView):
     """View to handle EventStream requests."""
 
     url = URL_API_STREAM
@@ -134,13 +134,13 @@ class APIEventStream(HomeAssistantView):
     @require_admin
     async def get(self, request: web.Request) -> web.StreamResponse:
         """Provide a streaming interface for the event bus."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         stop_obj = object()
         to_write: asyncio.Queue[object | str] = asyncio.Queue()
 
         restrict: list[EventType[Any] | str] | None = None
         if restrict_str := request.query.get("restrict"):
-            restrict = [*restrict_str.split(","), EVENT_HOMEASSISTANT_STOP]
+            restrict = [*restrict_str.split(","), EVENT_menuai_STOP]
 
         async def forward_events(event: Event) -> None:
             """Forward events to the open request."""
@@ -149,7 +149,7 @@ class APIEventStream(HomeAssistantView):
 
             _LOGGER.debug("STREAM %s FORWARDING %s", id(stop_obj), event)
 
-            if event.event_type == EVENT_HOMEASSISTANT_STOP:
+            if event.event_type == EVENT_menuai_STOP:
                 data = stop_obj
             else:
                 data = json_dumps(event)
@@ -160,7 +160,7 @@ class APIEventStream(HomeAssistantView):
         response.content_type = "text/event-stream"
         await response.prepare(request)
 
-        unsub_stream = hass.bus.async_listen(MATCH_ALL, forward_events)
+        unsub_stream = menuai.bus.async_listen(MATCH_ALL, forward_events)
 
         try:
             _LOGGER.debug("STREAM %s ATTACHED", id(stop_obj))
@@ -192,7 +192,7 @@ class APIEventStream(HomeAssistantView):
         return response
 
 
-class APIConfigView(HomeAssistantView):
+class APIConfigView(menuaiView):
     """View to handle Configuration requests."""
 
     url = URL_API_CONFIG
@@ -201,10 +201,10 @@ class APIConfigView(HomeAssistantView):
     @ha.callback
     def get(self, request: web.Request) -> web.Response:
         """Get current configuration."""
-        return self.json(request.app[KEY_HASS].config.as_dict())
+        return self.json(request.app[KEY_menuai].config.as_dict())
 
 
-class APIStatesView(HomeAssistantView):
+class APIStatesView(menuaiView):
     """View to handle States requests."""
 
     url = URL_API_STATES
@@ -213,15 +213,15 @@ class APIStatesView(HomeAssistantView):
     @ha.callback
     def get(self, request: web.Request) -> web.Response:
         """Get current states."""
-        user: User = request[KEY_HASS_USER]
-        hass = request.app[KEY_HASS]
+        user: User = request[KEY_menuai_USER]
+        menuai = request.app[KEY_menuai]
         if user.is_admin:
-            states = (state.as_dict_json for state in hass.states.async_all())
+            states = (state.as_dict_json for state in menuai.states.async_all())
         else:
             entity_perm = user.permissions.check_entity
             states = (
                 state.as_dict_json
-                for state in hass.states.async_all()
+                for state in menuai.states.async_all()
                 if entity_perm(state.entity_id, "read")
             )
         response = web.Response(
@@ -233,7 +233,7 @@ class APIStatesView(HomeAssistantView):
         return response
 
 
-class APIEntityStateView(HomeAssistantView):
+class APIEntityStateView(menuaiView):
     """View to handle EntityState requests."""
 
     url = "/api/states/{entity_id}"
@@ -242,12 +242,12 @@ class APIEntityStateView(HomeAssistantView):
     @ha.callback
     def get(self, request: web.Request, entity_id: str) -> web.Response:
         """Retrieve state of entity."""
-        user: User = request[KEY_HASS_USER]
-        hass = request.app[KEY_HASS]
+        user: User = request[KEY_menuai_USER]
+        menuai = request.app[KEY_menuai]
         if not user.permissions.check_entity(entity_id, POLICY_READ):
             raise Unauthorized(entity_id=entity_id)
 
-        if state := hass.states.get(entity_id):
+        if state := menuai.states.get(entity_id):
             return web.Response(
                 body=state.as_dict_json,
                 content_type=CONTENT_TYPE_JSON,
@@ -256,10 +256,10 @@ class APIEntityStateView(HomeAssistantView):
 
     async def post(self, request: web.Request, entity_id: str) -> web.Response:
         """Update state of entity."""
-        user: User = request[KEY_HASS_USER]
+        user: User = request[KEY_menuai_USER]
         if not user.is_admin:
             raise Unauthorized(entity_id=entity_id)
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         try:
             data = await request.json()
         except ValueError:
@@ -271,11 +271,11 @@ class APIEntityStateView(HomeAssistantView):
         attributes = data.get("attributes")
         force_update = data.get("force_update", False)
 
-        is_new_state = hass.states.get(entity_id) is None
+        is_new_state = menuai.states.get(entity_id) is None
 
         # Write state
         try:
-            hass.states.async_set(
+            menuai.states.async_set(
                 entity_id, new_state, attributes, force_update, self.context(request)
             )
         except InvalidEntityFormatError:
@@ -287,7 +287,7 @@ class APIEntityStateView(HomeAssistantView):
 
         # Read the state back for our response
         status_code = HTTPStatus.CREATED if is_new_state else HTTPStatus.OK
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         resp = self.json(state.as_dict(), status_code)
 
@@ -298,14 +298,14 @@ class APIEntityStateView(HomeAssistantView):
     @ha.callback
     def delete(self, request: web.Request, entity_id: str) -> web.Response:
         """Remove entity."""
-        if not request[KEY_HASS_USER].is_admin:
+        if not request[KEY_menuai_USER].is_admin:
             raise Unauthorized(entity_id=entity_id)
-        if request.app[KEY_HASS].states.async_remove(entity_id):
+        if request.app[KEY_menuai].states.async_remove(entity_id):
             return self.json_message("Entity removed.")
         return self.json_message("Entity not found.", HTTPStatus.NOT_FOUND)
 
 
-class APIEventListenersView(HomeAssistantView):
+class APIEventListenersView(menuaiView):
     """View to handle EventListeners requests."""
 
     url = URL_API_EVENTS
@@ -314,10 +314,10 @@ class APIEventListenersView(HomeAssistantView):
     @ha.callback
     def get(self, request: web.Request) -> web.Response:
         """Get event listeners."""
-        return self.json(async_events_json(request.app[KEY_HASS]))
+        return self.json(async_events_json(request.app[KEY_menuai]))
 
 
-class APIEventView(HomeAssistantView):
+class APIEventView(menuaiView):
     """View to handle Event requests."""
 
     url = "/api/events/{event_type}"
@@ -348,14 +348,14 @@ class APIEventView(HomeAssistantView):
                 if state:
                     event_data[key] = state
 
-        request.app[KEY_HASS].bus.async_fire(
+        request.app[KEY_menuai].bus.async_fire(
             event_type, event_data, ha.EventOrigin.remote, self.context(request)
         )
 
         return self.json_message(f"Event {event_type} fired.")
 
 
-class APIServicesView(HomeAssistantView):
+class APIServicesView(menuaiView):
     """View to handle Services requests."""
 
     url = URL_API_SERVICES
@@ -363,11 +363,11 @@ class APIServicesView(HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.Response:
         """Get registered services."""
-        services = await async_services_json(request.app[KEY_HASS])
+        services = await async_services_json(request.app[KEY_menuai])
         return self.json(services)
 
 
-class APIDomainServicesView(HomeAssistantView):
+class APIDomainServicesView(menuaiView):
     """View to handle DomainServices requests."""
 
     url = "/api/services/{domain}/{service}"
@@ -380,7 +380,7 @@ class APIDomainServicesView(HomeAssistantView):
 
         Returns a list of changed states.
         """
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         body = await request.text()
         try:
             data = json_loads(body) if body else None
@@ -390,12 +390,12 @@ class APIDomainServicesView(HomeAssistantView):
             )
 
         context = self.context(request)
-        if not hass.services.has_service(domain, service):
+        if not menuai.services.has_service(domain, service):
             raise HTTPBadRequest from ServiceNotFound(domain, service)
 
         if response_requested := "return_response" in request.query:
             if (
-                hass.services.supports_response(domain, service)
+                menuai.services.supports_response(domain, service)
                 is ha.SupportsResponse.NONE
             ):
                 return self.json_message(
@@ -403,7 +403,7 @@ class APIDomainServicesView(HomeAssistantView):
                     HTTPStatus.BAD_REQUEST,
                 )
         elif (
-            hass.services.supports_response(domain, service) is ha.SupportsResponse.ONLY
+            menuai.services.supports_response(domain, service) is ha.SupportsResponse.ONLY
         ):
             return self.json_message(
                 "Service call requires responses but caller did not ask for responses. "
@@ -420,7 +420,7 @@ class APIDomainServicesView(HomeAssistantView):
             if event.context == context and (state := event.data["new_state"]):
                 changed_states.append(state.json_fragment)
 
-        cancel_listen = hass.bus.async_listen(
+        cancel_listen = menuai.bus.async_listen(
             EVENT_STATE_CHANGED,
             _async_save_changed_entities,
         )
@@ -428,7 +428,7 @@ class APIDomainServicesView(HomeAssistantView):
         try:
             # shield the service call from cancellation on connection drop
             response = await shield(
-                hass.services.async_call(
+                menuai.services.async_call(
                     domain,
                     service,
                     data,  # type: ignore[arg-type]
@@ -450,7 +450,7 @@ class APIDomainServicesView(HomeAssistantView):
         return self.json(changed_states)
 
 
-class APIComponentsView(HomeAssistantView):
+class APIComponentsView(menuaiView):
     """View to handle Components requests."""
 
     url = URL_API_COMPONENTS
@@ -459,16 +459,16 @@ class APIComponentsView(HomeAssistantView):
     @ha.callback
     def get(self, request: web.Request) -> web.Response:
         """Get current loaded components."""
-        return self.json(request.app[KEY_HASS].config.components)
+        return self.json(request.app[KEY_menuai].config.components)
 
 
 @lru_cache
-def _cached_template(template_str: str, hass: HomeAssistant) -> template.Template:
+def _cached_template(template_str: str, menuai: menuai) -> template.Template:
     """Return a cached template."""
-    return template.Template(template_str, hass)
+    return template.Template(template_str, menuai)
 
 
-class APITemplateView(HomeAssistantView):
+class APITemplateView(menuaiView):
     """View to handle Template requests."""
 
     url = URL_API_TEMPLATE
@@ -479,7 +479,7 @@ class APITemplateView(HomeAssistantView):
         """Render a template."""
         try:
             data = await request.json()
-            tpl = _cached_template(data["template"], request.app[KEY_HASS])
+            tpl = _cached_template(data["template"], request.app[KEY_menuai])
             return tpl.async_render(variables=data.get("variables"), parse_result=False)  # type: ignore[no-any-return]
         except (ValueError, TemplateError) as ex:
             return self.json_message(
@@ -487,7 +487,7 @@ class APITemplateView(HomeAssistantView):
             )
 
 
-class APIErrorLog(HomeAssistantView):
+class APIErrorLog(menuaiView):
     """View to fetch the API error log."""
 
     url = URL_API_ERROR_LOG
@@ -496,22 +496,22 @@ class APIErrorLog(HomeAssistantView):
     @require_admin
     async def get(self, request: web.Request) -> web.FileResponse:
         """Retrieve API error log."""
-        hass = request.app[KEY_HASS]
-        response = web.FileResponse(hass.data[DATA_LOGGING])
+        menuai = request.app[KEY_menuai]
+        response = web.FileResponse(menuai.data[DATA_LOGGING])
         response.enable_compression()
         return response
 
 
-async def async_services_json(hass: HomeAssistant) -> list[dict[str, Any]]:
+async def async_services_json(menuai: menuai) -> list[dict[str, Any]]:
     """Generate services data to JSONify."""
-    descriptions = await async_get_all_descriptions(hass)
+    descriptions = await async_get_all_descriptions(menuai)
     return [{"domain": key, "services": value} for key, value in descriptions.items()]
 
 
 @ha.callback
-def async_events_json(hass: HomeAssistant) -> list[dict[str, Any]]:
+def async_events_json(menuai: menuai) -> list[dict[str, Any]]:
     """Generate event data to JSONify."""
     return [
         {"event": key, "listener_count": value}
-        for key, value in hass.bus.async_listeners().items()
+        for key, value in menuai.bus.async_listeners().items()
     ]

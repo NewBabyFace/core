@@ -12,9 +12,9 @@ from elmax_api.model.panel import PanelEntry, PanelStatus
 import httpx
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.exceptions import menuaiError
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .common import (
     build_direct_ssl_context,
@@ -151,7 +151,7 @@ class ElmaxConfigFlow(ConfigFlow, domain=DOMAIN):
                     port=self._panel_direct_port,
                 )
             )
-            ssl_context = await self.hass.async_add_executor_job(
+            ssl_context = await self.menuai.async_add_executor_job(
                 build_direct_ssl_context, self._panel_direct_ssl_cert
             )
 
@@ -487,7 +487,7 @@ class ElmaxConfigFlow(ConfigFlow, domain=DOMAIN):
                         if entry.data[CONF_ELMAX_MODE_DIRECT_SSL]
                         else http_port
                     )
-                    self.hass.config_entries.async_update_entry(
+                    self.menuai.config_entries.async_update_entry(
                         entry, unique_id=entry.unique_id, data=new_data
                     )
                 # Abort the configuration, as there already is an entry for this PANEL-ID.
@@ -551,5 +551,5 @@ class ElmaxConfigFlow(ConfigFlow, domain=DOMAIN):
         return client
 
 
-class NoOnlinePanelsError(HomeAssistantError):
+class NoOnlinePanelsError(menuaiError):
     """Error occurring when no online panel was found."""

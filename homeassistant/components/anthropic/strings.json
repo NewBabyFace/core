@@ -22,7 +22,7 @@
           "chat_model": "[%key:common::generic::model%]",
           "max_tokens": "Maximum tokens to return in response",
           "temperature": "Temperature",
-          "llm_hass_api": "[%key:common::config_flow::data::llm_hass_api%]",
+          "llm_menuai_api": "[%key:common::config_flow::data::llm_menuai_api%]",
           "recommended": "Recommended model settings",
           "thinking_budget_tokens": "Thinking budget"
         },

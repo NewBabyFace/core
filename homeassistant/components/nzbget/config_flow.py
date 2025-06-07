@@ -7,8 +7,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -57,7 +57,7 @@ class NZBGetConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_VERIFY_SSL] = DEFAULT_VERIFY_SSL
 
             try:
-                await self.hass.async_add_executor_job(_validate_input, user_input)
+                await self.menuai.async_add_executor_job(_validate_input, user_input)
             except NZBGetAPIException:
                 errors["base"] = "cannot_connect"
             except Exception:

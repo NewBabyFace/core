@@ -4,8 +4,8 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.components.pvpc_hourly_pricing.const import ATTR_TARIFF, DOMAIN
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, CURRENCY_EURO, UnitOfEnergy
+from menuai.components.pvpc_hourly_pricing.const import ATTR_TARIFF, DOMAIN
+from menuai.const import ATTR_UNIT_OF_MEASUREMENT, CURRENCY_EURO, UnitOfEnergy
 
 from tests.common import load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker

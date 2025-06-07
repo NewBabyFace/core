@@ -4,6 +4,6 @@
   "schema_version": 23,
   "min_supported_schema_version": 23,
   "base_url": "http://localhost:8095",
-  "homeassistant_addon": false,
+  "menuai_addon": false,
   "onboard_done": false
 }

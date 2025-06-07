@@ -10,15 +10,15 @@ from gspread.exceptions import APIError
 import pytest
 from requests.models import Response
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.google_sheets.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
+from menuai.components.google_sheets.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -60,40 +60,40 @@ def mock_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> Callable[[], Coroutine[Any, Any, None]]:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential("client-id", "client-secret"),
         DOMAIN,
     )
 
     async def func() -> None:
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     return func
 
 
 async def test_setup_success(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test successful setup and unload."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entries[0].entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entries[0].entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
     assert entries[0].state is ConfigEntryState.NOT_LOADED
 
 
@@ -109,23 +109,23 @@ async def test_setup_success(
     ids=["no_scope", "required_scope_prefix", "other_scope"],
 )
 async def test_missing_required_scopes_requires_reauth(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test that reauth is invoked when required scopes are not present."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
 
 @pytest.mark.parametrize("expires_at", [time.time() - 3600], ids=["expired"])
 async def test_expired_token_refresh_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -143,7 +143,7 @@ async def test_expired_token_refresh_success(
 
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert entries[0].data["token"]["access_token"] == "updated-access-token"
@@ -167,7 +167,7 @@ async def test_expired_token_refresh_success(
     ids=["failure_requires_reauth", "transient_failure"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
@@ -183,24 +183,24 @@ async def test_expired_token_refresh_failure(
     await setup_integration()
 
     # Verify a transient failure has occurred
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].state is expected_state
 
 
 async def test_append_sheet(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test service call appending to a sheet."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
-    with patch("homeassistant.components.google_sheets.services.Client") as mock_client:
-        await hass.services.async_call(
+    with patch("menuai.components.google_sheets.services.Client") as mock_client:
+        await menuai.services.async_call(
             DOMAIN,
             "append_sheet",
             {
@@ -214,19 +214,19 @@ async def test_append_sheet(
 
 
 async def test_append_sheet_multiple_rows(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test service call appending to a sheet."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
-    with patch("homeassistant.components.google_sheets.services.Client") as mock_client:
-        await hass.services.async_call(
+    with patch("menuai.components.google_sheets.services.Client") as mock_client:
+        await menuai.services.async_call(
             DOMAIN,
             "append_sheet",
             {
@@ -240,14 +240,14 @@ async def test_append_sheet_multiple_rows(
 
 
 async def test_append_sheet_api_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test append to sheet service call API error."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
@@ -255,13 +255,13 @@ async def test_append_sheet_api_error(
     response.status_code = 503
 
     with (
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
         patch(
-            "homeassistant.components.google_sheets.services.Client.request",
+            "menuai.components.google_sheets.services.Client.request",
             side_effect=APIError(response),
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "append_sheet",
             {
@@ -274,7 +274,7 @@ async def test_append_sheet_api_error(
 
 
 async def test_append_sheet_invalid_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     config_entry: MockConfigEntry,
     expires_at: int,
@@ -294,7 +294,7 @@ async def test_append_sheet_invalid_config_entry(
             },
         },
     )
-    config_entry2.add_to_hass(hass)
+    config_entry2.add_to_menuai(menuai)
 
     await setup_integration()
 
@@ -303,7 +303,7 @@ async def test_append_sheet_invalid_config_entry(
 
     # Exercise service call on a config entry that does not exist
     with pytest.raises(ValueError, match="Invalid config entry"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "append_sheet",
             {
@@ -315,12 +315,12 @@ async def test_append_sheet_invalid_config_entry(
         )
 
     # Unload the config entry invoke the service on the unloaded entry id
-    await hass.config_entries.async_unload(config_entry2.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry2.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry2.state is ConfigEntryState.NOT_LOADED
 
     with pytest.raises(ValueError, match="Invalid config entry"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "append_sheet",
             {

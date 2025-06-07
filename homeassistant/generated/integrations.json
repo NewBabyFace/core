@@ -286,7 +286,7 @@
       "iot_class": "cloud_polling"
     },
     "analytics_insights": {
-      "name": "Home Assistant Analytics Insights",
+      "name": "MenuAI Analytics Insights",
       "integration_type": "service",
       "config_flow": true,
       "iot_class": "cloud_polling",
@@ -2569,8 +2569,8 @@
       "integration_type": "virtual",
       "supported_by": "aquacell"
     },
-    "hassio": {
-      "name": "Home Assistant Supervisor",
+    "menuaiio": {
+      "name": "MenuAI Supervisor",
       "integration_type": "hub",
       "config_flow": false,
       "iot_class": "local_polling",
@@ -2694,19 +2694,19 @@
       "integration_type": "virtual",
       "supported_by": "netatmo"
     },
-    "homeassistant_green": {
-      "name": "Home Assistant Green",
+    "menuai_green": {
+      "name": "MenuAI Green",
       "integration_type": "hardware",
       "config_flow": false,
       "single_config_entry": true
     },
-    "homeassistant_sky_connect": {
-      "name": "Home Assistant Connect ZBT-1",
+    "menuai_sky_connect": {
+      "name": "MenuAI Connect ZBT-1",
       "integration_type": "hardware",
       "config_flow": true
     },
-    "homeassistant_yellow": {
-      "name": "Home Assistant Yellow",
+    "menuai_yellow": {
+      "name": "MenuAI Yellow",
       "integration_type": "hardware",
       "config_flow": false,
       "single_config_entry": true
@@ -3043,7 +3043,7 @@
       "iot_class": "local_polling"
     },
     "ios": {
-      "name": "Home Assistant iOS",
+      "name": "MenuAI iOS",
       "integration_type": "hub",
       "config_flow": true,
       "iot_class": "cloud_push"
@@ -5491,8 +5491,8 @@
       "config_flow": true,
       "iot_class": "local_push"
     },
-    "rhasspy": {
-      "name": "Rhasspy",
+    "rmenuaipy": {
+      "name": "Rmenuaipy",
       "integration_type": "hub",
       "config_flow": true,
       "iot_class": "local_push",

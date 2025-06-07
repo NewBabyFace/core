@@ -6,15 +6,15 @@ from typing import Any, cast
 
 from pysqueezebox.player import Alarm
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_change
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_change
 
 from .const import ATTR_ALARM_ID, DOMAIN, SIGNAL_PLAYER_DISCOVERED
 from .coordinator import SqueezeBoxPlayerUpdateCoordinator
@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -62,7 +62,7 @@ async def async_setup_entry(
                         _uid,
                     )
 
-                    entity_registry = er.async_get(hass)
+                    entity_registry = er.async_get(menuai)
                     _entity_id = entity_registry.async_get_entity_id(
                         Platform.SWITCH,
                         DOMAIN,
@@ -89,7 +89,7 @@ async def async_setup_entry(
         async_add_entities([SqueezeBoxAlarmsEnabledEntity(coordinator)])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, SIGNAL_PLAYER_DISCOVERED, _player_discovered)
+        async_dispatcher_connect(menuai, SIGNAL_PLAYER_DISCOVERED, _player_discovered)
     )
 
 
@@ -110,9 +110,9 @@ class SqueezeBoxAlarmEntity(SqueezeboxEntity, SwitchEntity):
             f"{format_mac(self._player.player_id)}_alarm_{self._alarm_id}"
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Set up alarm switch when added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up alarm switch when added to menuai."""
+        await super().async_added_to_menuai()
 
         async def async_write_state_daily(now: datetime.datetime) -> None:
             """Update alarm state attributes each calendar day."""
@@ -121,7 +121,7 @@ class SqueezeBoxAlarmEntity(SqueezeboxEntity, SwitchEntity):
 
         self.async_on_remove(
             async_track_time_change(
-                self.hass, async_write_state_daily, hour=0, minute=0, second=0
+                self.menuai, async_write_state_daily, hour=0, minute=0, second=0
             )
         )
 

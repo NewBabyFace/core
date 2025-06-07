@@ -5,8 +5,8 @@ from typing import Any
 
 from dio_chacon_wifi_api import DIOChaconAPIClient
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN, MANUFACTURER
 
@@ -38,9 +38,9 @@ class ChaconDioEntity(Entity):
     def _update_attr(self, data: dict[str, Any]) -> None:
         """Recomputes the attributes values."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register the callback for server side events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.client.set_callback_device_state_by_device(
             self.target_id, self.callback_device_state
         )

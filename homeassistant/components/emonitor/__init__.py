@@ -8,11 +8,11 @@ import logging
 from aioemonitor import Emonitor
 from aioemonitor.monitor import EmonitorStatus
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 type EmonitorConfigEntry = ConfigEntry[DataUpdateCoordinator[EmonitorStatus]]
 
@@ -23,13 +23,13 @@ DEFAULT_UPDATE_RATE = 60
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EmonitorConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EmonitorConfigEntry) -> bool:
     """Set up SiteSage Emonitor from a config entry."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
     emonitor = Emonitor(entry.data[CONF_HOST], session)
 
     coordinator = DataUpdateCoordinator[EmonitorStatus](
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=entry.title,
@@ -41,13 +41,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: EmonitorConfigEntry) -> 
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EmonitorConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EmonitorConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 def name_short_mac(short_mac):

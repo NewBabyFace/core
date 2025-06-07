@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, Mock
 
-from homeassistant.components.hdmi_cec import KeyPressCommand, KeyReleaseCommand
+from menuai.components.hdmi_cec import KeyPressCommand, KeyReleaseCommand
 
 
 class MockHDMIDevice:

@@ -14,31 +14,31 @@ from aioesphomeapi import (
     TextSensorState,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ICON,
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import MockESPHomeDeviceType, MockGenericDeviceEntryType
 
 
 async def test_generic_numeric_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
     """Test a generic sensor entity."""
-    logging.getLogger("homeassistant.components.esphome").setLevel(logging.DEBUG)
+    logging.getLogger("menuai.components.esphome").setLevel(logging.DEBUG)
     entity_info = [
         SensorInfo(
             object_id="mysensor",
@@ -55,41 +55,41 @@ async def test_generic_numeric_sensor(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "50"
 
     # Test updating state
     mock_device.set_state(SensorState(key=1, state=60))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.test_mysensor")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "60"
 
     # Test sending the same state again
     mock_device.set_state(SensorState(key=1, state=60))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.test_mysensor")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "60"
 
     # Test we can still update after the same state
     mock_device.set_state(SensorState(key=1, state=70))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.test_mysensor")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "70"
 
     # Test invalid data from the underlying api does not crash us
     mock_device.set_state(SensorState(key=1, state=object()))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.test_mysensor")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "70"
 
 
 async def test_generic_numeric_sensor_with_entity_category_and_icon(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
@@ -113,7 +113,7 @@ async def test_generic_numeric_sensor_with_entity_category_and_icon(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "50"
     assert state.attributes[ATTR_ICON] == "mdi:leaf"
@@ -126,7 +126,7 @@ async def test_generic_numeric_sensor_with_entity_category_and_icon(
 
 
 async def test_generic_numeric_sensor_state_class_measurement(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
@@ -151,7 +151,7 @@ async def test_generic_numeric_sensor_state_class_measurement(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "50"
     assert state.attributes[ATTR_STATE_CLASS] == SensorStateClass.MEASUREMENT
@@ -164,7 +164,7 @@ async def test_generic_numeric_sensor_state_class_measurement(
 
 
 async def test_generic_numeric_sensor_device_class_timestamp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -186,13 +186,13 @@ async def test_generic_numeric_sensor_device_class_timestamp(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "2023-06-22T18:43:52+00:00"
 
 
 async def test_generic_numeric_sensor_legacy_last_reset_convert(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -215,14 +215,14 @@ async def test_generic_numeric_sensor_legacy_last_reset_convert(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "50"
     assert state.attributes[ATTR_STATE_CLASS] == SensorStateClass.TOTAL_INCREASING
 
 
 async def test_generic_numeric_sensor_no_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -243,13 +243,13 @@ async def test_generic_numeric_sensor_no_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
 
 async def test_generic_numeric_sensor_nan_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -270,13 +270,13 @@ async def test_generic_numeric_sensor_nan_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
 
 async def test_generic_numeric_sensor_missing_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -297,13 +297,13 @@ async def test_generic_numeric_sensor_missing_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
 
 async def test_generic_text_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -324,13 +324,13 @@ async def test_generic_text_sensor(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "i am a teapot"
 
 
 async def test_generic_text_sensor_missing_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -351,13 +351,13 @@ async def test_generic_text_sensor_missing_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
 
 async def test_generic_text_sensor_device_class_timestamp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -379,14 +379,14 @@ async def test_generic_text_sensor_device_class_timestamp(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "2023-06-22T18:43:52+00:00"
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.TIMESTAMP
 
 
 async def test_generic_text_sensor_device_class_date(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -408,14 +408,14 @@ async def test_generic_text_sensor_device_class_date(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "2023-06-22"
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.DATE
 
 
 async def test_generic_numeric_sensor_empty_string_uom(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -437,7 +437,7 @@ async def test_generic_numeric_sensor_empty_string_uom(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.test_mysensor")
+    state = menuai.states.get("sensor.test_mysensor")
     assert state is not None
     assert state.state == "123"
     assert ATTR_UNIT_OF_MEASUREMENT not in state.attributes

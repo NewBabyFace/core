@@ -1,4 +1,4 @@
-"""Support for schedules in Home Assistant."""
+"""Support for schedules in MenuAI."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     CONF_ICON,
     CONF_ID,
@@ -18,15 +18,15 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.collection import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.collection import (
     CollectionEntity,
     DictStorageCollection,
     DictStorageCollectionWebsocket,
@@ -35,12 +35,12 @@ from homeassistant.helpers.collection import (
     YamlCollection,
     sync_entity_lifecycle,
 )
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_NEXT_EVENT,
@@ -163,25 +163,25 @@ ENTITY_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up a schedule."""
-    component = EntityComponent[Schedule](LOGGER, DOMAIN, hass)
+    component = EntityComponent[Schedule](LOGGER, DOMAIN, menuai)
 
     id_manager = IDManager()
 
     yaml_collection = YamlCollection(LOGGER, id_manager)
-    sync_entity_lifecycle(hass, DOMAIN, DOMAIN, component, yaml_collection, Schedule)
+    sync_entity_lifecycle(menuai, DOMAIN, DOMAIN, component, yaml_collection, Schedule)
 
     storage_collection = ScheduleStorageCollection(
         Store(
-            hass,
+            menuai,
             key=DOMAIN,
             version=STORAGE_VERSION,
             minor_version=STORAGE_VERSION_MINOR,
         ),
         id_manager,
     )
-    sync_entity_lifecycle(hass, DOMAIN, DOMAIN, component, storage_collection, Schedule)
+    sync_entity_lifecycle(menuai, DOMAIN, DOMAIN, component, storage_collection, Schedule)
 
     await yaml_collection.async_load(
         [{CONF_ID: id_, **cfg} for id_, cfg in config.get(DOMAIN, {}).items()]
@@ -194,7 +194,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         DOMAIN,
         BASE_SCHEMA | STORAGE_SCHEDULE_SCHEMA,
         BASE_SCHEMA | STORAGE_SCHEDULE_SCHEMA,
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     async def reload_service_handler(service_call: ServiceCall) -> None:
         """Reload yaml entities."""
@@ -206,7 +206,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         reload_service_handler,
@@ -306,8 +306,8 @@ class Schedule(CollectionEntity):
             self._unsub_update()
             self._unsub_update = None
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self.async_on_remove(self._clean_up_listener)
         self._update()
 
@@ -385,7 +385,7 @@ class Schedule(CollectionEntity):
 
         if next_event:
             self._unsub_update = async_track_point_in_utc_time(
-                self.hass,
+                self.menuai,
                 self._update,
                 next_event,
             )

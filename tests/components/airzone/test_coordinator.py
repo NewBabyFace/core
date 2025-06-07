@@ -10,18 +10,18 @@ from aioairzone.exceptions import (
 )
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.airzone.const import DOMAIN
-from homeassistant.components.airzone.coordinator import SCAN_INTERVAL
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.util.dt import utcnow
+from menuai.components.airzone.const import DOMAIN
+from menuai.components.airzone.coordinator import SCAN_INTERVAL
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.util.dt import utcnow
 
 from .util import CONFIG, HVAC_MOCK, HVAC_MOCK_NEW_ZONES, HVAC_VERSION_MOCK
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_coordinator_client_connector_error(hass: HomeAssistant) -> None:
+async def test_coordinator_client_connector_error(menuai: menuai) -> None:
     """Test ClientConnectorError on coordinator update."""
 
     config_entry = MockConfigEntry(
@@ -30,46 +30,46 @@ async def test_coordinator_client_connector_error(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         unique_id="airzone_unique_id",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             side_effect=HotWaterNotAvailable,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             return_value=HVAC_MOCK,
         ) as mock_hvac,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             side_effect=SystemOutOfRange,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             side_effect=InvalidMethod,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         mock_hvac.assert_called_once()
         mock_hvac.reset_mock()
 
         mock_hvac.side_effect = AirzoneError
-        async_fire_time_changed(hass, utcnow() + SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + SCAN_INTERVAL)
+        await menuai.async_block_till_done()
         mock_hvac.assert_called_once()
 
-        state = hass.states.get("sensor.despacho_temperature")
+        state = menuai.states.get("sensor.despacho_temperature")
         assert state.state == STATE_UNAVAILABLE
 
 
 async def test_coordinator_new_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test new devices on coordinator update."""
@@ -80,49 +80,49 @@ async def test_coordinator_new_devices(
         domain=DOMAIN,
         unique_id="airzone_unique_id",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             side_effect=HotWaterNotAvailable,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             return_value=HVAC_MOCK_NEW_ZONES,
         ) as mock_hvac,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             side_effect=SystemOutOfRange,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             side_effect=InvalidMethod,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         mock_hvac.assert_called_once()
         mock_hvac.reset_mock()
 
-        state = hass.states.get("sensor.salon_temperature")
+        state = menuai.states.get("sensor.salon_temperature")
         assert state.state == "19.6"
 
-        state = hass.states.get("sensor.dorm_ppal_temperature")
+        state = menuai.states.get("sensor.dorm_ppal_temperature")
         assert state is None
 
         mock_hvac.return_value = HVAC_MOCK
         freezer.tick(SCAN_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         mock_hvac.assert_called_once()
 
-        state = hass.states.get("sensor.salon_temperature")
+        state = menuai.states.get("sensor.salon_temperature")
         assert state.state == "19.6"
 
-        state = hass.states.get("sensor.dorm_ppal_temperature")
+        state = menuai.states.get("sensor.dorm_ppal_temperature")
         assert state.state == "21.1"

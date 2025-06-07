@@ -10,14 +10,14 @@ from flux_led.const import (
 from flux_led.protocol import PowerRestoreState, RemoteConfig
 import pytest
 
-from homeassistant.components import flux_led
-from homeassistant.components.flux_led.const import CONF_WHITE_CHANNEL_TYPE, DOMAIN
-from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_OPTION, CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import flux_led
+from menuai.components.flux_led.const import CONF_WHITE_CHANNEL_TYPE, DOMAIN
+from menuai.components.select import DOMAIN as SELECT_DOMAIN
+from menuai.const import ATTR_ENTITY_ID, ATTR_OPTION, CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import (
     DEFAULT_ENTRY_TITLE,
@@ -37,29 +37,29 @@ from tests.common import MockConfigEntry
 @pytest.fixture(autouse=True)
 def no_wait_on_state_change():
     """Disable waiting for state change in tests."""
-    with patch("homeassistant.components.flux_led.select.STATE_CHANGE_LATENCY", 0):
+    with patch("menuai.components.flux_led.select.STATE_CHANGE_LATENCY", 0):
         yield
 
 
-async def test_switch_power_restore_state(hass: HomeAssistant) -> None:
+async def test_switch_power_restore_state(menuai: menuai) -> None:
     """Test a smart plug power restore state."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     switch = _mocked_switch()
     with _patch_discovery(), _patch_wifibulb(device=switch):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     entity_id = "select.bulb_rgbcw_ddeeff_power_restored"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "Last State"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         "select_option",
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: "Always On"},
@@ -71,7 +71,7 @@ async def test_switch_power_restore_state(hass: HomeAssistant) -> None:
 
 
 async def test_power_restored_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a select unique id."""
     config_entry = MockConfigEntry(
@@ -79,11 +79,11 @@ async def test_power_restored_unique_id(
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     switch = _mocked_switch()
     with _patch_discovery(), _patch_wifibulb(device=switch):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     entity_id = "select.bulb_rgbcw_ddeeff_power_restored"
     assert (
@@ -93,18 +93,18 @@ async def test_power_restored_unique_id(
 
 
 async def test_power_restored_unique_id_no_discovery(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a select unique id."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     switch = _mocked_switch()
     with _patch_discovery(no_device=True), _patch_wifibulb(device=switch):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     entity_id = "select.bulb_rgbcw_ddeeff_power_restored"
     assert (
@@ -113,36 +113,36 @@ async def test_power_restored_unique_id_no_discovery(
     )
 
 
-async def test_select_addressable_strip_config(hass: HomeAssistant) -> None:
+async def test_select_addressable_strip_config(menuai: menuai) -> None:
     """Test selecting addressable strip configs."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     bulb.raw_state = bulb.raw_state._replace(model_num=0xA2)  # addressable model
     with _patch_discovery(), _patch_wifibulb(device=bulb):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     wiring_entity_id = "select.bulb_rgbcw_ddeeff_wiring"
-    state = hass.states.get(wiring_entity_id)
+    state = menuai.states.get(wiring_entity_id)
     assert state.state == "BGRW"
 
     ic_type_entity_id = "select.bulb_rgbcw_ddeeff_ic_type"
-    state = hass.states.get(ic_type_entity_id)
+    state = menuai.states.get(ic_type_entity_id)
     assert state.state == "WS2812B"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {ATTR_ENTITY_ID: wiring_entity_id, ATTR_OPTION: "INVALID"},
             blocking=True,
         )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         "select_option",
         {ATTR_ENTITY_ID: wiring_entity_id, ATTR_OPTION: "GRBW"},
@@ -152,7 +152,7 @@ async def test_select_addressable_strip_config(hass: HomeAssistant) -> None:
     bulb.async_set_device_config.reset_mock()
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {ATTR_ENTITY_ID: ic_type_entity_id, ATTR_OPTION: "INVALID"},
@@ -160,41 +160,41 @@ async def test_select_addressable_strip_config(hass: HomeAssistant) -> None:
         )
 
     with patch(
-        "homeassistant.components.flux_led.async_setup_entry"
+        "menuai.components.flux_led.async_setup_entry"
     ) as mock_setup_entry:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {ATTR_ENTITY_ID: ic_type_entity_id, ATTR_OPTION: "UCS1618"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     bulb.async_set_device_config.assert_called_once_with(ic_type="UCS1618")
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_select_mutable_0x25_strip_config(hass: HomeAssistant) -> None:
+async def test_select_mutable_0x25_strip_config(menuai: menuai) -> None:
     """Test selecting mutable 0x25 strip configs."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     bulb.operating_mode = "RGBWW"
     bulb.operating_modes = ["DIM", "CCT", "RGB", "RGBW", "RGBWW"]
     bulb.raw_state = bulb.raw_state._replace(model_num=0x25)  # addressable model
     with _patch_discovery(), _patch_wifibulb(device=bulb):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     operating_mode_entity_id = "select.bulb_rgbcw_ddeeff_operating_mode"
-    state = hass.states.get(operating_mode_entity_id)
+    state = menuai.states.get(operating_mode_entity_id)
     assert state.state == "RGBWW"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {ATTR_ENTITY_ID: operating_mode_entity_id, ATTR_OPTION: "INVALID"},
@@ -202,34 +202,34 @@ async def test_select_mutable_0x25_strip_config(hass: HomeAssistant) -> None:
         )
 
     with patch(
-        "homeassistant.components.flux_led.async_setup_entry"
+        "menuai.components.flux_led.async_setup_entry"
     ) as mock_setup_entry:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {ATTR_ENTITY_ID: operating_mode_entity_id, ATTR_OPTION: "CCT"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     bulb.async_set_device_config.assert_called_once_with(operating_mode="CCT")
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_select_24ghz_remote_config(hass: HomeAssistant) -> None:
+async def test_select_24ghz_remote_config(menuai: menuai) -> None:
     """Test selecting 2.4ghz remote config."""
-    _mock_config_entry_for_bulb(hass)
+    _mock_config_entry_for_bulb(menuai)
     bulb = _mocked_bulb()
     bulb.discovery = FLUX_DISCOVERY
     with _patch_discovery(device=FLUX_DISCOVERY), _patch_wifibulb(device=bulb):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     remote_config_entity_id = "select.bulb_rgbcw_ddeeff_remote_config"
-    state = hass.states.get(remote_config_entity_id)
+    state = menuai.states.get(remote_config_entity_id)
     assert state.state == "Open"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {ATTR_ENTITY_ID: remote_config_entity_id, ATTR_OPTION: "INVALID"},
@@ -237,7 +237,7 @@ async def test_select_24ghz_remote_config(hass: HomeAssistant) -> None:
         )
 
     bulb.remote_config = RemoteConfig.DISABLED
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         "select_option",
         {ATTR_ENTITY_ID: remote_config_entity_id, ATTR_OPTION: "Disabled"},
@@ -247,7 +247,7 @@ async def test_select_24ghz_remote_config(hass: HomeAssistant) -> None:
     bulb.async_config_remotes.reset_mock()
 
     bulb.remote_config = RemoteConfig.PAIRED_ONLY
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         "select_option",
         {ATTR_ENTITY_ID: remote_config_entity_id, ATTR_OPTION: "Paired Only"},
@@ -257,28 +257,28 @@ async def test_select_24ghz_remote_config(hass: HomeAssistant) -> None:
     bulb.async_config_remotes.reset_mock()
 
 
-async def test_select_white_channel_type(hass: HomeAssistant) -> None:
+async def test_select_white_channel_type(menuai: menuai) -> None:
     """Test selecting the white channel type."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     bulb.color_modes = {FLUX_COLOR_MODE_RGBW, FLUX_COLOR_MODE_CCT}
     bulb.color_mode = FLUX_COLOR_MODE_RGBW
     bulb.raw_state = bulb.raw_state._replace(model_num=0x06)  # rgbw
     with _patch_discovery(), _patch_wifibulb(device=bulb):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     operating_mode_entity_id = "select.bulb_rgbcw_ddeeff_white_channel"
-    state = hass.states.get(operating_mode_entity_id)
+    state = menuai.states.get(operating_mode_entity_id)
     assert state.state == WhiteChannelType.WARM.name.title()
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {ATTR_ENTITY_ID: operating_mode_entity_id, ATTR_OPTION: "INVALID"},
@@ -286,9 +286,9 @@ async def test_select_white_channel_type(hass: HomeAssistant) -> None:
         )
 
     with patch(
-        "homeassistant.components.flux_led.async_setup_entry"
+        "menuai.components.flux_led.async_setup_entry"
     ) as mock_setup_entry:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             "select_option",
             {
@@ -297,7 +297,7 @@ async def test_select_white_channel_type(hass: HomeAssistant) -> None:
             },
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert (
         config_entry.data[CONF_WHITE_CHANNEL_TYPE]
         == WhiteChannelType.NATURAL.name.lower()
@@ -305,21 +305,21 @@ async def test_select_white_channel_type(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_select_device_no_wiring(hass: HomeAssistant) -> None:
+async def test_select_device_no_wiring(menuai: menuai) -> None:
     """Test select is not created if the device does not support wiring."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE},
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     bulb.wiring = None
     bulb.wirings = ["RGB", "GRB"]
     bulb.raw_state = bulb.raw_state._replace(model_num=0x25)
     with _patch_discovery(), _patch_wifibulb(device=bulb):
-        await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     wiring_entity_id = "select.bulb_rgbcw_ddeeff_wiring"
-    assert hass.states.get(wiring_entity_id) is None
+    assert menuai.states.get(wiring_entity_id) is None

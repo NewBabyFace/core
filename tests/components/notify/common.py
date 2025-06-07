@@ -6,20 +6,20 @@ components. Instead call the service directly.
 
 from typing import Any
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TITLE,
     DOMAIN,
     SERVICE_NOTIFY,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.loader import bind_hass
+from menuai.core import menuai
+from menuai.loader import bind_menuai
 
 
-@bind_hass
+@bind_menuai
 def send_message(
-    hass: HomeAssistant, message: str, title: str | None = None, data: Any = None
+    menuai: menuai, message: str, title: str | None = None, data: Any = None
 ) -> None:
     """Send a notification message."""
     info = {ATTR_MESSAGE: message}
@@ -30,4 +30,4 @@ def send_message(
     if data is not None:
         info[ATTR_DATA] = data
 
-    hass.services.call(DOMAIN, SERVICE_NOTIFY, info)
+    menuai.services.call(DOMAIN, SERVICE_NOTIFY, info)

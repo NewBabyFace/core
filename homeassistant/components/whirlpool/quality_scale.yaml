@@ -28,7 +28,7 @@ rules:
   action-exceptions:
     status: todo
     comment: |
-      - The calls to the api can be changed to return bool, and services can then raise HomeAssistantError
+      - The calls to the api can be changed to return bool, and services can then raise menuaiError
       - Current services raise ValueError and should raise ServiceValidationError instead.
   config-entry-unloading: done
   docs-configuration-parameters:

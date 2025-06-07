@@ -12,20 +12,20 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy.engine import Result
 from sqlalchemy.engine.row import Row
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.filters import Filters
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.filters import Filters
+from menuai.components.recorder.models import (
     bytes_to_uuid_hex_or_none,
     extract_event_type_ids,
     extract_metadata_ids,
     process_timestamp_to_utc_isoformat,
 )
-from homeassistant.components.recorder.util import (
+from menuai.components.recorder.util import (
     execute_stmt_lambda_element,
     session_scope,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     ATTR_DOMAIN,
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
@@ -34,10 +34,10 @@ from homeassistant.const import (
     EVENT_CALL_SERVICE,
     EVENT_LOGBOOK_ENTRY,
 )
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
-from homeassistant.util.event_type import EventType
+from menuai.core import menuai, split_entity_id
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
+from menuai.util.event_type import EventType
 
 from .const import (
     ATTR_MESSAGE,
@@ -106,7 +106,7 @@ class EventProcessor:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         event_types: tuple[EventType[Any] | str, ...],
         entity_ids: list[str] | None = None,
         device_ids: list[str] | None = None,
@@ -118,19 +118,19 @@ class EventProcessor:
         assert not (context_id and (entity_ids or device_ids)), (
             "can't pass in both context_id and (entity_ids or device_ids)"
         )
-        self.hass = hass
-        self.ent_reg = er.async_get(hass)
+        self.menuai = menuai
+        self.ent_reg = er.async_get(menuai)
         self.event_types = event_types
         self.entity_ids = entity_ids
         self.device_ids = device_ids
         self.context_id = context_id
-        logbook_config: LogbookConfig = hass.data[DOMAIN]
+        logbook_config: LogbookConfig = menuai.data[DOMAIN]
         self.filters: Filters | None = logbook_config.sqlalchemy_filter
         self.logbook_run = LogbookRun(
             context_lookup={None: None},
             external_events=logbook_config.external_events,
             event_cache=EventCache({}),
-            entity_name_cache=EntityNameCache(self.hass),
+            entity_name_cache=EntityNameCache(self.menuai),
             include_entity_name=include_entity_name,
             timestamp=timestamp,
         )
@@ -156,9 +156,9 @@ class EventProcessor:
         end_day: dt,
     ) -> list[dict[str, Any]]:
         """Get events for a period of time."""
-        with session_scope(hass=self.hass, read_only=True) as session:
+        with session_scope(menuai=self.menuai, read_only=True) as session:
             metadata_ids: list[int] | None = None
-            instance = get_instance(self.hass)
+            instance = get_instance(self.menuai)
             if self.entity_ids:
                 metadata_ids = extract_metadata_ids(
                     instance.states_meta_manager.get_many(
@@ -190,7 +190,7 @@ class EventProcessor:
         """Humanify rows."""
         return list(
             _humanify(
-                self.hass,
+                self.menuai,
                 rows,
                 self.ent_reg,
                 self.logbook_run,
@@ -200,7 +200,7 @@ class EventProcessor:
 
 
 def _humanify(
-    hass: HomeAssistant,
+    menuai: menuai,
     rows: Generator[EventAsRow] | Sequence[Row] | Result,
     ent_reg: er.EntityRegistry,
     logbook_run: LogbookRun,
@@ -239,7 +239,7 @@ def _humanify(
             if (
                 is_continuous := continuous_sensors.get(entity_id)
             ) is None and split_entity_id(entity_id)[0] == SENSOR_DOMAIN:
-                is_continuous = is_sensor_continuous(hass, ent_reg, entity_id)
+                is_continuous = is_sensor_continuous(menuai, ent_reg, entity_id)
                 continuous_sensors[entity_id] = is_continuous
             if is_continuous:
                 continue
@@ -397,16 +397,16 @@ class EntityNameCache:
     that are expected to change state.
     """
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Init the cache."""
-        self._hass = hass
+        self._menuai = menuai
         self._names: dict[str, str] = {}
 
     def get(self, entity_id: str) -> str:
         """Lookup an the friendly name."""
         if entity_id in self._names:
             return self._names[entity_id]
-        if (current_state := self._hass.states.get(entity_id)) and (
+        if (current_state := self._menuai.states.get(entity_id)) and (
             friendly_name := current_state.attributes.get(ATTR_FRIENDLY_NAME)
         ):
             self._names[entity_id] = friendly_name

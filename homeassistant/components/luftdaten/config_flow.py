@@ -8,10 +8,10 @@ from luftdaten import Luftdaten
 from luftdaten.exceptions import LuftdatenConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_SHOW_ON_MAP
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_SHOW_ON_MAP
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import CONF_SENSOR_ID, DOMAIN
 

@@ -8,10 +8,10 @@ import logging
 from pyprobeplus import ProbePlusDevice
 from pyprobeplus.exceptions import ProbePlusDeviceNotFound, ProbePlusError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 type ProbePlusConfigEntry = ConfigEntry[ProbePlusDataUpdateCoordinator]
 
@@ -29,10 +29,10 @@ class ProbePlusDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     config_entry: ProbePlusConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ProbePlusConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ProbePlusConfigEntry) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name="ProbePlusDataUpdateCoordinator",
             update_interval=SCAN_INTERVAL,

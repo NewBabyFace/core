@@ -7,14 +7,14 @@ import logging
 
 from rpi_bad_power import UnderVoltage, new_under_voltage
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,12 +26,12 @@ DESCRIPTION_UNDER_VOLTAGE = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up rpi_power binary sensor."""
-    under_voltage = await hass.async_add_executor_job(new_under_voltage)
+    under_voltage = await menuai.async_add_executor_job(new_under_voltage)
     async_add_entities([RaspberryChargerBinarySensor(under_voltage)], True)
 
 

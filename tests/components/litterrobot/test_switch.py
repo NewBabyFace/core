@@ -5,14 +5,14 @@ from unittest.mock import MagicMock
 from pylitterbot import Robot
 import pytest
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as PLATFORM_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import setup_integration
 
@@ -21,12 +21,12 @@ PANEL_LOCKOUT_ENTITY_ID = "switch.test_panel_lockout"
 
 
 async def test_switch(
-    hass: HomeAssistant, mock_account: MagicMock, entity_registry: er.EntityRegistry
+    menuai: menuai, mock_account: MagicMock, entity_registry: er.EntityRegistry
 ) -> None:
     """Tests the switch entity was set up."""
-    await setup_integration(hass, mock_account, PLATFORM_DOMAIN)
+    await setup_integration(menuai, mock_account, PLATFORM_DOMAIN)
 
-    state = hass.states.get(NIGHT_LIGHT_MODE_ENTITY_ID)
+    state = menuai.states.get(NIGHT_LIGHT_MODE_ENTITY_ID)
     assert state
     assert state.state == STATE_ON
 
@@ -43,26 +43,26 @@ async def test_switch(
     ],
 )
 async def test_on_off_commands(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_account: MagicMock,
     entity_id: str,
     robot_command: str,
     updated_field: str,
 ) -> None:
     """Test sending commands to the switch."""
-    await setup_integration(hass, mock_account, PLATFORM_DOMAIN)
+    await setup_integration(menuai, mock_account, PLATFORM_DOMAIN)
     robot: Robot = mock_account.robots[0]
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     data = {ATTR_ENTITY_ID: entity_id}
 
     services = ((SERVICE_TURN_ON, STATE_ON, "1"), (SERVICE_TURN_OFF, STATE_OFF, "0"))
     for count, (service, new_state, new_value) in enumerate(services):
-        await hass.services.async_call(PLATFORM_DOMAIN, service, data, blocking=True)
+        await menuai.services.async_call(PLATFORM_DOMAIN, service, data, blocking=True)
         robot._update_data({updated_field: new_value}, partial=True)
 
         assert getattr(robot, robot_command).call_count == count + 1
-        assert (state := hass.states.get(entity_id))
+        assert (state := menuai.states.get(entity_id))
         assert state.state == new_state

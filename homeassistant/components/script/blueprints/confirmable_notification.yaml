@@ -4,12 +4,12 @@ blueprint:
     A script that sends an actionable notification with a confirmation before
     running the specified action.
   domain: script
-  source_url: https://github.com/home-assistant/core/blob/master/homeassistant/components/script/blueprints/confirmable_notification.yaml
-  author: Home Assistant
+  source_url: https://github.com/home-assistant/core/blob/master/menuai/components/script/blueprints/confirmable_notification.yaml
+  author: MenuAI
   input:
     notify_device:
       name: Device to notify
-      description: Device needs to run the official Home Assistant app to receive notifications.
+      description: Device needs to run the official MenuAI app to receive notifications.
       selector:
         device:
           filter:

@@ -8,14 +8,14 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from yalesmartalarmclient import YaleSmartAlarmData
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -25,7 +25,7 @@ from tests.common import MockConfigEntry, snapshot_platform
     [[Platform.SWITCH]],
 )
 async def test_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     load_config_entry: tuple[MockConfigEntry, Mock],
     get_data: YaleSmartAlarmData,
@@ -34,10 +34,10 @@ async def test_switch(
     """Test the Yale Smart Living autolock switch."""
 
     await snapshot_platform(
-        hass, entity_registry, snapshot, load_config_entry[0].entry_id
+        menuai, entity_registry, snapshot, load_config_entry[0].entry_id
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -46,10 +46,10 @@ async def test_switch(
         blocking=True,
     )
 
-    state = hass.states.get("switch.device1_autolock")
+    state = menuai.states.get("switch.device1_autolock")
     assert state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -58,5 +58,5 @@ async def test_switch(
         blocking=True,
     )
 
-    state = hass.states.get("switch.device1_autolock")
+    state = menuai.states.get("switch.device1_autolock")
     assert state.state == STATE_ON

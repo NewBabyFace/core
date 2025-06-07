@@ -1,6 +1,6 @@
 """The tests for lutron caseta logbook."""
 
-from homeassistant.components.lutron_caseta.const import (
+from menuai.components.lutron_caseta.const import (
     ATTR_ACTION,
     ATTR_AREA_NAME,
     ATTR_BUTTON_NUMBER,
@@ -14,11 +14,11 @@ from homeassistant.components.lutron_caseta.const import (
     DOMAIN,
     LUTRON_CASETA_BUTTON_EVENT,
 )
-from homeassistant.components.lutron_caseta.models import LutronCasetaData
-from homeassistant.const import ATTR_DEVICE_ID, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.lutron_caseta.models import LutronCasetaData
+from menuai.const import ATTR_DEVICE_ID, CONF_HOST
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import MockBridge, async_setup_integration
 
@@ -26,10 +26,10 @@ from tests.common import MockConfigEntry
 from tests.components.logbook.common import MockRow, mock_humanify
 
 
-async def test_humanify_lutron_caseta_button_event(hass: HomeAssistant) -> None:
+async def test_humanify_lutron_caseta_button_event(menuai: menuai) -> None:
     """Test humanifying lutron_caseta_button_events."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -40,14 +40,14 @@ async def test_humanify_lutron_caseta_button_event(hass: HomeAssistant) -> None:
         },
         unique_id="abc",
     )
-    config_entry.add_to_hass(hass)
-    await async_setup_integration(hass, MockBridge, config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    await async_setup_integration(menuai, MockBridge, config_entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Fetching the config entry runtime_data is a legacy pattern
     # and should not be copied for new integrations
-    data: LutronCasetaData = hass.config_entries.async_get_entry(
+    data: LutronCasetaData = menuai.config_entries.async_get_entry(
         config_entry.entry_id
     ).runtime_data
     keypads = data.keypad_data.keypads
@@ -55,7 +55,7 @@ async def test_humanify_lutron_caseta_button_event(hass: HomeAssistant) -> None:
     dr_device_id = keypad["dr_device_id"]
 
     (event1,) = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 LUTRON_CASETA_BUTTON_EVENT,
@@ -79,11 +79,11 @@ async def test_humanify_lutron_caseta_button_event(hass: HomeAssistant) -> None:
 
 
 async def test_humanify_lutron_caseta_button_event_integration_not_loaded(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test humanifying lutron_caseta_button_events when the integration fails to load."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -94,12 +94,12 @@ async def test_humanify_lutron_caseta_button_event_integration_not_loaded(
         },
         unique_id="abc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await async_setup_integration(hass, MockBridge, config_entry.entry_id)
+    await async_setup_integration(menuai, MockBridge, config_entry.entry_id)
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     for device in device_registry.devices.values():
         if device.config_entries == {config_entry.entry_id}:
@@ -108,7 +108,7 @@ async def test_humanify_lutron_caseta_button_event_integration_not_loaded(
 
     assert dr_device_id is not None
     (event1,) = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 LUTRON_CASETA_BUTTON_EVENT,
@@ -132,12 +132,12 @@ async def test_humanify_lutron_caseta_button_event_integration_not_loaded(
 
 
 async def test_humanify_lutron_caseta_button_event_ra3(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test humanifying lutron_caseta_button_events from an RA3 hub."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await async_setup_integration(hass, MockBridge)
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await async_setup_integration(menuai, MockBridge)
 
     keypad = device_registry.async_get_device(
         identifiers={(DOMAIN, 66286451)}, connections=set()
@@ -145,7 +145,7 @@ async def test_humanify_lutron_caseta_button_event_ra3(
     assert keypad
 
     (event1,) = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 LUTRON_CASETA_BUTTON_EVENT,
@@ -169,12 +169,12 @@ async def test_humanify_lutron_caseta_button_event_ra3(
 
 
 async def test_humanify_lutron_caseta_button_unknown_type(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test humanifying lutron_caseta_button_events with an unknown type."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await async_setup_integration(hass, MockBridge)
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await async_setup_integration(menuai, MockBridge)
 
     keypad = device_registry.async_get_device(
         identifiers={(DOMAIN, 66286451)}, connections=set()
@@ -182,7 +182,7 @@ async def test_humanify_lutron_caseta_button_unknown_type(
     assert keypad
 
     (event1,) = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 LUTRON_CASETA_BUTTON_EVENT,

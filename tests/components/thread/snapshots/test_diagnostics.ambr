@@ -18,7 +18,7 @@
           'fd59:86c6:e5a5::',
         ]),
         'routers': dict({
-          'HomeAssistant OpenThreadBorderRouter #0BBF._meshcop._udp.local.': dict({
+          'menuai OpenThreadBorderRouter #0BBF._meshcop._udp.local.': dict({
             'addresses': list([
               '127.0.0.1',
               'fe80::10ed:6406:4ee9:85e5',
@@ -38,9 +38,9 @@
                 'priority': 100,
               }),
             }),
-            'server': 'HomeAssistant OpenThreadBorderRouter #0BBF._meshcop._udp.local.',
+            'server': 'menuai OpenThreadBorderRouter #0BBF._meshcop._udp.local.',
             'thread_version': '1.3.0',
-            'vendor': 'HomeAssistant',
+            'vendor': 'menuai',
           }),
           'HomePod._meshcop._udp.local.': dict({
             'addresses': list([

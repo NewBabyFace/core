@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     entity,
 )
-from homeassistant.components.homeassistant.triggers import state as state_trigger
-from homeassistant.const import (
+from menuai.components.menuai.triggers import state as state_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -50,11 +50,11 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Media player entities."""
-    registry = er.async_get(hass)
-    triggers = await entity.async_get_triggers(hass, device_id, DOMAIN)
+    registry = er.async_get(menuai)
+    triggers = await entity.async_get_triggers(menuai, device_id, DOMAIN)
 
     # Get all the integration entities for this device
     for entry in er.async_entries_for_device(registry, device_id):
@@ -77,11 +77,11 @@ async def async_get_triggers(
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     if config[CONF_TYPE] not in TRIGGER_TYPES:
-        return await entity.async_get_trigger_capabilities(hass, config)
+        return await entity.async_get_trigger_capabilities(menuai, config)
     return {
         "extra_fields": vol.Schema(
             {vol.Optional(CONF_FOR): cv.positive_time_period_dict}
@@ -90,14 +90,14 @@ async def async_get_trigger_capabilities(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     if config[CONF_TYPE] not in TRIGGER_TYPES:
-        return await entity.async_attach_trigger(hass, config, action, trigger_info)
+        return await entity.async_attach_trigger(menuai, config, action, trigger_info)
     if config[CONF_TYPE] == "buffering":
         to_state = STATE_BUFFERING
     elif config[CONF_TYPE] == "idle":
@@ -118,7 +118,7 @@ async def async_attach_trigger(
     }
     if CONF_FOR in config:
         state_config[CONF_FOR] = config[CONF_FOR]
-    state_config = await state_trigger.async_validate_trigger_config(hass, state_config)
+    state_config = await state_trigger.async_validate_trigger_config(menuai, state_config)
     return await state_trigger.async_attach_trigger(
-        hass, state_config, action, trigger_info, platform_type="device"
+        menuai, state_config, action, trigger_info, platform_type="device"
     )

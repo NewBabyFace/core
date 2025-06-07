@@ -1,16 +1,16 @@
-"""Bridge between emulated_roku and Home Assistant."""
+"""Bridge between emulated_roku and MenuAI."""
 
 import logging
 
 from emulated_roku import EmulatedRokuCommandHandler, EmulatedRokuServer
 
-from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import (
+from menuai.const import EVENT_menuai_START, EVENT_menuai_STOP
+from menuai.core import (
     CALLBACK_TYPE,
     CoreState,
     Event,
     EventOrigin,
-    HomeAssistant,
+    menuai,
 )
 
 LOGGER = logging.getLogger(__package__)
@@ -33,7 +33,7 @@ class EmulatedRoku:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry_id: str,
         name: str,
         host_ip: str,
@@ -43,7 +43,7 @@ class EmulatedRoku:
         upnp_bind_multicast: bool | None,
     ) -> None:
         """Initialize the properties."""
-        self.hass = hass
+        self.menuai = menuai
         self.entry_id = entry_id
 
         self.roku_usn = name
@@ -66,12 +66,12 @@ class EmulatedRoku:
         class EventCommandHandler(EmulatedRokuCommandHandler):
             """emulated_roku command handler to turn commands into events."""
 
-            def __init__(self, hass: HomeAssistant) -> None:
-                self.hass = hass
+            def __init__(self, menuai: menuai) -> None:
+                self.menuai = menuai
 
             def on_keydown(self, roku_usn: str, key: str) -> None:
                 """Handle keydown event."""
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     EVENT_ROKU_COMMAND,
                     {
                         ATTR_SOURCE_NAME: roku_usn,
@@ -83,7 +83,7 @@ class EmulatedRoku:
 
             def on_keyup(self, roku_usn: str, key: str) -> None:
                 """Handle keyup event."""
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     EVENT_ROKU_COMMAND,
                     {
                         ATTR_SOURCE_NAME: roku_usn,
@@ -95,7 +95,7 @@ class EmulatedRoku:
 
             def on_keypress(self, roku_usn: str, key: str) -> None:
                 """Handle keypress event."""
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     EVENT_ROKU_COMMAND,
                     {
                         ATTR_SOURCE_NAME: roku_usn,
@@ -107,7 +107,7 @@ class EmulatedRoku:
 
             def launch(self, roku_usn: str, app_id: str) -> None:
                 """Handle launch event."""
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     EVENT_ROKU_COMMAND,
                     {
                         ATTR_SOURCE_NAME: roku_usn,
@@ -124,10 +124,10 @@ class EmulatedRoku:
             self.listen_port,
         )
 
-        handler = EventCommandHandler(self.hass)
+        handler = EventCommandHandler(self.menuai)
 
         self._api_server = EmulatedRokuServer(
-            self.hass.loop,
+            self.menuai.loop,
             handler,
             self.roku_usn,
             self.host_ip,
@@ -161,16 +161,16 @@ class EmulatedRoku:
                 # clean up inconsistent state on errors
                 await emulated_roku_stop(None)
             else:
-                self._unsub_stop_listener = self.hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STOP, emulated_roku_stop
+                self._unsub_stop_listener = self.menuai.bus.async_listen_once(
+                    EVENT_menuai_STOP, emulated_roku_stop
                 )
 
         # start immediately if already running
-        if self.hass.state is CoreState.running:
+        if self.menuai.state is CoreState.running:
             await emulated_roku_start(None)
         else:
-            self._unsub_start_listener = self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_START, emulated_roku_start
+            self._unsub_start_listener = self.menuai.bus.async_listen_once(
+                EVENT_menuai_START, emulated_roku_start
             )
 
         return True

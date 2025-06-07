@@ -9,15 +9,15 @@ from myuplink import Device, DevicePoint, System
 import orjson
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.myuplink.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import json_loads
+from menuai.components.myuplink.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.setup import async_setup_component
+from menuai.util.json import json_loads
 
 from .const import CLIENT_ID, CLIENT_SECRET, UNIQUE_ID
 
@@ -31,7 +31,7 @@ def mock_expires_at() -> float:
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant, expires_at: float) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai, expires_at: float) -> MockConfigEntry:
     """Return the default mocked config entry."""
     config_entry = MockConfigEntry(
         minor_version=2,
@@ -51,16 +51,16 @@ def mock_config_entry(hass: HomeAssistant, expires_at: float) -> MockConfigEntry
         entry_id="myuplink_test",
         unique_id=UNIQUE_ID,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(
             CLIENT_ID,
@@ -141,7 +141,7 @@ def mock_myuplink_client(
     """Mock a myuplink client."""
 
     with patch(
-        "homeassistant.components.myuplink.MyUplinkAPI",
+        "menuai.components.myuplink.MyUplinkAPI",
         autospec=True,
     ) as mock_client:
         client = mock_client.return_value
@@ -160,15 +160,15 @@ def mock_myuplink_client(
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_myuplink_client: MagicMock,
 ) -> MockConfigEntry:
     """Set up the myuplink integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry
 
@@ -181,23 +181,23 @@ def platforms() -> list[str]:
 
 @pytest.fixture
 async def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     platforms,
 ) -> AsyncGenerator[None]:
     """Set up one or all platforms."""
 
-    with patch(f"homeassistant.components.{DOMAIN}.PLATFORMS", platforms):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch(f"menuai.components.{DOMAIN}.PLATFORMS", platforms):
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         yield
 
 
 @pytest.fixture
-async def access_token(hass: HomeAssistant) -> str:
+async def access_token(menuai: menuai) -> str:
     """Return a valid access token."""
     return config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "sub": UNIQUE_ID,
             "aud": [],

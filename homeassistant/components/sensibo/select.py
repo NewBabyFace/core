@@ -8,17 +8,17 @@ from typing import TYPE_CHECKING, Any
 
 from pysensibo.model import SensiboDevice
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.components.select import (
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SelectEntity,
     SelectEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import (
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
@@ -65,7 +65,7 @@ DEVICE_SELECT_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SensiboConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -75,7 +75,7 @@ async def async_setup_entry(
 
     entities: list[SensiboSelect] = []
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for device_id, device_data in coordinator.data.parsed.items():
         if entity_id := entity_registry.async_get_entity_id(
             SELECT_DOMAIN, DOMAIN, f"{device_id}-horizontalSwing"
@@ -84,7 +84,7 @@ async def async_setup_entry(
             if entity and entity.disabled:
                 entity_registry.async_remove(entity_id)
                 async_delete_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     "deprecated_entity_horizontalswing",
                 )
@@ -92,11 +92,11 @@ async def async_setup_entry(
                 entities.append(
                     SensiboSelect(coordinator, device_id, HORIZONTAL_SWING_MODE_TYPE)
                 )
-                if automations_with_entity(hass, entity_id) or scripts_with_entity(
-                    hass, entity_id
+                if automations_with_entity(menuai, entity_id) or scripts_with_entity(
+                    menuai, entity_id
                 ):
                     async_create_issue(
-                        hass,
+                        menuai,
                         DOMAIN,
                         "deprecated_entity_horizontalswing",
                         breaks_in_ha_version="2025.8.0",

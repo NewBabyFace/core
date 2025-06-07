@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.hunterdouglas_powerview.const import DOMAIN
-from homeassistant.const import CONF_API_VERSION, CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.hunterdouglas_powerview.const import DOMAIN
+from menuai.const import CONF_API_VERSION, CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import entity_registry as er
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DHCP_DATA, DISCOVERY_DATA, HOMEKIT_DATA, MOCK_SERIAL
 
@@ -21,23 +21,23 @@ from tests.common import MockConfigEntry, async_load_json_object_fixture
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize("api_version", [1, 2, 3])
 async def test_user_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     api_version: int,
 ) -> None:
     """Test we get the user form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "1.2.3.4"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"Powerview Generation {api_version}"
@@ -46,13 +46,13 @@ async def test_user_form(
 
     assert len(mock_setup_entry.mock_calls) == 1
 
-    result3 = await hass.config_entries.flow.async_init(
+    result3 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result3["type"] is FlowResultType.FORM
     assert result3["errors"] == {}
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"],
         {CONF_HOST: "1.2.3.4"},
     )
@@ -63,7 +63,7 @@ async def test_user_form(
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize(("source", "discovery_info", "api_version"), DISCOVERY_DATA)
 async def test_form_homekit_and_dhcp_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     source: str,
     discovery_info: DhcpServiceInfo,
@@ -74,13 +74,13 @@ async def test_form_homekit_and_dhcp_cannot_connect(
     ignored_config_entry = MockConfigEntry(
         domain=DOMAIN, data={}, source=config_entries.SOURCE_IGNORE
     )
-    ignored_config_entry.add_to_hass(hass)
+    ignored_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.hunterdouglas_powerview.util.Hub.query_firmware",
+        "menuai.components.hunterdouglas_powerview.util.Hub.query_firmware",
         side_effect=TimeoutError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": source},
             data=discovery_info,
@@ -90,14 +90,14 @@ async def test_form_homekit_and_dhcp_cannot_connect(
     assert result["reason"] == "cannot_connect"
 
     # test we can recover from the failed entry
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": source},
         data=discovery_info,
     )
 
-    result3 = await hass.config_entries.flow.async_configure(result2["flow_id"], {})
-    await hass.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(result2["flow_id"], {})
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == f"Powerview Generation {api_version}"
@@ -110,7 +110,7 @@ async def test_form_homekit_and_dhcp_cannot_connect(
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize(("source", "discovery_info", "api_version"), DISCOVERY_DATA)
 async def test_form_homekit_and_dhcp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     source: str,
     discovery_info: DhcpServiceInfo | ZeroconfServiceInfo,
@@ -121,9 +121,9 @@ async def test_form_homekit_and_dhcp(
     ignored_config_entry = MockConfigEntry(
         domain=DOMAIN, data={}, source=config_entries.SOURCE_IGNORE
     )
-    ignored_config_entry.add_to_hass(hass)
+    ignored_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": source},
         data=discovery_info,
@@ -138,8 +138,8 @@ async def test_form_homekit_and_dhcp(
         CONF_API_VERSION: api_version,
     }
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-    await hass.async_block_till_done()
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"Powerview Generation {api_version}"
@@ -148,7 +148,7 @@ async def test_form_homekit_and_dhcp(
 
     assert len(mock_setup_entry.mock_calls) == 1
 
-    result3 = await hass.config_entries.flow.async_init(
+    result3 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": source},
         data=discovery_info,
@@ -164,7 +164,7 @@ async def test_form_homekit_and_dhcp(
     ("dhcp_source", "dhcp_discovery", "dhcp_api_version"), DHCP_DATA
 )
 async def test_discovered_by_homekit_and_dhcp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     homekit_source: str,
     homekit_discovery: ZeroconfServiceInfo,
@@ -174,7 +174,7 @@ async def test_discovered_by_homekit_and_dhcp(
     dhcp_api_version: int,
 ) -> None:
     """Test we get the form with homekit and abort for dhcp source when we get both."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=homekit_discovery,
@@ -183,7 +183,7 @@ async def test_discovered_by_homekit_and_dhcp(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "link"
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=dhcp_discovery,
@@ -196,21 +196,21 @@ async def test_discovered_by_homekit_and_dhcp(
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize("api_version", [1, 2, 3])
 async def test_form_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     api_version: int,
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     # Simulate a timeout error
     with patch(
-        "homeassistant.components.hunterdouglas_powerview.util.Hub.query_firmware",
+        "menuai.components.hunterdouglas_powerview.util.Hub.query_firmware",
         side_effect=TimeoutError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.2.3.4"},
         )
@@ -219,7 +219,7 @@ async def test_form_cannot_connect(
     assert result2["errors"] == {"base": "cannot_connect"}
 
     # Now try again without the patch in place to make sure we can recover
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {CONF_HOST: "1.2.3.4"},
     )
@@ -235,26 +235,26 @@ async def test_form_cannot_connect(
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize("api_version", [1, 2, 3])
 async def test_form_no_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     api_version: int,
 ) -> None:
     """Test we handle no data being returned from the hub."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with (
         patch(
-            "homeassistant.components.hunterdouglas_powerview.util.Hub.request_raw_data",
+            "menuai.components.hunterdouglas_powerview.util.Hub.request_raw_data",
             return_value={},
         ),
         patch(
-            "homeassistant.components.hunterdouglas_powerview.util.Hub.request_home_data",
+            "menuai.components.hunterdouglas_powerview.util.Hub.request_home_data",
             return_value={},
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.2.3.4"},
         )
@@ -263,7 +263,7 @@ async def test_form_no_data(
     assert result2["errors"] == {"base": "cannot_connect"}
 
     # Now try again without the patch in place to make sure we can recover
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {CONF_HOST: "1.2.3.4"},
     )
@@ -279,21 +279,21 @@ async def test_form_no_data(
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize("api_version", [1, 2, 3])
 async def test_form_unknown_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     api_version: int,
 ) -> None:
     """Test we handle unknown exception."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     # Simulate a transient error
     with patch(
-        "homeassistant.components.hunterdouglas_powerview.util.Hub.query_firmware",
+        "menuai.components.hunterdouglas_powerview.util.Hub.query_firmware",
         side_effect=SyntaxError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.2.3.4"},
         )
@@ -302,7 +302,7 @@ async def test_form_unknown_exception(
     assert result2["errors"] == {"base": "unknown"}
 
     # Now try again without the patch in place to make sure we can recover
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {CONF_HOST: "1.2.3.4"},
     )
@@ -318,23 +318,23 @@ async def test_form_unknown_exception(
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize("api_version", [3])  # only gen 3 present secondary hubs
 async def test_form_unsupported_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
     api_version: int,
 ) -> None:
     """Test unsupported device failure."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     # Simulate a gen 3 secondary hub
     with patch(
-        "homeassistant.components.hunterdouglas_powerview.util.Hub.request_raw_data",
+        "menuai.components.hunterdouglas_powerview.util.Hub.request_raw_data",
         return_value=await async_load_json_object_fixture(
-            hass, "gen3/gateway/secondary.json", DOMAIN
+            menuai, "gen3/gateway/secondary.json", DOMAIN
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "1.2.3.4"},
         )
@@ -343,7 +343,7 @@ async def test_form_unsupported_device(
     assert result2["errors"] == {"base": "unsupported_device"}
 
     # Now try again without the patch in place to make sure we can recover
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {CONF_HOST: "1.2.3.4"},
     )
@@ -359,7 +359,7 @@ async def test_form_unsupported_device(
 @pytest.mark.usefixtures("mock_hunterdouglas_hub")
 @pytest.mark.parametrize("api_version", [1, 2, 3])
 async def test_migrate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     api_version: int,
 ) -> None:
@@ -371,7 +371,7 @@ async def test_migrate_entry(
         version=1,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Add entries with int unique_id
     entity_registry.async_get_or_create(
@@ -391,8 +391,8 @@ async def test_migrate_entry(
     assert entry.version == 1
     assert entry.minor_version == 1
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.version == 1
     assert entry.minor_version == 2

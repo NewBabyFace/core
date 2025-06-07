@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import add_mock_config
 
@@ -13,13 +13,13 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_select_async_setup_entry(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
     mock_get: AsyncMock,
 ) -> None:
     """Test select platform."""
 
-    entry = await add_mock_config(hass)
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    entry = await add_mock_config(menuai)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
     assert diag == snapshot

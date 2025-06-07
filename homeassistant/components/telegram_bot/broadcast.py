@@ -2,13 +2,13 @@
 
 from telegram import Bot
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .bot import BaseTelegramBot, TelegramBotConfigEntry
 
 
 async def async_setup_platform(
-    hass: HomeAssistant, bot: Bot, config: TelegramBotConfigEntry
+    menuai: menuai, bot: Bot, config: TelegramBotConfigEntry
 ) -> type[BaseTelegramBot] | None:
     """Set up the Telegram broadcast platform."""
     return None

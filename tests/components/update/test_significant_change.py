@@ -1,6 +1,6 @@
 """Test the update significant change platform."""
 
-from homeassistant.components.update.const import (
+from menuai.components.update.const import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
@@ -9,19 +9,19 @@ from homeassistant.components.update.const import (
     ATTR_SKIPPED_VERSION,
     ATTR_TITLE,
 )
-from homeassistant.components.update.significant_change import (
+from menuai.components.update.significant_change import (
     async_check_significant_change,
 )
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 
-async def test_significant_change(hass: HomeAssistant) -> None:
+async def test_significant_change(menuai: menuai) -> None:
     """Detect update significant changes."""
-    assert async_check_significant_change(hass, STATE_ON, {}, STATE_OFF, {})
-    assert async_check_significant_change(hass, STATE_OFF, {}, STATE_ON, {})
-    assert not async_check_significant_change(hass, STATE_OFF, {}, STATE_OFF, {})
-    assert not async_check_significant_change(hass, STATE_ON, {}, STATE_ON, {})
+    assert async_check_significant_change(menuai, STATE_ON, {}, STATE_OFF, {})
+    assert async_check_significant_change(menuai, STATE_OFF, {}, STATE_ON, {})
+    assert not async_check_significant_change(menuai, STATE_OFF, {}, STATE_OFF, {})
+    assert not async_check_significant_change(menuai, STATE_ON, {}, STATE_ON, {})
 
     attrs = {
         ATTR_INSTALLED_VERSION: "1.0.0",
@@ -32,10 +32,10 @@ async def test_significant_change(hass: HomeAssistant) -> None:
         ATTR_SKIPPED_VERSION: None,
         ATTR_TITLE: "Piece of Software",
     }
-    assert not async_check_significant_change(hass, STATE_ON, attrs, STATE_ON, attrs)
+    assert not async_check_significant_change(menuai, STATE_ON, attrs, STATE_ON, attrs)
 
     assert async_check_significant_change(
-        hass,
+        menuai,
         STATE_ON,
         attrs,
         STATE_ON,
@@ -43,7 +43,7 @@ async def test_significant_change(hass: HomeAssistant) -> None:
     )
 
     assert async_check_significant_change(
-        hass,
+        menuai,
         STATE_ON,
         attrs,
         STATE_ON,
@@ -51,7 +51,7 @@ async def test_significant_change(hass: HomeAssistant) -> None:
     )
 
     assert not async_check_significant_change(
-        hass,
+        menuai,
         STATE_ON,
         attrs,
         STATE_ON,
@@ -59,7 +59,7 @@ async def test_significant_change(hass: HomeAssistant) -> None:
     )
 
     assert not async_check_significant_change(
-        hass,
+        menuai,
         STATE_ON,
         attrs,
         STATE_ON,
@@ -67,7 +67,7 @@ async def test_significant_change(hass: HomeAssistant) -> None:
     )
 
     assert not async_check_significant_change(
-        hass,
+        menuai,
         STATE_ON,
         attrs,
         STATE_ON,
@@ -75,7 +75,7 @@ async def test_significant_change(hass: HomeAssistant) -> None:
     )
 
     assert not async_check_significant_change(
-        hass,
+        menuai,
         STATE_ON,
         attrs,
         STATE_ON,
@@ -83,7 +83,7 @@ async def test_significant_change(hass: HomeAssistant) -> None:
     )
 
     assert not async_check_significant_change(
-        hass,
+        menuai,
         STATE_ON,
         attrs,
         STATE_ON,

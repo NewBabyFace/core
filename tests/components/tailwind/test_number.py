@@ -6,26 +6,26 @@ from gotailwind import TailwindError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import number
-from homeassistant.components.number import ATTR_VALUE, SERVICE_SET_VALUE
-from homeassistant.components.tailwind.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components import number
+from menuai.components.number import ATTR_VALUE, SERVICE_SET_VALUE
+from menuai.components.tailwind.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = pytest.mark.usefixtures("init_integration")
 
 
 async def test_number_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_tailwind: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test number entities provided by the Tailwind integration."""
-    assert (state := hass.states.get("number.tailwind_iq3_status_led_brightness"))
+    assert (state := menuai.states.get("number.tailwind_iq3_status_led_brightness"))
     assert snapshot == state
 
     assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -36,7 +36,7 @@ async def test_number_entities(
     assert snapshot == device_entry
 
     assert len(mock_tailwind.status_led.mock_calls) == 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         number.DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -52,8 +52,8 @@ async def test_number_entities(
     # Test error handling
     mock_tailwind.status_led.side_effect = TailwindError("Some error")
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             number.DOMAIN,
             SERVICE_SET_VALUE,
             {

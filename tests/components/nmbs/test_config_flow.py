@@ -3,16 +3,16 @@
 from typing import Any
 from unittest.mock import AsyncMock
 
-from homeassistant import config_entries
-from homeassistant.components.nmbs.config_flow import CONF_EXCLUDE_VIAS
-from homeassistant.components.nmbs.const import (
+from menuai import config_entries
+from menuai.components.nmbs.config_flow import CONF_EXCLUDE_VIAS
+from menuai.components.nmbs.const import (
     CONF_STATION_FROM,
     CONF_STATION_TO,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -36,17 +36,17 @@ DUMMY_DATA: dict[str, Any] = {
 
 
 async def test_full_flow(
-    hass: HomeAssistant, mock_nmbs_client: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_nmbs_client: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test the full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_STATION_FROM: DUMMY_DATA["STAT_BRUSSELS_NORTH"],
@@ -69,17 +69,17 @@ async def test_full_flow(
 
 
 async def test_same_station(
-    hass: HomeAssistant, mock_nmbs_client: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_nmbs_client: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test selecting the same station."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_STATION_FROM: DUMMY_DATA["STAT_BRUSSELS_NORTH"],
@@ -89,7 +89,7 @@ async def test_same_station(
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "same_station"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_STATION_FROM: DUMMY_DATA["STAT_BRUSSELS_NORTH"],
@@ -100,11 +100,11 @@ async def test_same_station(
 
 
 async def test_abort_if_exists(
-    hass: HomeAssistant, mock_nmbs_client: AsyncMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_nmbs_client: AsyncMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test aborting the flow if the entry already exists."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -117,11 +117,11 @@ async def test_abort_if_exists(
 
 
 async def test_dont_abort_if_exists_when_vias_differs(
-    hass: HomeAssistant, mock_nmbs_client: AsyncMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_nmbs_client: AsyncMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test aborting the flow if the entry already exists."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -134,11 +134,11 @@ async def test_dont_abort_if_exists_when_vias_differs(
 
 
 async def test_unavailable_api(
-    hass: HomeAssistant, mock_nmbs_client: AsyncMock
+    menuai: menuai, mock_nmbs_client: AsyncMock
 ) -> None:
     """Test starting a flow by user and api is unavailable."""
     mock_nmbs_client.get_stations.return_value = None
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )

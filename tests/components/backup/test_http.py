@@ -11,15 +11,15 @@ from unittest.mock import patch
 from aiohttp import web
 import pytest
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AddonInfo,
     AgentBackup,
     BackupAgentError,
     BackupNotFound,
     Folder,
 )
-from homeassistant.components.backup.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.backup.const import DOMAIN
+from menuai.core import menuai
 
 from .common import TEST_BACKUP_ABC123, aiter_from_iter, setup_backup_integration
 
@@ -33,8 +33,8 @@ PROTECTED_BACKUP = AgentBackup(
     date="1970-01-01T00:00:00Z",
     extra_metadata={},
     folders=[Folder.MEDIA, Folder.SHARE],
-    homeassistant_included=True,
-    homeassistant_version="2024.12.0",
+    menuai_included=True,
+    menuai_version="2024.12.0",
     name="Test",
     protected=True,
     size=13,
@@ -42,25 +42,25 @@ PROTECTED_BACKUP = AgentBackup(
 
 
 async def test_downloading_local_backup(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test downloading a local backup file."""
-    await setup_backup_integration(hass)
+    await setup_backup_integration(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with (
         patch(
-            "homeassistant.components.backup.backup.CoreLocalBackupAgent.async_get_backup",
+            "menuai.components.backup.backup.CoreLocalBackupAgent.async_get_backup",
             return_value=TEST_BACKUP_ABC123,
         ),
         patch(
-            "homeassistant.components.backup.backup.CoreLocalBackupAgent.get_backup_path",
+            "menuai.components.backup.backup.CoreLocalBackupAgent.get_backup_path",
         ),
         patch("pathlib.Path.exists", return_value=True),
         patch(
-            "homeassistant.components.backup.http.FileResponse",
+            "menuai.components.backup.http.FileResponse",
             return_value=web.Response(text=""),
         ),
     ):
@@ -69,16 +69,16 @@ async def test_downloading_local_backup(
 
 
 async def test_downloading_remote_backup(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test downloading a remote backup."""
 
     await setup_backup_integration(
-        hass, backups={"test.test": [TEST_BACKUP_ABC123]}, remote_agents=["test.test"]
+        menuai, backups={"test.test": [TEST_BACKUP_ABC123]}, remote_agents=["test.test"]
     )
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/backup/download/abc123?agent_id=test.test")
     assert resp.status == 200
@@ -86,20 +86,20 @@ async def test_downloading_remote_backup(
 
 
 async def test_downloading_local_encrypted_backup_file_not_found(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test downloading a local backup file."""
-    await setup_backup_integration(hass)
-    client = await hass_client()
+    await setup_backup_integration(menuai)
+    client = await menuai_client()
 
     with (
         patch(
-            "homeassistant.components.backup.backup.CoreLocalBackupAgent.async_get_backup",
+            "menuai.components.backup.backup.CoreLocalBackupAgent.async_get_backup",
             return_value=TEST_BACKUP_ABC123,
         ),
         patch(
-            "homeassistant.components.backup.backup.CoreLocalBackupAgent.get_backup_path",
+            "menuai.components.backup.backup.CoreLocalBackupAgent.get_backup_path",
         ),
     ):
         resp = await client.get(
@@ -110,29 +110,29 @@ async def test_downloading_local_encrypted_backup_file_not_found(
 
 @pytest.mark.usefixtures("mock_backups")
 async def test_downloading_local_encrypted_backup(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test downloading a local backup file."""
-    await setup_backup_integration(hass)
-    await _test_downloading_encrypted_backup(hass_client, "backup.local")
+    await setup_backup_integration(menuai)
+    await _test_downloading_encrypted_backup(menuai_client, "backup.local")
 
 
 async def test_downloading_remote_encrypted_backup(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test downloading a local backup file."""
     backup_path = get_fixture_path("test_backups/c0cb53bd.tar", DOMAIN)
     mock_agents = await setup_backup_integration(
-        hass, remote_agents=["test.test"], backups={"test.test": [PROTECTED_BACKUP]}
+        menuai, remote_agents=["test.test"], backups={"test.test": [PROTECTED_BACKUP]}
     )
 
     async def download_backup(backup_id: str, **kwargs: Any) -> AsyncIterator[bytes]:
         return aiter_from_iter((backup_path.read_bytes(),))
 
     mock_agents["test.test"].async_download_backup.side_effect = download_backup
-    await _test_downloading_encrypted_backup(hass_client, "test.test")
+    await _test_downloading_encrypted_backup(menuai_client, "test.test")
 
 
 @pytest.mark.parametrize(
@@ -143,18 +143,18 @@ async def test_downloading_remote_encrypted_backup(
     ],
 )
 async def test_downloading_remote_encrypted_backup_with_error(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     error: Exception,
     status: int,
 ) -> None:
     """Test downloading a local backup file."""
     mock_agents = await setup_backup_integration(
-        hass, remote_agents=["test.test"], backups={"test.test": [PROTECTED_BACKUP]}
+        menuai, remote_agents=["test.test"], backups={"test.test": [PROTECTED_BACKUP]}
     )
 
     mock_agents["test.test"].async_download_backup.side_effect = error
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get(
         f"/api/backup/download/{PROTECTED_BACKUP.backup_id}?agent_id=test.test&password=blah"
     )
@@ -162,12 +162,12 @@ async def test_downloading_remote_encrypted_backup_with_error(
 
 
 async def _test_downloading_encrypted_backup(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     agent_id: str,
 ) -> None:
     """Test downloading an encrypted backup file."""
     # Try downloading without supplying a password
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get(f"/api/backup/download/c0cb53bd?agent_id={agent_id}")
     assert resp.status == 200
     backup = await resp.read()
@@ -177,7 +177,7 @@ async def _test_downloading_encrypted_backup(
         enc_metadata = json.loads(outer_tar.extractfile("./backup.json").read())
         assert enc_metadata["protected"] is True
         with (
-            outer_tar.extractfile("homeassistant.tar.gz") as inner_tar_file,
+            outer_tar.extractfile("menuai.tar.gz") as inner_tar_file,
             pytest.raises(tarfile.ReadError, match="file could not be opened"),
         ):
             # pylint: disable-next=consider-using-with
@@ -209,7 +209,7 @@ async def _test_downloading_encrypted_backup(
         dec_metadata = json.loads(outer_tar.extractfile("./backup.json").read())
         assert dec_metadata == enc_metadata | {"protected": False}
         with (
-            outer_tar.extractfile("homeassistant.tar.gz") as inner_tar_file,
+            outer_tar.extractfile("menuai.tar.gz") as inner_tar_file,
             tarfile.open(fileobj=inner_tar_file, mode="r") as inner_tar,
         ):
             assert inner_tar.getnames() == [
@@ -222,29 +222,29 @@ async def _test_downloading_encrypted_backup(
 
 
 async def test_downloading_backup_not_found(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test downloading a backup file that does not exist."""
-    await setup_backup_integration(hass)
+    await setup_backup_integration(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/backup/download/abc123?agent_id=backup.local")
     assert resp.status == 404
 
 
 async def test_downloading_backup_not_found_get_backup_returns_none(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test downloading a backup file that does not exist."""
-    mock_agents = await setup_backup_integration(hass, remote_agents=["test.test"])
+    mock_agents = await setup_backup_integration(menuai, remote_agents=["test.test"])
     mock_agents["test.test"].async_get_backup.return_value = None
     mock_agents["test.test"].async_get_backup.side_effect = None
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/backup/download/abc123?agent_id=test.test")
     assert resp.status == 404
@@ -255,31 +255,31 @@ async def test_downloading_backup_not_found_get_backup_returns_none(
 
 
 async def test_downloading_as_non_admin(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test downloading a backup file when you are not an admin."""
-    hass_admin_user.groups = []
-    await setup_backup_integration(hass)
+    menuai_admin_user.groups = []
+    await setup_backup_integration(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/backup/download/abc123?agent_id=backup.local")
     assert resp.status == 401
 
 
 async def test_uploading_a_backup_file(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test uploading a backup file."""
-    await setup_backup_integration(hass)
+    await setup_backup_integration(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_receive_backup",
+        "menuai.components.backup.manager.BackupManager.async_receive_backup",
         return_value=TEST_BACKUP_ABC123.backup_id,
     ) as async_receive_backup_mock:
         resp = await client.post(
@@ -299,18 +299,18 @@ async def test_uploading_a_backup_file(
     ],
 )
 async def test_error_handling_uploading_a_backup_file(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     error: Exception,
     message: str,
 ) -> None:
     """Test error handling when uploading a backup file."""
-    await setup_backup_integration(hass)
+    await setup_backup_integration(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_receive_backup",
+        "menuai.components.backup.manager.BackupManager.async_receive_backup",
         side_effect=error,
     ):
         resp = await client.post(

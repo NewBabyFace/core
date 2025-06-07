@@ -10,13 +10,13 @@ from aiohomekit.model.characteristics import (
 from aiohomekit.model.services import Service, ServicesTypes
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -71,10 +71,10 @@ def create_tv_service_with_target_media_state(accessory: Accessory) -> Service:
 
 
 async def test_tv_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit fan accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_tv_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_tv_service)
 
     state = await helper.async_update(
         ServicesTypes.TELEVISION,
@@ -102,10 +102,10 @@ async def test_tv_read_state(
 
 
 async def test_tv_read_sources(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the input source of a HomeKit TV."""
-    helper = await setup_test_component(hass, get_next_aid(), create_tv_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_tv_service)
 
     state = await helper.poll_and_get_state()
     assert state.attributes["source"] == "HDMI 1"
@@ -113,10 +113,10 @@ async def test_tv_read_sources(
 
 
 async def test_play_remote_key(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can play media on a media player."""
-    helper = await setup_test_component(hass, get_next_aid(), create_tv_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_tv_service)
 
     await helper.async_update(
         ServicesTypes.TELEVISION,
@@ -125,7 +125,7 @@ async def test_play_remote_key(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_play",
         {"entity_id": "media_player.testdevice"},
@@ -147,7 +147,7 @@ async def test_play_remote_key(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_play",
         {"entity_id": "media_player.testdevice"},
@@ -162,10 +162,10 @@ async def test_play_remote_key(
 
 
 async def test_pause_remote_key(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can pause a media player."""
-    helper = await setup_test_component(hass, get_next_aid(), create_tv_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_tv_service)
 
     await helper.async_update(
         ServicesTypes.TELEVISION,
@@ -174,7 +174,7 @@ async def test_pause_remote_key(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_pause",
         {"entity_id": "media_player.testdevice"},
@@ -196,7 +196,7 @@ async def test_pause_remote_key(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_pause",
         {"entity_id": "media_player.testdevice"},
@@ -210,10 +210,10 @@ async def test_pause_remote_key(
     )
 
 
-async def test_play(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_play(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can play media on a media player."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_tv_service_with_target_media_state
+        menuai, get_next_aid(), create_tv_service_with_target_media_state
     )
 
     await helper.async_update(
@@ -223,7 +223,7 @@ async def test_play(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> Non
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_play",
         {"entity_id": "media_player.testdevice"},
@@ -246,7 +246,7 @@ async def test_play(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> Non
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_play",
         {"entity_id": "media_player.testdevice"},
@@ -261,10 +261,10 @@ async def test_play(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> Non
     )
 
 
-async def test_pause(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_pause(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can turn pause a media player."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_tv_service_with_target_media_state
+        menuai, get_next_aid(), create_tv_service_with_target_media_state
     )
 
     await helper.async_update(
@@ -274,7 +274,7 @@ async def test_pause(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> No
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_pause",
         {"entity_id": "media_player.testdevice"},
@@ -297,7 +297,7 @@ async def test_pause(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> No
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_pause",
         {"entity_id": "media_player.testdevice"},
@@ -311,13 +311,13 @@ async def test_pause(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> No
     )
 
 
-async def test_stop(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_stop(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can  stop a media player."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_tv_service_with_target_media_state
+        menuai, get_next_aid(), create_tv_service_with_target_media_state
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_stop",
         {"entity_id": "media_player.testdevice"},
@@ -339,7 +339,7 @@ async def test_stop(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> Non
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "media_stop",
         {"entity_id": "media_player.testdevice"},
@@ -355,12 +355,12 @@ async def test_stop(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> Non
 
 
 async def test_tv_set_source(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can set the input source of a HomeKit TV."""
-    helper = await setup_test_component(hass, get_next_aid(), create_tv_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_tv_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "select_source",
         {"entity_id": "media_player.testdevice", "source": "HDMI 2"},
@@ -378,13 +378,13 @@ async def test_tv_set_source(
 
 
 async def test_tv_set_source_fail(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can set the input source of a HomeKit TV."""
-    helper = await setup_test_component(hass, get_next_aid(), create_tv_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_tv_service)
 
     with pytest.raises(ValueError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player",
             "select_source",
             {"entity_id": "media_player.testdevice", "source": "HDMI 999"},
@@ -396,7 +396,7 @@ async def test_tv_set_source_fail(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -407,7 +407,7 @@ async def test_migrate_unique_id(
         "homekit_controller",
         f"homekit-00:00:00:00:00:00-{aid}-8",
     )
-    await setup_test_component(hass, aid, create_tv_service_with_target_media_state)
+    await setup_test_component(menuai, aid, create_tv_service_with_target_media_state)
 
     assert (
         entity_registry.async_get(media_player_entry.entity_id).unique_id
@@ -415,10 +415,10 @@ async def test_migrate_unique_id(
     )
 
 
-async def test_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_turn_on(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can turn on a media player."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_tv_service_with_target_media_state
+        menuai, get_next_aid(), create_tv_service_with_target_media_state
     )
 
     await helper.async_update(
@@ -428,7 +428,7 @@ async def test_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> 
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_TURN_ON,
         {"entity_id": "media_player.testdevice"},
@@ -442,10 +442,10 @@ async def test_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> 
     )
 
 
-async def test_turn_off(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_turn_off(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can turn off a media player."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_tv_service_with_target_media_state
+        menuai, get_next_aid(), create_tv_service_with_target_media_state
     )
 
     await helper.async_update(
@@ -455,7 +455,7 @@ async def test_turn_off(hass: HomeAssistant, get_next_aid: Callable[[], int]) ->
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_TURN_OFF,
         {"entity_id": "media_player.testdevice"},

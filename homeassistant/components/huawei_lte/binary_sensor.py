@@ -7,15 +7,15 @@ from typing import Any
 
 from huawei_lte_api.enums.cradle import ConnectionStatusEnum
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DOMAIN,
@@ -29,12 +29,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up from config entry."""
-    router = hass.data[DOMAIN].routers[config_entry.entry_id]
+    router = menuai.data[DOMAIN].routers[config_entry.entry_id]
     entities: list[Entity] = []
 
     if router.data.get(KEY_MONITORING_STATUS):
@@ -62,16 +62,16 @@ class HuaweiLteBaseBinarySensor(HuaweiLteBaseEntityWithDevice, BinarySensorEntit
     def _device_unique_id(self) -> str:
         return f"{self.key}.{self.item}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to needed data on add."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.router.subscriptions[self.key].append(
             f"{BINARY_SENSOR_DOMAIN}/{self.item}"
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from needed data on remove."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self.router.subscriptions[self.key].remove(
             f"{BINARY_SENSOR_DOMAIN}/{self.item}"
         )

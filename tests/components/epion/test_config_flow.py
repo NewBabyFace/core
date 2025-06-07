@@ -5,33 +5,33 @@ from unittest.mock import MagicMock, patch
 from epion import EpionAuthenticationError, EpionConnectionError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.epion.const import DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.epion.const import DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 API_KEY = "test-key-123"
 
 
-async def test_user_flow(hass: HomeAssistant, mock_epion: MagicMock) -> None:
+async def test_user_flow(menuai: menuai, mock_epion: MagicMock) -> None:
     """Test we can handle a regular successflow setup flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.epion.async_setup_entry",
+        "menuai.components.epion.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: API_KEY},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Epion integration"
@@ -49,16 +49,16 @@ async def test_user_flow(hass: HomeAssistant, mock_epion: MagicMock) -> None:
     ],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant, exception: Exception, error: str, mock_epion: MagicMock
+    menuai: menuai, exception: Exception, error: str, mock_epion: MagicMock
 ) -> None:
     """Test we can handle Form exceptions."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_epion.return_value.get_current.side_effect = exception
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_API_KEY: API_KEY},
     )
@@ -69,14 +69,14 @@ async def test_form_exceptions(
     mock_epion.return_value.get_current.side_effect = None
 
     with patch(
-        "homeassistant.components.epion.async_setup_entry",
+        "menuai.components.epion.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: API_KEY},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Epion integration"
@@ -86,7 +86,7 @@ async def test_form_exceptions(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_duplicate_entry(hass: HomeAssistant, mock_epion: MagicMock) -> None:
+async def test_duplicate_entry(menuai: menuai, mock_epion: MagicMock) -> None:
     """Test duplicate setup handling."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -95,17 +95,17 @@ async def test_duplicate_entry(hass: HomeAssistant, mock_epion: MagicMock) -> No
         },
         unique_id="account-dupe-123",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_API_KEY: API_KEY},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"

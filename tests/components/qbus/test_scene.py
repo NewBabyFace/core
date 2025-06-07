@@ -1,8 +1,8 @@
 """Test Qbus scene entities."""
 
-from homeassistant.components.scene import DOMAIN as SCENE_DOMAIN, SERVICE_TURN_ON
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.components.scene import DOMAIN as SCENE_DOMAIN, SERVICE_TURN_ON
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
 
 from tests.common import async_fire_mqtt_message
 from tests.typing import MqttMockHAClient
@@ -17,17 +17,17 @@ _SCENE_ENTITY_ID = "scene.ctd_000001_watching_tv"
 
 
 async def test_scene(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     setup_integration: None,
 ) -> None:
     """Test scene."""
 
-    assert hass.states.get(_SCENE_ENTITY_ID).state == STATE_UNKNOWN
+    assert menuai.states.get(_SCENE_ENTITY_ID).state == STATE_UNKNOWN
 
     # Activate scene
     mqtt_mock.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SCENE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: _SCENE_ENTITY_ID},
@@ -39,7 +39,7 @@ async def test_scene(
     )
 
     # Simulate response
-    async_fire_mqtt_message(hass, _TOPIC_SCENE_STATE, _PAYLOAD_SCENE_STATE)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, _TOPIC_SCENE_STATE, _PAYLOAD_SCENE_STATE)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(_SCENE_ENTITY_ID).state != STATE_UNKNOWN
+    assert menuai.states.get(_SCENE_ENTITY_ID).state != STATE_UNKNOWN

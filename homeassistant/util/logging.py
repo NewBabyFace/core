@@ -13,27 +13,27 @@ import time
 import traceback
 from typing import Any, cast, overload, override
 
-from homeassistant.core import (
-    HassJobType,
-    HomeAssistant,
+from menuai.core import (
+    menuaiJobType,
+    menuai,
     callback,
-    get_hassjob_callable_job_type,
+    get_menuaijob_callable_job_type,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class HomeAssistantQueueListener(logging.handlers.QueueListener):
+class menuaiQueueListener(logging.handlers.QueueListener):
     """Custom QueueListener to watch for noisy loggers."""
 
     LOG_COUNTS_RESET_INTERVAL = 300
     MAX_LOGS_COUNT = 200
 
     EXCLUDED_LOG_COUNT_MODULES = [
-        "homeassistant.components.automation",
-        "homeassistant.components.script",
-        "homeassistant.setup",
-        "homeassistant.util.logging",
+        "menuai.components.automation",
+        "menuai.components.script",
+        "menuai.setup",
+        "menuai.util.logging",
     ]
 
     _last_reset: float
@@ -91,7 +91,7 @@ class HomeAssistantQueueListener(logging.handlers.QueueListener):
         return excluded
 
 
-class HomeAssistantQueueHandler(logging.handlers.QueueHandler):
+class menuaiQueueHandler(logging.handlers.QueueHandler):
     """Process the log in another thread."""
 
     listener: logging.handlers.QueueListener | None = None
@@ -126,14 +126,14 @@ class HomeAssistantQueueHandler(logging.handlers.QueueHandler):
 
 
 @callback
-def async_activate_log_queue_handler(hass: HomeAssistant) -> None:
+def async_activate_log_queue_handler(menuai: menuai) -> None:
     """Migrate the existing log handlers to use the queue.
 
     This allows us to avoid blocking I/O and formatting messages
     in the event loop as log messages are written in another thread.
     """
     simple_queue: SimpleQueue[logging.Handler] = SimpleQueue()
-    queue_handler = HomeAssistantQueueHandler(simple_queue)
+    queue_handler = menuaiQueueHandler(simple_queue)
     logging.root.addHandler(queue_handler)
 
     migrated_handlers: list[logging.Handler] = []
@@ -143,7 +143,7 @@ def async_activate_log_queue_handler(hass: HomeAssistant) -> None:
         logging.root.removeHandler(handler)
         migrated_handlers.append(handler)
 
-    listener = HomeAssistantQueueListener(simple_queue, *migrated_handlers)
+    listener = menuaiQueueListener(simple_queue, *migrated_handlers)
     queue_handler.listener = listener
 
     listener.start()
@@ -204,7 +204,7 @@ def _callback_wrapper[*_Ts](
 def catch_log_exception[*_Ts](
     func: Callable[[*_Ts], Coroutine[Any, Any, Any]],
     format_err: Callable[[*_Ts], Any],
-    job_type: HassJobType | None = None,
+    job_type: menuaiJobType | None = None,
 ) -> Callable[[*_Ts], Coroutine[Any, Any, None]]: ...
 
 
@@ -212,14 +212,14 @@ def catch_log_exception[*_Ts](
 def catch_log_exception[*_Ts](
     func: Callable[[*_Ts], Any],
     format_err: Callable[[*_Ts], Any],
-    job_type: HassJobType | None = None,
+    job_type: menuaiJobType | None = None,
 ) -> Callable[[*_Ts], None] | Callable[[*_Ts], Coroutine[Any, Any, None]]: ...
 
 
 def catch_log_exception[*_Ts](
     func: Callable[[*_Ts], Any],
     format_err: Callable[[*_Ts], Any],
-    job_type: HassJobType | None = None,
+    job_type: menuaiJobType | None = None,
 ) -> Callable[[*_Ts], None] | Callable[[*_Ts], Coroutine[Any, Any, None]]:
     """Decorate a function func to catch and log exceptions.
 
@@ -227,13 +227,13 @@ def catch_log_exception[*_Ts](
     If func is a callback, a callback will be returned.
     """
     if job_type is None:
-        job_type = get_hassjob_callable_job_type(func)
+        job_type = get_menuaijob_callable_job_type(func)
 
-    if job_type is HassJobType.Coroutinefunction:
+    if job_type is menuaiJobType.Coroutinefunction:
         async_func = cast(Callable[[*_Ts], Coroutine[Any, Any, None]], func)
         return wraps(async_func)(partial(_async_wrapper, async_func, format_err))  # type: ignore[return-value]
 
-    if job_type is HassJobType.Callback:
+    if job_type is menuaiJobType.Callback:
         return wraps(func)(partial(_callback_wrapper, func, format_err))  # type: ignore[return-value]
 
     return wraps(func)(partial(_sync_wrapper, func, format_err))  # type: ignore[return-value]

@@ -1,18 +1,18 @@
 """Sonos specific exceptions."""
 
-from homeassistant.components.media_player import BrowseError
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.media_player import BrowseError
+from menuai.exceptions import menuaiError
 
 
 class UnknownMediaType(BrowseError):
     """Unknown media type."""
 
 
-class SonosSubscriptionsFailed(HomeAssistantError):
+class SonosSubscriptionsFailed(menuaiError):
     """Subscription creation failed."""
 
 
-class SonosUpdateError(HomeAssistantError):
+class SonosUpdateError(menuaiError):
     """Update failed."""
 
 

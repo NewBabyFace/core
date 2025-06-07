@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from miio import DeviceException
 import pytest
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     ATTR_BATTERY_ICON,
     ATTR_FAN_SPEED,
     ATTR_FAN_SPEED_LIST,
@@ -23,12 +23,12 @@ from homeassistant.components.vacuum import (
     SERVICE_STOP,
     VacuumActivity,
 )
-from homeassistant.components.xiaomi_miio.const import (
+from menuai.components.xiaomi_miio.const import (
     CONF_FLOW_TYPE,
     DOMAIN,
     MODELS_VACUUM,
 )
-from homeassistant.components.xiaomi_miio.vacuum import (
+from menuai.components.xiaomi_miio.vacuum import (
     ATTR_ERROR,
     ATTR_TIMERS,
     CONF_DEVICE,
@@ -40,7 +40,7 @@ from homeassistant.components.xiaomi_miio.vacuum import (
     SERVICE_START_REMOTE_CONTROL,
     SERVICE_STOP_REMOTE_CONTROL,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     CONF_HOST,
@@ -49,8 +49,8 @@ from homeassistant.const import (
     CONF_TOKEN,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import TEST_MAC
 
@@ -116,7 +116,7 @@ def mirobo_is_got_error_fixture():
     mock_vacuum.timer.return_value = [mock_timer_1, mock_timer_2]
 
     with patch(
-        "homeassistant.components.xiaomi_miio.RoborockVacuum"
+        "menuai.components.xiaomi_miio.RoborockVacuum"
     ) as mock_vacuum_cls:
         mock_vacuum_cls.return_value = mock_vacuum
         yield mock_vacuum
@@ -154,7 +154,7 @@ def mirobo_old_speeds_fixture(
     )
 
     with patch(
-        "homeassistant.components.xiaomi_miio.RoborockVacuum"
+        "menuai.components.xiaomi_miio.RoborockVacuum"
     ) as mock_vacuum_cls:
         mock_vacuum_cls.return_value = mock_vacuum
         yield mock_vacuum
@@ -216,19 +216,19 @@ def mirobo_is_on_fixture():
     mock_vacuum.timer.return_value = [mock_timer_1, mock_timer_2]
 
     with patch(
-        "homeassistant.components.xiaomi_miio.RoborockVacuum"
+        "menuai.components.xiaomi_miio.RoborockVacuum"
     ) as mock_vacuum_cls:
         mock_vacuum_cls.return_value = mock_vacuum
         yield mock_vacuum
 
 
-async def test_xiaomi_exceptions(hass: HomeAssistant, mock_mirobo_is_on) -> None:
+async def test_xiaomi_exceptions(menuai: menuai, mock_mirobo_is_on) -> None:
     """Test error logging on exceptions."""
     entity_name = "test_vacuum_cleaner_error"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
     def is_available():
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         return state.state != STATE_UNAVAILABLE
 
     # The initial setup has to be done successfully
@@ -237,8 +237,8 @@ async def test_xiaomi_exceptions(hass: HomeAssistant, mock_mirobo_is_on) -> None
     # Second update causes an exception, which should be logged
     mock_mirobo_is_on.status.side_effect = DeviceException("dummy exception")
     future = dt_util.utcnow() + timedelta(seconds=60)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert not is_available()
 
@@ -246,22 +246,22 @@ async def test_xiaomi_exceptions(hass: HomeAssistant, mock_mirobo_is_on) -> None
     # so we clear the log and reset the status to test that
     mock_mirobo_is_on.status.reset_mock()
     future += timedelta(seconds=60)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert not is_available()
     assert mock_mirobo_is_on.status.call_count == 1
 
 
 async def test_xiaomi_vacuum_services(
-    hass: HomeAssistant, mock_mirobo_is_got_error
+    menuai: menuai, mock_mirobo_is_got_error
 ) -> None:
     """Test vacuum supported features."""
     entity_name = "test_vacuum_cleaner_1"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
     # Check state attributes
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state.state == VacuumActivity.ERROR
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) == 14204
@@ -281,7 +281,7 @@ async def test_xiaomi_vacuum_services(
     ]
 
     # Call services
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN, SERVICE_START, {"entity_id": entity_id}, blocking=True
     )
     mock_mirobo_is_got_error.assert_has_calls(
@@ -290,42 +290,42 @@ async def test_xiaomi_vacuum_services(
     mock_mirobo_is_got_error.assert_has_calls(STATUS_CALLS, any_order=True)
     mock_mirobo_is_got_error.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN, SERVICE_PAUSE, {"entity_id": entity_id}, blocking=True
     )
     mock_mirobo_is_got_error.assert_has_calls([mock.call.pause()], any_order=True)
     mock_mirobo_is_got_error.assert_has_calls(STATUS_CALLS, any_order=True)
     mock_mirobo_is_got_error.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN, SERVICE_STOP, {"entity_id": entity_id}, blocking=True
     )
     mock_mirobo_is_got_error.assert_has_calls([mock.call.stop()], any_order=True)
     mock_mirobo_is_got_error.assert_has_calls(STATUS_CALLS, any_order=True)
     mock_mirobo_is_got_error.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN, SERVICE_RETURN_TO_BASE, {"entity_id": entity_id}, blocking=True
     )
     mock_mirobo_is_got_error.assert_has_calls([mock.call.home()], any_order=True)
     mock_mirobo_is_got_error.assert_has_calls(STATUS_CALLS, any_order=True)
     mock_mirobo_is_got_error.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN, SERVICE_LOCATE, {"entity_id": entity_id}, blocking=True
     )
     mock_mirobo_is_got_error.assert_has_calls([mock.call.find()], any_order=True)
     mock_mirobo_is_got_error.assert_has_calls(STATUS_CALLS, any_order=True)
     mock_mirobo_is_got_error.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN, SERVICE_CLEAN_SPOT, {"entity_id": entity_id}, blocking=True
     )
     mock_mirobo_is_got_error.assert_has_calls([mock.call.spot()], any_order=True)
     mock_mirobo_is_got_error.assert_has_calls(STATUS_CALLS, any_order=True)
     mock_mirobo_is_got_error.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN,
         SERVICE_SEND_COMMAND,
         {"entity_id": entity_id, "command": "raw"},
@@ -337,7 +337,7 @@ async def test_xiaomi_vacuum_services(
     mock_mirobo_is_got_error.assert_has_calls(STATUS_CALLS, any_order=True)
     mock_mirobo_is_got_error.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN,
         SERVICE_SEND_COMMAND,
         {"entity_id": entity_id, "command": "raw", "params": {"k1": 2}},
@@ -434,7 +434,7 @@ async def test_xiaomi_vacuum_services(
     ],
 )
 async def test_xiaomi_specific_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mirobo_is_on,
     service,
     service_data,
@@ -445,10 +445,10 @@ async def test_xiaomi_specific_services(
 ) -> None:
     """Test vacuum supported features."""
     entity_name = "test_vacuum_cleaner_2"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
     # Check state attributes
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == VacuumActivity.CLEANING
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) == 14204
     assert state.attributes.get(ATTR_ERROR) is None
@@ -470,7 +470,7 @@ async def test_xiaomi_specific_services(
     device_method_attr = getattr(mock_mirobo_is_on, device_method)
     device_method_attr.side_effect = error
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         service,
         service_data,
@@ -483,20 +483,20 @@ async def test_xiaomi_specific_services(
 
 
 async def test_xiaomi_vacuum_fanspeeds(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_mirobo_fanspeeds
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mock_mirobo_fanspeeds
 ) -> None:
     """Test Xiaomi vacuum fanspeeds."""
     entity_name = "test_vacuum_cleaner_2"
-    entity_id = await setup_component(hass, entity_name)
+    entity_id = await setup_component(menuai, entity_name)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_FAN_SPEED) == "Silent"
     fanspeeds = state.attributes.get(ATTR_FAN_SPEED_LIST)
     for speed in ("Silent", "Standard", "Medium", "Turbo"):
         assert speed in fanspeeds
 
     # Set speed service:
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN,
         SERVICE_SET_FAN_SPEED,
         {"entity_id": entity_id, "fan_speed": 60},
@@ -510,7 +510,7 @@ async def test_xiaomi_vacuum_fanspeeds(
 
     fan_speed_dict = mock_mirobo_fanspeeds.fan_speed_presets()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN,
         SERVICE_SET_FAN_SPEED,
         {"entity_id": entity_id, "fan_speed": "Medium"},
@@ -523,7 +523,7 @@ async def test_xiaomi_vacuum_fanspeeds(
     mock_mirobo_fanspeeds.reset_mock()
 
     assert "ERROR" not in caplog.text
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VACUUM_DOMAIN,
         SERVICE_SET_FAN_SPEED,
         {"entity_id": entity_id, "fan_speed": "invent"},
@@ -532,7 +532,7 @@ async def test_xiaomi_vacuum_fanspeeds(
     assert "Fan speed step not recognized" in caplog.text
 
 
-async def setup_component(hass: HomeAssistant, entity_name: str) -> str:
+async def setup_component(menuai: menuai, entity_name: str) -> str:
     """Set up vacuum component."""
     entity_id = f"{VACUUM_DOMAIN}.{entity_name}"
 
@@ -549,8 +549,8 @@ async def setup_component(hass: HomeAssistant, entity_name: str) -> str:
         },
     )
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entity_id

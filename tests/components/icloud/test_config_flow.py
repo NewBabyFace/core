@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, Mock, patch
 from pyicloud.exceptions import PyiCloudFailedLoginException
 import pytest
 
-from homeassistant.components.icloud.config_flow import (
+from menuai.components.icloud.config_flow import (
     CONF_TRUSTED_DEVICE,
     CONF_VERIFICATION_CODE,
 )
-from homeassistant.components.icloud.const import (
+from menuai.components.icloud.const import (
     CONF_GPS_ACCURACY_THRESHOLD,
     CONF_MAX_INTERVAL,
     CONF_WITH_FAMILY,
@@ -18,10 +18,10 @@ from homeassistant.components.icloud.const import (
     DEFAULT_WITH_FAMILY,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import (
     MOCK_CONFIG,
@@ -38,7 +38,7 @@ from tests.common import MockConfigEntry
 @pytest.fixture(name="icloud_bypass_setup", autouse=True)
 def icloud_bypass_setup_fixture():
     """Mock component setup."""
-    with patch("homeassistant.components.icloud.async_setup_entry", return_value=True):
+    with patch("menuai.components.icloud.async_setup_entry", return_value=True):
         yield
 
 
@@ -46,7 +46,7 @@ def icloud_bypass_setup_fixture():
 def mock_controller_service():
     """Mock a successful service."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = False
         service_mock.return_value.requires_2sa = True
@@ -60,7 +60,7 @@ def mock_controller_service():
 def mock_controller_2fa_service():
     """Mock a successful 2fa service."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = True
         service_mock.return_value.requires_2sa = True
@@ -73,7 +73,7 @@ def mock_controller_2fa_service():
 def mock_controller_service_authenticated():
     """Mock a successful service while already authenticate."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = False
         service_mock.return_value.requires_2sa = False
@@ -89,7 +89,7 @@ def mock_controller_service_authenticated():
 def mock_controller_service_authenticated_no_device():
     """Mock a successful service while already authenticate, but without device."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = False
         service_mock.return_value.requires_2sa = False
@@ -104,7 +104,7 @@ def mock_controller_service_authenticated_no_device():
 def mock_controller_service_authenticated_not_trusted():
     """Mock a successful service while already authenticated, but the session is not trusted."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = False
         service_mock.return_value.requires_2sa = False
@@ -120,7 +120,7 @@ def mock_controller_service_authenticated_not_trusted():
 def mock_controller_service_send_verification_code_failed():
     """Mock a failed service during sending verification code step."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = False
         service_mock.return_value.requires_2sa = True
@@ -133,7 +133,7 @@ def mock_controller_service_send_verification_code_failed():
 def mock_controller_service_validate_2fa_code_failed():
     """Mock a failed service during validation of 2FA verification code step."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = True
         service_mock.return_value.validate_2fa_code = Mock(return_value=False)
@@ -144,7 +144,7 @@ def mock_controller_service_validate_2fa_code_failed():
 def mock_controller_service_validate_verification_code_failed():
     """Mock a failed service during validation of verification code step."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService"
+        "menuai.components.icloud.config_flow.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = False
         service_mock.return_value.requires_2sa = True
@@ -154,16 +154,16 @@ def mock_controller_service_validate_verification_code_failed():
         yield service_mock
 
 
-async def test_user(hass: HomeAssistant, service: MagicMock) -> None:
+async def test_user(menuai: menuai, service: MagicMock) -> None:
     """Test user config."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=None
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     # test with required
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
@@ -173,11 +173,11 @@ async def test_user(hass: HomeAssistant, service: MagicMock) -> None:
 
 
 async def test_user_with_cookie(
-    hass: HomeAssistant, service_authenticated: MagicMock
+    menuai: menuai, service_authenticated: MagicMock
 ) -> None:
     """Test user config with presence of a cookie."""
     # test with all provided
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -196,13 +196,13 @@ async def test_user_with_cookie(
     assert result["data"][CONF_GPS_ACCURACY_THRESHOLD] == DEFAULT_GPS_ACCURACY_THRESHOLD
 
 
-async def test_login_failed(hass: HomeAssistant) -> None:
+async def test_login_failed(menuai: menuai) -> None:
     """Test when we have errors during login."""
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService.authenticate",
+        "menuai.components.icloud.config_flow.PyiCloudService.authenticate",
         side_effect=PyiCloudFailedLoginException(),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
@@ -212,10 +212,10 @@ async def test_login_failed(hass: HomeAssistant) -> None:
 
 
 async def test_no_device(
-    hass: HomeAssistant, service_authenticated_no_device: MagicMock
+    menuai: menuai, service_authenticated_no_device: MagicMock
 ) -> None:
     """Test when we have no devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
@@ -224,28 +224,28 @@ async def test_no_device(
     assert result["reason"] == "no_device"
 
 
-async def test_trusted_device(hass: HomeAssistant, service: MagicMock) -> None:
+async def test_trusted_device(menuai: menuai, service: MagicMock) -> None:
     """Test trusted_device step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == CONF_TRUSTED_DEVICE
 
 
-async def test_trusted_device_success(hass: HomeAssistant, service: MagicMock) -> None:
+async def test_trusted_device_success(menuai: menuai, service: MagicMock) -> None:
     """Test trusted_device step success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_TRUSTED_DEVICE: 0}
     )
     assert result["type"] is FlowResultType.FORM
@@ -253,16 +253,16 @@ async def test_trusted_device_success(hass: HomeAssistant, service: MagicMock) -
 
 
 async def test_send_verification_code_failed(
-    hass: HomeAssistant, service_send_verification_code_failed: MagicMock
+    menuai: menuai, service_send_verification_code_failed: MagicMock
 ) -> None:
     """Test when we have errors during send_verification_code."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_TRUSTED_DEVICE: 0}
     )
     assert result["type"] is FlowResultType.FORM
@@ -270,37 +270,37 @@ async def test_send_verification_code_failed(
     assert result["errors"] == {CONF_TRUSTED_DEVICE: "send_verification_code"}
 
 
-async def test_verification_code(hass: HomeAssistant, service: MagicMock) -> None:
+async def test_verification_code(menuai: menuai, service: MagicMock) -> None:
     """Test verification_code step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_TRUSTED_DEVICE: 0}
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == CONF_VERIFICATION_CODE
 
 
 async def test_verification_code_success(
-    hass: HomeAssistant, service: MagicMock
+    menuai: menuai, service: MagicMock
 ) -> None:
     """Test verification_code step success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_TRUSTED_DEVICE: 0}
     )
     service.return_value.requires_2sa = False
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_VERIFICATION_CODE: "0"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -314,19 +314,19 @@ async def test_verification_code_success(
 
 
 async def test_validate_verification_code_failed(
-    hass: HomeAssistant, service_validate_verification_code_failed: MagicMock
+    menuai: menuai, service_validate_verification_code_failed: MagicMock
 ) -> None:
     """Test when we have errors during validate_verification_code."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_TRUSTED_DEVICE: 0}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_VERIFICATION_CODE: "0"}
     )
     assert result["type"] is FlowResultType.FORM
@@ -334,9 +334,9 @@ async def test_validate_verification_code_failed(
     assert result["errors"] == {"base": "validate_verification_code"}
 
 
-async def test_2fa_code_success(hass: HomeAssistant, service_2fa: MagicMock) -> None:
+async def test_2fa_code_success(menuai: menuai, service_2fa: MagicMock) -> None:
     """Test 2fa step success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
@@ -344,7 +344,7 @@ async def test_2fa_code_success(hass: HomeAssistant, service_2fa: MagicMock) -> 
     service_2fa.return_value.requires_2fa = False
     service_2fa.return_value.requires_2sa = False
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_VERIFICATION_CODE: "0"}
     )
 
@@ -359,16 +359,16 @@ async def test_2fa_code_success(hass: HomeAssistant, service_2fa: MagicMock) -> 
 
 
 async def test_validate_2fa_code_failed(
-    hass: HomeAssistant, service_validate_2fa_code_failed: MagicMock
+    menuai: menuai, service_validate_2fa_code_failed: MagicMock
 ) -> None:
     """Test when we have errors during validate_verification_code."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_VERIFICATION_CODE: "0"}
     )
 
@@ -378,18 +378,18 @@ async def test_validate_2fa_code_failed(
 
 
 async def test_password_update(
-    hass: HomeAssistant, service_authenticated: MagicMock
+    menuai: menuai, service_authenticated: MagicMock
 ) -> None:
     """Test that password reauthentication works successfully."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, entry_id="test", unique_id=USERNAME
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_PASSWORD: PASSWORD_2}
     )
 
@@ -398,21 +398,21 @@ async def test_password_update(
     assert config_entry.data[CONF_PASSWORD] == PASSWORD_2
 
 
-async def test_password_update_wrong_password(hass: HomeAssistant) -> None:
+async def test_password_update_wrong_password(menuai: menuai) -> None:
     """Test that during password reauthentication wrong password returns correct error."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, entry_id="test", unique_id=USERNAME
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
 
     with patch(
-        "homeassistant.components.icloud.config_flow.PyiCloudService.authenticate",
+        "menuai.components.icloud.config_flow.PyiCloudService.authenticate",
         side_effect=PyiCloudFailedLoginException(),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_PASSWORD: PASSWORD_2}
         )
 

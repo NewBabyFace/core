@@ -18,18 +18,18 @@ from reolink_aio.exceptions import (
     UnexpectedDataError,
 )
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.components.reolink.const import DOMAIN
-from homeassistant.components.reolink.util import get_device_uid_and_ch
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr
+from menuai.components.reolink.const import DOMAIN
+from menuai.components.reolink.util import get_device_uid_and_ch
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import device_registry as dr
 
 from .conftest import TEST_NVR_NAME, TEST_UID, TEST_UID_CAM
 
@@ -44,23 +44,23 @@ DEV_ID_STANDALONE_CAM = f"{TEST_UID_CAM}"
     [
         (
             ApiError("Test error"),
-            HomeAssistantError(translation_key="api_error"),
+            menuaiError(translation_key="api_error"),
         ),
         (
             ApiError("Test error", translation_key="firmware_rate_limit"),
-            HomeAssistantError(translation_key="firmware_rate_limit"),
+            menuaiError(translation_key="firmware_rate_limit"),
         ),
         (
             ApiError("Test error", translation_key="not_in_strings.json"),
-            HomeAssistantError(translation_key="api_error"),
+            menuaiError(translation_key="api_error"),
         ),
         (
             CredentialsInvalidError("Test error"),
-            HomeAssistantError(translation_key="invalid_credentials"),
+            menuaiError(translation_key="invalid_credentials"),
         ),
         (
             InvalidContentTypeError("Test error"),
-            HomeAssistantError(translation_key="invalid_content_type"),
+            menuaiError(translation_key="invalid_content_type"),
         ),
         (
             InvalidParameterError("Test error"),
@@ -68,58 +68,58 @@ DEV_ID_STANDALONE_CAM = f"{TEST_UID_CAM}"
         ),
         (
             LoginError("Test error"),
-            HomeAssistantError(translation_key="login_error"),
+            menuaiError(translation_key="login_error"),
         ),
         (
             NoDataError("Test error"),
-            HomeAssistantError(translation_key="no_data"),
+            menuaiError(translation_key="no_data"),
         ),
         (
             NotSupportedError("Test error"),
-            HomeAssistantError(translation_key="not_supported"),
+            menuaiError(translation_key="not_supported"),
         ),
         (
             ReolinkConnectionError("Test error"),
-            HomeAssistantError(translation_key="connection_error"),
+            menuaiError(translation_key="connection_error"),
         ),
         (
             ReolinkError("Test error"),
-            HomeAssistantError(translation_key="unexpected"),
+            menuaiError(translation_key="unexpected"),
         ),
         (
             ReolinkTimeoutError("Test error"),
-            HomeAssistantError(translation_key="timeout"),
+            menuaiError(translation_key="timeout"),
         ),
         (
             SubscriptionError("Test error"),
-            HomeAssistantError(translation_key="subscription_error"),
+            menuaiError(translation_key="subscription_error"),
         ),
         (
             UnexpectedDataError("Test error"),
-            HomeAssistantError(translation_key="unexpected_data"),
+            menuaiError(translation_key="unexpected_data"),
         ),
     ],
 )
 async def test_try_function(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     side_effect: ReolinkError,
-    expected: HomeAssistantError,
+    expected: menuaiError,
 ) -> None:
     """Test try_function error translations using number entity."""
     reolink_connect.volume.return_value = 80
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.NUMBER]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.NUMBER]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
 
     entity_id = f"{Platform.NUMBER}.{TEST_NVR_NAME}_volume"
 
     reolink_connect.set_volume.side_effect = side_effect
     with pytest.raises(expected.__class__) as err:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: 50},
@@ -139,7 +139,7 @@ async def test_try_function(
     ],
 )
 async def test_get_device_uid_and_ch(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     device_registry: dr.DeviceRegistry,
@@ -155,9 +155,9 @@ async def test_get_device_uid_and_ch(
     )
 
     # setup CH 0 and host entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     result = get_device_uid_and_ch(dev_entry, config_entry.runtime_data.host)
     # always get the uid and channel form the DEV_ID_NVR since is_nvr = True

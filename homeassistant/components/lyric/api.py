@@ -1,13 +1,13 @@
-"""API for Honeywell Lyric bound to Home Assistant OAuth."""
+"""API for Honeywell Lyric bound to MenuAI OAuth."""
 
 from typing import cast
 
 from aiohttp import BasicAuth, ClientSession
 from aiolyric.client import LyricClient
 
-from homeassistant.components.application_credentials import AuthImplementation
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.components.application_credentials import AuthImplementation
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 
 class OAuth2SessionLyric(config_entry_oauth2_flow.OAuth2Session):
@@ -17,7 +17,7 @@ class OAuth2SessionLyric(config_entry_oauth2_flow.OAuth2Session):
         """Force a token refresh."""
         new_token = await self.implementation.async_refresh_token(self.token)
 
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self.config_entry, data={**self.config_entry.data, "token": new_token}
         )
 
@@ -48,7 +48,7 @@ class LyricLocalOAuth2Implementation(
 
     async def _token_request(self, data: dict) -> dict:
         """Make a token request."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         data["client_id"] = self.client_id
 

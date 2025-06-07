@@ -1,7 +1,7 @@
 """Models for SQLAlchemy.
 
 This file contains the model definitions for schema version 9,
-used by Home Assistant Core 0.119.0.
+used by MenuAI Core 0.119.0.
 It is used to test the schema migration logic.
 """
 
@@ -22,9 +22,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm.session import Session
 
-from homeassistant.core import Context, Event, EventOrigin, State, split_entity_id
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.util import dt as dt_util
+from menuai.core import Context, Event, EventOrigin, State, split_entity_id
+from menuai.helpers.json import JSONEncoder
+from menuai.util import dt as dt_util
 
 # SQLAlchemy Schema
 Base = declarative_base()

@@ -14,13 +14,13 @@ from attr import asdict
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.homekit_controller.const import DOMAIN, ENTITY_MAP
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components.homekit_controller.const import DOMAIN, ENTITY_MAP
+from menuai.config_entries import ConfigEntryState
+from menuai.const import EVENT_menuai_STOP, STATE_OFF, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .common import (
     Helper,
@@ -48,25 +48,25 @@ def create_motion_sensor_service(accessory: Accessory) -> None:
 
 
 async def test_unload_on_stop(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test async_unload is called on stop."""
-    await setup_test_component(hass, get_next_aid(), create_motion_sensor_service)
+    await setup_test_component(menuai, get_next_aid(), create_motion_sensor_service)
     with patch(
-        "homeassistant.components.homekit_controller.HKDevice.async_unload"
+        "menuai.components.homekit_controller.HKDevice.async_unload"
     ) as async_unlock_mock:
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
 
     assert async_unlock_mock.called
 
 
 async def test_async_remove_entry(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test unpairing a component."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_motion_sensor_service
+        menuai, get_next_aid(), create_motion_sensor_service
     )
     controller = helper.pairing.controller
 
@@ -74,13 +74,13 @@ async def test_async_remove_entry(
 
     assert len(controller.pairings) == 1
 
-    assert hkid in hass.data[ENTITY_MAP].storage_data
+    assert hkid in menuai.data[ENTITY_MAP].storage_data
 
     # Remove it via config entry and number of pairings should go down
-    await hass.config_entries.async_remove(helper.config_entry.entry_id)
+    await menuai.config_entries.async_remove(helper.config_entry.entry_id)
     assert len(controller.pairings) == 0
 
-    assert hkid not in hass.data[ENTITY_MAP].storage_data
+    assert hkid not in menuai.data[ENTITY_MAP].storage_data
 
 
 def create_alive_service(accessory: Accessory) -> Service:
@@ -91,16 +91,16 @@ def create_alive_service(accessory: Accessory) -> Service:
 
 
 async def test_device_remove_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     get_next_aid: Callable[[], int],
 ) -> None:
     """Test we can only remove a device that no longer exists."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     helper: Helper = await setup_test_component(
-        hass, get_next_aid(), create_alive_service
+        menuai, get_next_aid(), create_alive_service
     )
     config_entry = helper.config_entry
     entry_id = config_entry.entry_id
@@ -108,7 +108,7 @@ async def test_device_remove_devices(
     entity = entity_registry.entities[ALIVE_DEVICE_ENTITY_ID]
 
     live_device_entry = device_registry.async_get(entity.device_id)
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(live_device_entry.id, entry_id)
     assert not response["success"]
 
@@ -121,7 +121,7 @@ async def test_device_remove_devices(
 
 
 async def test_offline_device_raises(
-    hass: HomeAssistant, get_next_aid: Callable[[], int], controller
+    menuai: menuai, get_next_aid: Callable[[], int], controller
 ) -> None:
     """Test an offline device raises ConfigEntryNotReady."""
 
@@ -158,25 +158,25 @@ async def test_offline_device_raises(
     create_alive_service(accessory)
 
     with patch("aiohomekit.testing.FakePairing", OfflineFakePairing):
-        await async_setup_component(hass, DOMAIN, {})
+        await async_setup_component(menuai, DOMAIN, {})
         config_entry, _ = await setup_test_accessories_with_controller(
-            hass, [accessory], controller
+            menuai, [accessory], controller
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
     is_connected = True
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=10))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=10))
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.states.get("light.testdevice").state == STATE_OFF
+    assert menuai.states.get("light.testdevice").state == STATE_OFF
 
 
 @pytest.mark.usefixtures("fake_ble_discovery")
 async def test_ble_device_only_checks_is_available(
-    hass: HomeAssistant, get_next_aid: Callable[[], int], controller
+    menuai: menuai, get_next_aid: Callable[[], int], controller
 ) -> None:
     """Test a BLE device only checks is_available."""
 
@@ -217,35 +217,35 @@ async def test_ble_device_only_checks_is_available(
     create_alive_service(accessory)
 
     with patch("aiohomekit.testing.FakePairing", FakeBLEPairing):
-        await async_setup_component(hass, DOMAIN, {})
+        await async_setup_component(menuai, DOMAIN, {})
         config_entry, _ = await setup_test_accessories_with_controller(
-            hass, [accessory], controller
+            menuai, [accessory], controller
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
     is_available = True
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=10))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=10))
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.states.get("light.testdevice").state == STATE_OFF
+    assert menuai.states.get("light.testdevice").state == STATE_OFF
 
     is_available = False
-    async_fire_time_changed(hass, utcnow() + timedelta(hours=1))
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get("light.testdevice").state == STATE_UNAVAILABLE
+    async_fire_time_changed(menuai, utcnow() + timedelta(hours=1))
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get("light.testdevice").state == STATE_UNAVAILABLE
 
     is_available = True
-    async_fire_time_changed(hass, utcnow() + timedelta(hours=1))
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get("light.testdevice").state == STATE_OFF
+    async_fire_time_changed(menuai, utcnow() + timedelta(hours=1))
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get("light.testdevice").state == STATE_OFF
 
 
 @pytest.mark.usefixtures("fake_ble_discovery", "fake_ble_pairing")
 async def test_ble_device_populates_connections(
-    hass: HomeAssistant, get_next_aid: Callable[[], int], controller
+    menuai: menuai, get_next_aid: Callable[[], int], controller
 ) -> None:
     """Test a BLE device populates connections in the device registry."""
     aid = get_next_aid()
@@ -255,14 +255,14 @@ async def test_ble_device_populates_connections(
     )
     create_alive_service(accessory)
 
-    await async_setup_component(hass, DOMAIN, {})
+    await async_setup_component(menuai, DOMAIN, {})
     config_entry, _ = await setup_test_accessories_with_controller(
-        hass, [accessory], controller
+        menuai, [accessory], controller
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     assert (
         dev_reg.async_get_device(
             identifiers={}, connections={("bluetooth", "AA:BB:CC:DD:EE:FF")}
@@ -273,15 +273,15 @@ async def test_ble_device_populates_connections(
 
 @pytest.mark.parametrize("example", FIXTURES, ids=lambda val: str(val.stem))
 async def test_snapshots(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
     example: str,
 ) -> None:
     """Detect regressions in enumerating a homekit accessory database and building entities."""
-    accessories = await setup_accessories_from_file(hass, example)
-    config_entry, _ = await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, example)
+    config_entry, _ = await setup_test_accessories(menuai, accessories)
 
     registry_devices = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
@@ -302,7 +302,7 @@ async def test_snapshots(
 
         for entity_entry in registry_entities:
             state_dict = None
-            if state := hass.states.get(entity_entry.entity_id):
+            if state := menuai.states.get(entity_entry.entity_id):
                 state_dict = dict(state.as_dict())
                 state_dict.pop("context", None)
                 state_dict.pop("last_changed", None)

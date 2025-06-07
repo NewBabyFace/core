@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.components.media_player import BrowseMedia, MediaClass, MediaType
+from menuai.components.media_player import BrowseMedia, MediaClass, MediaType
 
 
 def build_app_list(app_list: dict[str, str]) -> BrowseMedia:

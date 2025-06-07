@@ -4,14 +4,14 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     DOMAIN as MP_DOMAIN,
     SERVICE_MEDIA_PLAY,
 )
-from homeassistant.components.sonos import DOMAIN
-from homeassistant.components.sonos.const import DATA_SONOS, SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.sonos import DOMAIN
+from menuai.components.sonos.const import DATA_SONOS, SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .conftest import MockSoCo, SonosMockEvent
 
@@ -19,21 +19,21 @@ from tests.common import async_fire_time_changed, load_fixture, load_json_value_
 
 
 async def test_fallback_to_polling(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry,
     soco,
     fire_zgs_event,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that polling fallback works."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     # Do not wait on background tasks here because the
     # subscription callback will fire an unsub the polling check
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     await fire_zgs_event()
 
-    speaker = list(hass.data[DATA_SONOS].discovered.values())[0]
+    speaker = list(menuai.data[DATA_SONOS].discovered.values())[0]
     assert speaker.soco is soco
     assert speaker._subscriptions
     assert not speaker.subscriptions_failed
@@ -42,13 +42,13 @@ async def test_fallback_to_polling(
 
     # Ensure subscriptions are cancelled and polling methods are called when subscriptions time out
     with (
-        patch("homeassistant.components.sonos.media.SonosMedia.poll_media"),
+        patch("menuai.components.sonos.media.SonosMedia.poll_media"),
         patch(
-            "homeassistant.components.sonos.speaker.SonosSpeaker.subscription_address"
+            "menuai.components.sonos.speaker.SonosSpeaker.subscription_address"
         ),
     ):
-        async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert not speaker._subscriptions
     assert speaker.subscriptions_failed
@@ -56,22 +56,22 @@ async def test_fallback_to_polling(
 
 
 async def test_subscription_creation_fails(
-    hass: HomeAssistant, async_setup_sonos
+    menuai: menuai, async_setup_sonos
 ) -> None:
     """Test that subscription creation failures are handled."""
     with patch(
-        "homeassistant.components.sonos.speaker.SonosSpeaker._subscribe",
+        "menuai.components.sonos.speaker.SonosSpeaker._subscribe",
         side_effect=ConnectionError("Took too long"),
     ):
         await async_setup_sonos()
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    speaker = list(hass.data[DATA_SONOS].discovered.values())[0]
+    speaker = list(menuai.data[DATA_SONOS].discovered.values())[0]
     assert not speaker._subscriptions
 
     with patch.object(speaker, "_resub_cooldown_expires_at", None):
         speaker.speaker_activity("discovery")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert speaker._subscriptions
 
@@ -100,9 +100,9 @@ def _create_avtransport_sonos_event(
     return SonosMockEvent(soco, soco.avTransport, variables)
 
 
-async def _media_play(hass: HomeAssistant, entity: str) -> None:
+async def _media_play(menuai: menuai, entity: str) -> None:
     """Call media play service."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PLAY,
         {
@@ -113,7 +113,7 @@ async def _media_play(hass: HomeAssistant, entity: str) -> None:
 
 
 async def test_zgs_event_group_speakers(
-    hass: HomeAssistant, sonos_setup_two_speakers: list[MockSoCo]
+    menuai: menuai, sonos_setup_two_speakers: list[MockSoCo]
 ) -> None:
     """Tests grouping and ungrouping two speakers."""
     # When Sonos speakers are grouped; one of the speakers is the coordinator and is in charge
@@ -123,14 +123,14 @@ async def test_zgs_event_group_speakers(
     soco_br = sonos_setup_two_speakers[1]
 
     # Test 1 - Initial state - speakers are not grouped
-    state = hass.states.get("media_player.living_room")
+    state = menuai.states.get("media_player.living_room")
     assert state.attributes["group_members"] == ["media_player.living_room"]
-    state = hass.states.get("media_player.bedroom")
+    state = menuai.states.get("media_player.bedroom")
     assert state.attributes["group_members"] == ["media_player.bedroom"]
     # Each speaker is its own coordinator and calls should route to their SoCos
-    await _media_play(hass, "media_player.living_room")
+    await _media_play(menuai, "media_player.living_room")
     assert soco_lr.play.call_count == 1
-    await _media_play(hass, "media_player.bedroom")
+    await _media_play(menuai, "media_player.bedroom")
     assert soco_br.play.call_count == 1
 
     soco_lr.play.reset_mock()
@@ -142,20 +142,20 @@ async def test_zgs_event_group_speakers(
     )
     soco_lr.zoneGroupTopology.subscribe.return_value._callback(event)
     soco_br.zoneGroupTopology.subscribe.return_value._callback(event)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("media_player.living_room")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("media_player.living_room")
     assert state.attributes["group_members"] == [
         "media_player.living_room",
         "media_player.bedroom",
     ]
-    state = hass.states.get("media_player.bedroom")
+    state = menuai.states.get("media_player.bedroom")
     assert state.attributes["group_members"] == [
         "media_player.living_room",
         "media_player.bedroom",
     ]
     # Play calls should route to the living room SoCo
-    await _media_play(hass, "media_player.living_room")
-    await _media_play(hass, "media_player.bedroom")
+    await _media_play(menuai, "media_player.living_room")
+    await _media_play(menuai, "media_player.bedroom")
     assert soco_lr.play.call_count == 2
     assert soco_br.play.call_count == 0
 
@@ -168,20 +168,20 @@ async def test_zgs_event_group_speakers(
     )
     soco_lr.zoneGroupTopology.subscribe.return_value._callback(event)
     soco_br.zoneGroupTopology.subscribe.return_value._callback(event)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("media_player.living_room")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("media_player.living_room")
     assert state.attributes["group_members"] == ["media_player.living_room"]
-    state = hass.states.get("media_player.bedroom")
+    state = menuai.states.get("media_player.bedroom")
     assert state.attributes["group_members"] == ["media_player.bedroom"]
     # Calls should route to each speakers Soco
-    await _media_play(hass, "media_player.living_room")
+    await _media_play(menuai, "media_player.living_room")
     assert soco_lr.play.call_count == 1
-    await _media_play(hass, "media_player.bedroom")
+    await _media_play(menuai, "media_player.bedroom")
     assert soco_br.play.call_count == 1
 
 
 async def test_zgs_avtransport_group_speakers(
-    hass: HomeAssistant, sonos_setup_two_speakers: list[MockSoCo]
+    menuai: menuai, sonos_setup_two_speakers: list[MockSoCo]
 ) -> None:
     """Test processing avtransport and zgs events to change group membership."""
     soco_lr = sonos_setup_two_speakers[0]
@@ -191,9 +191,9 @@ async def test_zgs_avtransport_group_speakers(
     # for the living room speaker to the bedroom speaker.
     event = _create_avtransport_sonos_event("av_transport.json", soco_lr)
     soco_lr.avTransport.subscribe.return_value._callback(event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     # Call should route to the new coodinator which is the bedroom
-    await _media_play(hass, "media_player.living_room")
+    await _media_play(menuai, "media_player.living_room")
     assert soco_lr.play.call_count == 0
     assert soco_br.play.call_count == 1
 
@@ -206,8 +206,8 @@ async def test_zgs_avtransport_group_speakers(
     )
     soco_lr.zoneGroupTopology.subscribe.return_value._callback(event)
     soco_br.zoneGroupTopology.subscribe.return_value._callback(event)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     # Call should route to the living room
-    await _media_play(hass, "media_player.living_room")
+    await _media_play(menuai, "media_player.living_room")
     assert soco_lr.play.call_count == 1
     assert soco_br.play.call_count == 0

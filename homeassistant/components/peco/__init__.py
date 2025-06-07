@@ -15,11 +15,11 @@ from peco import (
     UnresponsiveMeterError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_COUNTY,
@@ -41,10 +41,10 @@ class PECOCoordinatorData:
     alerts: AlertResults
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up PECO Outage Counter from a config entry."""
 
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     api = PecoOutageApi()
     # Outage Counter Setup
     county: str = entry.data[CONF_COUNTY]
@@ -66,7 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return data
 
     outage_coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         LOGGER,
         config_entry=entry,
         name="PECO Outage Count",
@@ -76,7 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await outage_coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "outage_count": outage_coordinator
     }
 
@@ -96,7 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return data
 
         meter_coordinator = DataUpdateCoordinator(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name="PECO Smart Meter",
@@ -106,15 +106,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         await meter_coordinator.async_config_entry_first_refresh()
 
-        hass.data[DOMAIN][entry.entry_id]["smart_meter"] = meter_coordinator
+        menuai.data[DOMAIN][entry.entry_id]["smart_meter"] = meter_coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

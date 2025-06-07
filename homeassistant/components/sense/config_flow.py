@@ -12,9 +12,9 @@ from sense_energy import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CODE, CONF_EMAIL, CONF_PASSWORD, CONF_TIMEOUT
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CODE, CONF_EMAIL, CONF_PASSWORD, CONF_TIMEOUT
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import ACTIVE_UPDATE_RATE, DEFAULT_TIMEOUT, DOMAIN, SENSE_CONNECT_EXCEPTIONS
 
@@ -47,11 +47,11 @@ class SenseConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         self._auth_data.update(dict(data))
         timeout = self._auth_data[CONF_TIMEOUT]
-        client_session = async_get_clientsession(self.hass)
+        client_session = async_get_clientsession(self.menuai)
 
         # Creating the AsyncSenseable object loads
         # ssl certificates which does blocking IO
-        self._gateway = await self.hass.async_add_executor_job(
+        self._gateway = await self.menuai.async_add_executor_job(
             partial(
                 ASyncSenseable,
                 api_timeout=timeout,

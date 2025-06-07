@@ -7,23 +7,23 @@ import aiohttp
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components.mjpeg import (
+from menuai.components.mjpeg import (
     CONF_MJPEG_URL,
     CONF_STILL_IMAGE_URL,
     DOMAIN as MJPEG_DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_CLOSE,
+    EVENT_menuai_CLOSE,
     HTTP_BASIC_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client as client
-from homeassistant.util.color import RGBColor
-from homeassistant.util.ssl import SSLCipherList
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client as client
+from menuai.util.color import RGBColor
+from menuai.util.ssl import SSLCipherList
 
 from tests.common import (
     MockConfigEntry,
@@ -37,7 +37,7 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.fixture(name="camera_client")
 async def camera_client_fixture(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> TestClient:
     """Fixture to fetch camera streams."""
     mock_config_entry = MockConfigEntry(
@@ -52,40 +52,40 @@ async def camera_client_fixture(
             CONF_VERIFY_SSL: True,
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    return await hass_client()
+    return await menuai_client()
 
 
-async def test_get_clientsession_with_ssl(hass: HomeAssistant) -> None:
+async def test_get_clientsession_with_ssl(menuai: menuai) -> None:
     """Test init clientsession with ssl."""
-    client.async_get_clientsession(hass)
+    client.async_get_clientsession(menuai)
     verify_ssl = True
     ssl_cipher = SSLCipherList.PYTHON_DEFAULT
     family = 0
 
-    client_session = hass.data[client.DATA_CLIENTSESSION][
+    client_session = menuai.data[client.DATA_CLIENTSESSION][
         (verify_ssl, family, ssl_cipher)
     ]
     assert isinstance(client_session, aiohttp.ClientSession)
-    connector = hass.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
+    connector = menuai.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
     assert isinstance(connector, aiohttp.TCPConnector)
 
 
-async def test_get_clientsession_without_ssl(hass: HomeAssistant) -> None:
+async def test_get_clientsession_without_ssl(menuai: menuai) -> None:
     """Test init clientsession without ssl."""
-    client.async_get_clientsession(hass, verify_ssl=False)
+    client.async_get_clientsession(menuai, verify_ssl=False)
     verify_ssl = False
     ssl_cipher = SSLCipherList.PYTHON_DEFAULT
     family = 0
 
-    client_session = hass.data[client.DATA_CLIENTSESSION][
+    client_session = menuai.data[client.DATA_CLIENTSESSION][
         (verify_ssl, family, ssl_cipher)
     ]
     assert isinstance(client_session, aiohttp.ClientSession)
-    connector = hass.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
+    connector = menuai.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
     assert isinstance(connector, aiohttp.TCPConnector)
 
 
@@ -119,52 +119,52 @@ async def test_get_clientsession_without_ssl(hass: HomeAssistant) -> None:
     ],
 )
 async def test_get_clientsession(
-    hass: HomeAssistant,
+    menuai: menuai,
     verify_ssl: bool,
     expected_family: int,
     ssl_cipher: SSLCipherList,
 ) -> None:
     """Test init clientsession combinations."""
     client.async_get_clientsession(
-        hass, verify_ssl=verify_ssl, family=expected_family, ssl_cipher=ssl_cipher
+        menuai, verify_ssl=verify_ssl, family=expected_family, ssl_cipher=ssl_cipher
     )
-    client_session = hass.data[client.DATA_CLIENTSESSION][
+    client_session = menuai.data[client.DATA_CLIENTSESSION][
         (verify_ssl, expected_family, ssl_cipher)
     ]
     assert isinstance(client_session, aiohttp.ClientSession)
-    connector = hass.data[client.DATA_CONNECTOR][
+    connector = menuai.data[client.DATA_CONNECTOR][
         (verify_ssl, expected_family, ssl_cipher)
     ]
     assert isinstance(connector, aiohttp.TCPConnector)
 
 
-async def test_create_clientsession_with_ssl_and_cookies(hass: HomeAssistant) -> None:
+async def test_create_clientsession_with_ssl_and_cookies(menuai: menuai) -> None:
     """Test create clientsession with ssl."""
-    session = client.async_create_clientsession(hass, cookies={"bla": True})
+    session = client.async_create_clientsession(menuai, cookies={"bla": True})
     assert isinstance(session, aiohttp.ClientSession)
 
     verify_ssl = True
     ssl_cipher = SSLCipherList.PYTHON_DEFAULT
     family = 0
 
-    assert client.DATA_CLIENTSESSION not in hass.data
-    connector = hass.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
+    assert client.DATA_CLIENTSESSION not in menuai.data
+    connector = menuai.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
     assert isinstance(connector, aiohttp.TCPConnector)
 
 
 async def test_create_clientsession_without_ssl_and_cookies(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test create clientsession without ssl."""
-    session = client.async_create_clientsession(hass, False, cookies={"bla": True})
+    session = client.async_create_clientsession(menuai, False, cookies={"bla": True})
     assert isinstance(session, aiohttp.ClientSession)
 
     verify_ssl = False
     ssl_cipher = SSLCipherList.PYTHON_DEFAULT
     family = 0
 
-    assert client.DATA_CLIENTSESSION not in hass.data
-    connector = hass.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
+    assert client.DATA_CLIENTSESSION not in menuai.data
+    connector = menuai.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)]
     assert isinstance(connector, aiohttp.TCPConnector)
 
 
@@ -198,33 +198,33 @@ async def test_create_clientsession_without_ssl_and_cookies(
     ],
 )
 async def test_get_clientsession_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     verify_ssl: bool,
     expected_family: int,
     ssl_cipher: SSLCipherList,
 ) -> None:
     """Test init clientsession cleanup."""
     client.async_get_clientsession(
-        hass, verify_ssl=verify_ssl, family=expected_family, ssl_cipher=ssl_cipher
+        menuai, verify_ssl=verify_ssl, family=expected_family, ssl_cipher=ssl_cipher
     )
 
-    client_session = hass.data[client.DATA_CLIENTSESSION][
+    client_session = menuai.data[client.DATA_CLIENTSESSION][
         (verify_ssl, expected_family, ssl_cipher)
     ]
     assert isinstance(client_session, aiohttp.ClientSession)
-    connector = hass.data[client.DATA_CONNECTOR][
+    connector = menuai.data[client.DATA_CONNECTOR][
         (verify_ssl, expected_family, ssl_cipher)
     ]
     assert isinstance(connector, aiohttp.TCPConnector)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_CLOSE)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_CLOSE)
+    await menuai.async_block_till_done()
 
     assert client_session.closed
     assert connector.closed
 
 
-async def test_get_clientsession_patched_close(hass: HomeAssistant) -> None:
+async def test_get_clientsession_patched_close(menuai: menuai) -> None:
     """Test closing clientsession does not work."""
 
     verify_ssl = True
@@ -232,14 +232,14 @@ async def test_get_clientsession_patched_close(hass: HomeAssistant) -> None:
     family = 0
 
     with patch("aiohttp.ClientSession.close") as mock_close:
-        session = client.async_get_clientsession(hass)
+        session = client.async_get_clientsession(menuai)
 
         assert isinstance(
-            hass.data[client.DATA_CLIENTSESSION][(verify_ssl, family, ssl_cipher)],
+            menuai.data[client.DATA_CLIENTSESSION][(verify_ssl, family, ssl_cipher)],
             aiohttp.ClientSession,
         )
         assert isinstance(
-            hass.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)],
+            menuai.data[client.DATA_CONNECTOR][(verify_ssl, family, ssl_cipher)],
             aiohttp.TCPConnector,
         )
 
@@ -250,25 +250,25 @@ async def test_get_clientsession_patched_close(hass: HomeAssistant) -> None:
 
 
 async def test_warning_close_session_integration(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test log warning message when closing the session from integration context."""
     with (
         patch(
-            "homeassistant.helpers.frame.linecache.getline",
+            "menuai.helpers.frame.linecache.getline",
             return_value="await session.close()",
         ),
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=extract_stack_to_frame(
                 [
                     Mock(
-                        filename="/home/paulus/homeassistant/core.py",
+                        filename="/home/paulus/menuai/core.py",
                         lineno="23",
                         line="do_something()",
                     ),
                     Mock(
-                        filename="/home/paulus/homeassistant/components/hue/light.py",
+                        filename="/home/paulus/menuai/components/hue/light.py",
                         lineno="23",
                         line="await session.close()",
                     ),
@@ -281,32 +281,32 @@ async def test_warning_close_session_integration(
             ),
         ),
     ):
-        session = client.async_get_clientsession(hass)
+        session = client.async_get_clientsession(menuai)
         await session.close()
     assert (
-        "Detected that integration 'hue' closes the Home Assistant aiohttp session at "
-        "homeassistant/components/hue/light.py, line 23: await session.close(). "
+        "Detected that integration 'hue' closes the MenuAI aiohttp session at "
+        "menuai/components/hue/light.py, line 23: await session.close(). "
         "Please create a bug report at https://github.com/home-assistant/core/issues?"
         "q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+hue%22"
     ) in caplog.text
 
 
 async def test_warning_close_session_custom(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test log warning message when closing the session from custom context."""
-    mock_integration(hass, MockModule("hue"), built_in=False)
+    mock_integration(menuai, MockModule("hue"), built_in=False)
     with (
         patch(
-            "homeassistant.helpers.frame.linecache.getline",
+            "menuai.helpers.frame.linecache.getline",
             return_value="await session.close()",
         ),
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=extract_stack_to_frame(
                 [
                     Mock(
-                        filename="/home/paulus/homeassistant/core.py",
+                        filename="/home/paulus/menuai/core.py",
                         lineno="23",
                         line="do_something()",
                     ),
@@ -324,10 +324,10 @@ async def test_warning_close_session_custom(
             ),
         ),
     ):
-        session = client.async_get_clientsession(hass)
+        session = client.async_get_clientsession(menuai)
         await session.close()
     assert (
-        "Detected that custom integration 'hue' closes the Home Assistant aiohttp "
+        "Detected that custom integration 'hue' closes the MenuAI aiohttp "
         "session at custom_components/hue/light.py, line 23: await session.close(). "
         "Please report it to the author of the 'hue' custom integration"
     ) in caplog.text
@@ -368,20 +368,20 @@ async def test_async_aiohttp_proxy_stream_client_err(
 
 
 async def test_sending_named_tuple(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test sending a named tuple in json."""
     resp = aioclient_mock.post("http://127.0.0.1/rgb", json={"rgb": RGBColor(4, 3, 2)})
-    session = client.async_create_clientsession(hass)
+    session = client.async_create_clientsession(menuai)
     resp = await session.post("http://127.0.0.1/rgb", json={"rgb": RGBColor(4, 3, 2)})
     assert resp.status == 200
     assert await resp.json() == {"rgb": [4, 3, 2]}
     assert aioclient_mock.mock_calls[0][2]["rgb"] == RGBColor(4, 3, 2)
 
 
-async def test_client_session_immutable_headers(hass: HomeAssistant) -> None:
+async def test_client_session_immutable_headers(menuai: menuai) -> None:
     """Test we can't mutate headers."""
-    session = client.async_get_clientsession(hass)
+    session = client.async_get_clientsession(menuai)
 
     with pytest.raises(TypeError):
         session.headers["user-agent"] = "bla"
@@ -393,21 +393,21 @@ async def test_client_session_immutable_headers(hass: HomeAssistant) -> None:
 @pytest.mark.usefixtures("disable_mock_zeroconf_resolver")
 @pytest.mark.usefixtures("mock_async_zeroconf")
 async def test_async_mdnsresolver(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test async_mdnsresolver."""
     resp = aioclient_mock.post("http://localhost/xyz", json={"x": 1})
-    session = client.async_create_clientsession(hass)
+    session = client.async_create_clientsession(menuai)
     resp = await session.post("http://localhost/xyz", json={"x": 1})
     assert resp.status == 200
     assert await resp.json() == {"x": 1}
 
 
-async def test_resolver_is_singleton(hass: HomeAssistant) -> None:
+async def test_resolver_is_singleton(menuai: menuai) -> None:
     """Test that the resolver is a singleton."""
-    session = client.async_get_clientsession(hass)
-    session2 = client.async_get_clientsession(hass)
-    session3 = client.async_create_clientsession(hass)
+    session = client.async_get_clientsession(menuai)
+    session2 = client.async_get_clientsession(menuai)
+    session3 = client.async_create_clientsession(menuai)
     assert isinstance(session._connector, aiohttp.TCPConnector)
     assert isinstance(session2._connector, aiohttp.TCPConnector)
     assert isinstance(session3._connector, aiohttp.TCPConnector)

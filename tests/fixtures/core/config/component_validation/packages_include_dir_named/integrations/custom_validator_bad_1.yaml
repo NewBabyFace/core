@@ -1,2 +1,2 @@
-# This always raises HomeAssistantError
+# This always raises menuaiError
 custom_validator_bad_1:

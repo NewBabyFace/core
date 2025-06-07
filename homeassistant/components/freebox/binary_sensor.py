@@ -5,15 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import FreeboxHomeCategory
 from .entity import FreeboxHomeEntity
@@ -33,7 +33,7 @@ RAID_SENSORS: tuple[BinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -50,12 +50,12 @@ async def async_setup_entry(
 
     for node in router.home_devices.values():
         if node["category"] == FreeboxHomeCategory.PIR:
-            binary_entities.append(FreeboxPirSensor(hass, router, node))
+            binary_entities.append(FreeboxPirSensor(menuai, router, node))
         elif node["category"] == FreeboxHomeCategory.DWS:
-            binary_entities.append(FreeboxDwsSensor(hass, router, node))
+            binary_entities.append(FreeboxDwsSensor(menuai, router, node))
 
         binary_entities.extend(
-            FreeboxCoverSensor(hass, router, node)
+            FreeboxCoverSensor(menuai, router, node)
             for endpoint in node["show_endpoints"]
             if (
                 endpoint["name"] == "cover"
@@ -74,13 +74,13 @@ class FreeboxHomeBinarySensor(FreeboxHomeEntity, BinarySensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         router: FreeboxRouter,
         node: dict[str, Any],
         sub_node: dict[str, Any] | None = None,
     ) -> None:
         """Initialize a Freebox binary sensor."""
-        super().__init__(hass, router, node, sub_node)
+        super().__init__(menuai, router, node, sub_node)
         self._command_id = self.get_command_id(
             node["type"]["endpoints"], "signal", self._sensor_name
         )
@@ -124,7 +124,7 @@ class FreeboxCoverSensor(FreeboxHomeBinarySensor):
     _sensor_name = "cover"
 
     def __init__(
-        self, hass: HomeAssistant, router: FreeboxRouter, node: dict[str, Any]
+        self, menuai: menuai, router: FreeboxRouter, node: dict[str, Any]
     ) -> None:
         """Initialize a cover for another device."""
         cover_node = next(
@@ -134,7 +134,7 @@ class FreeboxCoverSensor(FreeboxHomeBinarySensor):
             ),
             None,
         )
-        super().__init__(hass, router, node, cover_node)
+        super().__init__(menuai, router, node, cover_node)
 
 
 class FreeboxRaidDegradedSensor(BinarySensorEntity):
@@ -175,12 +175,12 @@ class FreeboxRaidDegradedSensor(BinarySensorEntity):
         self.async_update_state()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
         self.async_update_state()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._router.signal_sensor_update,
                 self.async_on_demand_update,
             )

@@ -2,12 +2,12 @@
 
 import pytest
 
-from homeassistant.components.geonetnz_quakes import (
+from menuai.components.geonetnz_quakes import (
     CONF_MINIMUM_MAGNITUDE,
     CONF_MMI,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,

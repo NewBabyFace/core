@@ -7,9 +7,9 @@ from aiovodafone import VodafoneStationDevice
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.vodafone_station.const import DOMAIN, SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.vodafone_station.const import DOMAIN, SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import setup_integration
 from .const import DEVICE_1_HOST, DEVICE_1_MAC, DEVICE_2_HOST, DEVICE_2_MAC
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_coordinator_device_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_vodafone_station_router: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -29,7 +29,7 @@ async def test_coordinator_device_cleanup(
     """Test Device cleanup on coordinator update."""
 
     caplog.set_level(logging.DEBUG)
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     device = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -40,7 +40,7 @@ async def test_coordinator_device_cleanup(
 
     device_tracker = f"device_tracker.{DEVICE_1_HOST}"
 
-    assert hass.states.get(device_tracker)
+    assert menuai.states.get(device_tracker)
 
     mock_vodafone_station_router.get_devices_data.return_value = {
         DEVICE_2_MAC: VodafoneStationDevice(
@@ -55,10 +55,10 @@ async def test_coordinator_device_cleanup(
     }
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert hass.states.get(device_tracker) is None
+    assert menuai.states.get(device_tracker) is None
     assert f"Skipping entity {DEVICE_2_HOST}" in caplog.text
 
     assert (

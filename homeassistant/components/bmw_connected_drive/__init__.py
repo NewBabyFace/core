@@ -6,9 +6,9 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_ENTITY_ID, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.const import CONF_DEVICE_ID, CONF_ENTITY_ID, CONF_NAME, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     discovery,
@@ -49,7 +49,7 @@ SERVICE_UPDATE_STATE = "update_state"
 
 @callback
 def _async_migrate_options_from_data_if_missing(
-    hass: HomeAssistant, entry: BMWConfigEntry
+    menuai: menuai, entry: BMWConfigEntry
 ) -> None:
     data = dict(entry.data)
     options = dict(entry.options)
@@ -61,14 +61,14 @@ def _async_migrate_options_from_data_if_missing(
         )
         options[CONF_READ_ONLY] = data.pop(CONF_READ_ONLY, False)
 
-        hass.config_entries.async_update_entry(entry, data=data, options=options)
+        menuai.config_entries.async_update_entry(entry, data=data, options=options)
 
 
 async def _async_migrate_entries(
-    hass: HomeAssistant, config_entry: BMWConfigEntry
+    menuai: menuai, config_entry: BMWConfigEntry
 ) -> bool:
     """Migrate old entry."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     @callback
     def update_unique_id(entry: er.RegistryEntry) -> dict[str, str] | None:
@@ -116,21 +116,21 @@ async def _async_migrate_entries(
             }
         return None
 
-    await er.async_migrate_entries(hass, config_entry.entry_id, update_unique_id)
+    await er.async_migrate_entries(menuai, config_entry.entry_id, update_unique_id)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BMWConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BMWConfigEntry) -> bool:
     """Set up BMW Connected Drive from a config entry."""
 
-    _async_migrate_options_from_data_if_missing(hass, entry)
+    _async_migrate_options_from_data_if_missing(menuai, entry)
 
-    await _async_migrate_entries(hass, entry)
+    await _async_migrate_entries(menuai, entry)
 
     # Set up one data coordinator per account/config entry
     coordinator = BMWDataUpdateCoordinator(
-        hass,
+        menuai,
         config_entry=entry,
     )
     await coordinator.async_config_entry_first_refresh()
@@ -138,15 +138,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: BMWConfigEntry) -> bool:
     entry.runtime_data = coordinator
 
     # Set up all platforms except notify
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )
 
     # set up notify platform, no entry support for notify platform yet,
     # have to use discovery to load platform.
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass,
+            menuai,
             Platform.NOTIFY,
             DOMAIN,
             {CONF_NAME: DOMAIN, CONF_ENTITY_ID: entry.entry_id},
@@ -156,7 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: BMWConfigEntry) -> bool:
 
     # Clean up vehicles which are not assigned to the account anymore
     account_vehicles = {(DOMAIN, v.vin) for v in coordinator.account.vehicles}
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry_id=entry.entry_id
     )
@@ -169,9 +169,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: BMWConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BMWConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BMWConfigEntry) -> bool:
     """Unload a config entry."""
 
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )

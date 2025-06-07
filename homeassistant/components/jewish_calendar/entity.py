@@ -6,9 +6,9 @@ import datetime as dt
 from hdate import HDateInfo, Location, Zmanim
 from hdate.translator import Language, set_language
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from .const import DOMAIN
 

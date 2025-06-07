@@ -5,26 +5,26 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from homeassistant import config_entries
-from homeassistant.components.sensor import (
+from menuai import config_entries
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfDataRate,
     UnitOfInformation,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import QnapCoordinator
@@ -246,12 +246,12 @@ SENSOR_KEYS: list[str] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up entry."""
-    coordinator = QnapCoordinator(hass, config_entry)
+    coordinator = QnapCoordinator(menuai, config_entry)
     await coordinator.async_refresh()
     if not coordinator.last_update_success:
         raise PlatformNotReady

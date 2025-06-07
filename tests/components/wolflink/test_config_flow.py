@@ -6,16 +6,16 @@ from httpcore import ConnectError
 from wolf_comm.models import Device
 from wolf_comm.token_auth import InvalidAuth
 
-from homeassistant import config_entries
-from homeassistant.components.wolflink.const import (
+from menuai import config_entries
+from menuai.components.wolflink.const import (
     DEVICE_GATEWAY,
     DEVICE_ID,
     DEVICE_NAME,
     DOMAIN,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import CONFIG
 
@@ -29,23 +29,23 @@ INPUT_CONFIG = {
 DEVICE = Device(CONFIG[DEVICE_ID], CONFIG[DEVICE_GATEWAY], CONFIG[DEVICE_NAME])
 
 
-async def test_show_form(hass: HomeAssistant) -> None:
+async def test_show_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
 
-async def test_device_step_form(hass: HomeAssistant) -> None:
+async def test_device_step_form(menuai: menuai) -> None:
     """Test we get the second step of config."""
     with patch(
-        "homeassistant.components.wolflink.config_flow.WolfClient.fetch_system_list",
+        "menuai.components.wolflink.config_flow.WolfClient.fetch_system_list",
         return_value=[DEVICE],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=INPUT_CONFIG
         )
 
@@ -53,20 +53,20 @@ async def test_device_step_form(hass: HomeAssistant) -> None:
     assert result["step_id"] == "device"
 
 
-async def test_create_entry(hass: HomeAssistant) -> None:
+async def test_create_entry(menuai: menuai) -> None:
     """Test entity creation from device step."""
     with (
         patch(
-            "homeassistant.components.wolflink.config_flow.WolfClient.fetch_system_list",
+            "menuai.components.wolflink.config_flow.WolfClient.fetch_system_list",
             return_value=[DEVICE],
         ),
-        patch("homeassistant.components.wolflink.async_setup_entry", return_value=True),
+        patch("menuai.components.wolflink.async_setup_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=INPUT_CONFIG
         )
 
-        result_create_entry = await hass.config_entries.flow.async_configure(
+        result_create_entry = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device_name": CONFIG[DEVICE_NAME]},
         )
@@ -76,13 +76,13 @@ async def test_create_entry(hass: HomeAssistant) -> None:
     assert result_create_entry["data"] == CONFIG
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
     with patch(
-        "homeassistant.components.wolflink.config_flow.WolfClient.fetch_system_list",
+        "menuai.components.wolflink.config_flow.WolfClient.fetch_system_list",
         side_effect=InvalidAuth,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=INPUT_CONFIG
         )
 
@@ -90,13 +90,13 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
     with patch(
-        "homeassistant.components.wolflink.config_flow.WolfClient.fetch_system_list",
+        "menuai.components.wolflink.config_flow.WolfClient.fetch_system_list",
         side_effect=ConnectError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=INPUT_CONFIG
         )
 
@@ -104,13 +104,13 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_unknown_exception(hass: HomeAssistant) -> None:
+async def test_form_unknown_exception(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
     with patch(
-        "homeassistant.components.wolflink.config_flow.WolfClient.fetch_system_list",
+        "menuai.components.wolflink.config_flow.WolfClient.fetch_system_list",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=INPUT_CONFIG
         )
 
@@ -118,24 +118,24 @@ async def test_form_unknown_exception(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "unknown"}
 
 
-async def test_already_configured_error(hass: HomeAssistant) -> None:
+async def test_already_configured_error(menuai: menuai) -> None:
     """Test already configured while creating entry."""
     with (
         patch(
-            "homeassistant.components.wolflink.config_flow.WolfClient.fetch_system_list",
+            "menuai.components.wolflink.config_flow.WolfClient.fetch_system_list",
             return_value=[DEVICE],
         ),
-        patch("homeassistant.components.wolflink.async_setup_entry", return_value=True),
+        patch("menuai.components.wolflink.async_setup_entry", return_value=True),
     ):
         MockConfigEntry(
             domain=DOMAIN, unique_id=str(CONFIG[DEVICE_ID]), data=CONFIG
-        ).add_to_hass(hass)
+        ).add_to_menuai(menuai)
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=INPUT_CONFIG
         )
 
-        result_create_entry = await hass.config_entries.flow.async_configure(
+        result_create_entry = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"device_name": CONFIG[DEVICE_NAME]},
         )

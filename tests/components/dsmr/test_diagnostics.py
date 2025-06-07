@@ -12,7 +12,7 @@ from dsmr_parser.obis_references import (
 from dsmr_parser.objects import CosemObject, MBusObject, Telegram
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -20,8 +20,8 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     dsmr_connection_fixture: tuple[MagicMock, MagicMock, MagicMock],
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -68,15 +68,15 @@ async def test_diagnostics(
         domain="dsmr", unique_id="/dev/ttyUSB0", data=entry_data, options=entry_options
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     telegram_callback = connection_factory.call_args_list[0][0][2]
 
     # simulate a telegram pushed from the smartmeter and parsed by dsmr_parser
     telegram_callback(telegram)
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, mock_entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, mock_entry)
     assert result == snapshot

@@ -1,4 +1,4 @@
-"""Sensor platform for Home Assistant Backup integration."""
+"""Sensor platform for MenuAI Backup integration."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import BackupConfigEntry, BackupCoordinatorData
 from .entity import BackupManagerEntity
@@ -21,7 +21,7 @@ from .manager import BackupManagerState
 
 @dataclass(kw_only=True, frozen=True)
 class BackupSensorEntityDescription(SensorEntityDescription):
-    """Description for Home Assistant Backup sensor entities."""
+    """Description for MenuAI Backup sensor entities."""
 
     value_fn: Callable[[BackupCoordinatorData], str | datetime | None]
 
@@ -56,7 +56,7 @@ BACKUP_MANAGER_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BackupConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

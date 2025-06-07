@@ -7,38 +7,38 @@ from syrupy.assertion import SnapshotAssertion
 from tesla_fleet_api.const import EnergyExportMode, EnergyOperationMode
 from tesla_fleet_api.exceptions import UnsupportedVehicle
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.tessie.const import (
+from menuai.components.tessie.const import (
     TessieSeatCoolerOptions,
     TessieSeatHeaterOptions,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_OPTION, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, ATTR_OPTION, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from .common import ERROR_UNKNOWN, TEST_RESPONSE, assert_entities, setup_platform
 
 
 async def test_select(
-    hass: HomeAssistant, snapshot: SnapshotAssertion, entity_registry: er.EntityRegistry
+    menuai: menuai, snapshot: SnapshotAssertion, entity_registry: er.EntityRegistry
 ) -> None:
     """Tests that the select entities are correct."""
 
-    entry = await setup_platform(hass, [Platform.SELECT])
+    entry = await setup_platform(menuai, [Platform.SELECT])
 
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
     # Test changing select
     entity_id = "select.test_seat_heater_left"
     with patch(
-        "homeassistant.components.tessie.select.set_seat_heat",
+        "menuai.components.tessie.select.set_seat_heat",
         return_value=TEST_RESPONSE,
     ) as mock_set:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: [entity_id], ATTR_OPTION: TessieSeatHeaterOptions.LOW},
@@ -47,7 +47,7 @@ async def test_select(
         mock_set.assert_called_once()
     assert mock_set.call_args[1]["seat"] == "front_left"
     assert mock_set.call_args[1]["level"] == 1
-    assert hass.states.get(entity_id) == snapshot(name=SERVICE_SELECT_OPTION)
+    assert menuai.states.get(entity_id) == snapshot(name=SERVICE_SELECT_OPTION)
 
     # Test site operation mode
     entity_id = "select.energy_site_operation_mode"
@@ -55,7 +55,7 @@ async def test_select(
         "tesla_fleet_api.tessie.EnergySite.operation",
         return_value=TEST_RESPONSE,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -64,7 +64,7 @@ async def test_select(
             },
             blocking=True,
         )
-        assert (state := hass.states.get(entity_id))
+        assert (state := menuai.states.get(entity_id))
         assert state.state == EnergyOperationMode.AUTONOMOUS.value
         call.assert_called_once()
 
@@ -74,23 +74,23 @@ async def test_select(
         "tesla_fleet_api.tessie.EnergySite.grid_import_export",
         return_value=TEST_RESPONSE,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: EnergyExportMode.BATTERY_OK.value},
             blocking=True,
         )
-        assert (state := hass.states.get(entity_id))
+        assert (state := menuai.states.get(entity_id))
         assert state.state == EnergyExportMode.BATTERY_OK.value
         call.assert_called_once()
 
     # Test changing select
     entity_id = "select.test_seat_cooler_left"
     with patch(
-        "homeassistant.components.tessie.select.set_seat_cool",
+        "menuai.components.tessie.select.set_seat_cool",
         return_value=TEST_RESPONSE,
     ) as mock_set:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: [entity_id], ATTR_OPTION: TessieSeatCoolerOptions.LOW},
@@ -101,20 +101,20 @@ async def test_select(
     assert mock_set.call_args[1]["level"] == 1
 
 
-async def test_errors(hass: HomeAssistant) -> None:
+async def test_errors(menuai: menuai) -> None:
     """Tests unknown error is handled."""
 
-    await setup_platform(hass, [Platform.SELECT])
+    await setup_platform(menuai, [Platform.SELECT])
 
     # Test changing vehicle select with unknown error
     with (
         patch(
-            "homeassistant.components.tessie.select.set_seat_heat",
+            "menuai.components.tessie.select.set_seat_heat",
             side_effect=ERROR_UNKNOWN,
         ) as mock_set,
-        pytest.raises(HomeAssistantError) as error,
+        pytest.raises(menuaiError) as error,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -132,9 +132,9 @@ async def test_errors(hass: HomeAssistant) -> None:
             "tesla_fleet_api.tessie.EnergySite.operation",
             side_effect=UnsupportedVehicle,
         ) as mock_set,
-        pytest.raises(HomeAssistantError) as error,
+        pytest.raises(menuaiError) as error,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {

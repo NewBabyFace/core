@@ -16,14 +16,14 @@ from oauth2client.client import (
     OAuth2WebServerFlow,
 )
 
-from homeassistant.components.application_credentials import AuthImplementation
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.event import (
+from menuai.components.application_credentials import AuthImplementation
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.event import (
     async_track_point_in_utc_time,
     async_track_time_interval,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import CONF_CALENDAR_ACCESS, DEFAULT_FEATURE_ACCESS, FeatureAccess
 from .store import GoogleConfigEntry
@@ -47,7 +47,7 @@ class GoogleHybridAuth(AuthImplementation):
     """OAuth implementation that supports both Web Auth (base class) and Device Auth."""
 
     async def async_resolve_external_data(self, external_data: Any) -> dict:
-        """Resolve a Google API Credentials object to Home Assistant token."""
+        """Resolve a Google API Credentials object to MenuAI token."""
         if DEVICE_AUTH_CREDS not in external_data:
             # Assume the Web Auth flow was used, so use the default behavior
             return await super().async_resolve_external_data(external_data)
@@ -70,12 +70,12 @@ class DeviceFlow:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         oauth_flow: OAuth2WebServerFlow,
         device_flow_info: DeviceFlowInfo,
     ) -> None:
         """Initialize DeviceFlow."""
-        self._hass = hass
+        self._menuai = menuai
         self._oauth_flow = oauth_flow
         self._device_flow_info: DeviceFlowInfo = device_flow_info
         self._exchange_task_unsub: CALLBACK_TYPE | None = None
@@ -120,18 +120,18 @@ class DeviceFlow:
         expiration_time = min(user_code_expiry, max_timeout)
 
         self._exchange_task_unsub = async_track_time_interval(
-            self._hass,
+            self._menuai,
             self._async_poll_attempt,
             datetime.timedelta(seconds=self._device_flow_info.interval),
         )
         self._timeout_unsub = async_track_point_in_utc_time(
-            self._hass, self._async_timeout, expiration_time
+            self._menuai, self._async_timeout, expiration_time
         )
 
     async def _async_poll_attempt(self, now: datetime.datetime) -> None:
         _LOGGER.debug("Attempting OAuth code exchange")
         try:
-            self._creds = await self._hass.async_add_executor_job(self._exchange)
+            self._creds = await self._menuai.async_add_executor_job(self._exchange)
         except FlowExchangeError:
             _LOGGER.debug("Token not yet ready; trying again later")
             return
@@ -163,7 +163,7 @@ def get_feature_access(config_entry: GoogleConfigEntry) -> FeatureAccess:
 
 
 async def async_create_device_flow(
-    hass: HomeAssistant, client_id: str, client_secret: str, access: FeatureAccess
+    menuai: menuai, client_id: str, client_secret: str, access: FeatureAccess
 ) -> DeviceFlow:
     """Create a new Device flow."""
     oauth_flow = OAuth2WebServerFlow(
@@ -173,7 +173,7 @@ async def async_create_device_flow(
         redirect_uri="",
     )
     try:
-        device_flow_info = await hass.async_add_executor_job(
+        device_flow_info = await menuai.async_add_executor_job(
             oauth_flow.step1_get_device_and_user_codes
         )
     except OAuth2DeviceCodeError as err:
@@ -182,7 +182,7 @@ async def async_create_device_flow(
         if "Error: invalid_client" in str(err):
             raise InvalidCredential(str(err)) from err
         raise OAuthError(str(err)) from err
-    return DeviceFlow(hass, oauth_flow, device_flow_info)
+    return DeviceFlow(menuai, oauth_flow, device_flow_info)
 
 
 class ApiAuthImpl(AbstractAuth):

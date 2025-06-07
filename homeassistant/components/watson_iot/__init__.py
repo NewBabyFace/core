@@ -9,7 +9,7 @@ from ibmiotf import MissingMessageEncoderException
 from ibmiotf.gateway import Client
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DOMAINS,
     CONF_ENTITIES,
     CONF_EXCLUDE,
@@ -17,14 +17,14 @@ from homeassistant.const import (
     CONF_INCLUDE,
     CONF_TOKEN,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, state as state_helper
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, state as state_helper
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Watson IoT Platform component."""
 
     conf = config[DOMAIN]
@@ -140,7 +140,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         return out_event
 
-    instance = hass.data[DOMAIN] = WatsonIOTThread(hass, watson_gateway, event_to_json)
+    instance = menuai.data[DOMAIN] = WatsonIOTThread(menuai, watson_gateway, event_to_json)
     instance.start()
 
     def shutdown(event):
@@ -148,7 +148,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         instance.queue.put(None)
         instance.join()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
+    menuai.bus.listen_once(EVENT_menuai_STOP, shutdown)
 
     return True
 
@@ -156,7 +156,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class WatsonIOTThread(threading.Thread):
     """A threaded event handler class."""
 
-    def __init__(self, hass, gateway, event_to_json):
+    def __init__(self, menuai, gateway, event_to_json):
         """Initialize the listener."""
         threading.Thread.__init__(self, name="WatsonIOT")
         self.queue = queue.Queue()
@@ -165,7 +165,7 @@ class WatsonIOTThread(threading.Thread):
         self.event_to_json = event_to_json
         self.write_errors = 0
         self.shutdown = False
-        hass.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
+        menuai.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
 
     @callback
     def _event_listener(self, event):

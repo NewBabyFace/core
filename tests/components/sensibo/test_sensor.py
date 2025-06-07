@@ -10,10 +10,10 @@ from pysensibo.model import PureAQI
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import async_fire_time_changed, snapshot_platform
 
@@ -24,7 +24,7 @@ from tests.common import async_fire_time_changed, snapshot_platform
     [[Platform.SENSOR]],
 )
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -33,17 +33,17 @@ async def test_sensor(
 ) -> None:
     """Test the Sensibo sensor."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, load_int.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, load_int.entry_id)
 
     mock_client.async_get_devices_data.return_value.parsed[
         "AAZZAAZZ"
     ].pm25_pure = PureAQI(2)
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.kitchen_pure_aqi")
+    state = menuai.states.get("sensor.kitchen_pure_aqi")
     assert state.state == "moderate"
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -51,8 +51,8 @@ async def test_sensor(
     ].pm25_pure = PureAQI(0)
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.kitchen_pure_aqi")
+    state = menuai.states.get("sensor.kitchen_pure_aqi")
     assert state.state == STATE_UNKNOWN

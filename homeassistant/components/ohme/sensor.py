@@ -7,13 +7,13 @@ from dataclasses import dataclass
 
 from ohme import ChargerStatus, OhmeApiClient
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     STATE_UNKNOWN,
     UnitOfElectricCurrent,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import OhmeConfigEntry
 from .entity import OhmeEntity, OhmeEntityDescription
@@ -105,7 +105,7 @@ SENSOR_ADVANCED_SETTINGS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OhmeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

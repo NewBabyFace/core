@@ -4,7 +4,7 @@ from typing import Any
 
 from pyopenweathermap import RequestError, create_owm_client
 
-from homeassistant.const import CONF_LANGUAGE, CONF_MODE
+from menuai.const import CONF_LANGUAGE, CONF_MODE
 
 from .const import DEFAULT_LANGUAGE, DEFAULT_OWM_MODE
 

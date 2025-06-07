@@ -7,16 +7,16 @@ from apple_weatherkit.client import (
     WeatherKitApiClientError,
 )
 
-from homeassistant.components.weatherkit.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.weatherkit.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import EXAMPLE_CONFIG_DATA
 
 from tests.common import MockConfigEntry
 
 
-async def test_auth_error_handling(hass: HomeAssistant) -> None:
+async def test_auth_error_handling(menuai: menuai) -> None:
     """Test that we handle authentication errors at setup properly."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -27,22 +27,22 @@ async def test_auth_error_handling(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.weatherkit.WeatherKitApiClient.get_weather_data",
+            "menuai.components.weatherkit.WeatherKitApiClient.get_weather_data",
             side_effect=WeatherKitApiClientAuthenticationError,
         ),
         patch(
-            "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+            "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
             side_effect=WeatherKitApiClientAuthenticationError,
         ),
     ):
-        entry.add_to_hass(hass)
-        setup_result = await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        setup_result = await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert setup_result is False
 
 
-async def test_client_error_handling(hass: HomeAssistant) -> None:
+async def test_client_error_handling(menuai: menuai) -> None:
     """Test that we handle API client errors at setup properly."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -53,16 +53,16 @@ async def test_client_error_handling(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.weatherkit.WeatherKitApiClient.get_weather_data",
+            "menuai.components.weatherkit.WeatherKitApiClient.get_weather_data",
             side_effect=WeatherKitApiClientError,
         ),
         patch(
-            "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+            "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
             side_effect=WeatherKitApiClientError,
         ),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY

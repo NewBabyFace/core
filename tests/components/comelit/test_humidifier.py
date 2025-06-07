@@ -9,8 +9,8 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.comelit.const import DOMAIN, SCAN_INTERVAL
-from homeassistant.components.humidifier import (
+from menuai.components.comelit.const import DOMAIN, SCAN_INTERVAL
+from menuai.components.humidifier import (
     ATTR_HUMIDITY,
     ATTR_MODE,
     DOMAIN as HUMIDIFIER_DOMAIN,
@@ -21,10 +21,10 @@ from homeassistant.components.humidifier import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -34,7 +34,7 @@ ENTITY_ID = "humidifier.climate0_humidifier"
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
@@ -42,12 +42,12 @@ async def test_all_entities(
 ) -> None:
     """Test all entities."""
     with patch(
-        "homeassistant.components.comelit.BRIDGE_PLATFORMS", [Platform.HUMIDIFIER]
+        "menuai.components.comelit.BRIDGE_PLATFORMS", [Platform.HUMIDIFIER]
     ):
-        await setup_integration(hass, mock_serial_bridge_config_entry)
+        await setup_integration(menuai, mock_serial_bridge_config_entry)
 
     await snapshot_platform(
-        hass,
+        menuai,
         entity_registry,
         snapshot,
         mock_serial_bridge_config_entry.entry_id,
@@ -87,7 +87,7 @@ async def test_all_entities(
     ],
 )
 async def test_humidifier_data_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
@@ -96,9 +96,9 @@ async def test_humidifier_data_update(
     humidity: float,
 ) -> None:
     """Test humidifier data update."""
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
@@ -118,24 +118,24 @@ async def test_humidifier_data_update(
     }
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == mode
     assert state.attributes[ATTR_HUMIDITY] == humidity
 
 
 async def test_humidifier_data_update_bad_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test humidifier data update."""
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
@@ -155,29 +155,29 @@ async def test_humidifier_data_update_bad_data(
     }
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
 
 async def test_humidifier_set_humidity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test humidifier set humidity service."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
     # Test set humidity
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_SET_HUMIDITY,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HUMIDITY: 23},
@@ -185,26 +185,26 @@ async def test_humidifier_set_humidity(
     )
     mock_serial_bridge.set_humidity_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 23.0
 
 
 async def test_humidifier_set_humidity_while_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test humidifier set humidity service while off."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
     # Switch humidifier off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -212,12 +212,12 @@ async def test_humidifier_set_humidity_while_off(
     )
     mock_serial_bridge.set_humidity_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_OFF
 
     # Try setting humidity
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             HUMIDIFIER_DOMAIN,
             SERVICE_SET_HUMIDITY,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HUMIDITY: 23},
@@ -228,20 +228,20 @@ async def test_humidifier_set_humidity_while_off(
 
 
 async def test_humidifier_set_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test humidifier set mode service."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
     assert state.attributes[ATTR_MODE] == MODE_NORMAL
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_SET_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_MODE: MODE_AUTO},
@@ -249,26 +249,26 @@ async def test_humidifier_set_mode(
     )
     mock_serial_bridge.set_humidity_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_MODE] == MODE_AUTO
 
 
 async def test_humidifier_set_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test humidifier set status service."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
     # Test turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -276,11 +276,11 @@ async def test_humidifier_set_status(
     )
     mock_serial_bridge.set_humidity_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_OFF
 
     # Test turn on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -288,20 +288,20 @@ async def test_humidifier_set_status(
     )
     mock_serial_bridge.set_humidity_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
 
 
 async def test_humidifier_dehumidifier_remove_stale(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test removal of stale humidifier/dehumidifier entities."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
@@ -324,7 +324,7 @@ async def test_humidifier_dehumidifier_remove_stale(
         ),
     }
 
-    await hass.config_entries.async_reload(mock_serial_bridge_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(mock_serial_bridge_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID)) is None
+    assert (state := menuai.states.get(ENTITY_ID)) is None

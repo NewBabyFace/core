@@ -1,4 +1,4 @@
-"""Test Home Assistant package util methods."""
+"""Test MenuAI package util methods."""
 
 import asyncio
 from collections.abc import Generator
@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 
-from homeassistant.util import package
+from menuai.util import package
 
 RESOURCE_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "resources")
@@ -25,7 +25,7 @@ TEST_ZIP_REQ = f"file://{RESOURCE_DIR}/pyhelloworld3.zip#{TEST_NEW_REQ}"
 @pytest.fixture
 def mock_sys() -> Generator[MagicMock]:
     """Mock sys."""
-    with patch("homeassistant.util.package.sys", spec=object) as sys_mock:
+    with patch("menuai.util.package.sys", spec=object) as sys_mock:
         sys_mock.executable = "python3"
         yield sys_mock
 
@@ -45,7 +45,7 @@ def lib_dir(deps_dir) -> str:
 @pytest.fixture
 def mock_popen(lib_dir) -> Generator[MagicMock]:
     """Return a Popen mock."""
-    with patch("homeassistant.util.package.Popen") as popen_mock:
+    with patch("menuai.util.package.Popen") as popen_mock:
         popen_mock.return_value.__enter__ = popen_mock
         popen_mock.return_value.communicate.return_value = (
             bytes(lib_dir, "utf-8"),
@@ -58,15 +58,15 @@ def mock_popen(lib_dir) -> Generator[MagicMock]:
 @pytest.fixture
 def mock_env_copy() -> Generator[Mock]:
     """Mock os.environ.copy."""
-    with patch("homeassistant.util.package.os.environ.copy") as env_copy:
+    with patch("menuai.util.package.os.environ.copy") as env_copy:
         env_copy.return_value = {}
         yield env_copy
 
 
 @pytest.fixture
 def mock_venv() -> Generator[MagicMock]:
-    """Mock homeassistant.util.package.is_virtual_env."""
-    with patch("homeassistant.util.package.is_virtual_env") as mock:
+    """Mock menuai.util.package.is_virtual_env."""
+    with patch("menuai.util.package.is_virtual_env") as mock:
         mock.return_value = True
         yield mock
 
@@ -286,7 +286,7 @@ def test_install_pip_compatibility_use_workaround(
         site_dir,
     ]
 
-    with patch("homeassistant.util.package.site", autospec=True) as site_mock:
+    with patch("menuai.util.package.site", autospec=True) as site_mock:
         site_mock.getusersitepackages.return_value = site_dir
         assert package.install_package(TEST_NEW_REQ, False)
 
@@ -345,7 +345,7 @@ async def test_async_get_user_site(mock_env_copy) -> None:
     env["PYTHONUSERBASE"] = os.path.abspath(deps_dir)
     args = [sys.executable, "-m", "site", "--user-site"]
     with patch(
-        "homeassistant.util.package.asyncio.create_subprocess_exec",
+        "menuai.util.package.asyncio.create_subprocess_exec",
         return_value=mock_async_subprocess(),
     ) as popen_mock:
         ret = await package.async_get_user_site(deps_dir)
@@ -363,7 +363,7 @@ async def test_async_get_user_site(mock_env_copy) -> None:
 
 def test_check_package_global(caplog: pytest.LogCaptureFixture) -> None:
     """Test for an installed package."""
-    pkg = metadata("homeassistant")
+    pkg = metadata("menuai")
     installed_package = pkg["name"]
     installed_version = pkg["version"]
 
@@ -390,7 +390,7 @@ def test_check_package_fragment(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_get_is_installed() -> None:
     """Test is_installed can parse complex requirements."""
-    pkg = metadata("homeassistant")
+    pkg = metadata("menuai")
     installed_package = pkg["name"]
     installed_version = pkg["version"]
 
@@ -403,11 +403,11 @@ def test_get_is_installed() -> None:
 
 def test_check_package_previous_failed_install() -> None:
     """Test for when a previously install package failed and left cruft behind."""
-    pkg = metadata("homeassistant")
+    pkg = metadata("menuai")
     installed_package = pkg["name"]
     installed_version = pkg["version"]
 
-    with patch("homeassistant.util.package.version", return_value=None):
+    with patch("menuai.util.package.version", return_value=None):
         assert not package.is_installed(installed_package)
         assert not package.is_installed(f"{installed_package}=={installed_version}")
 
@@ -444,9 +444,9 @@ async def test_is_docker_env(
 
     package.is_docker_env.cache_clear()
     with (
-        patch("homeassistant.util.package.Path", side_effect=new_path_mock),
+        patch("menuai.util.package.Path", side_effect=new_path_mock),
         patch(
-            "homeassistant.util.package.is_official_image",
+            "menuai.util.package.is_official_image",
             return_value=is_official_image,
         ),
         patch.dict(os.environ, env),

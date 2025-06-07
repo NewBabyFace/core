@@ -5,34 +5,34 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components import pilight, sensor
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import pilight, sensor
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component, mock_component
 
 
 @pytest.fixture(autouse=True)
-def setup_comp(hass: HomeAssistant) -> None:
+def setup_comp(menuai: menuai) -> None:
     """Initialize components."""
-    mock_component(hass, "pilight")
+    mock_component(menuai, "pilight")
 
 
 def fire_pilight_message(
-    hass: HomeAssistant, protocol: str, data: dict[str, Any]
+    menuai: menuai, protocol: str, data: dict[str, Any]
 ) -> None:
     """Fire the fake Pilight message."""
     message = {pilight.CONF_PROTOCOL: protocol}
     message.update(data)
 
-    hass.bus.async_fire(pilight.EVENT, message)
+    menuai.bus.async_fire(pilight.EVENT, message)
 
 
-async def test_sensor_value_from_code(hass: HomeAssistant) -> None:
+async def test_sensor_value_from_code(menuai: menuai) -> None:
     """Test the setting of value via pilight."""
     with assert_setup_component(1):
         assert await async_setup_component(
-            hass,
+            menuai,
             sensor.DOMAIN,
             {
                 sensor.DOMAIN: {
@@ -44,26 +44,26 @@ async def test_sensor_value_from_code(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.test")
+        state = menuai.states.get("sensor.test")
         assert state.state == "unknown"
 
         unit_of_measurement = state.attributes.get("unit_of_measurement")
         assert unit_of_measurement == "fav unit"
 
         # Set value from data with correct payload
-        fire_pilight_message(hass, protocol="test-protocol", data={"test": 42})
-        await hass.async_block_till_done()
-        state = hass.states.get("sensor.test")
+        fire_pilight_message(menuai, protocol="test-protocol", data={"test": 42})
+        await menuai.async_block_till_done()
+        state = menuai.states.get("sensor.test")
         assert state.state == "42"
 
 
-async def test_disregard_wrong_payload(hass: HomeAssistant) -> None:
+async def test_disregard_wrong_payload(menuai: menuai) -> None:
     """Test omitting setting of value with wrong payload."""
     with assert_setup_component(1):
         assert await async_setup_component(
-            hass,
+            menuai,
             sensor.DOMAIN,
             {
                 sensor.DOMAIN: {
@@ -74,43 +74,43 @@ async def test_disregard_wrong_payload(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Try set value from data with incorrect payload
         fire_pilight_message(
-            hass, protocol="test-protocol_2", data={"test": "data", "uuid": "0-0-0-0"}
+            menuai, protocol="test-protocol_2", data={"test": "data", "uuid": "0-0-0-0"}
         )
-        await hass.async_block_till_done()
-        state = hass.states.get("sensor.test_2")
+        await menuai.async_block_till_done()
+        state = menuai.states.get("sensor.test_2")
         assert state.state == "unknown"
 
         # Try set value from data with partially matched payload
         fire_pilight_message(
-            hass, protocol="wrong-protocol", data={"test": "data", "uuid": "1-2-3-4"}
+            menuai, protocol="wrong-protocol", data={"test": "data", "uuid": "1-2-3-4"}
         )
-        await hass.async_block_till_done()
-        state = hass.states.get("sensor.test_2")
+        await menuai.async_block_till_done()
+        state = menuai.states.get("sensor.test_2")
         assert state.state == "unknown"
 
         # Try set value from data with fully matched payload
         fire_pilight_message(
-            hass,
+            menuai,
             protocol="test-protocol_2",
             data={"test": "data", "uuid": "1-2-3-4", "other_payload": 3.141},
         )
-        await hass.async_block_till_done()
-        state = hass.states.get("sensor.test_2")
+        await menuai.async_block_till_done()
+        state = menuai.states.get("sensor.test_2")
         assert state.state == "data"
 
 
 async def test_variable_missing(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Check if error message when variable missing."""
     caplog.set_level(logging.ERROR)
     with assert_setup_component(1):
         assert await async_setup_component(
-            hass,
+            menuai,
             sensor.DOMAIN,
             {
                 sensor.DOMAIN: {
@@ -121,15 +121,15 @@ async def test_variable_missing(
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Create code without sensor variable
         fire_pilight_message(
-            hass,
+            menuai,
             protocol="test-protocol",
             data={"uuid": "1-2-3-4", "other_variable": 3.141},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         logs = caplog.text
 

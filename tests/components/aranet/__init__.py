@@ -4,7 +4,7 @@ from time import time
 
 from bleak.backends.scanner import AdvertisementData
 
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
 
 from tests.components.bluetooth import generate_ble_device
 

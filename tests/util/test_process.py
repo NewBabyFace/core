@@ -6,13 +6,13 @@ import subprocess
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import process
+from menuai.core import menuai
+from menuai.util import process
 
 
-async def test_kill_process(hass: HomeAssistant) -> None:
+async def test_kill_process(menuai: menuai) -> None:
     """Test killing a process."""
-    sleeper = await hass.async_add_executor_job(
+    sleeper = await menuai.async_add_executor_job(
         partial(  # noqa: S604 # shell by design
             subprocess.Popen,
             "sleep 1000",

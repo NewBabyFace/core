@@ -11,11 +11,11 @@ from goslideapi.goslideapi import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_platform
 
@@ -23,27 +23,27 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_slide_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_platform(hass, mock_config_entry, [Platform.BUTTON])
+    await setup_platform(menuai, mock_config_entry, [Platform.BUTTON])
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_pressing_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_slide_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test pressing button."""
-    await setup_platform(hass, mock_config_entry, [Platform.BUTTON])
+    await setup_platform(menuai, mock_config_entry, [Platform.BUTTON])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {
@@ -64,21 +64,21 @@ async def test_pressing_button(
     ],
 )
 async def test_pressing_button_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     mock_slide_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test pressing button."""
-    await setup_platform(hass, mock_config_entry, [Platform.BUTTON])
+    await setup_platform(menuai, mock_config_entry, [Platform.BUTTON])
 
     mock_slide_api.slide_calibrate.side_effect = exception
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Error while sending the calibration request to the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {

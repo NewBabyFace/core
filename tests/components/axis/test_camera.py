@@ -5,12 +5,12 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import camera
-from homeassistant.components.axis.const import CONF_STREAM_PROFILE
-from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components import camera
+from menuai.components.axis.const import CONF_STREAM_PROFILE
+from menuai.components.camera import DOMAIN as CAMERA_DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType
 from .const import MAC, NAME
@@ -22,7 +22,7 @@ from tests.common import snapshot_platform
 def mock_getrandbits():
     """Mock camera access token which normally is randomized."""
     with patch(
-        "homeassistant.components.camera.SystemRandom.getrandbits",
+        "menuai.components.camera.SystemRandom.getrandbits",
         return_value=1,
     ):
         yield
@@ -47,19 +47,19 @@ root.Properties.System.SerialNumber={MAC}
     ],
 )
 async def test_camera(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     snapshot: SnapshotAssertion,
     stream_profile: str,
 ) -> None:
     """Test that Axis camera platform is loaded properly."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.CAMERA]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.CAMERA]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     entity_id = f"{CAMERA_DOMAIN}.{NAME}"
-    camera_entity = camera.helper.get_camera_from_entity_id(hass, entity_id)
+    camera_entity = camera.helper.get_camera_from_entity_id(menuai, entity_id)
     assert camera_entity.image_source == "http://1.2.3.4:80/axis-cgi/jpg/image.cgi"
     assert (
         camera_entity.mjpeg_source == "http://1.2.3.4:80/axis-cgi/mjpg/video.cgi"
@@ -74,6 +74,6 @@ async def test_camera(
 
 @pytest.mark.parametrize("param_properties_payload", [PROPERTY_DATA])
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_camera_disabled(hass: HomeAssistant) -> None:
+async def test_camera_disabled(menuai: menuai) -> None:
     """Test that Axis camera platform is loaded properly but does not create camera entity."""
-    assert len(hass.states.async_entity_ids(CAMERA_DOMAIN)) == 0
+    assert len(menuai.states.async_entity_ids(CAMERA_DOMAIN)) == 0

@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Any, Self
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_VERSION, CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_VERSION, CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, HUB_EXCEPTIONS
 from .util import async_connect_hub
@@ -24,12 +24,12 @@ POWERVIEW_G2_SUFFIX = "._powerview._tcp.local."
 POWERVIEW_G3_SUFFIX = "._PowerView-G3._tcp.local."
 
 
-async def validate_input(hass: HomeAssistant, hub_address: str) -> dict[str, str]:
+async def validate_input(menuai: menuai, hub_address: str) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    api = await async_connect_hub(hass, hub_address)
+    api = await async_connect_hub(menuai, hub_address)
     hub = api.hub
     device_info = api.device_info
     if hub.role != "Primary":
@@ -99,7 +99,7 @@ class PowerviewConfigFlow(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_HOST: host})
 
         try:
-            info = await validate_input(self.hass, host)
+            info = await validate_input(self.menuai, host)
         except HUB_EXCEPTIONS:
             return None, "cannot_connect"
         except UnsupportedDevice:
@@ -142,7 +142,7 @@ class PowerviewConfigFlow(ConfigFlow, domain=DOMAIN):
         # If we already have the host configured do
         # not open connections to it if we can avoid it.
         assert self.discovered_ip and self.discovered_name is not None
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
 
         self._async_abort_entries_match({CONF_HOST: self.discovered_ip})
@@ -189,5 +189,5 @@ class PowerviewConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class UnsupportedDevice(HomeAssistantError):
+class UnsupportedDevice(menuaiError):
     """Error to indicate the device is not supported."""

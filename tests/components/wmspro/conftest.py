@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.wmspro.const import DOMAIN
-from homeassistant.const import CONF_HOST
+from menuai.components.wmspro.const import DOMAIN
+from menuai.const import CONF_HOST
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -25,7 +25,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.wmspro.async_setup_entry", return_value=True
+        "menuai.components.wmspro.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 

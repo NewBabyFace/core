@@ -4,11 +4,11 @@ from datetime import timedelta
 
 from stookwijzer import Stookwijzer
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -23,18 +23,18 @@ class StookwijzerCoordinator(DataUpdateCoordinator[None]):
     config_entry: StookwijzerConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: StookwijzerConfigEntry
+        self, menuai: menuai, config_entry: StookwijzerConfigEntry
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
         )
         self.client = Stookwijzer(
-            async_get_clientsession(hass),
+            async_get_clientsession(menuai),
             config_entry.data[CONF_LATITUDE],
             config_entry.data[CONF_LONGITUDE],
         )

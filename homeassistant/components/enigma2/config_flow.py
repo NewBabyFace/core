@@ -9,13 +9,13 @@ from openwebif.error import InvalidAuthError
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_USER,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import selector
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers import selector
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
@@ -124,7 +124,7 @@ class Enigma2ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         session = async_create_clientsession(
-            self.hass, verify_ssl=user_input[CONF_VERIFY_SSL], base_url=base_url
+            self.menuai, verify_ssl=user_input[CONF_VERIFY_SSL], base_url=base_url
         )
 
         try:

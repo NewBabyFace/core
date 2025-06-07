@@ -11,16 +11,16 @@ from pysmlight.const import Events as SmEvents
 from pysmlight.models import Firmware, Info
 from pysmlight.sse import MessageEvent
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, LOGGER
 from .coordinator import SmConfigEntry, SmFirmwareUpdateCoordinator, SmFwData
@@ -63,7 +63,7 @@ ZB_UPDATE_ENTITY = SmUpdateEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -116,9 +116,9 @@ class SmUpdateEntity(SmEntity, UpdateEntity):
         self._unload: list[Callable] = []
         self.idx = idx
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     @callback
@@ -210,7 +210,7 @@ class SmUpdateEntity(SmEntity, UpdateEntity):
     def _update_failed(self, event: MessageEvent) -> None:
         self._update_done()
         self.coordinator.in_progress = False
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="firmware_update_failed",
             translation_placeholders={

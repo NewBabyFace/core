@@ -7,7 +7,7 @@ from israelrailapi import TrainSchedule
 from israelrailapi.stations import STATIONS
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import CONF_DESTINATION, CONF_START, DOMAIN
 
@@ -37,7 +37,7 @@ class IsraelRailConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input:
             train_schedule = TrainSchedule()
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     train_schedule.query,
                     user_input[CONF_START],
                     user_input[CONF_DESTINATION],

@@ -5,15 +5,15 @@ from __future__ import annotations
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.proximity.const import (
+from menuai.components.proximity.const import (
     CONF_IGNORED_ZONES,
     CONF_TOLERANCE,
     CONF_TRACKED_ENTITIES,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ZONE
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ZONE
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -21,22 +21,22 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.test1",
         "not_home",
         {"friendly_name": "test1", "latitude": 20.1, "longitude": 10.1},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.test2",
         "not_home",
         {"friendly_name": "test2", "latitude": 150.1, "longitude": 20.1},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.test3",
         "my secret address",
         {
@@ -64,13 +64,13 @@ async def test_entry_diagnostics(
         unique_id=f"{DOMAIN}_home",
     )
 
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_entry.state is ConfigEntryState.LOADED
 
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, mock_entry
+        menuai, menuai_client, mock_entry
     ) == snapshot(
         exclude=props(
             "entry_id",

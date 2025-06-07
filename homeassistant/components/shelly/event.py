@@ -10,15 +10,15 @@ from aioshelly.ble.const import BLE_SCRIPT_NAME
 from aioshelly.block_device import Block
 from aioshelly.const import MODEL_I3, RPC_GENERATIONS
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     DOMAIN as EVENT_DOMAIN,
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     BASIC_INPUTS_EVENTS_TYPES,
@@ -81,7 +81,7 @@ SCRIPT_EVENT: Final = ShellyRpcEventDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -102,7 +102,7 @@ async def async_setup_entry(
                 coordinator.device.config, coordinator.device.status, key
             ):
                 unique_id = f"{coordinator.mac}-{key}"
-                async_remove_shelly_entity(hass, EVENT_DOMAIN, unique_id)
+                async_remove_shelly_entity(menuai, EVENT_DOMAIN, unique_id)
             else:
                 entities.append(ShellyRpcEvent(coordinator, key, RPC_EVENT))
 
@@ -121,7 +121,7 @@ async def async_setup_entry(
 
         # If a script is removed, from the device configuration, we need to remove orphaned entities
         async_remove_orphaned_entities(
-            hass,
+            menuai,
             config_entry.entry_id,
             coordinator.mac,
             EVENT_DOMAIN,
@@ -147,7 +147,7 @@ async def async_setup_entry(
             ):
                 channel = int(block.channel or 0) + 1
                 unique_id = f"{coordinator.mac}-{block.description}-{channel}"
-                async_remove_shelly_entity(hass, EVENT_DOMAIN, unique_id)
+                async_remove_shelly_entity(menuai, EVENT_DOMAIN, unique_id)
             else:
                 entities.append(ShellyBlockEvent(coordinator, block, BLOCK_EVENT))
 
@@ -176,9 +176,9 @@ class ShellyBlockEvent(ShellyBlockEntity, EventEntity):
             self._attr_event_types = list(BASIC_INPUTS_EVENTS_TYPES)
         self.entity_description = description
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.async_subscribe_input_events(self._async_handle_event)
         )
@@ -213,9 +213,9 @@ class ShellyRpcEvent(CoordinatorEntity[ShellyRpcCoordinator], EventEntity):
         self._attr_name = get_rpc_entity_name(coordinator.device, key)
         self.entity_description = description
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             self.coordinator.async_subscribe_input_events(self._async_handle_event)
@@ -244,9 +244,9 @@ class ShellyRpcScriptEvent(ShellyRpcEvent):
         self.component = key
         self._attr_event_types = event_types
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super(CoordinatorEntity, self).async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super(CoordinatorEntity, self).async_added_to_menuai()
 
         self.async_on_remove(
             self.coordinator.async_subscribe_events(self._async_handle_event)

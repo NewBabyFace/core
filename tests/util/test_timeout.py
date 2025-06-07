@@ -1,4 +1,4 @@
-"""Test Home Assistant timeout handler."""
+"""Test MenuAI timeout handler."""
 
 import asyncio
 from contextlib import suppress
@@ -6,8 +6,8 @@ import time
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util.timeout import TimeoutManager
+from menuai.core import menuai
+from menuai.util.timeout import TimeoutManager
 
 
 async def test_simple_global_timeout() -> None:
@@ -19,13 +19,13 @@ async def test_simple_global_timeout() -> None:
             await asyncio.sleep(0.3)
 
 
-async def test_simple_global_timeout_with_executor_job(hass: HomeAssistant) -> None:
+async def test_simple_global_timeout_with_executor_job(menuai: menuai) -> None:
     """Test a simple global timeout with executor job."""
     timeout = TimeoutManager()
 
     with pytest.raises(TimeoutError):
         async with timeout.async_timeout(0.1):
-            await hass.async_add_executor_job(time.sleep, 0.2)
+            await menuai.async_add_executor_job(time.sleep, 0.2)
 
 
 async def test_simple_global_timeout_freeze() -> None:
@@ -49,7 +49,7 @@ async def test_simple_global_timeout_cancel_message() -> None:
 
 
 async def test_simple_zone_timeout_freeze_inside_executor_job(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple zone timeout freeze inside an executor job."""
     timeout = TimeoutManager()
@@ -62,11 +62,11 @@ async def test_simple_zone_timeout_freeze_inside_executor_job(
         timeout.async_timeout(1.0),
         timeout.async_timeout(0.2, zone_name="recorder"),
     ):
-        await hass.async_add_executor_job(_some_sync_work)
+        await menuai.async_add_executor_job(_some_sync_work)
 
 
 async def test_simple_global_timeout_freeze_inside_executor_job(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple global timeout freeze inside an executor job."""
     timeout = TimeoutManager()
@@ -76,11 +76,11 @@ async def test_simple_global_timeout_freeze_inside_executor_job(
             time.sleep(0.3)
 
     async with timeout.async_timeout(0.2):
-        await hass.async_add_executor_job(_some_sync_work)
+        await menuai.async_add_executor_job(_some_sync_work)
 
 
 async def test_mix_global_timeout_freeze_and_zone_freeze_inside_executor_job(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple global timeout freeze inside an executor job."""
     timeout = TimeoutManager()
@@ -93,11 +93,11 @@ async def test_mix_global_timeout_freeze_and_zone_freeze_inside_executor_job(
         timeout.async_timeout(0.1),
         timeout.async_timeout(0.2, zone_name="recorder"),
     ):
-        await hass.async_add_executor_job(_some_sync_work)
+        await menuai.async_add_executor_job(_some_sync_work)
 
 
 async def test_mix_global_timeout_freeze_and_zone_freeze_different_order(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple global timeout freeze inside an executor job before timeout was set."""
     timeout = TimeoutManager()
@@ -107,13 +107,13 @@ async def test_mix_global_timeout_freeze_and_zone_freeze_different_order(
             time.sleep(0.4)
 
     async with timeout.async_timeout(0.1):
-        hass.async_add_executor_job(_some_sync_work)
+        menuai.async_add_executor_job(_some_sync_work)
         async with timeout.async_timeout(0.2, zone_name="recorder"):
             await asyncio.sleep(0.3)
 
 
 async def test_mix_global_timeout_freeze_and_zone_freeze_other_zone_inside_executor_job(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple global timeout freeze other zone inside an executor job."""
     timeout = TimeoutManager()
@@ -128,11 +128,11 @@ async def test_mix_global_timeout_freeze_and_zone_freeze_other_zone_inside_execu
                 timeout.async_timeout(0.2, zone_name="recorder"),
                 timeout.async_timeout(0.2, zone_name="not_recorder"),
             ):
-                await hass.async_add_executor_job(_some_sync_work)
+                await menuai.async_add_executor_job(_some_sync_work)
 
 
 async def test_mix_global_timeout_freeze_and_zone_freeze_inside_executor_job_second_job_outside_zone_context(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple global timeout freeze inside an executor job with second job outside of zone context."""
     timeout = TimeoutManager()
@@ -144,22 +144,22 @@ async def test_mix_global_timeout_freeze_and_zone_freeze_inside_executor_job_sec
     with pytest.raises(TimeoutError):  # noqa: PT012
         async with timeout.async_timeout(0.1):
             async with timeout.async_timeout(0.2, zone_name="recorder"):
-                await hass.async_add_executor_job(_some_sync_work)
-            await hass.async_add_executor_job(time.sleep, 0.2)
+                await menuai.async_add_executor_job(_some_sync_work)
+            await menuai.async_add_executor_job(time.sleep, 0.2)
 
 
 async def test_simple_global_timeout_freeze_with_executor_job(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple global timeout freeze with executor job."""
     timeout = TimeoutManager()
 
     async with timeout.async_timeout(0.2), timeout.async_freeze():
-        await hass.async_add_executor_job(time.sleep, 0.3)
+        await menuai.async_add_executor_job(time.sleep, 0.3)
 
 
 async def test_simple_global_timeout_does_not_leak_upward(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a global timeout does not leak upward."""
     timeout = TimeoutManager()
@@ -178,7 +178,7 @@ async def test_simple_global_timeout_does_not_leak_upward(
 
 
 async def test_simple_global_timeout_does_swallow_cancellation(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a global timeout does not swallow cancellation."""
     timeout = TimeoutManager()
@@ -245,7 +245,7 @@ async def test_simple_zone_timeout_cancel_message() -> None:
 
 
 async def test_simple_zone_timeout_does_not_leak_upward(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a zone timeout does not leak upward."""
     timeout = TimeoutManager()
@@ -264,7 +264,7 @@ async def test_simple_zone_timeout_does_not_leak_upward(
 
 
 async def test_simple_zone_timeout_does_swallow_cancellation(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a zone timeout does not swallow cancellation."""
     timeout = TimeoutManager()
@@ -418,7 +418,7 @@ async def test_mix_zone_timeout_trigger_global_cool_down() -> None:
 
 
 async def test_simple_zone_timeout_freeze_without_timeout_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple zone timeout freeze on a zone that does not have a timeout set."""
     timeout = TimeoutManager()
@@ -428,12 +428,12 @@ async def test_simple_zone_timeout_freeze_without_timeout_cleanup(
             await asyncio.sleep(0.4)
 
     async with timeout.async_timeout(0.1):
-        hass.async_create_task(background())
+        menuai.async_create_task(background())
         await asyncio.sleep(0.2)
 
 
 async def test_simple_zone_timeout_freeze_without_timeout_cleanup2(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test a simple zone timeout freeze on a zone that does not have a timeout set."""
     timeout = TimeoutManager()
@@ -444,7 +444,7 @@ async def test_simple_zone_timeout_freeze_without_timeout_cleanup2(
 
     with pytest.raises(TimeoutError):  # noqa: PT012
         async with timeout.async_timeout(0.1):
-            hass.async_create_task(background())
+            menuai.async_create_task(background())
             await asyncio.sleep(0.3)
 
 
@@ -474,7 +474,7 @@ async def test_simple_zone_timeout_zone_with_timeout_exception() -> None:
             await asyncio.sleep(0.3)
 
 
-async def test_multiple_global_freezes(hass: HomeAssistant) -> None:
+async def test_multiple_global_freezes(menuai: menuai) -> None:
     """Test multiple global freezes."""
     timeout = TimeoutManager()
 
@@ -483,13 +483,13 @@ async def test_multiple_global_freezes(hass: HomeAssistant) -> None:
             await asyncio.sleep(delay)
 
     async with timeout.async_timeout(0.1):
-        task = hass.async_create_task(background(0.2))
+        task = menuai.async_create_task(background(0.2))
         async with timeout.async_freeze():
             await asyncio.sleep(0.1)
     await task
 
     async with timeout.async_timeout(0.1):
-        task = hass.async_create_task(background(0.2))
+        task = menuai.async_create_task(background(0.2))
         async with timeout.async_freeze():
             await asyncio.sleep(0.3)
     await task

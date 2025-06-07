@@ -2,28 +2,28 @@
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.const import STATE_ON
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .bridge import DynaliteConfigEntry
 from .entity import DynaliteBase, async_setup_entry_base
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DynaliteConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Record the async_add_entities function to add them later when received from Dynalite."""
     async_setup_entry_base(
-        hass, config_entry, async_add_entities, "switch", DynaliteSwitch
+        menuai, config_entry, async_add_entities, "switch", DynaliteSwitch
     )
 
 
 class DynaliteSwitch(DynaliteBase, SwitchEntity):
-    """Representation of a Dynalite Channel as a Home Assistant Switch."""
+    """Representation of a Dynalite Channel as a MenuAI Switch."""
 
     @property
     def is_on(self) -> bool:

@@ -7,10 +7,10 @@ import logging
 
 import zeversolar
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -22,10 +22,10 @@ class ZeversolarCoordinator(DataUpdateCoordinator[zeversolar.ZeverSolarData]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -35,4 +35,4 @@ class ZeversolarCoordinator(DataUpdateCoordinator[zeversolar.ZeverSolarData]):
 
     async def _async_update_data(self) -> zeversolar.ZeverSolarData:
         """Fetch the latest data from the source."""
-        return await self.hass.async_add_executor_job(self._client.get_data)
+        return await self.menuai.async_add_executor_job(self._client.get_data)

@@ -6,7 +6,7 @@ from typing import Any
 
 from pyoverkiz.enums import OverkizCommand, OverkizCommandParam, OverkizState
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_BOOST,
     PRESET_COMFORT,
     PRESET_ECO,
@@ -16,7 +16,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
 
 from ..const import DOMAIN
 from ..coordinator import OverkizDataUpdateCoordinator
@@ -30,7 +30,7 @@ PRESET_PROG = "prog"
 PRESET_EXTERNAL = "external"
 
 
-# Map Overkiz presets to Home Assistant presets
+# Map Overkiz presets to MenuAI presets
 OVERKIZ_TO_PRESET_MODE: dict[str, str] = {
     OverkizCommandParam.OFF: PRESET_NONE,
     OverkizCommandParam.FROSTPROTECTION: PRESET_FROST_PROTECTION,
@@ -46,7 +46,7 @@ OVERKIZ_TO_PRESET_MODE: dict[str, str] = {
 
 PRESET_MODE_TO_OVERKIZ = {v: k for k, v in OVERKIZ_TO_PRESET_MODE.items()}
 
-# Map Overkiz HVAC modes to Home Assistant HVAC modes
+# Map Overkiz HVAC modes to MenuAI HVAC modes
 OVERKIZ_TO_HVAC_MODE: dict[str, HVACMode] = {
     OverkizCommandParam.ON: HVACMode.HEAT,
     OverkizCommandParam.OFF: HVACMode.OFF,

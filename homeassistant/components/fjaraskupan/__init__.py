@@ -7,7 +7,7 @@ import logging
 
 from fjaraskupan import Device
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothCallbackMatcher,
     BluetoothChange,
     BluetoothScanningMode,
@@ -15,16 +15,16 @@ from homeassistant.components.bluetooth import (
     async_rediscover_address,
     async_register_callback,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DISPATCH_DETECTION, DOMAIN
 from .coordinator import FjaraskupanConfigEntry, FjaraskupanCoordinator
@@ -40,7 +40,7 @@ PLATFORMS = [
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FjaraskupanConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FjaraskupanConfigEntry) -> bool:
     """Set up Fjäråskupan from a config entry."""
 
     entry.runtime_data = {}
@@ -65,18 +65,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: FjaraskupanConfigEntry) 
             )
 
             coordinator: FjaraskupanCoordinator = FjaraskupanCoordinator(
-                hass, entry, device, device_info
+                menuai, entry, device, device_info
             )
             coordinator.detection_callback(service_info)
 
             entry.runtime_data[service_info.address] = coordinator
             async_dispatcher_send(
-                hass, f"{DISPATCH_DETECTION}.{entry.entry_id}", coordinator
+                menuai, f"{DISPATCH_DETECTION}.{entry.entry_id}", coordinator
             )
 
     entry.async_on_unload(
         async_register_callback(
-            hass,
+            menuai,
             detection_callback,
             BluetoothCallbackMatcher(
                 manufacturer_id=20296,
@@ -87,13 +87,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: FjaraskupanConfigEntry) 
         )
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 @callback
 def async_setup_entry_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FjaraskupanConfigEntry,
     async_add_entities: AddEntitiesCallback,
     constructor: Callable[[FjaraskupanCoordinator], list[Entity]],
@@ -112,22 +112,22 @@ def async_setup_entry_platform(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, f"{DISPATCH_DETECTION}.{entry.entry_id}", _detection
+            menuai, f"{DISPATCH_DETECTION}.{entry.entry_id}", _detection
         )
     )
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: FjaraskupanConfigEntry
+    menuai: menuai, entry: FjaraskupanConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         for device_entry in dr.async_entries_for_config_entry(
-            dr.async_get(hass), entry.entry_id
+            dr.async_get(menuai), entry.entry_id
         ):
             for conn in device_entry.connections:
                 if conn[0] == dr.CONNECTION_BLUETOOTH:
-                    async_rediscover_address(hass, conn[1])
+                    async_rediscover_address(menuai, conn[1])
 
     return unload_ok

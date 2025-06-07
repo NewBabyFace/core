@@ -16,9 +16,9 @@ from aiohasupervisor.models import (
 )
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from .test_init import MOCK_ENVIRON
 from .test_issues import mock_resolution_info
@@ -35,9 +35,9 @@ def fixture_supervisor_environ() -> Generator[None]:
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_repair_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fix flow for supervisor issue."""
@@ -64,18 +64,18 @@ async def test_supervisor_issue_repair_flow(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -85,7 +85,7 @@ async def test_supervisor_issue_repair_flow(
     assert data == {
         "type": "form",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "system_rename_data_disk",
         "data_schema": [],
         "errors": None,
@@ -103,20 +103,20 @@ async def test_supervisor_issue_repair_flow(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_repair_flow_with_multiple_suggestions(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fix flow for supervisor issue with multiple suggestions."""
@@ -150,18 +150,18 @@ async def test_supervisor_issue_repair_flow_with_multiple_suggestions(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -171,7 +171,7 @@ async def test_supervisor_issue_repair_flow_with_multiple_suggestions(
     assert data == {
         "type": "menu",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "fix_menu",
         "data_schema": [
             {
@@ -198,20 +198,20 @@ async def test_supervisor_issue_repair_flow_with_multiple_suggestions(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_repair_flow_with_multiple_suggestions_and_confirmation(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fix flow for supervisor issue with multiple suggestions and choice requires confirmation."""
@@ -245,18 +245,18 @@ async def test_supervisor_issue_repair_flow_with_multiple_suggestions_and_confir
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -266,7 +266,7 @@ async def test_supervisor_issue_repair_flow_with_multiple_suggestions_and_confir
     assert data == {
         "type": "menu",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "fix_menu",
         "data_schema": [
             {
@@ -294,7 +294,7 @@ async def test_supervisor_issue_repair_flow_with_multiple_suggestions_and_confir
     assert data == {
         "type": "form",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "system_execute_reboot",
         "data_schema": [],
         "errors": None,
@@ -312,20 +312,20 @@ async def test_supervisor_issue_repair_flow_with_multiple_suggestions_and_confir
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_repair_flow_skip_confirmation(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test confirmation skipped for fix flow for supervisor issue with one suggestion."""
@@ -352,18 +352,18 @@ async def test_supervisor_issue_repair_flow_skip_confirmation(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -373,7 +373,7 @@ async def test_supervisor_issue_repair_flow_skip_confirmation(
     assert data == {
         "type": "form",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "system_execute_reboot",
         "data_schema": [],
         "errors": None,
@@ -391,20 +391,20 @@ async def test_supervisor_issue_repair_flow_skip_confirmation(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_mount_failed_repair_flow_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test repair flow fails when repair fails to apply."""
@@ -439,18 +439,18 @@ async def test_mount_failed_repair_flow_error(
         suggestion_result=SupervisorError("boom"),
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -469,20 +469,20 @@ async def test_mount_failed_repair_flow_error(
     assert data == {
         "type": "abort",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "reason": "apply_suggestion_fail",
         "result": None,
         "description_placeholders": None,
     }
 
-    assert issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
 
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_mount_failed_repair_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test repair flow for mount_failed issue."""
@@ -516,18 +516,18 @@ async def test_mount_failed_repair_flow(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -537,7 +537,7 @@ async def test_mount_failed_repair_flow(
     assert data == {
         "type": "menu",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "fix_menu",
         "data_schema": [
             {
@@ -568,12 +568,12 @@ async def test_mount_failed_repair_flow(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
@@ -582,9 +582,9 @@ async def test_mount_failed_repair_flow(
 )
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_docker_config_repair_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fix flow for supervisor issue."""
@@ -641,18 +641,18 @@ async def test_supervisor_issue_docker_config_repair_flow(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue1_uuid.hex
+        domain="menuaiio", issue_id=issue1_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -662,11 +662,11 @@ async def test_supervisor_issue_docker_config_repair_flow(
     assert data == {
         "type": "form",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "system_execute_rebuild",
         "data_schema": [],
         "errors": None,
-        "description_placeholders": {"components": "Home Assistant\n- test"},
+        "description_placeholders": {"components": "MenuAI\n- test"},
         "last_step": True,
         "preview": None,
     }
@@ -680,20 +680,20 @@ async def test_supervisor_issue_docker_config_repair_flow(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue1_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue1_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_repair_flow_multiple_data_disks(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fix flow for multiple data disks supervisor issue."""
@@ -727,18 +727,18 @@ async def test_supervisor_issue_repair_flow_multiple_data_disks(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -748,7 +748,7 @@ async def test_supervisor_issue_repair_flow_multiple_data_disks(
     assert data == {
         "type": "menu",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "fix_menu",
         "data_schema": [
             {
@@ -776,7 +776,7 @@ async def test_supervisor_issue_repair_flow_multiple_data_disks(
     assert data == {
         "type": "form",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "system_adopt_data_disk",
         "data_schema": [],
         "errors": None,
@@ -794,12 +794,12 @@ async def test_supervisor_issue_repair_flow_multiple_data_disks(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
@@ -808,9 +808,9 @@ async def test_supervisor_issue_repair_flow_multiple_data_disks(
 )
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_detached_addon_removed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fix flow for supervisor issue."""
@@ -837,18 +837,18 @@ async def test_supervisor_issue_detached_addon_removed(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -858,7 +858,7 @@ async def test_supervisor_issue_detached_addon_removed(
     assert data == {
         "type": "form",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "addon_execute_remove",
         "data_schema": [],
         "errors": None,
@@ -881,12 +881,12 @@ async def test_supervisor_issue_detached_addon_removed(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)
 
 
@@ -895,9 +895,9 @@ async def test_supervisor_issue_detached_addon_removed(
 )
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issue_addon_boot_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test fix flow for supervisor issue."""
@@ -931,18 +931,18 @@ async def test_supervisor_issue_addon_boot_fail(
         },
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
     repair_issue = issue_registry.async_get_issue(
-        domain="hassio", issue_id=issue_uuid.hex
+        domain="menuaiio", issue_id=issue_uuid.hex
     )
     assert repair_issue
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
-        json={"handler": "hassio", "issue_id": repair_issue.issue_id},
+        json={"handler": "menuaiio", "issue_id": repair_issue.issue_id},
     )
 
     assert resp.status == HTTPStatus.OK
@@ -952,7 +952,7 @@ async def test_supervisor_issue_addon_boot_fail(
     assert data == {
         "type": "menu",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "step_id": "fix_menu",
         "data_schema": [
             {
@@ -983,10 +983,10 @@ async def test_supervisor_issue_addon_boot_fail(
     assert data == {
         "type": "create_entry",
         "flow_id": flow_id,
-        "handler": "hassio",
+        "handler": "menuaiio",
         "description": None,
         "description_placeholders": None,
     }
 
-    assert not issue_registry.async_get_issue(domain="hassio", issue_id=issue_uuid.hex)
+    assert not issue_registry.async_get_issue(domain="menuaiio", issue_id=issue_uuid.hex)
     supervisor_client.resolution.apply_suggestion.assert_called_once_with(sugg_uuid)

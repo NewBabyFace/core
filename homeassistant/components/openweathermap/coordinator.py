@@ -17,16 +17,16 @@ from pyopenweathermap import (
     WeatherReport,
 )
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_SUNNY,
     Forecast,
 )
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import sun
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers import sun
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 if TYPE_CHECKING:
     from . import OpenweathermapConfigEntry
@@ -86,17 +86,17 @@ class OWMUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OpenweathermapConfigEntry,
         owm_client: OWMClient,
     ) -> None:
         """Initialize coordinator."""
         self._owm_client = owm_client
-        self._latitude = config_entry.data.get(CONF_LATITUDE, hass.config.latitude)
-        self._longitude = config_entry.data.get(CONF_LONGITUDE, hass.config.longitude)
+        self._latitude = config_entry.data.get(CONF_LATITUDE, menuai.config.latitude)
+        self._longitude = config_entry.data.get(CONF_LONGITUDE, menuai.config.longitude)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -261,7 +261,7 @@ class WeatherUpdateCoordinator(OWMUpdateCoordinator):
             if timestamp:
                 timestamp = dt_util.utc_from_timestamp(timestamp)
 
-            if sun.is_up(self.hass, timestamp):
+            if sun.is_up(self.menuai, timestamp):
                 return ATTR_CONDITION_SUNNY
             return ATTR_CONDITION_CLEAR_NIGHT
 

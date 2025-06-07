@@ -10,7 +10,7 @@ from requests.exceptions import Timeout
 from soco import SoCo
 from soco.exceptions import SoCoException, SoCoUPnPException
 
-from homeassistant.helpers.dispatcher import dispatcher_send
+from menuai.helpers.dispatcher import dispatcher_send
 
 from .const import SONOS_SPEAKER_ACTIVITY
 from .exception import SonosUpdateError
@@ -75,7 +75,7 @@ def soco_error[_T: _SonosEntitiesType, **_P, _R](
 
             dispatch_soco = args_soco or self.soco  # type: ignore[union-attr]
             dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{SONOS_SPEAKER_ACTIVITY}-{dispatch_soco.uid}",
                 funct.__qualname__,
             )

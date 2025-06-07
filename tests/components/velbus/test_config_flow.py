@@ -7,12 +7,12 @@ import pytest
 import serial.tools.list_ports
 from velbusaio.exceptions import VelbusConnectionFailed
 
-from homeassistant.components.velbus.const import CONF_TLS, DOMAIN
-from homeassistant.config_entries import SOURCE_USB, SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.components.velbus.const import CONF_TLS, DOMAIN
+from menuai.config_entries import SOURCE_USB, SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .const import PORT_SERIAL
 
@@ -45,7 +45,7 @@ def override_async_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with (
         patch(
-            "homeassistant.components.velbus.async_setup_entry", return_value=True
+            "menuai.components.velbus.async_setup_entry", return_value=True
         ) as mock,
     ):
         yield mock
@@ -81,11 +81,11 @@ def mock_controller_connection_failed():
     ],
 )
 async def test_user_network_succes(
-    hass: HomeAssistant, inputParams: str, expected: str
+    menuai: menuai, inputParams: str, expected: str
 ) -> None:
     """Test user network config."""
     # inttial menu show
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result
@@ -94,13 +94,13 @@ async def test_user_network_succes(
     assert result.get("step_id") == "user"
     assert result.get("menu_options") == ["network", "usbselect"]
     # select the network option
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result.get("flow_id"),
         {"next_step_id": "network"},
     )
     assert result["type"] is FlowResultType.FORM
     # fill in the network form
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result.get("flow_id"),
         {
             CONF_HOST: "velbus",
@@ -118,17 +118,17 @@ async def test_user_network_succes(
 
 @pytest.mark.usefixtures("controller")
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_user_usb_succes(hass: HomeAssistant) -> None:
+async def test_user_usb_succes(menuai: menuai) -> None:
     """Test user usb step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result.get("flow_id"),
         {"next_step_id": "usbselect"},
     )
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PORT: USB_DEV,
@@ -143,21 +143,21 @@ async def test_user_usb_succes(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("controller")
-async def test_network_abort_if_already_setup(hass: HomeAssistant) -> None:
+async def test_network_abort_if_already_setup(menuai: menuai) -> None:
     """Test we abort if Velbus is already setup."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_PORT: "127.0.0.1:3788"},
     )
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result.get("flow_id"),
         {"next_step_id": "network"},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_TLS: False,
@@ -173,9 +173,9 @@ async def test_network_abort_if_already_setup(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("controller")
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_flow_usb(hass: HomeAssistant) -> None:
+async def test_flow_usb(menuai: menuai) -> None:
     """Test usb discovery flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USB},
         data=DISCOVERY_INFO,
@@ -184,7 +184,7 @@ async def test_flow_usb(hass: HomeAssistant) -> None:
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -195,24 +195,24 @@ async def test_flow_usb(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("controller")
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_flow_usb_if_already_setup(hass: HomeAssistant) -> None:
+async def test_flow_usb_if_already_setup(menuai: menuai) -> None:
     """Test we abort if Velbus USB discovbery aborts in case it is already setup."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_PORT: PORT_SERIAL},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result.get("flow_id"),
         {"next_step_id": "usbselect"},
     )
     assert result
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PORT: USB_DEV,
@@ -225,9 +225,9 @@ async def test_flow_usb_if_already_setup(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("controller_connection_failed")
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_flow_usb_failed(hass: HomeAssistant) -> None:
+async def test_flow_usb_failed(menuai: menuai) -> None:
     """Test usb discovery flow with a failed velbus test."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USB},
         data=DISCOVERY_INFO,

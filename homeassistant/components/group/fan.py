@@ -9,7 +9,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -24,8 +24,8 @@ from homeassistant.components.fan import (
     FanEntity,
     FanEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     CONF_ENTITIES,
@@ -35,13 +35,13 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, State, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .entity import GroupEntity
 from .util import attribute_equal, most_frequent_attribute, reduce_attribute
@@ -71,7 +71,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -83,12 +83,12 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Fan Group config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITIES]
     )
@@ -98,7 +98,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_fan(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    menuai: menuai, name: str, validated_config: dict[str, Any]
 ) -> FanGroup:
     """Create a preview sensor."""
     return FanGroup(
@@ -219,7 +219,7 @@ class FanGroup(GroupEntity, FanEntity):
         self, service: str, support_flag: int, data: dict[str, Any]
     ) -> None:
         """Call a service with all entities."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             FAN_DOMAIN,
             service,
             {**data, ATTR_ENTITY_ID: self._fans[support_flag]},
@@ -229,7 +229,7 @@ class FanGroup(GroupEntity, FanEntity):
 
     async def _async_call_all_entities(self, service: str) -> None:
         """Call a service with all entities."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             FAN_DOMAIN,
             service,
             {ATTR_ENTITY_ID: self._entity_ids},
@@ -240,7 +240,7 @@ class FanGroup(GroupEntity, FanEntity):
     def _async_states_by_support_flag(self, flag: int) -> list[State]:
         """Return all the entity states for a supported flag."""
         states: list[State] = list(
-            filter(None, [self.hass.states.get(x) for x in self._fans[flag]])
+            filter(None, [self.menuai.states.get(x) for x in self._fans[flag]])
         )
         return states
 
@@ -256,7 +256,7 @@ class FanGroup(GroupEntity, FanEntity):
         states = [
             state
             for entity_id in self._entity_ids
-            if (state := self.hass.states.get(entity_id)) is not None
+            if (state := self.menuai.states.get(entity_id)) is not None
         ]
 
         # Set group as unavailable if all members are unavailable or missing

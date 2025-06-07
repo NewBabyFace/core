@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.tankerkoenig import DOMAIN
-from homeassistant.const import CONF_SHOW_ON_MAP
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.tankerkoenig import DOMAIN
+from menuai.const import CONF_SHOW_ON_MAP
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .const import CONFIG_DATA, NEARBY_STATIONS, PRICES, STATION
 
@@ -20,11 +20,11 @@ def mock_tankerkoenig() -> Generator[AsyncMock]:
     """Mock the aiotankerkoenig client."""
     with (
         patch(
-            "homeassistant.components.tankerkoenig.coordinator.Tankerkoenig",
+            "menuai.components.tankerkoenig.coordinator.Tankerkoenig",
             autospec=True,
         ) as mock_tankerkoenig,
         patch(
-            "homeassistant.components.tankerkoenig.config_flow.Tankerkoenig",
+            "menuai.components.tankerkoenig.config_flow.Tankerkoenig",
             new=mock_tankerkoenig,
         ),
     ):
@@ -36,7 +36,7 @@ def mock_tankerkoenig() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="config_entry")
-async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+async def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return a MockConfigEntry for testing."""
     return MockConfigEntry(
         domain=DOMAIN,
@@ -52,10 +52,10 @@ async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, tankerkoenig: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, tankerkoenig: AsyncMock
 ) -> None:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()

@@ -6,27 +6,27 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pyweatherflowudp.errors import AddressInUseError
 
-from homeassistant import config_entries
-from homeassistant.components.weatherflow.const import (
+from menuai import config_entries
+from menuai.components.weatherflow.const import (
     DOMAIN,
     ERROR_MSG_ADDRESS_IN_USE,
     ERROR_MSG_CANNOT_CONNECT,
     ERROR_MSG_NO_DEVICE_FOUND,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_single_instance(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_has_devices: AsyncMock,
 ) -> None:
     """Test more than one instance."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
@@ -35,19 +35,19 @@ async def test_single_instance(
 
 
 async def test_devices_with_mocks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_start: AsyncMock,
     mock_stop: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test getting user input."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {}
 
@@ -61,7 +61,7 @@ async def test_devices_with_mocks(
     ],
 )
 async def test_devices_with_various_mocks_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_start: AsyncMock,
     mock_stop: AsyncMock,
     mock_setup_entry: AsyncMock,
@@ -71,21 +71,21 @@ async def test_devices_with_various_mocks_errors(
     """Test the various on error states - then finally complete the test."""
 
     with patch(
-        "homeassistant.components.weatherflow.config_flow.WeatherFlowListener.on",
+        "menuai.components.weatherflow.config_flow.WeatherFlowListener.on",
         side_effect=exception,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert result["type"] is FlowResultType.FORM
         assert result["errors"]["base"] == error_msg
         assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {}

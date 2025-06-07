@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.const import __version__ as HA_VERSION
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import __version__ as HA_VERSION
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import BackupDataUpdateCoordinator
@@ -24,12 +24,12 @@ class BackupManagerBaseEntity(CoordinatorEntity[BackupDataUpdateCoordinator]):
         super().__init__(coordinator)
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, "backup_manager")},
-            manufacturer="Home Assistant",
-            model="Home Assistant Backup",
+            manufacturer="MenuAI",
+            model="MenuAI Backup",
             sw_version=HA_VERSION,
             name="Backup",
             entry_type=DeviceEntryType.SERVICE,
-            configuration_url="homeassistant://config/backup",
+            configuration_url="menuai://config/backup",
         )
 
 

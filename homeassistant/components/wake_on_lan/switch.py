@@ -9,22 +9,22 @@ from typing import Any
 import voluptuous as vol
 import wakeonlan
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_BROADCAST_ADDRESS,
     CONF_BROADCAST_PORT,
     CONF_HOST,
     CONF_MAC,
     CONF_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.script import Script
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.script import Script
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_OFF_ACTION, DEFAULT_NAME, DEFAULT_PING_TIMEOUT, DOMAIN
 
@@ -43,7 +43,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -59,7 +59,7 @@ async def async_setup_platform(
     async_add_entities(
         [
             WolSwitch(
-                hass,
+                menuai,
                 name,
                 host,
                 mac_address,
@@ -77,7 +77,7 @@ class WolSwitch(SwitchEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         host: str | None,
         mac_address: str,
@@ -92,7 +92,7 @@ class WolSwitch(SwitchEntity):
         self._broadcast_address = broadcast_address
         self._broadcast_port = broadcast_port
         self._off_script = (
-            Script(hass, off_action, name, DOMAIN) if off_action else None
+            Script(menuai, off_action, name, DOMAIN) if off_action else None
         )
         self._state = False
         self._attr_assumed_state = host is None

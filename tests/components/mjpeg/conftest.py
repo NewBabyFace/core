@@ -8,19 +8,19 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from requests_mock import Mocker
 
-from homeassistant.components.mjpeg.const import (
+from menuai.components.mjpeg.const import (
     CONF_MJPEG_URL,
     CONF_STILL_IMAGE_URL,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
     HTTP_BASIC_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -47,7 +47,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.mjpeg.async_setup_entry", return_value=True
+        "menuai.components.mjpeg.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -55,7 +55,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 @pytest.fixture
 def mock_reload_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
-    with patch("homeassistant.components.mjpeg.async_reload_entry") as mock_reload:
+    with patch("menuai.components.mjpeg.async_reload_entry") as mock_reload:
         yield mock_reload
 
 
@@ -69,12 +69,12 @@ def mock_mjpeg_requests(requests_mock: Mocker) -> Mocker:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_mjpeg_requests: Mocker
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_mjpeg_requests: Mocker
 ) -> MockConfigEntry:
     """Set up the MJPEG IP Camera integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

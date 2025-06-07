@@ -7,13 +7,13 @@ from aiohttp import ClientResponseError
 from incomfortclient import InvalidGateway, InvalidHeaterList
 import pytest
 
-from homeassistant.components.incomfort.const import DOMAIN
-from homeassistant.config_entries import SOURCE_DHCP, SOURCE_USER, ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.components.incomfort.const import DOMAIN
+from menuai.config_entries import SOURCE_DHCP, SOURCE_USER, ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .conftest import MOCK_CONFIG, MOCK_CONFIG_DHCP
 
@@ -33,19 +33,19 @@ DHCP_SERVICE_INFO_ALT = DhcpServiceInfo(
 
 
 async def test_form(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_incomfort: MagicMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_incomfort: MagicMock
 ) -> None:
     """Test we get the full form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_CONFIG
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Intergas InComfort/Intouch Lan2RF gateway"
@@ -54,24 +54,24 @@ async def test_form(
 
 
 async def test_entry_already_configured(
-    hass: HomeAssistant, mock_incomfort: MagicMock
+    menuai: menuai, mock_incomfort: MagicMock
 ) -> None:
     """Test aborting if the entry is already configured."""
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: MOCK_CONFIG[CONF_HOST],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -100,20 +100,20 @@ async def test_entry_already_configured(
     ],
 )
 async def test_form_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     exc: Exception,
     error: str,
     base: str,
 ) -> None:
     """Test form validation."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     # Simulate an issue
     mock_incomfort().heaters.side_effect = exc
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_CONFIG
     )
     assert result["type"] is FlowResultType.FORM
@@ -123,7 +123,7 @@ async def test_form_validation(
 
     # Fix the issue and retry
     mock_incomfort().heaters.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_CONFIG
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -131,7 +131,7 @@ async def test_form_validation(
 
 
 async def test_dhcp_flow_simple(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     device_registry: dr.DeviceRegistry,
 ) -> None:
@@ -139,13 +139,13 @@ async def test_dhcp_flow_simple(
 
     Assert on the creation of the gateway device, climate and boiler devices.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=DHCP_SERVICE_INFO
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "dhcp_confirm"
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {"host": "192.168.1.12"}
@@ -153,7 +153,7 @@ async def test_dhcp_flow_simple(
     config_entry: ConfigEntry = result["result"]
     entry_id = config_entry.entry_id
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Check the gateway device is discovered
     gateway_device = device_registry.async_get_device(identifiers={(DOMAIN, entry_id)})
@@ -176,27 +176,27 @@ async def test_dhcp_flow_simple(
     assert climate_device.via_device_id == gateway_device.id
 
     # Check the host is dynamically updated
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=DHCP_SERVICE_INFO_ALT
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert config_entry.data[CONF_HOST] == DHCP_SERVICE_INFO_ALT.ip
 
 
 async def test_dhcp_flow_migrates_existing_entry_without_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test dhcp flow migrates an existing entry without unique_id."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    result = await hass.config_entries.flow.async_init(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=DHCP_SERVICE_INFO
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
@@ -227,10 +227,10 @@ async def test_dhcp_flow_migrates_existing_entry_without_unique_id(
 
 
 async def test_dhcp_flow_wih_auth(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_incomfort: MagicMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_incomfort: MagicMock
 ) -> None:
     """Test dhcp flow for with authentication."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=DHCP_SERVICE_INFO
     )
 
@@ -243,7 +243,7 @@ async def test_dhcp_flow_wih_auth(
         "heaters",
         side_effect=InvalidGateway,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_HOST: "192.168.1.12"}
         )
 
@@ -252,10 +252,10 @@ async def test_dhcp_flow_wih_auth(
     assert result["errors"] == {"base": "auth_error"}
 
     # Submit the form with added credentials
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_CONFIG_DHCP
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Intergas InComfort/Intouch Lan2RF gateway"
@@ -264,18 +264,18 @@ async def test_dhcp_flow_wih_auth(
 
 
 async def test_reauth_flow_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the re-authentication flow succeeds."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: "new-password"},
     )
@@ -284,14 +284,14 @@ async def test_reauth_flow_success(
 
 
 async def test_reauth_flow_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the re-authentication flow fails."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
@@ -300,14 +300,14 @@ async def test_reauth_flow_failure(
         "heaters",
         side_effect=InvalidGateway,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_PASSWORD: "incorrect-password"},
         )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "auth_error"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: "new-password"},
     )
@@ -316,18 +316,18 @@ async def test_reauth_flow_failure(
 
 
 async def test_reconfigure_flow_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the re-configure flow succeeds."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_CONFIG | {CONF_PASSWORD: "new-password"},
     )
@@ -336,14 +336,14 @@ async def test_reconfigure_flow_success(
 
 
 async def test_reconfigure_flow_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the re-configure flow fails."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
@@ -352,14 +352,14 @@ async def test_reconfigure_flow_failure(
         "heaters",
         side_effect=InvalidGateway,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=MOCK_CONFIG | {CONF_PASSWORD: "wrong-password"},
         )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "auth_error"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_CONFIG | {CONF_PASSWORD: "new-password"},
     )
@@ -376,26 +376,26 @@ async def test_reconfigure_flow_failure(
     ],
 )
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     user_input: dict[str, Any],
     legacy_setpoint_status: bool,
 ) -> None:
     """Test options flow."""
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    with patch("homeassistant.components.incomfort.async_setup_entry") as restart_mock:
-        result2 = await hass.config_entries.options.async_configure(
+    with patch("menuai.components.incomfort.async_setup_entry") as restart_mock:
+        result2 = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input
         )
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert restart_mock.call_count == 1
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY

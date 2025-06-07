@@ -8,11 +8,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.components.climate import HVACMode
-from homeassistant.components.lock import LockState
-from homeassistant.components.vacuum import VacuumActivity
-from homeassistant.components.water_heater import (
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.components.climate import HVACMode
+from menuai.components.lock import LockState
+from menuai.components.vacuum import VacuumActivity
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_ELECTRIC,
     STATE_GAS,
@@ -20,7 +20,7 @@ from homeassistant.components.water_heater import (
     STATE_HIGH_DEMAND,
     STATE_PERFORMANCE,
 )
-from homeassistant.const import (
+from menuai.const import (
     STATE_CLOSED,
     STATE_HOME,
     STATE_IDLE,
@@ -34,8 +34,8 @@ from homeassistant.const import (
     STATE_PROBLEM,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.integration_platform import (
+from menuai.core import menuai, callback
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
 
@@ -128,12 +128,12 @@ ON_OFF_STATES: dict[Platform | str, tuple[set[str], str, str]] = {
 }
 
 
-async def async_setup(hass: HomeAssistant) -> None:
+async def async_setup(menuai: menuai) -> None:
     """Set up the Group integration registry of integration platforms."""
-    hass.data[REG_KEY] = GroupIntegrationRegistry(hass)
+    menuai.data[REG_KEY] = GroupIntegrationRegistry(menuai)
 
     await async_process_integration_platforms(
-        hass, DOMAIN, _process_group_platform, wait_for_platforms=True
+        menuai, DOMAIN, _process_group_platform, wait_for_platforms=True
     )
 
 
@@ -141,17 +141,17 @@ class GroupProtocol(Protocol):
     """Define the format of group platforms."""
 
     def async_describe_on_off_states(
-        self, hass: HomeAssistant, registry: GroupIntegrationRegistry
+        self, menuai: menuai, registry: GroupIntegrationRegistry
     ) -> None:
         """Describe group on off states."""
 
 
 @callback
 def _process_group_platform(
-    hass: HomeAssistant, domain: str, platform: GroupProtocol
+    menuai: menuai, domain: str, platform: GroupProtocol
 ) -> None:
     """Process a group platform."""
-    platform.async_describe_on_off_states(hass, hass.data[REG_KEY])
+    platform.async_describe_on_off_states(menuai, menuai.data[REG_KEY])
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,9 +165,9 @@ class SingleStateType:
 class GroupIntegrationRegistry:
     """Class to hold a registry of integrations."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Imitialize registry."""
-        self.hass = hass
+        self.menuai = menuai
         self.on_off_mapping: dict[str, str] = {STATE_ON: STATE_OFF}
         self.off_on_mapping: dict[str, str] = {STATE_OFF: STATE_ON}
         self.on_states_by_domain: dict[str, set[str]] = {}

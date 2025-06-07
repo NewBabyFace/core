@@ -8,15 +8,15 @@ from typing import Any
 
 from regenmaschine.errors import RequestError
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RainMachineConfigEntry
 from .const import DATA_MACHINE_FIRMWARE_UPDATE_STATUS
@@ -58,7 +58,7 @@ UPDATE_DESCRIPTION = RainMachineUpdateEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RainMachineConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,7 +85,7 @@ class RainMachineUpdateEntity(RainMachineEntity, UpdateEntity):
         try:
             await self._data.controller.machine.update_firmware()
         except RequestError as err:
-            raise HomeAssistantError(f"Error while updating firmware: {err}") from err
+            raise menuaiError(f"Error while updating firmware: {err}") from err
 
         await self.coordinator.async_refresh()
 

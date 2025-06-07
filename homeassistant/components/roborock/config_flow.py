@@ -19,17 +19,17 @@ from roborock.exceptions import (
 from roborock.web_api import RoborockApiClient
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.const import CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import RoborockConfigEntry
 from .const import (
@@ -66,7 +66,7 @@ class RoborockFlowHandler(ConfigFlow, domain=DOMAIN):
             self._username = username
             _LOGGER.debug("Requesting code for Roborock account")
             self._client = RoborockApiClient(
-                username, session=async_get_clientsession(self.hass)
+                username, session=async_get_clientsession(self.menuai)
             )
             errors = await self._request_code()
             if not errors:
@@ -124,7 +124,7 @@ class RoborockFlowHandler(ConfigFlow, domain=DOMAIN):
                 if self.source == SOURCE_REAUTH:
                     self._abort_if_unique_id_mismatch(reason="wrong_account")
                     reauth_entry = self._get_reauth_entry()
-                    self.hass.config_entries.async_update_entry(
+                    self.menuai.config_entries.async_update_entry(
                         reauth_entry,
                         data={
                             **reauth_entry.data,
@@ -146,7 +146,7 @@ class RoborockFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle a flow started by a dhcp discovery."""
         await self._async_handle_discovery_without_unique_id()
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device = device_registry.async_get_device(
             connections={
                 (dr.CONNECTION_NETWORK_MAC, dr.format_mac(discovery_info.macaddress))
@@ -165,7 +165,7 @@ class RoborockFlowHandler(ConfigFlow, domain=DOMAIN):
         self._username = entry_data[CONF_USERNAME]
         assert self._username
         self._client = RoborockApiClient(
-            self._username, session=async_get_clientsession(self.hass)
+            self._username, session=async_get_clientsession(self.menuai)
         )
         return await self.async_step_reauth_confirm()
 

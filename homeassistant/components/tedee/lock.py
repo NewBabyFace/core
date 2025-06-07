@@ -4,10 +4,10 @@ from typing import Any
 
 from aiotedee import TedeeClientException, TedeeLock, TedeeLockState
 
-from homeassistant.components.lock import LockEntity, LockEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity, LockEntityFeature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import TedeeApiCoordinator, TedeeConfigEntry
@@ -17,7 +17,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TedeeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -104,7 +104,7 @@ class TedeeLockEntity(TedeeEntity, LockEntity):
             await self.coordinator.tedee_client.unlock(self._lock.lock_id)
             await self.coordinator.async_request_refresh()
         except (TedeeClientException, Exception) as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unlock_failed",
                 translation_placeholders={"lock_id": str(self._lock.lock_id)},
@@ -119,7 +119,7 @@ class TedeeLockEntity(TedeeEntity, LockEntity):
             await self.coordinator.tedee_client.lock(self._lock.lock_id)
             await self.coordinator.async_request_refresh()
         except (TedeeClientException, Exception) as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="lock_failed",
                 translation_placeholders={"lock_id": str(self._lock.lock_id)},
@@ -143,7 +143,7 @@ class TedeeLockWithLatchEntity(TedeeLockEntity):
             await self.coordinator.tedee_client.open(self._lock.lock_id)
             await self.coordinator.async_request_refresh()
         except (TedeeClientException, Exception) as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="open_failed",
                 translation_placeholders={"lock_id": str(self._lock.lock_id)},

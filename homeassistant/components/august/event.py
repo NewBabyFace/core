@@ -10,13 +10,13 @@ from yalexs.activity import Activity
 from yalexs.doorbell import DoorbellDetail
 from yalexs.lock import LockDetail
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AugustConfigEntry, AugustData
 from .entity import AugustDescriptionEntity
@@ -57,7 +57,7 @@ TYPES_DOORBELL: tuple[AugustEventEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AugustConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

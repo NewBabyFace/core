@@ -1,21 +1,21 @@
 """Tests for the mfa setup flow."""
 
-from homeassistant.auth import auth_manager_from_config
-from homeassistant.components.auth import mfa_setup_flow
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai.auth import auth_manager_from_config
+from menuai.components.auth import mfa_setup_flow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 from tests.common import CLIENT_ID, MockUser, ensure_auth_manager_loaded
 from tests.typing import WebSocketGenerator
 
 
 async def test_ws_setup_depose_mfa(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test set up mfa module for current user."""
-    hass.auth = await auth_manager_from_config(
-        hass,
+    menuai.auth = await auth_manager_from_config(
+        menuai,
         provider_configs=[
             {
                 "type": "insecure_example",
@@ -36,18 +36,18 @@ async def test_ws_setup_depose_mfa(
             }
         ],
     )
-    ensure_auth_manager_loaded(hass.auth)
-    await async_setup_component(hass, "auth", {"http": {}})
+    ensure_auth_manager_loaded(menuai.auth)
+    await async_setup_component(menuai, "auth", {"http": {}})
 
-    user = MockUser(id="mock-user").add_to_hass(hass)
-    cred = await hass.auth.auth_providers[0].async_get_or_create_credentials(
+    user = MockUser(id="mock-user").add_to_menuai(menuai)
+    cred = await menuai.auth.auth_providers[0].async_get_or_create_credentials(
         {"username": "test-user"}
     )
-    await hass.auth.async_link_user(user, cred)
-    refresh_token = await hass.auth.async_create_refresh_token(user, CLIENT_ID)
-    access_token = hass.auth.async_create_access_token(refresh_token)
+    await menuai.auth.async_link_user(user, cred)
+    refresh_token = await menuai.auth.async_create_refresh_token(user, CLIENT_ID)
+    access_token = menuai.auth.async_create_access_token(refresh_token)
 
-    client = await hass_ws_client(hass, access_token)
+    client = await menuai_ws_client(menuai, access_token)
 
     await client.send_json(
         {

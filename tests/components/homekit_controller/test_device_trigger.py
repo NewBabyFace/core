@@ -8,13 +8,13 @@ from aiohomekit.model.services import ServicesTypes
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.homekit_controller.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.homekit_controller.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .common import setup_test_component
 
@@ -82,13 +82,13 @@ def create_doorbell(accessory: Accessory) -> None:
 
 
 async def test_enumerate_remote(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
     """Test that remote is correctly enumerated."""
-    await setup_test_component(hass, get_next_aid(), create_remote)
+    await setup_test_component(menuai, get_next_aid(), create_remote)
 
     bat_sensor = entity_registry.async_get("sensor.testdevice_battery")
     identify_button = entity_registry.async_get("button.testdevice_identify")
@@ -128,19 +128,19 @@ async def test_enumerate_remote(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert triggers == unordered(expected)
 
 
 async def test_enumerate_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
     """Test that a button is correctly enumerated."""
-    await setup_test_component(hass, get_next_aid(), create_button)
+    await setup_test_component(menuai, get_next_aid(), create_button)
 
     bat_sensor = entity_registry.async_get("sensor.testdevice_battery")
     identify_button = entity_registry.async_get("button.testdevice_identify")
@@ -179,19 +179,19 @@ async def test_enumerate_button(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert triggers == unordered(expected)
 
 
 async def test_enumerate_doorbell(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
     """Test that a button is correctly enumerated."""
-    await setup_test_component(hass, get_next_aid(), create_doorbell)
+    await setup_test_component(menuai, get_next_aid(), create_doorbell)
 
     bat_sensor = entity_registry.async_get("sensor.testdevice_battery")
     identify_button = entity_registry.async_get("button.testdevice_identify")
@@ -230,27 +230,27 @@ async def test_enumerate_doorbell(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert triggers == unordered(expected)
 
 
 async def test_handle_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
     service_calls: list[ServiceCall],
 ) -> None:
     """Test that events are handled."""
-    helper = await setup_test_component(hass, get_next_aid(), create_remote)
+    helper = await setup_test_component(menuai, get_next_aid(), create_remote)
 
     entry = entity_registry.async_get("sensor.testdevice_battery")
 
     device = device_registry.async_get(entry.device_id)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -303,7 +303,7 @@ async def test_handle_events(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 0}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "device - button1 - single_press - 0"
 
@@ -312,7 +312,7 @@ async def test_handle_events(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 1}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Make sure automation doesn't trigger for double press
@@ -320,7 +320,7 @@ async def test_handle_events(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Make sure second automation fires for long press
@@ -328,12 +328,12 @@ async def test_handle_events(
         "Button 2", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "device - button2 - long_press - 0"
 
     # Turn the automations off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "automation",
         "turn_off",
         {"entity_id": "automation.long_press"},
@@ -341,7 +341,7 @@ async def test_handle_events(
     )
     assert len(service_calls) == 3
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "automation",
         "turn_off",
         {"entity_id": "automation.single_press"},
@@ -354,30 +354,30 @@ async def test_handle_events(
         "Button 2", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4
 
 
 async def test_handle_events_late_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
     service_calls: list[ServiceCall],
 ) -> None:
     """Test that events are handled when setup happens after startup."""
-    helper = await setup_test_component(hass, get_next_aid(), create_remote)
+    helper = await setup_test_component(menuai, get_next_aid(), create_remote)
 
     entry = entity_registry.async_get("sensor.testdevice_battery")
 
     device = device_registry.async_get(entry.device_id)
 
-    await hass.config_entries.async_unload(helper.config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(helper.config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert helper.config_entry.state is ConfigEntryState.NOT_LOADED
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -424,10 +424,10 @@ async def test_handle_events_late_setup(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.config_entries.async_setup(helper.config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(helper.config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert helper.config_entry.state is ConfigEntryState.LOADED
 
     # Make sure first automation (only) fires for single press
@@ -435,7 +435,7 @@ async def test_handle_events_late_setup(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 0}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "device - button1 - single_press - 0"
 
@@ -444,7 +444,7 @@ async def test_handle_events_late_setup(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: None}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Make sure automation doesn't trigger for long press
@@ -452,7 +452,7 @@ async def test_handle_events_late_setup(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 1}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Make sure automation doesn't trigger for double press
@@ -460,7 +460,7 @@ async def test_handle_events_late_setup(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Make sure second automation fires for long press
@@ -468,12 +468,12 @@ async def test_handle_events_late_setup(
         "Button 2", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "device - button2 - long_press - 0"
 
     # Turn the automations off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "automation",
         "turn_off",
         {"entity_id": "automation.long_press"},
@@ -481,7 +481,7 @@ async def test_handle_events_late_setup(
     )
     assert len(service_calls) == 3
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "automation",
         "turn_off",
         {"entity_id": "automation.single_press"},
@@ -494,5 +494,5 @@ async def test_handle_events_late_setup(
         "Button 2", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4

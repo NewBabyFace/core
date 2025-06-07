@@ -5,16 +5,16 @@ from unittest.mock import Mock, patch
 import pytest
 from samsungtvws.encrypted.remote import SamsungTVEncryptedCommand
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_COMMAND,
     DOMAIN as REMOTE_DOMAIN,
     SERVICE_SEND_COMMAND,
 )
-from homeassistant.components.samsungtv.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.samsungtv.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_samsungtv_entry
 from .const import ENTRYDATA_ENCRYPTED_WEBSOCKET, ENTRYDATA_LEGACY, ENTRYDATA_WEBSOCKET
@@ -25,18 +25,18 @@ ENTITY_ID = f"{REMOTE_DOMAIN}.mock_title"
 
 
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(menuai: menuai) -> None:
     """Test setup with basic config."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
-    assert hass.states.get(ENTITY_ID)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    assert menuai.states.get(ENTITY_ID)
 
 
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 async def test_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test unique id."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
 
     main = entity_registry.async_get(ENTITY_ID)
     assert main.unique_id == "be9554b9-c9fb-41f4-8920-22da015376a4"
@@ -44,16 +44,16 @@ async def test_unique_id(
 
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 async def test_main_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     remote_encrypted_websocket: Mock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for turn_off."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
 
     remote_encrypted_websocket.send_commands.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -71,7 +71,7 @@ async def test_main_services(
 
     # commands not sent : power off in progress
     remote_encrypted_websocket.send_commands.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["dash"]},
@@ -83,12 +83,12 @@ async def test_main_services(
 
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 async def test_send_command_service(
-    hass: HomeAssistant, remote_encrypted_websocket: Mock
+    menuai: menuai, remote_encrypted_websocket: Mock
 ) -> None:
     """Test the send command."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["dash"]},
@@ -103,31 +103,31 @@ async def test_send_command_service(
 
 
 @pytest.mark.usefixtures("remote_websocket", "rest_api")
-async def test_turn_on_wol(hass: HomeAssistant) -> None:
+async def test_turn_on_wol(menuai: menuai) -> None:
     """Test turn on."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=ENTRYDATA_WEBSOCKET,
         unique_id="be9554b9-c9fb-41f4-8920-22da015376a4",
     )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     with patch(
-        "homeassistant.components.samsungtv.entity.send_magic_packet"
+        "menuai.components.samsungtv.entity.send_magic_packet"
     ) as mock_send_magic_packet:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             REMOTE_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_ID}, True
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert mock_send_magic_packet.called
 
 
-async def test_turn_on_without_turnon(hass: HomeAssistant, remote_legacy: Mock) -> None:
+async def test_turn_on_without_turnon(menuai: menuai, remote_legacy: Mock) -> None:
     """Test turn on."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_LEGACY)
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    await setup_samsungtv_entry(menuai, ENTRYDATA_LEGACY)
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             REMOTE_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_ID}, True
         )
     # nothing called as not supported feature

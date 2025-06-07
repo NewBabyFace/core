@@ -6,15 +6,15 @@ from collections.abc import Callable
 from enum import IntFlag
 from typing import TYPE_CHECKING, Final
 
-from homeassistant.const import (
+from menuai.const import (
     UnitOfLength,
     UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.unit_conversion import (
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.unit_conversion import (
     DistanceConverter,
     PressureConverter,
     SpeedConverter,
@@ -22,7 +22,7 @@ from homeassistant.util.unit_conversion import (
 )
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from . import WeatherEntity
 
@@ -54,9 +54,9 @@ ATTR_WEATHER_CLOUD_COVERAGE = "cloud_coverage"
 ATTR_WEATHER_UV_INDEX = "uv_index"
 
 DOMAIN: Final = "weather"
-DATA_COMPONENT: HassKey[EntityComponent[WeatherEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[WeatherEntity]] = menuaiKey(DOMAIN)
 
-INTENT_GET_WEATHER = "HassGetWeather"
+INTENT_GET_WEATHER = "menuaiGetWeather"
 
 VALID_UNITS_PRESSURE: set[str] = {
     UnitOfPressure.HPA,

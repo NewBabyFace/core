@@ -9,11 +9,11 @@ import pytest
 from renault_api.gigya.exceptions import GigyaException, InvalidCredentialsException
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.renault.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.renault.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntry, ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from tests.typing import WebSocketGenerator
 
@@ -21,30 +21,30 @@ from tests.typing import WebSocketGenerator
 @pytest.fixture(autouse=True)
 def override_platforms() -> Generator[None]:
     """Override PLATFORMS."""
-    with patch("homeassistant.components.renault.PLATFORMS", []):
+    with patch("menuai.components.renault.PLATFORMS", []):
         yield
 
 
 @pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicles")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_setup_unload_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test entry setup and unload."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert config_entry.state is ConfigEntryState.LOADED
 
     # Unload the entry and verify that the data has been removed
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_setup_entry_bad_password(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test entry setup and unload."""
     # Create a mock entry so we don't have to go through config flow
@@ -52,13 +52,13 @@ async def test_setup_entry_bad_password(
         "renault_api.renault_session.RenaultSession.login",
         side_effect=InvalidCredentialsException(403042, "invalid loginID or password"),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["context"]["source"] == SOURCE_REAUTH
     assert flows[0]["context"]["entry_id"] == config_entry.entry_id
@@ -66,7 +66,7 @@ async def test_setup_entry_bad_password(
 
 @pytest.mark.parametrize("side_effect", [aiohttp.ClientConnectionError, GigyaException])
 async def test_setup_entry_exception(
-    hass: HomeAssistant, config_entry: ConfigEntry, side_effect: Any
+    menuai: menuai, config_entry: ConfigEntry, side_effect: Any
 ) -> None:
     """Test ConfigEntryNotReady when API raises an exception during entry setup."""
     # In this case we are testing the condition where async_setup_entry raises
@@ -75,16 +75,16 @@ async def test_setup_entry_exception(
         "renault_api.renault_session.RenaultSession.login",
         side_effect=side_effect,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.usefixtures("patch_renault_account")
 async def test_setup_entry_kamereon_exception(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test ConfigEntryNotReady when API raises an exception during entry setup."""
     # In this case we are testing the condition where renault_hub fails to retrieve
@@ -93,38 +93,38 @@ async def test_setup_entry_kamereon_exception(
         "renault_api.renault_client.RenaultClient.get_api_account",
         side_effect=aiohttp.ClientResponseError(Mock(), (), status=504),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicles")
 @pytest.mark.parametrize("vehicle_type", ["missing_details"], indirect=True)
 async def test_setup_entry_missing_vehicle_details(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test ConfigEntryNotReady when vehicleDetails is missing."""
     # In this case we are testing the condition where renault_hub fails to retrieve
     # vehicle details (see #99127).
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicles")
 async def test_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test device is correctly registered."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Ensure devices are correctly registered
     device_entries = dr.async_entries_for_config_entry(
@@ -136,13 +136,13 @@ async def test_device_registry(
 @pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicles")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_registry_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry: ConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test being able to remove a disconnected device."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     entry_id = config_entry.entry_id
     live_id = "VF1ZOE40VIN"
     dead_id = "VF1AAAAA555777888"
@@ -158,13 +158,13 @@ async def test_registry_cleanup(
     )
     assert len(dr.async_entries_for_config_entry(device_registry, entry_id)) == 1
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert len(dr.async_entries_for_config_entry(device_registry, entry_id)) == 2
 
     # Try to remove "VF1ZOE40VIN" - fails as it is live
     device = device_registry.async_get_device(identifiers={(DOMAIN, live_id)})
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device.id, entry_id)
     assert not response["success"]
     assert len(dr.async_entries_for_config_entry(device_registry, entry_id)) == 2

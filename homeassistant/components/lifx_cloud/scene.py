@@ -11,13 +11,13 @@ import aiohttp
 from aiohttp.hdrs import AUTHORIZATION
 import voluptuous as vol
 
-from homeassistant.components.scene import Scene
-from homeassistant.const import CONF_PLATFORM, CONF_TIMEOUT, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.scene import Scene
+from menuai.const import CONF_PLATFORM, CONF_TIMEOUT, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ PLATFORM_SCHEMA = vol.Schema(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -47,7 +47,7 @@ async def async_setup_platform(
     url = "https://api.lifx.com/v1/scenes"
 
     try:
-        httpsession = async_get_clientsession(hass)
+        httpsession = async_get_clientsession(menuai)
         async with asyncio.timeout(timeout):
             scenes_resp = await httpsession.get(url, headers=headers)
 
@@ -58,7 +58,7 @@ async def async_setup_platform(
     status = scenes_resp.status
     if status == HTTPStatus.OK:
         data = await scenes_resp.json()
-        devices = [LifxCloudScene(hass, headers, timeout, scene) for scene in data]
+        devices = [LifxCloudScene(menuai, headers, timeout, scene) for scene in data]
         async_add_entities(devices)
         return
     if status == HTTPStatus.UNAUTHORIZED:
@@ -71,9 +71,9 @@ async def async_setup_platform(
 class LifxCloudScene(Scene):
     """Representation of a LIFX Cloud scene."""
 
-    def __init__(self, hass, headers, timeout, scene_data):
+    def __init__(self, menuai, headers, timeout, scene_data):
         """Initialize the scene."""
-        self.hass = hass
+        self.menuai = menuai
         self._headers = headers
         self._timeout = timeout
         self._name = scene_data["name"]
@@ -89,7 +89,7 @@ class LifxCloudScene(Scene):
         url = f"https://api.lifx.com/v1/scenes/scene_id:{self._uuid}/activate"
 
         try:
-            httpsession = async_get_clientsession(self.hass)
+            httpsession = async_get_clientsession(self.menuai)
             async with asyncio.timeout(self._timeout):
                 await httpsession.put(url, headers=self._headers)
 

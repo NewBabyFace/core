@@ -2,13 +2,13 @@
 
 import pytest
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .conftest import patch_set_values
 
@@ -41,7 +41,7 @@ async def test_temperature_number_entities(
     metric_key: str,
     value: float,
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test temperature entities."""
@@ -49,11 +49,11 @@ async def test_temperature_number_entities(
     setup_fetch_metric_data_mock(metrics={metric_key: value})
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
-    sensor = hass.states.get(entity_id)
+    sensor = menuai.states.get(entity_id)
     assert sensor.state == str(value)
     assert sensor.attributes["unit_of_measurement"] == "°C"
 
@@ -66,7 +66,7 @@ async def test_temperature_number_entity_set(
     metric_key: str,
     value: float,
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test temperature set."""
@@ -75,9 +75,9 @@ async def test_temperature_number_entity_set(
 
     # Act
     with patch_set_values() as set_values:
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             service_data={
@@ -85,5 +85,5 @@ async def test_temperature_number_entity_set(
                 ATTR_VALUE: value,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         set_values.assert_called_once_with({metric_key: value})

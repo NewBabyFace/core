@@ -10,24 +10,24 @@ from typing import Any
 from pynetio import Netio
 import voluptuous as vol
 
-from homeassistant import util
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.switch import (
+from menuai import util
+from menuai.components.http import menuaiView
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -72,7 +72,7 @@ def setup_platform(
     port = config[CONF_PORT]
 
     if not DEVICES:
-        hass.http.register_view(NetioApiView)
+        menuai.http.register_view(NetioApiView)
 
     dev = Netio(host, port, username, password)
 
@@ -87,7 +87,7 @@ def setup_platform(
 
     add_entities(DEVICES[host].entities)
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, dispose)
+    menuai.bus.listen_once(EVENT_menuai_STOP, dispose)
 
 
 def dispose(event):
@@ -96,7 +96,7 @@ def dispose(event):
         value.netio.stop()
 
 
-class NetioApiView(HomeAssistantView):
+class NetioApiView(menuaiView):
     """WSGI handler class."""
 
     url = URL_API_NETIO_EP

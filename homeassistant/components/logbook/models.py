@@ -9,18 +9,18 @@ from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast, final
 from propcache.api import cached_property
 from sqlalchemy.engine.row import Row
 
-from homeassistant.components.recorder.filters import Filters
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder.filters import Filters
+from menuai.components.recorder.models import (
     bytes_to_ulid_or_none,
     bytes_to_uuid_hex_or_none,
     ulid_to_bytes_or_none,
     uuid_hex_to_bytes_or_none,
 )
-from homeassistant.const import ATTR_ICON, EVENT_STATE_CHANGED
-from homeassistant.core import Context, Event, State, callback
-from homeassistant.util.event_type import EventType
-from homeassistant.util.json import json_loads
-from homeassistant.util.ulid import ulid_to_bytes
+from menuai.const import ATTR_ICON, EVENT_STATE_CHANGED
+from menuai.core import Context, Event, State, callback
+from menuai.util.event_type import EventType
+from menuai.util.json import json_loads
+from menuai.util.ulid import ulid_to_bytes
 
 
 @dataclass(slots=True)

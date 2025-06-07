@@ -6,13 +6,13 @@ from itertools import chain
 
 import pypck
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as DOMAIN_SENSOR,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     CONF_DOMAIN,
     CONF_ENTITIES,
@@ -24,9 +24,9 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ADD_ENTITIES_CALLBACKS,
@@ -85,7 +85,7 @@ def add_lcn_entities(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -96,7 +96,7 @@ async def async_setup_entry(
         async_add_entities,
     )
 
-    hass.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
+    menuai.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
         {DOMAIN_SENSOR: add_entities}
     )
 
@@ -126,15 +126,15 @@ class LcnVariableSensor(LcnEntity, SensorEntity):
         )
         self._attr_device_class = DEVICE_CLASS_MAPPING.get(self.unit)
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(self.variable)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(self.variable)
 
@@ -168,15 +168,15 @@ class LcnLedLogicSensor(LcnEntity, SensorEntity):
                 config[CONF_DOMAIN_DATA][CONF_SOURCE]
             ]
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.activate_status_request_handler(self.source)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         if not self.device_connection.is_group:
             await self.device_connection.cancel_status_request_handler(self.source)
 

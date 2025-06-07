@@ -14,13 +14,13 @@ from pyhap.iid_manager import IIDManager
 from pyhap.service import Service
 from pyhap.util import callback as pyhap_callback
 
-from homeassistant.components.cover import CoverDeviceClass, CoverEntityFeature
-from homeassistant.components.lawn_mower import LawnMowerEntityFeature
-from homeassistant.components.media_player import MediaPlayerDeviceClass
-from homeassistant.components.remote import RemoteEntityFeature
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.components.switch import SwitchDeviceClass
-from homeassistant.const import (
+from menuai.components.cover import CoverDeviceClass, CoverEntityFeature
+from menuai.components.lawn_mower import LawnMowerEntityFeature
+from menuai.components.media_player import MediaPlayerDeviceClass
+from menuai.components.remote import RemoteEntityFeature
+from menuai.components.sensor import SensorDeviceClass
+from menuai.components.switch import SwitchDeviceClass
+from menuai.const import (
     ATTR_BATTERY_CHARGING,
     ATTR_BATTERY_LEVEL,
     ATTR_DEVICE_CLASS,
@@ -42,20 +42,20 @@ from homeassistant.const import (
     UnitOfTemperature,
     __version__,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Context,
     Event,
     EventStateChangedData,
-    HassJobType,
-    HomeAssistant,
+    menuaiJobType,
+    menuai,
     State,
     callback as ha_callback,
     split_entity_id,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.util.decorator import Registry
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_state_change_event
+from menuai.util.decorator import Registry
 
 from .const import (
     ATTR_DISPLAY_NAME,
@@ -128,7 +128,7 @@ RELOAD_ON_CHANGE_ATTRS = (
 
 
 def get_accessory(  # noqa: C901
-    hass: HomeAssistant, driver: HomeDriver, state: State, aid: int | None, config: dict
+    menuai: menuai, driver: HomeDriver, state: State, aid: int | None, config: dict
 ) -> HomeAccessory | None:
     """Take state and return an accessory object if supported."""
     if not aid:
@@ -301,7 +301,7 @@ def get_accessory(  # noqa: C901
         return None
 
     _LOGGER.debug('Add "%s" as "%s"', state.entity_id, a_type)
-    return TYPES[a_type](hass, driver, name, state.entity_id, aid, config)
+    return TYPES[a_type](menuai, driver, name, state.entity_id, aid, config)
 
 
 class HomeAccessory(Accessory):  # type: ignore[misc]
@@ -311,7 +311,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         driver: HomeDriver,
         name: str,
         entity_id: str,
@@ -384,7 +384,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
 
         self.category = category
         self.entity_id = entity_id
-        self.hass = hass
+        self.menuai = menuai
         self._subscriptions: list[CALLBACK_TYPE] = []
 
         if device_id:
@@ -402,14 +402,14 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         )
 
         """Add battery service if available"""
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         self._update_available_from_state(state)
         assert state is not None
         entity_attributes = state.attributes
         battery_found = entity_attributes.get(ATTR_BATTERY_LEVEL)
 
         if self.linked_battery_sensor:
-            state = self.hass.states.get(self.linked_battery_sensor)
+            state = self.menuai.states.get(self.linked_battery_sensor)
             if state is not None:
                 battery_found = state.state
             else:
@@ -426,7 +426,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         _LOGGER.debug("%s: Found battery level", self.entity_id)
 
         if self.linked_battery_charging_sensor:
-            state = self.hass.states.get(self.linked_battery_charging_sensor)
+            state = self.menuai.states.get(self.linked_battery_charging_sensor)
             if state is None:
                 self.linked_battery_charging_sensor = None
                 _LOGGER.warning(
@@ -459,22 +459,22 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
     @pyhap_callback  # type: ignore[misc]
     def run(self) -> None:
         """Handle accessory driver started event."""
-        if state := self.hass.states.get(self.entity_id):
+        if state := self.menuai.states.get(self.entity_id):
             self.async_update_state_callback(state)
         self._update_available_from_state(state)
         self._subscriptions.append(
             async_track_state_change_event(
-                self.hass,
+                self.menuai,
                 [self.entity_id],
                 self.async_update_event_state_callback,
-                job_type=HassJobType.Callback,
+                job_type=menuaiJobType.Callback,
             )
         )
 
         battery_charging_state = None
         battery_state = None
         if self.linked_battery_sensor and (
-            linked_battery_sensor_state := self.hass.states.get(
+            linked_battery_sensor_state := self.menuai.states.get(
                 self.linked_battery_sensor
             )
         ):
@@ -484,23 +484,23 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
             )
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_battery_sensor],
                     self.async_update_linked_battery_callback,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
         elif state is not None:
             battery_state = state.attributes.get(ATTR_BATTERY_LEVEL)
         if self.linked_battery_charging_sensor:
-            state = self.hass.states.get(self.linked_battery_charging_sensor)
+            state = self.menuai.states.get(self.linked_battery_charging_sensor)
             battery_charging_state = state and state.state == STATE_ON
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_battery_charging_sensor],
                     self.async_update_linked_battery_charging_callback,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
         elif battery_charging_state is None and state is not None:
@@ -640,9 +640,9 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         }
         context = Context()
 
-        self.hass.bus.async_fire(EVENT_HOMEKIT_CHANGED, event_data, context=context)
-        self.hass.async_create_task(
-            self.hass.services.async_call(
+        self.menuai.bus.async_fire(EVENT_HOMEKIT_CHANGED, event_data, context=context)
+        self.menuai.async_create_task(
+            self.menuai.services.async_call(
                 domain, service, service_data, context=context
             ),
             eager_start=True,
@@ -652,7 +652,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
     def async_reload(self) -> None:
         """Reload and recreate an accessory and update the c# value in the mDNS record."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             SIGNAL_RELOAD_ENTITIES.format(self.driver.entry_id),
             (self.entity_id,),
         )
@@ -677,7 +677,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
 class HomeBridge(Bridge):  # type: ignore[misc]
     """Adapter class for Bridge."""
 
-    def __init__(self, hass: HomeAssistant, driver: HomeDriver, name: str) -> None:
+    def __init__(self, menuai: menuai, driver: HomeDriver, name: str) -> None:
         """Initialize a Bridge object."""
         super().__init__(driver, name, iid_manager=HomeIIDManager(driver.iid_storage))
         self.set_info_service(
@@ -686,7 +686,7 @@ class HomeBridge(Bridge):  # type: ignore[misc]
             model=BRIDGE_MODEL,
             serial_number=BRIDGE_SERIAL_NUMBER,
         )
-        self.hass = hass
+        self.menuai = menuai
 
     def setup_message(self) -> None:
         """Prevent print of pyhap setup message to terminal."""
@@ -708,7 +708,7 @@ class HomeDriver(AccessoryDriver):  # type: ignore[misc]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry_id: str,
         bridge_name: str,
         entry_title: str,
@@ -719,7 +719,7 @@ class HomeDriver(AccessoryDriver):  # type: ignore[misc]
         # Always set an empty mac of pyhap will incur
         # the cost of generating a new one for every driver
         super().__init__(**kwargs, mac=EMPTY_MAC)
-        self.hass = hass
+        self.menuai = menuai
         self.entry_id = entry_id
         self._bridge_name = bridge_name
         self._entry_title = entry_title
@@ -732,7 +732,7 @@ class HomeDriver(AccessoryDriver):  # type: ignore[misc]
         """Override super function to dismiss setup message if paired."""
         success = super().pair(client_username_bytes, client_public, client_permissions)
         if success:
-            async_dismiss_setup_message(self.hass, self.entry_id)
+            async_dismiss_setup_message(self.menuai, self.entry_id)
         return cast(bool, success)
 
     @pyhap_callback  # type: ignore[misc]
@@ -744,7 +744,7 @@ class HomeDriver(AccessoryDriver):  # type: ignore[misc]
             return
 
         async_show_setup_message(
-            self.hass,
+            self.menuai,
             self.entry_id,
             accessory_friendly_name(self._entry_title, self.accessory),
             self.state.pincode,

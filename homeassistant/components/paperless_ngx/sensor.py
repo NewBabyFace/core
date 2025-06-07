@@ -9,17 +9,17 @@ from typing import Generic
 from pypaperless.models import Statistic, Status
 from pypaperless.models.common import StatusType
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory, UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.unit_conversion import InformationConverter
+from menuai.const import EntityCategory, UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.unit_conversion import InformationConverter
 
 from .coordinator import (
     PaperlessConfigEntry,
@@ -231,7 +231,7 @@ SENSOR_STATUS: tuple[PaperlessEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PaperlessConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

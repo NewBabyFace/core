@@ -6,20 +6,20 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from wled import WLEDConnectionError
 
-from homeassistant.components.wled.const import CONF_KEEP_MAIN_LIGHT, DOMAIN
-from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.wled.const import CONF_KEEP_MAIN_LIGHT, DOMAIN
+from menuai.config_entries import SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("mock_setup_entry", "mock_wled")
-async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
+async def test_full_user_flow_implementation(menuai: menuai) -> None:
     """Test the full manual user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -27,7 +27,7 @@ async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
     assert result.get("step_id") == "user"
     assert result.get("type") is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: "192.168.1.123"}
     )
 
@@ -38,9 +38,9 @@ async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry", "mock_wled")
-async def test_full_zeroconf_flow_implementation(hass: HomeAssistant) -> None:
+async def test_full_zeroconf_flow_implementation(menuai: menuai) -> None:
     """Test the full manual user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -54,7 +54,7 @@ async def test_full_zeroconf_flow_implementation(hass: HomeAssistant) -> None:
         ),
     )
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     assert (
@@ -64,7 +64,7 @@ async def test_full_zeroconf_flow_implementation(hass: HomeAssistant) -> None:
     assert result.get("step_id") == "zeroconf_confirm"
     assert result.get("type") is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -79,12 +79,12 @@ async def test_full_zeroconf_flow_implementation(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mock_wled")
 async def test_zeroconf_during_onboarding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_onboarding: MagicMock,
 ) -> None:
     """Test we create a config entry when discovered during onboarding."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -109,10 +109,10 @@ async def test_zeroconf_during_onboarding(
     assert len(mock_onboarding.mock_calls) == 1
 
 
-async def test_connection_error(hass: HomeAssistant, mock_wled: MagicMock) -> None:
+async def test_connection_error(menuai: menuai, mock_wled: MagicMock) -> None:
     """Test we show user form on WLED connection error."""
     mock_wled.update.side_effect = WLEDConnectionError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "example.com"},
@@ -124,12 +124,12 @@ async def test_connection_error(hass: HomeAssistant, mock_wled: MagicMock) -> No
 
 
 async def test_zeroconf_connection_error(
-    hass: HomeAssistant, mock_wled: MagicMock
+    menuai: menuai, mock_wled: MagicMock
 ) -> None:
     """Test we abort zeroconf flow on WLED connection error."""
     mock_wled.update.side_effect = WLEDConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -149,13 +149,13 @@ async def test_zeroconf_connection_error(
 
 @pytest.mark.usefixtures("mock_wled")
 async def test_user_device_exists_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow if WLED device already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "192.168.1.123"},
@@ -167,12 +167,12 @@ async def test_user_device_exists_abort(
 
 @pytest.mark.usefixtures("mock_wled")
 async def test_zeroconf_without_mac_device_exists_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort zeroconf flow if WLED device already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -191,13 +191,13 @@ async def test_zeroconf_without_mac_device_exists_abort(
 
 
 async def test_zeroconf_with_mac_device_exists_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> None:
     """Test we abort zeroconf flow if WLED device already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -216,17 +216,17 @@ async def test_zeroconf_with_mac_device_exists_abort(
 
 
 async def test_options_flow(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test options config flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "init"
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_KEEP_MAIN_LIGHT: True},
     )

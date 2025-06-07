@@ -22,7 +22,7 @@ def adb_device_tcp_fixture() -> Generator[None]:
 def load_adbkey_fixture() -> Generator[None]:
     """Patch load_adbkey."""
     with patch(
-        "homeassistant.components.androidtv.ADBPythonSync.load_adbkey",
+        "menuai.components.androidtv.ADBPythonSync.load_adbkey",
         return_value="signer for testing",
     ):
         yield
@@ -32,7 +32,7 @@ def load_adbkey_fixture() -> Generator[None]:
 def keygen_fixture() -> Generator[None]:
     """Patch keygen."""
     with patch(
-        "homeassistant.components.androidtv.keygen",
+        "menuai.components.androidtv.keygen",
         return_value=Mock(),
     ):
         yield

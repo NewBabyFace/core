@@ -7,12 +7,12 @@ from typing import Any
 from knocki import KnockiClient, KnockiConnectionError, KnockiInvalidAuthError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN, LOGGER
 
@@ -33,7 +33,7 @@ class KnockiConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            client = KnockiClient(session=async_get_clientsession(self.hass))
+            client = KnockiClient(session=async_get_clientsession(self.menuai))
             try:
                 token_response = await client.login(
                     user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
@@ -42,7 +42,7 @@ class KnockiConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 client.token = token_response.token
                 await client.link()
-            except HomeAssistantError:
+            except menuaiError:
                 # Catch the unique_id abort and reraise it to keep the code clean
                 raise
             except KnockiConnectionError:
@@ -69,7 +69,7 @@ class KnockiConfigFlow(ConfigFlow, domain=DOMAIN):
         self, discovery_info: DhcpServiceInfo
     ) -> ConfigFlowResult:
         """Handle a DHCP discovery."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         if device_entry := device_registry.async_get_device(
             identifiers={(DOMAIN, discovery_info.hostname)}
         ):

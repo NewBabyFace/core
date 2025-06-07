@@ -1,4 +1,4 @@
-"""Provide common test tools for hassio."""
+"""Provide common test tools for menuaiio."""
 
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ from aiohasupervisor.models import (
     StoreAddonComplete,
 )
 
-from homeassistant.components.hassio.addon_manager import AddonManager
-from homeassistant.core import HomeAssistant
+from menuai.components.menuaiio.addon_manager import AddonManager
+from menuai.core import menuai
 
 LOGGER = logging.getLogger(__name__)
 INSTALLED_ADDON_FIELDS = [field.name for field in fields(InstalledAddonComplete)]
@@ -36,7 +36,7 @@ MOCK_STORE_ADDONS = [
         available=True,
         build=False,
         description="Test add-on service",
-        homeassistant=None,
+        menuai=None,
         icon=False,
         logo=False,
         repository="core",
@@ -56,7 +56,7 @@ MOCK_REPOSITORIES = [
         name="Official add-ons",
         source="core",
         url="https://home-assistant.io/addons",
-        maintainer="Home Assistant",
+        maintainer="MenuAI",
     )
 ]
 
@@ -70,9 +70,9 @@ def mock_to_dict(obj: Mock, fields: list[str]) -> dict[str, Any]:
     }
 
 
-def mock_addon_manager(hass: HomeAssistant) -> AddonManager:
+def mock_addon_manager(menuai: menuai) -> AddonManager:
     """Return an AddonManager instance."""
-    return AddonManager(hass, LOGGER, "Test", "test_addon")
+    return AddonManager(menuai, LOGGER, "Test", "test_addon")
 
 
 def mock_addon_store_info(
@@ -200,7 +200,7 @@ def mock_set_addon_options_side_effect(addon_options: dict[str, Any]) -> Any | N
 def mock_create_backup() -> Generator[AsyncMock]:
     """Mock create backup."""
     with patch(
-        "homeassistant.components.hassio.addon_manager.async_create_backup"
+        "menuai.components.menuaiio.addon_manager.async_create_backup"
     ) as create_backup:
         yield create_backup
 

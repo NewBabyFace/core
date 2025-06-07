@@ -10,13 +10,13 @@ from bleak import BleakError
 from py_dormakaba_dkey import DKEYLock, device_filter, errors as dkey_errors
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
     async_last_service_info,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
 
 from .const import CONF_ASSOCIATION_DATA, DOMAIN
 
@@ -58,7 +58,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_associate()
 
         current_addresses = self._async_current_ids(include_ignore=False)
-        for discovery in async_discovered_service_info(self.hass):
+        for discovery in async_discovered_service_info(self.menuai):
             if (
                 discovery.address in current_addresses
                 or discovery.address in self._discovered_devices
@@ -130,7 +130,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if (
                 discovery_info := async_last_service_info(
-                    self.hass, self._get_reauth_entry().data[CONF_ADDRESS], True
+                    self.menuai, self._get_reauth_entry().data[CONF_ADDRESS], True
                 )
             ) is None:
                 errors = {"base": "no_longer_in_range"}

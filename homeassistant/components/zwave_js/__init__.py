@@ -27,33 +27,33 @@ from zwave_js_server.model.notification import (
 )
 from zwave_js_server.model.value import Value, ValueNotification
 
-from homeassistant.components.hassio import AddonError, AddonManager, AddonState
-from homeassistant.components.persistent_notification import async_create
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import (
+from menuai.components.menuaiio import AddonError, AddonManager, AddonState
+from menuai.components.persistent_notification import async_create
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import (
     ATTR_DEVICE_ID,
     ATTR_DOMAIN,
     ATTR_ENTITY_ID,
     CONF_URL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EVENT_LOGGING_CHANGED,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady, menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.issue_registry import (
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.typing import UNDEFINED, ConfigType
+from menuai.helpers.typing import UNDEFINED, ConfigType
 
 from .addon import get_addon_manager
 from .api import async_register_api
@@ -168,28 +168,28 @@ PLATFORMS = [
 ]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Z-Wave JS component."""
-    hass.data[DOMAIN] = config.get(DOMAIN, {})
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    menuai.data[DOMAIN] = config.get(DOMAIN, {})
+    for entry in menuai.config_entries.async_entries(DOMAIN):
         if not isinstance(entry.unique_id, str):
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry, unique_id=str(entry.unique_id)
             )
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Z-Wave JS from a config entry."""
     if use_addon := entry.data.get(CONF_USE_ADDON):
-        await async_ensure_addon_running(hass, entry)
+        await async_ensure_addon_running(menuai, entry)
 
     client = ZwaveClient(
         entry.data[CONF_URL],
-        async_get_clientsession(hass),
+        async_get_clientsession(menuai),
         additional_user_agent_components=USER_AGENT,
     )
 
@@ -199,11 +199,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await client.connect()
     except InvalidServerVersion as err:
         if use_addon:
-            addon_manager = _get_addon_manager(hass)
+            addon_manager = _get_addon_manager(menuai)
             addon_manager.async_schedule_update_addon(catch_error=True)
         else:
             async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "invalid_server_version",
                 is_fixable=False,
@@ -214,16 +214,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except (TimeoutError, BaseZwaveJSServerError) as err:
         raise ConfigEntryNotReady(f"Failed to connect: {err}") from err
 
-    async_delete_issue(hass, DOMAIN, "invalid_server_version")
+    async_delete_issue(menuai, DOMAIN, "invalid_server_version")
     LOGGER.debug("Connected to Zwave JS Server")
 
     # Set up websocket API
-    async_register_api(hass)
+    async_register_api(menuai)
 
     driver_ready = asyncio.Event()
     listen_task = entry.async_create_background_task(
-        hass,
-        client_listen(hass, entry, client, driver_ready),
+        menuai,
+        client_listen(menuai, entry, client, driver_ready),
         f"{DOMAIN}_{entry.title}_client_listen",
     )
 
@@ -234,11 +234,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await client.disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, handle_ha_shutdown)
+        menuai.bus.async_listen(EVENT_menuai_STOP, handle_ha_shutdown)
     )
 
     driver_ready_task = entry.async_create_task(
-        hass,
+        menuai,
         driver_ready.wait(),
         f"{DOMAIN}_{entry.title}_driver_ready",
     )
@@ -263,13 +263,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry_runtime_data = entry.runtime_data = {
         DATA_CLIENT: client,
     }
-    entry_runtime_data[DATA_DRIVER_EVENTS] = driver_events = DriverEvents(hass, entry)
+    entry_runtime_data[DATA_DRIVER_EVENTS] = driver_events = DriverEvents(menuai, entry)
 
     driver = client.driver
     # When the driver is ready we know it's set on the client.
     assert driver is not None
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     with contextlib.suppress(NotConnected):
         # If the client isn't connected the listen task may have an exception
@@ -279,7 +279,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if (old_unique_id := entry.unique_id) is not None and old_unique_id != (
         new_unique_id := str(driver.controller.home_id)
     ):
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         controller_model = "Unknown model"
         if (
             (own_node := driver.controller.own_node)
@@ -292,7 +292,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ):
             controller_model = model
         async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"migrate_unique_id.{entry.entry_id}",
             data={
@@ -307,12 +307,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             translation_key="migrate_unique_id",
         )
     else:
-        async_delete_issue(hass, DOMAIN, f"migrate_unique_id.{entry.entry_id}")
+        async_delete_issue(menuai, DOMAIN, f"migrate_unique_id.{entry.entry_id}")
 
     # If the listen task is already failed, we need to raise ConfigEntryNotReady
     if listen_task.done():
         listen_error, error_message = _get_listen_task_error(listen_task)
-        await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+        await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
         raise ConfigEntryNotReady(error_message) from listen_error
 
     # Re-attach trigger listeners.
@@ -323,7 +323,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Signal that server connection and driver are ready."""
         if entry.state is ConfigEntryState.LOADED:
             async_dispatcher_send(
-                hass,
+                menuai,
                 f"{DOMAIN}_{driver.controller.home_id}_connected_to_server",
             )
 
@@ -348,13 +348,13 @@ class DriverEvents:
 
     driver: Driver
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Set up the driver events instance."""
         self.config_entry = entry
-        self.dev_reg = dr.async_get(hass)
-        self.hass = hass
+        self.dev_reg = dr.async_get(menuai)
+        self.menuai = menuai
         # Make sure to not pass self to ControllerEvents until all attributes are set.
-        self.controller_events = ControllerEvents(hass, self)
+        self.controller_events = ControllerEvents(menuai, self)
 
     async def setup(self, driver: Driver) -> None:
         """Set up devices using the ready driver."""
@@ -372,18 +372,18 @@ class DriverEvents:
             """Handle logging changed event."""
             if LIB_LOGGER.isEnabledFor(logging.DEBUG):
                 await async_enable_server_logging_if_needed(
-                    self.hass, self.config_entry, driver
+                    self.menuai, self.config_entry, driver
                 )
             else:
                 await async_disable_server_logging_if_needed(
-                    self.hass, self.config_entry, driver
+                    self.menuai, self.config_entry, driver
                 )
 
         # Set up server logging on setup if needed
         await handle_logging_changed()
 
         self.config_entry.async_on_unload(
-            self.hass.bus.async_listen(EVENT_LOGGING_CHANGED, handle_logging_changed)
+            self.menuai.bus.async_listen(EVENT_LOGGING_CHANGED, handle_logging_changed)
         )
 
         # Check for nodes that no longer exist and remove them
@@ -425,7 +425,7 @@ class DriverEvents:
         self.config_entry.async_on_unload(
             controller.on(
                 "node added",
-                lambda event: self.hass.async_create_task(
+                lambda event: self.menuai.async_create_task(
                     self.controller_events.async_on_node_added(event["node"]),
                     eager_start=False,
                 ),
@@ -451,9 +451,9 @@ class ControllerEvents:
     - node removed
     """
 
-    def __init__(self, hass: HomeAssistant, driver_events: DriverEvents) -> None:
+    def __init__(self, menuai: menuai, driver_events: DriverEvents) -> None:
         """Set up the controller events instance."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = driver_events.config_entry
         self.discovered_value_ids: dict[str, set[str]] = defaultdict(set)
         self.driver_events = driver_events
@@ -461,7 +461,7 @@ class ControllerEvents:
         self.registered_unique_ids: dict[str, dict[Platform, set[str]]] = defaultdict(
             lambda: defaultdict(set)
         )
-        self.node_events = NodeEvents(hass, self)
+        self.node_events = NodeEvents(menuai, self)
 
     @callback
     def remove_device(self, device: dr.DeviceEntry) -> None:
@@ -480,7 +480,7 @@ class ControllerEvents:
             node.on(
                 "interview started",
                 lambda _: async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     f"{DOMAIN}_{base_unique_id}_remove_entity_on_interview_started",
                 ),
             )
@@ -491,27 +491,27 @@ class ControllerEvents:
         if node.is_controller_node:
             # Create a controller status sensor for each device
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.config_entry.entry_id}_add_controller_status_sensor",
             )
         else:
             # Create a node status sensor for each device
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.config_entry.entry_id}_add_node_status_sensor",
                 node,
             )
 
             # Create a ping button for each device
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.config_entry.entry_id}_add_ping_button_entity",
                 node,
             )
 
         # Create statistics sensors for each device
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{DOMAIN}_{self.config_entry.entry_id}_add_statistics_sensors",
             node,
         )
@@ -522,7 +522,7 @@ class ControllerEvents:
         self.config_entry.async_on_unload(
             node.on(
                 "ready",
-                lambda event: self.hass.async_create_task(
+                lambda event: self.menuai.async_create_task(
                     self.node_events.async_on_node_ready(event["node"]),
                     eager_start=False,
                 ),
@@ -553,7 +553,7 @@ class ControllerEvents:
             self.discovered_value_ids.pop(device.id, None)
 
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 (
                     f"{DOMAIN}_"
                     f"{get_valueless_base_unique_id(self.driver_events.driver, node)}_"
@@ -566,7 +566,7 @@ class ControllerEvents:
         if reason == RemoveNodeReason.RESET:
             device_name = device.name_by_user or device.name or f"Node {node.node_id}"
             identifier = get_network_identifier_for_notification(
-                self.hass, self.config_entry, self.driver_events.driver.controller
+                self.menuai, self.config_entry, self.driver_events.driver.controller
             )
             notification_msg = (
                 f"`{device_name}` has been factory reset "
@@ -580,7 +580,7 @@ class ControllerEvents:
             else:
                 notification_msg = f"{notification_msg}."
             async_create(
-                self.hass,
+                self.menuai,
                 notification_msg,
                 "Device Was Factory Reset!",
                 f"{DOMAIN}.node_reset_and_removed.{dev_id[1]}",
@@ -600,10 +600,10 @@ class ControllerEvents:
         # In case the user has multiple networks, we should give them more information
         # about the network for the controller being identified.
         identifier = get_network_identifier_for_notification(
-            self.hass, self.config_entry, self.driver_events.driver.controller
+            self.menuai, self.config_entry, self.driver_events.driver.controller
         )
         async_create(
-            self.hass,
+            self.menuai,
             (
                 f"`{device_name}` has just requested the controller for your Z-Wave "
                 f"network {identifier} to identify itself. No action is needed from "
@@ -709,7 +709,7 @@ class ControllerEvents:
             via_device=via_identifier,
         )
 
-        async_dispatcher_send(self.hass, EVENT_DEVICE_ADDED_TO_REGISTRY, device)
+        async_dispatcher_send(self.menuai, EVENT_DEVICE_ADDED_TO_REGISTRY, device)
 
         return device
 
@@ -727,14 +727,14 @@ class NodeEvents:
     """
 
     def __init__(
-        self, hass: HomeAssistant, controller_events: ControllerEvents
+        self, menuai: menuai, controller_events: ControllerEvents
     ) -> None:
         """Set up the node events instance."""
         self.config_entry = controller_events.config_entry
         self.controller_events = controller_events
         self.dev_reg = controller_events.dev_reg
-        self.ent_reg = er.async_get(hass)
-        self.hass = hass
+        self.ent_reg = er.async_get(menuai)
+        self.menuai = menuai
 
     async def async_on_node_ready(self, node: ZwaveNode) -> None:
         """Handle node ready event."""
@@ -764,7 +764,7 @@ class NodeEvents:
             self.config_entry.async_on_unload(
                 node.on(
                     event,
-                    lambda event: self.hass.async_create_task(
+                    lambda event: self.menuai.async_create_task(
                         self.async_on_value_added(
                             value_updates_disc_info, event["value"]
                         )
@@ -794,7 +794,7 @@ class NodeEvents:
             for cc in node.command_classes
         ):
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.config_entry.entry_id}_add_firmware_update_entity",
                 node,
             )
@@ -805,7 +805,7 @@ class NodeEvents:
         if not node.is_controller_node and await node.async_has_device_config_changed():
             device_name = device.name_by_user or device.name or "Unnamed device"
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"device_config_file_changed.{device.id}",
                 data={"device_id": device.id, "device_name": device_name},
@@ -828,7 +828,7 @@ class NodeEvents:
         # the value_id format. Some time in the future, this call (as well as the
         # helper functions) can be removed.
         async_migrate_discovered_value(
-            self.hass,
+            self.menuai,
             self.ent_reg,
             self.controller_events.registered_unique_ids[device.id][platform],
             device,
@@ -838,7 +838,7 @@ class NodeEvents:
 
         LOGGER.debug("Discovered entity: %s", disc_info)
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{DOMAIN}_{self.config_entry.entry_id}_add_{platform}",
             disc_info,
         )
@@ -892,7 +892,7 @@ class NodeEvents:
 
     @callback
     def async_on_value_notification(self, notification: ValueNotification) -> None:
-        """Relay stateless value notification events from Z-Wave nodes to hass."""
+        """Relay stateless value notification events from Z-Wave nodes to menuai."""
         driver = self.controller_events.driver_events.driver
         device = self.dev_reg.async_get_device(
             identifiers={get_device_id(driver, notification.node)}
@@ -902,7 +902,7 @@ class NodeEvents:
         raw_value = value = notification.value
         if notification.metadata.states:
             value = notification.metadata.states.get(str(value), value)
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             ZWAVE_JS_VALUE_NOTIFICATION_EVENT,
             {
                 ATTR_DOMAIN: DOMAIN,
@@ -924,7 +924,7 @@ class NodeEvents:
 
     @callback
     def async_on_notification(self, event: dict[str, Any]) -> None:
-        """Relay stateless notification events from Z-Wave nodes to hass."""
+        """Relay stateless notification events from Z-Wave nodes to menuai."""
         if "notification" not in event:
             LOGGER.info("Unknown notification: %s", event)
             return
@@ -993,7 +993,7 @@ class NodeEvents:
         else:
             raise TypeError(f"Unhandled notification type: {notification}")
 
-        self.hass.bus.async_fire(ZWAVE_JS_NOTIFICATION_EVENT, event_data)
+        self.menuai.bus.async_fire(ZWAVE_JS_NOTIFICATION_EVENT, event_data)
 
     @callback
     def async_on_value_updated_fire_event(
@@ -1023,7 +1023,7 @@ class NodeEvents:
         if value.metadata.states:
             value_ = value.metadata.states.get(str(value_), value_)
 
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             ZWAVE_JS_VALUE_UPDATED_EVENT,
             {
                 ATTR_NODE_ID: value.node.node_id,
@@ -1044,7 +1044,7 @@ class NodeEvents:
 
 
 async def client_listen(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     client: ZwaveClient,
     driver_ready: asyncio.Event,
@@ -1065,25 +1065,25 @@ async def client_listen(
     # The entry needs to be reloaded since a new driver state
     # will be acquired on reconnect.
     # All model instances will be replaced when the new state is acquired.
-    if not hass.is_stopping:
+    if not menuai.is_stopping:
         if entry.state is not ConfigEntryState.LOADED:
-            raise HomeAssistantError("Listen task ended unexpectedly")
+            raise menuaiError("Listen task ended unexpectedly")
         LOGGER.debug("Disconnected from server. Reloading integration")
-        hass.config_entries.async_schedule_reload(entry.entry_id)
+        menuai.config_entries.async_schedule_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     entry_runtime_data = entry.runtime_data
     client: ZwaveClient = entry_runtime_data[DATA_CLIENT]
 
     if client.connected and (driver := client.driver):
-        await async_disable_server_logging_if_needed(hass, entry, driver)
+        await async_disable_server_logging_if_needed(menuai, entry, driver)
 
     if entry.data.get(CONF_USE_ADDON) and entry.disabled_by:
-        addon_manager: AddonManager = get_addon_manager(hass)
+        addon_manager: AddonManager = get_addon_manager(menuai)
         LOGGER.debug("Stopping Z-Wave JS add-on")
         try:
             await addon_manager.async_stop_addon()
@@ -1094,12 +1094,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Remove a config entry."""
     if not entry.data.get(CONF_INTEGRATION_CREATED_ADDON):
         return
 
-    addon_manager: AddonManager = get_addon_manager(hass)
+    addon_manager: AddonManager = get_addon_manager(menuai)
     try:
         await addon_manager.async_stop_addon()
     except AddonError as err:
@@ -1117,7 +1117,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
     client: ZwaveClient = config_entry.runtime_data[DATA_CLIENT]
@@ -1148,9 +1148,9 @@ async def async_remove_config_entry_device(
     return True
 
 
-async def async_ensure_addon_running(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_ensure_addon_running(menuai: menuai, entry: ConfigEntry) -> None:
     """Ensure that Z-Wave JS add-on is installed and running."""
-    addon_manager = _get_addon_manager(hass)
+    addon_manager = _get_addon_manager(menuai)
     try:
         addon_info = await addon_manager.async_get_addon_info()
     except AddonError as err:
@@ -1232,13 +1232,13 @@ async def async_ensure_addon_running(hass: HomeAssistant, entry: ConfigEntry) ->
             updates[CONF_LR_S2_AUTHENTICATED_KEY] = addon_lr_s2_authenticated_key
 
     if updates:
-        hass.config_entries.async_update_entry(entry, data={**entry.data, **updates})
+        menuai.config_entries.async_update_entry(entry, data={**entry.data, **updates})
 
 
 @callback
-def _get_addon_manager(hass: HomeAssistant) -> AddonManager:
+def _get_addon_manager(menuai: menuai) -> AddonManager:
     """Ensure that Z-Wave JS add-on is updated and running."""
-    addon_manager: AddonManager = get_addon_manager(hass)
+    addon_manager: AddonManager = get_addon_manager(menuai)
     if addon_manager.task_in_progress():
         raise ConfigEntryNotReady
     return addon_manager

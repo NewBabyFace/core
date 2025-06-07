@@ -1,10 +1,10 @@
 """application_credentials platform for Google Mail."""
 
-from homeassistant.components.application_credentials import AuthorizationServer
-from homeassistant.core import HomeAssistant
+from menuai.components.application_credentials import AuthorizationServer
+from menuai.core import menuai
 
 
-async def async_get_authorization_server(hass: HomeAssistant) -> AuthorizationServer:
+async def async_get_authorization_server(menuai: menuai) -> AuthorizationServer:
     """Return authorization server."""
     return AuthorizationServer(
         "https://accounts.google.com/o/oauth2/v2/auth",
@@ -12,7 +12,7 @@ async def async_get_authorization_server(hass: HomeAssistant) -> AuthorizationSe
     )
 
 
-async def async_get_description_placeholders(hass: HomeAssistant) -> dict[str, str]:
+async def async_get_description_placeholders(menuai: menuai) -> dict[str, str]:
     """Return description placeholders for the credentials dialog."""
     return {
         "oauth_consent_url": "https://console.cloud.google.com/apis/credentials/consent",

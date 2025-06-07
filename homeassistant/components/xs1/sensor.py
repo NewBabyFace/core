@@ -6,24 +6,24 @@ from xs1_api_client.api_constants import ActuatorType
 from xs1_api_client.device.actuator import XS1Actuator
 from xs1_api_client.device.sensor import XS1Sensor
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import ACTUATORS, DOMAIN, SENSORS
 from .entity import XS1DeviceEntity
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the XS1 sensor platform."""
-    sensors: list[XS1Sensor] = hass.data[DOMAIN][SENSORS]
-    actuators: list[XS1Actuator] = hass.data[DOMAIN][ACTUATORS]
+    sensors: list[XS1Sensor] = menuai.data[DOMAIN][SENSORS]
+    actuators: list[XS1Actuator] = menuai.data[DOMAIN][ACTUATORS]
 
     sensor_entities = []
     for sensor in sensors:

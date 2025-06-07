@@ -9,17 +9,17 @@ from pymochad import controller, device
 from pymochad.exceptions import MochadException
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_ADDRESS, CONF_DEVICES, CONF_NAME, CONF_PLATFORM
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_ADDRESS, CONF_DEVICES, CONF_NAME, CONF_PLATFORM
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_COMM_TYPE, DOMAIN, REQ_LOCK, MochadCtrl
 
@@ -44,15 +44,15 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up X10 dimmers over a mochad controller."""
-    mochad_controller: MochadCtrl = hass.data[DOMAIN]
+    mochad_controller: MochadCtrl = menuai.data[DOMAIN]
     devs: list[dict[str, Any]] = config[CONF_DEVICES]
-    add_entities([MochadLight(hass, mochad_controller.ctrl, dev) for dev in devs])
+    add_entities([MochadLight(menuai, mochad_controller.ctrl, dev) for dev in devs])
 
 
 class MochadLight(LightEntity):
@@ -63,7 +63,7 @@ class MochadLight(LightEntity):
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
     def __init__(
-        self, hass: HomeAssistant, ctrl: controller.PyMochad, dev: dict[str, Any]
+        self, menuai: menuai, ctrl: controller.PyMochad, dev: dict[str, Any]
     ) -> None:
         """Initialize a Mochad Light Device."""
 

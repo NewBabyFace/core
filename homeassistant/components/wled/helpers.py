@@ -7,7 +7,7 @@ from typing import Any, Concatenate
 
 from wled import WLEDConnectionError, WLEDError
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .entity import WLEDEntity
 
@@ -29,10 +29,10 @@ def wled_exception_handler[_WLEDEntityT: WLEDEntity, **_P](
         except WLEDConnectionError as error:
             self.coordinator.last_update_success = False
             self.coordinator.async_update_listeners()
-            raise HomeAssistantError("Error communicating with WLED API") from error
+            raise menuaiError("Error communicating with WLED API") from error
 
         except WLEDError as error:
-            raise HomeAssistantError("Invalid response from WLED API") from error
+            raise menuaiError("Invalid response from WLED API") from error
 
     return handler
 

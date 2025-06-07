@@ -4,29 +4,29 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import conversation
-from homeassistant.components.conversation import trace
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
+from menuai.components import conversation
+from menuai.components.conversation import trace
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture
-async def init_components(hass: HomeAssistant):
+async def init_components(menuai: menuai):
     """Initialize relevant components with empty configs."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "conversation", {})
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "conversation", {})
+    assert await async_setup_component(menuai, "intent", {})
 
 
 async def test_converation_trace(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: None,
     sl_setup: None,
 ) -> None:
     """Test tracing a conversation."""
     await conversation.async_converse(
-        hass, "add apples to my shopping list", None, Context()
+        menuai, "add apples to my shopping list", None, Context()
     )
 
     traces = trace.async_get_traces()
@@ -53,7 +53,7 @@ async def test_converation_trace(
     trace_event = last_trace["events"][1]
     assert trace_event.get("event_type") == trace.ConversationTraceEventType.TOOL_CALL
     assert trace_event.get("data") == {
-        "intent_name": "HassListAddItem",
+        "intent_name": "menuaiListAddItem",
         "slots": {
             "name": "Shopping List",
             "item": "apples",
@@ -62,20 +62,20 @@ async def test_converation_trace(
 
 
 async def test_converation_trace_uncaught_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: None,
     sl_setup: None,
 ) -> None:
     """Test tracing a conversation that raises an uncaught error."""
     with (
         patch(
-            "homeassistant.components.conversation.default_agent.DefaultAgent.async_process",
+            "menuai.components.conversation.default_agent.DefaultAgent.async_process",
             side_effect=ValueError("Unexpected error"),
         ),
         pytest.raises(ValueError),
     ):
         await conversation.async_converse(
-            hass, "add apples to my shopping list", None, Context()
+            menuai, "add apples to my shopping list", None, Context()
         )
 
     traces = trace.async_get_traces()
@@ -91,20 +91,20 @@ async def test_converation_trace_uncaught_error(
     assert not last_trace.get("result")
 
 
-async def test_converation_trace_homeassistant_error(
-    hass: HomeAssistant,
+async def test_converation_trace_menuai_error(
+    menuai: menuai,
     init_components: None,
     sl_setup: None,
 ) -> None:
-    """Test tracing a conversation with a HomeAssistant error."""
+    """Test tracing a conversation with a menuai error."""
     with (
         patch(
-            "homeassistant.components.conversation.default_agent.DefaultAgent.async_process",
-            side_effect=HomeAssistantError("Failed to talk to agent"),
+            "menuai.components.conversation.default_agent.DefaultAgent.async_process",
+            side_effect=menuaiError("Failed to talk to agent"),
         ),
     ):
         await conversation.async_converse(
-            hass, "add apples to my shopping list", None, Context()
+            menuai, "add apples to my shopping list", None, Context()
         )
 
     traces = trace.async_get_traces()

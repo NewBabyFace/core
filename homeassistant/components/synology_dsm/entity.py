@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .common import SynoApi
 from .const import ATTRIBUTION, DOMAIN
@@ -62,12 +62,12 @@ class SynologyDSMBaseEntity[_CoordinatorT: SynologyDSMUpdateCoordinator[Any]](
             configuration_url=api.config_url,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register entity for updates from API."""
         self.async_on_remove(
             self._api.subscribe(self.entity_description.api_key, self.unique_id)
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
 
 class SynologyDSMDeviceEntity(

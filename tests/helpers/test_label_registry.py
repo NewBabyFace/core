@@ -8,13 +8,13 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.core import menuai
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     label_registry as lr,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, async_capture_events, flush_store
 
@@ -27,10 +27,10 @@ async def test_list_labels(label_registry: lr.LabelRegistry) -> None:
 
 @pytest.mark.usefixtures("freezer")
 async def test_create_label(
-    hass: HomeAssistant, label_registry: lr.LabelRegistry
+    menuai: menuai, label_registry: lr.LabelRegistry
 ) -> None:
     """Make sure that we can create labels."""
-    update_events = async_capture_events(hass, lr.EVENT_LABEL_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, lr.EVENT_LABEL_REGISTRY_UPDATED)
     label = label_registry.async_create(
         name="My Label",
         color="#FF0000",
@@ -50,7 +50,7 @@ async def test_create_label(
 
     assert len(label_registry.labels) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 1
     assert update_events[0].data == {
@@ -60,10 +60,10 @@ async def test_create_label(
 
 
 async def test_create_label_with_name_already_in_use(
-    hass: HomeAssistant, label_registry: lr.LabelRegistry
+    menuai: menuai, label_registry: lr.LabelRegistry
 ) -> None:
     """Make sure that we can't create a label with a ID already in use."""
-    update_events = async_capture_events(hass, lr.EVENT_LABEL_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, lr.EVENT_LABEL_REGISTRY_UPDATED)
     label_registry.async_create("mock")
 
     with pytest.raises(
@@ -71,7 +71,7 @@ async def test_create_label_with_name_already_in_use(
     ):
         label_registry.async_create("mock")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(label_registry.labels) == 1
     assert len(update_events) == 1
@@ -92,10 +92,10 @@ async def test_create_label_with_id_already_in_use(
 
 
 async def test_delete_label(
-    hass: HomeAssistant, label_registry: lr.LabelRegistry
+    menuai: menuai, label_registry: lr.LabelRegistry
 ) -> None:
     """Make sure that we can delete a label."""
-    update_events = async_capture_events(hass, lr.EVENT_LABEL_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, lr.EVENT_LABEL_REGISTRY_UPDATED)
     label = label_registry.async_create("Label")
     assert len(label_registry.labels) == 1
 
@@ -103,7 +103,7 @@ async def test_delete_label(
 
     assert not label_registry.labels
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -127,14 +127,14 @@ async def test_delete_non_existing_label(label_registry: lr.LabelRegistry) -> No
 
 
 async def test_update_label(
-    hass: HomeAssistant,
+    menuai: menuai,
     label_registry: lr.LabelRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Make sure that we can update labels."""
     created_at = datetime.fromisoformat("2024-01-01T01:00:00+00:00")
     freezer.move_to(created_at)
-    update_events = async_capture_events(hass, lr.EVENT_LABEL_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, lr.EVENT_LABEL_REGISTRY_UPDATED)
     label = label_registry.async_create("Mock")
 
     assert len(label_registry.labels) == 1
@@ -170,7 +170,7 @@ async def test_update_label(
     )
     assert len(label_registry.labels) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -184,10 +184,10 @@ async def test_update_label(
 
 
 async def test_update_label_with_same_data(
-    hass: HomeAssistant, label_registry: lr.LabelRegistry
+    menuai: menuai, label_registry: lr.LabelRegistry
 ) -> None:
     """Make sure that we can reapply the same data to the label and it won't update."""
-    update_events = async_capture_events(hass, lr.EVENT_LABEL_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, lr.EVENT_LABEL_REGISTRY_UPDATED)
     label = label_registry.async_create(
         "mock",
         color="#FFFFFF",
@@ -204,7 +204,7 @@ async def test_update_label_with_same_data(
     )
     assert label == udpated_label
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No update event
     assert len(update_events) == 1
@@ -263,7 +263,7 @@ async def test_update_label_with_normalized_name_already_in_use(
 
 
 async def test_load_labels(
-    hass: HomeAssistant,
+    menuai: menuai,
     label_registry: lr.LabelRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -287,7 +287,7 @@ async def test_load_labels(
 
     assert len(label_registry.labels) == 2
 
-    registry2 = lr.LabelRegistry(hass)
+    registry2 = lr.LabelRegistry(menuai)
     await flush_store(label_registry._store)
     await registry2.async_load()
 
@@ -303,10 +303,10 @@ async def test_load_labels(
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_loading_label_from_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test loading stored labels on start."""
-    hass_storage[lr.STORAGE_KEY] = {
+    menuai_storage[lr.STORAGE_KEY] = {
         "version": lr.STORAGE_VERSION_MAJOR,
         "data": {
             "labels": [
@@ -323,8 +323,8 @@ async def test_loading_label_from_storage(
         },
     }
 
-    await lr.async_load(hass)
-    registry = lr.async_get(hass)
+    await lr.async_load(menuai)
+    registry = lr.async_get(menuai)
 
     assert len(registry.labels) == 1
 
@@ -355,13 +355,13 @@ async def test_async_get_label_by_name_not_found(
 
 
 async def test_labels_removed_from_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     label_registry: lr.LabelRegistry,
 ) -> None:
     """Test if label gets removed from devices when the label is removed."""
     config_entry = MockConfigEntry()
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     label1 = label_registry.async_create("label1")
     label2 = label_registry.async_create("label2")
@@ -400,7 +400,7 @@ async def test_labels_removed_from_devices(
     assert len(entries) == 2
 
     label_registry.async_delete(label1.label_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entries = dr.async_entries_for_label(device_registry, label1.label_id)
     assert len(entries) == 0
@@ -408,7 +408,7 @@ async def test_labels_removed_from_devices(
     assert len(entries) == 2
 
     label_registry.async_delete(label2.label_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entries = dr.async_entries_for_label(device_registry, label1.label_id)
     assert len(entries) == 0
@@ -417,7 +417,7 @@ async def test_labels_removed_from_devices(
 
 
 async def test_labels_removed_from_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     label_registry: lr.LabelRegistry,
 ) -> None:
@@ -453,7 +453,7 @@ async def test_labels_removed_from_entities(
     assert len(entries) == 2
 
     label_registry.async_delete(label1.label_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entries = er.async_entries_for_label(entity_registry, label1.label_id)
     assert len(entries) == 0
@@ -461,7 +461,7 @@ async def test_labels_removed_from_entities(
     assert len(entries) == 2
 
     label_registry.async_delete(label2.label_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entries = er.async_entries_for_label(entity_registry, label1.label_id)
     assert len(entries) == 0
@@ -470,7 +470,7 @@ async def test_labels_removed_from_entities(
 
 
 async def test_async_create_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     label_registry: lr.LabelRegistry,
 ) -> None:
     """Test async_create raises when called from wrong thread."""
@@ -478,11 +478,11 @@ async def test_async_create_thread_safety(
         RuntimeError,
         match="Detected code that calls label_registry.async_create from a thread.",
     ):
-        await hass.async_add_executor_job(label_registry.async_create, "any")
+        await menuai.async_add_executor_job(label_registry.async_create, "any")
 
 
 async def test_async_delete_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     label_registry: lr.LabelRegistry,
 ) -> None:
     """Test async_delete raises when called from wrong thread."""
@@ -492,11 +492,11 @@ async def test_async_delete_thread_safety(
         RuntimeError,
         match="Detected code that calls label_registry.async_delete from a thread.",
     ):
-        await hass.async_add_executor_job(label_registry.async_delete, any_label)
+        await menuai.async_add_executor_job(label_registry.async_delete, any_label)
 
 
 async def test_async_update_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     label_registry: lr.LabelRegistry,
 ) -> None:
     """Test async_update raises when called from wrong thread."""
@@ -506,17 +506,17 @@ async def test_async_update_thread_safety(
         RuntimeError,
         match="Detected code that calls label_registry.async_update from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(label_registry.async_update, any_label.label_id, name="new name")
         )
 
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_migration_from_1_1(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test migration from version 1.1."""
-    hass_storage[lr.STORAGE_KEY] = {
+    menuai_storage[lr.STORAGE_KEY] = {
         "version": 1,
         "data": {
             "labels": [
@@ -531,8 +531,8 @@ async def test_migration_from_1_1(
         },
     }
 
-    await lr.async_load(hass)
-    registry = lr.async_get(hass)
+    await lr.async_load(menuai)
+    registry = lr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_label_by_name("mock")
@@ -540,7 +540,7 @@ async def test_migration_from_1_1(
 
     # Check we store migrated data
     await flush_store(registry._store)
-    assert hass_storage[lr.STORAGE_KEY] == {
+    assert menuai_storage[lr.STORAGE_KEY] == {
         "version": lr.STORAGE_VERSION_MAJOR,
         "minor_version": lr.STORAGE_VERSION_MINOR,
         "key": lr.STORAGE_KEY,

@@ -5,11 +5,11 @@ from unittest.mock import patch
 import pytest
 from youtubeaio.types import ForbiddenError
 
-from homeassistant import config_entries
-from homeassistant.components.youtube.const import CONF_CHANNELS, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai import config_entries
+from menuai.components.youtube.const import CONF_CHANNELS, DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from . import MockYouTube
 from .conftest import (
@@ -28,15 +28,15 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "youtube", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -50,29 +50,29 @@ async def test_full_flow(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     with (
         patch(
-            "homeassistant.components.youtube.async_setup_entry", return_value=True
+            "menuai.components.youtube.async_setup_entry", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.youtube.config_flow.YouTube",
-            return_value=MockYouTube(hass),
+            "menuai.components.youtube.config_flow.YouTube",
+            return_value=MockYouTube(menuai),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "channels"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_CHANNELS: ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]}
         )
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -87,15 +87,15 @@ async def test_full_flow(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_flow_abort_without_channel(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check abort flow if user has no channel."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "youtube", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -109,34 +109,34 @@ async def test_flow_abort_without_channel(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
-    service = MockYouTube(hass, channel_fixture="get_no_channel.json")
+    service = MockYouTube(menuai, channel_fixture="get_no_channel.json")
     with (
-        patch("homeassistant.components.youtube.async_setup_entry", return_value=True),
+        patch("menuai.components.youtube.async_setup_entry", return_value=True),
         patch(
-            "homeassistant.components.youtube.config_flow.YouTube", return_value=service
+            "menuai.components.youtube.config_flow.YouTube", return_value=service
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "no_channel"
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_flow_abort_without_subscriptions(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check abort flow if user has no subscriptions and no own channel."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "youtube", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -150,38 +150,38 @@ async def test_flow_abort_without_subscriptions(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     service = MockYouTube(
-        hass,
+        menuai,
         channel_fixture="get_no_channel.json",
         subscriptions_fixture="get_no_subscriptions.json",
     )
     with (
-        patch("homeassistant.components.youtube.async_setup_entry", return_value=True),
+        patch("menuai.components.youtube.async_setup_entry", return_value=True),
         patch(
-            "homeassistant.components.youtube.config_flow.YouTube", return_value=service
+            "menuai.components.youtube.config_flow.YouTube", return_value=service
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "no_channel"
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_flow_without_subscriptions(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check flow continues even without subscriptions since user has their own channel."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "youtube", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -195,19 +195,19 @@ async def test_flow_without_subscriptions(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
-    service = MockYouTube(hass, subscriptions_fixture="get_no_subscriptions.json")
+    service = MockYouTube(menuai, subscriptions_fixture="get_no_subscriptions.json")
     with (
-        patch("homeassistant.components.youtube.async_setup_entry", return_value=True),
+        patch("menuai.components.youtube.async_setup_entry", return_value=True),
         patch(
-            "homeassistant.components.youtube.config_flow.YouTube", return_value=service
+            "menuai.components.youtube.config_flow.YouTube", return_value=service
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "channels"
 
@@ -219,7 +219,7 @@ async def test_flow_without_subscriptions(
         assert "(Your Channel)" in channels[0]["label"]
 
         # Test selecting the own channel
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_CHANNELS: ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]},
         )
@@ -236,15 +236,15 @@ async def test_flow_without_subscriptions(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_flow_http_error(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "youtube", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -258,18 +258,18 @@ async def test_flow_http_error(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     with patch(
-        "homeassistant.components.youtube.config_flow.YouTube.get_user_channels",
+        "menuai.components.youtube.config_flow.YouTube.get_user_channels",
         side_effect=ForbiddenError(
             "YouTube Data API v3 has not been used in project 0 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/youtube.googleapis.com/overview?project=0 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "access_not_configured"
         assert result["description_placeholders"]["message"] == (
@@ -298,8 +298,8 @@ async def test_flow_http_error(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
     fixture: str,
@@ -313,19 +313,19 @@ async def test_reauth(
     Make sure we abort if the user selects the
     wrong account on the consent screen.
     """
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -337,7 +337,7 @@ async def test_reauth(
         f"&state={state}&scope={'+'.join(SCOPES)}"
         "&access_type=offline&prompt=consent"
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -353,19 +353,19 @@ async def test_reauth(
         },
     )
 
-    youtube = MockYouTube(hass, channel_fixture=f"{fixture}.json")
+    youtube = MockYouTube(menuai, channel_fixture=f"{fixture}.json")
     with (
         patch(
-            "homeassistant.components.youtube.async_setup_entry", return_value=True
+            "menuai.components.youtube.async_setup_entry", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.youtube.config_flow.YouTube",
+            "menuai.components.youtube.config_flow.YouTube",
             return_value=youtube,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == abort_reason
@@ -381,15 +381,15 @@ async def test_reauth(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_flow_exception(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "youtube", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -403,40 +403,40 @@ async def test_flow_exception(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     with patch(
-        "homeassistant.components.youtube.config_flow.YouTube", side_effect=Exception
+        "menuai.components.youtube.config_flow.YouTube", side_effect=Exception
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "unknown"
 
 
 async def test_options_flow(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test the full options flow."""
     await setup_integration()
     with patch(
-        "homeassistant.components.youtube.config_flow.YouTube",
-        return_value=MockYouTube(hass),
+        "menuai.components.youtube.config_flow.YouTube",
+        return_value=MockYouTube(menuai),
     ):
-        entry = hass.config_entries.async_entries(DOMAIN)[0]
-        result = await hass.config_entries.options.async_init(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = menuai.config_entries.async_entries(DOMAIN)[0]
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={CONF_CHANNELS: ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"] == {CONF_CHANNELS: ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]}
@@ -444,15 +444,15 @@ async def test_options_flow(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_own_channel_included(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test that the user's own channel is included in the list of selectable channels."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "youtube", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -466,21 +466,21 @@ async def test_own_channel_included(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     with (
         patch(
-            "homeassistant.components.youtube.async_setup_entry", return_value=True
+            "menuai.components.youtube.async_setup_entry", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.youtube.config_flow.YouTube",
-            return_value=MockYouTube(hass),
+            "menuai.components.youtube.config_flow.YouTube",
+            return_value=MockYouTube(menuai),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "channels"
 
@@ -494,14 +494,14 @@ async def test_own_channel_included(
         )
 
         # Test selecting both own channel and a subscribed channel
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_CHANNELS: ["UC_x5XG1OV2P6uZZ5FSM9Ttw", "UC_x5XG1OV2P6uZZ5FSM9Ttw"]
             },
         )
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -517,17 +517,17 @@ async def test_own_channel_included(
 
 
 async def test_options_flow_own_channel(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test the options flow includes the user's own channel."""
     await setup_integration()
     with patch(
-        "homeassistant.components.youtube.config_flow.YouTube",
-        return_value=MockYouTube(hass),
+        "menuai.components.youtube.config_flow.YouTube",
+        return_value=MockYouTube(menuai),
     ):
-        entry = hass.config_entries.async_entries(DOMAIN)[0]
-        result = await hass.config_entries.options.async_init(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = menuai.config_entries.async_entries(DOMAIN)[0]
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
@@ -541,11 +541,11 @@ async def test_options_flow_own_channel(
             for channel in channels
         )
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={CONF_CHANNELS: ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"] == {CONF_CHANNELS: ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]}

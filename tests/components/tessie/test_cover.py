@@ -5,16 +5,16 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     DOMAIN as COVER_DOMAIN,
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
     CoverState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from .common import (
     ERROR_UNKNOWN,
@@ -26,15 +26,15 @@ from .common import (
 
 
 async def test_covers(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Tests that the window cover entity is correct."""
 
-    entry = await setup_platform(hass, [Platform.COVER])
+    entry = await setup_platform(menuai, [Platform.COVER])
 
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
     for entity_id, openfunc, closefunc in (
         ("cover.test_vent_windows", "vent_windows", "close_windows"),
@@ -46,49 +46,49 @@ async def test_covers(
         # Test open windows
         if openfunc:
             with patch(
-                f"homeassistant.components.tessie.cover.{openfunc}",
+                f"menuai.components.tessie.cover.{openfunc}",
                 return_value=TEST_RESPONSE,
             ) as mock_open:
-                await hass.services.async_call(
+                await menuai.services.async_call(
                     COVER_DOMAIN,
                     SERVICE_OPEN_COVER,
                     {ATTR_ENTITY_ID: [entity_id]},
                     blocking=True,
                 )
                 mock_open.assert_called_once()
-            assert hass.states.get(entity_id).state == CoverState.OPEN
+            assert menuai.states.get(entity_id).state == CoverState.OPEN
 
         # Test close windows
         if closefunc:
             with patch(
-                f"homeassistant.components.tessie.cover.{closefunc}",
+                f"menuai.components.tessie.cover.{closefunc}",
                 return_value=TEST_RESPONSE,
             ) as mock_close:
-                await hass.services.async_call(
+                await menuai.services.async_call(
                     COVER_DOMAIN,
                     SERVICE_CLOSE_COVER,
                     {ATTR_ENTITY_ID: [entity_id]},
                     blocking=True,
                 )
                 mock_close.assert_called_once()
-            assert hass.states.get(entity_id).state == CoverState.CLOSED
+            assert menuai.states.get(entity_id).state == CoverState.CLOSED
 
 
-async def test_errors(hass: HomeAssistant) -> None:
+async def test_errors(menuai: menuai) -> None:
     """Tests errors are handled."""
 
-    await setup_platform(hass, [Platform.COVER])
+    await setup_platform(menuai, [Platform.COVER])
     entity_id = "cover.test_charge_port_door"
 
     # Test setting cover open with unknown error
     with (
         patch(
-            "homeassistant.components.tessie.cover.open_unlock_charge_port",
+            "menuai.components.tessie.cover.open_unlock_charge_port",
             side_effect=ERROR_UNKNOWN,
         ) as mock_set,
-        pytest.raises(HomeAssistantError) as error,
+        pytest.raises(menuaiError) as error,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
@@ -100,12 +100,12 @@ async def test_errors(hass: HomeAssistant) -> None:
     # Test setting cover open with unknown error
     with (
         patch(
-            "homeassistant.components.tessie.cover.open_unlock_charge_port",
+            "menuai.components.tessie.cover.open_unlock_charge_port",
             return_value=TEST_RESPONSE_ERROR,
         ) as mock_set,
-        pytest.raises(HomeAssistantError) as error,
+        pytest.raises(menuaiError) as error,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},

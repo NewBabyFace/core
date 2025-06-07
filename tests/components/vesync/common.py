@@ -5,8 +5,8 @@ from typing import Any
 
 import requests_mock
 
-from homeassistant.components.vesync.const import DOMAIN
-from homeassistant.util.json import JsonObjectType
+from menuai.components.vesync.const import DOMAIN
+from menuai.util.json import JsonObjectType
 
 from tests.common import load_fixture, load_json_object_fixture
 

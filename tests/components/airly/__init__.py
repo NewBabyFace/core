@@ -1,7 +1,7 @@
 """Tests for Airly."""
 
-from homeassistant.components.airly.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.airly.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -17,9 +17,9 @@ HEADERS = {
 
 
 async def init_integration(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> MockConfigEntry:
-    """Set up the Airly integration in Home Assistant."""
+    """Set up the Airly integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Home",
@@ -35,11 +35,11 @@ async def init_integration(
 
     aioclient_mock.get(
         API_POINT_URL,
-        text=await async_load_fixture(hass, "valid_station.json", DOMAIN),
+        text=await async_load_fixture(menuai, "valid_station.json", DOMAIN),
         headers=HEADERS,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry

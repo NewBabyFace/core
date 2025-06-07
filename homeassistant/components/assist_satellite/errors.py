@@ -1,9 +1,9 @@
 """Errors for assist satellite."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class AssistSatelliteError(HomeAssistantError):
+class AssistSatelliteError(menuaiError):
     """Base class for assist satellite errors."""
 
 

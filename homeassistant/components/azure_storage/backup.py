@@ -11,14 +11,14 @@ from typing import Any, Concatenate
 from azure.core.exceptions import AzureError, HttpResponseError, ServiceRequestError
 from azure.storage.blob import BlobProperties
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AgentBackup,
     BackupAgent,
     BackupAgentError,
     BackupNotFound,
     suggested_filename,
 )
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from . import AzureStorageConfigEntry
 from .const import DATA_BACKUP_AGENT_LISTENERS, DOMAIN
@@ -28,31 +28,31 @@ METADATA_VERSION = "1"
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[BackupAgent]:
     """Return a list of backup agents."""
-    entries: list[AzureStorageConfigEntry] = hass.config_entries.async_loaded_entries(
+    entries: list[AzureStorageConfigEntry] = menuai.config_entries.async_loaded_entries(
         DOMAIN
     )
-    return [AzureStorageBackupAgent(hass, entry) for entry in entries]
+    return [AzureStorageBackupAgent(menuai, entry) for entry in entries]
 
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
 ) -> Callable[[], None]:
     """Register a listener to be called when agents are added or removed."""
-    hass.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
+    menuai.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
 
     @callback
     def remove_listener() -> None:
         """Remove the listener."""
-        hass.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
-        if not hass.data[DATA_BACKUP_AGENT_LISTENERS]:
-            hass.data.pop(DATA_BACKUP_AGENT_LISTENERS)
+        menuai.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
+        if not menuai.data[DATA_BACKUP_AGENT_LISTENERS]:
+            menuai.data.pop(DATA_BACKUP_AGENT_LISTENERS)
 
     return remove_listener
 
@@ -103,7 +103,7 @@ class AzureStorageBackupAgent(BackupAgent):
 
     domain = DOMAIN
 
-    def __init__(self, hass: HomeAssistant, entry: AzureStorageConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: AzureStorageConfigEntry) -> None:
         """Initialize the Azure storage backup agent."""
         super().__init__()
         self._client = entry.runtime_data

@@ -2,17 +2,17 @@
 
 from unittest.mock import patch
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def init_integration(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> MockConfigEntry:
-    """Set up the Tractive integration in Home Assistant."""
-    entry.add_to_hass(hass)
+    """Set up the Tractive integration in MenuAI."""
+    entry.add_to_menuai(menuai)
 
-    with patch("homeassistant.components.tractive.TractiveClient._listen"):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.tractive.TractiveClient._listen"):
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()

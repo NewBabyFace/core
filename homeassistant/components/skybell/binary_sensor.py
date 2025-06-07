@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from aioskybell.helpers import const as CONST
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 from .coordinator import SkybellDataUpdateCoordinator
@@ -31,7 +31,7 @@ BINARY_SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -39,7 +39,7 @@ async def async_setup_entry(
     async_add_entities(
         SkybellBinarySensor(coordinator, sensor)
         for sensor in BINARY_SENSOR_TYPES
-        for coordinator in hass.data[DOMAIN][entry.entry_id]
+        for coordinator in menuai.data[DOMAIN][entry.entry_id]
     )
 
 

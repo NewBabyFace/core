@@ -5,13 +5,13 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import MealieConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: MealieConfigEntry
+    menuai: menuai, config_entry: MealieConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = config_entry.runtime_data

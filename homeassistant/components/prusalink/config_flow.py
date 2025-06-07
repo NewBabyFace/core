@@ -12,11 +12,11 @@ from pyprusalink import PrusaLink
 from pyprusalink.types import InvalidAuth, VersionInfo
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import DOMAIN
 
@@ -54,13 +54,13 @@ def ensure_printer_is_supported(version: VersionInfo) -> None:
     raise NotSupported
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, str]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, str]) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
     api = PrusaLink(
-        get_async_client(hass),
+        get_async_client(menuai),
         data[CONF_HOST],
         data[CONF_USERNAME],
         data[CONF_PASSWORD],
@@ -106,7 +106,7 @@ class PrusaLinkConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, data)
+            info = await validate_input(self.menuai, data)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except NotSupported:
@@ -124,9 +124,9 @@ class PrusaLinkConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class NotSupported(HomeAssistantError):
+class NotSupported(menuaiError):
     """Error to indicate we cannot connect."""

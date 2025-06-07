@@ -5,14 +5,14 @@ from typing import Any
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant import setup
-from homeassistant.components import number, template
-from homeassistant.components.input_number import (
+from menuai import setup
+from menuai.components import number, template
+from menuai.components.input_number import (
     ATTR_VALUE as INPUT_NUMBER_ATTR_VALUE,
     DOMAIN as INPUT_NUMBER_DOMAIN,
     SERVICE_SET_VALUE as INPUT_NUMBER_SERVICE_SET_VALUE,
 )
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_MAX,
     ATTR_MIN,
     ATTR_STEP,
@@ -20,17 +20,17 @@ from homeassistant.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE as NUMBER_SERVICE_SET_VALUE,
 )
-from homeassistant.components.template import DOMAIN
-from homeassistant.const import (
+from menuai.components.template import DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_ICON,
     CONF_ENTITY_ID,
     CONF_UNIT_OF_MEASUREMENT,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Context, HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import Context, menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import ConfigurationStyle
 
@@ -60,26 +60,26 @@ _VALUE_INPUT_NUMBER_CONFIG = {
 
 
 async def async_setup_modern_format(
-    hass: HomeAssistant, count: int, number_config: dict[str, Any]
+    menuai: menuai, count: int, number_config: dict[str, Any]
 ) -> None:
     """Do setup of number integration via new format."""
     config = {"template": {"number": number_config}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def setup_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     number_config: dict[str, Any],
@@ -87,12 +87,12 @@ async def setup_number(
     """Do setup of number integration."""
     if style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass, count, {"name": _TEST_OBJECT_ID, **number_config}
+            menuai, count, {"name": _TEST_OBJECT_ID, **number_config}
         )
 
 
 async def test_setup_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the config flow."""
@@ -115,21 +115,21 @@ async def test_setup_config_entry(
         },
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("number.my_template")
+    state = menuai.states.get("number.my_template")
     assert state is not None
     assert state == snapshot
 
 
-async def test_missing_optional_config(hass: HomeAssistant) -> None:
+async def test_missing_optional_config(menuai: menuai) -> None:
     """Test: missing optional template is ok."""
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -142,18 +142,18 @@ async def test_missing_optional_config(hass: HomeAssistant) -> None:
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    _verify(hass, 4, 1, 0.0, 100.0, None)
+    _verify(menuai, 4, 1, 0.0, 100.0, None)
 
 
-async def test_missing_required_keys(hass: HomeAssistant) -> None:
+async def test_missing_required_keys(menuai: menuai) -> None:
     """Test: missing required fields will fail."""
     with assert_setup_component(0, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -166,7 +166,7 @@ async def test_missing_required_keys(hass: HomeAssistant) -> None:
 
     with assert_setup_component(0, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -177,18 +177,18 @@ async def test_missing_required_keys(hass: HomeAssistant) -> None:
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert hass.states.async_all("number") == []
+    assert menuai.states.async_all("number") == []
 
 
-async def test_all_optional_config(hass: HomeAssistant) -> None:
+async def test_all_optional_config(menuai: menuai) -> None:
     """Test: including all optional templates is ok."""
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -204,20 +204,20 @@ async def test_all_optional_config(hass: HomeAssistant) -> None:
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    _verify(hass, 4, 1, 3, 5, "beer")
+    _verify(menuai, 4, 1, 3, 5, "beer")
 
 
 async def test_templates_with_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, calls: list[ServiceCall]
+    menuai: menuai, entity_registry: er.EntityRegistry, calls: list[ServiceCall]
 ) -> None:
     """Test templates with values from other entities."""
     with assert_setup_component(4, "input_number"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "input_number",
             {
                 "input_number": {
@@ -249,7 +249,7 @@ async def test_templates_with_entities(
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -283,64 +283,64 @@ async def test_templates_with_entities(
             },
         )
 
-    hass.states.async_set(_VALUE_INPUT_NUMBER, 4)
-    hass.states.async_set(_STEP_INPUT_NUMBER, 1)
-    hass.states.async_set(_MINIMUM_INPUT_NUMBER, 3)
-    hass.states.async_set(_MAXIMUM_INPUT_NUMBER, 5)
+    menuai.states.async_set(_VALUE_INPUT_NUMBER, 4)
+    menuai.states.async_set(_STEP_INPUT_NUMBER, 1)
+    menuai.states.async_set(_MINIMUM_INPUT_NUMBER, 3)
+    menuai.states.async_set(_MAXIMUM_INPUT_NUMBER, 5)
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     entry = entity_registry.async_get(_TEST_NUMBER)
     assert entry
     assert entry.unique_id == "b-a"
 
-    _verify(hass, 4, 1, 3, 5, None)
+    _verify(menuai, 4, 1, 3, 5, None)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         INPUT_NUMBER_DOMAIN,
         INPUT_NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _VALUE_INPUT_NUMBER, INPUT_NUMBER_ATTR_VALUE: 5},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    _verify(hass, 5, 1, 3, 5, None)
+    await menuai.async_block_till_done()
+    _verify(menuai, 5, 1, 3, 5, None)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         INPUT_NUMBER_DOMAIN,
         INPUT_NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _STEP_INPUT_NUMBER, INPUT_NUMBER_ATTR_VALUE: 2},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    _verify(hass, 5, 2, 3, 5, None)
+    await menuai.async_block_till_done()
+    _verify(menuai, 5, 2, 3, 5, None)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         INPUT_NUMBER_DOMAIN,
         INPUT_NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _MINIMUM_INPUT_NUMBER, INPUT_NUMBER_ATTR_VALUE: 2},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    _verify(hass, 5, 2, 2, 5, None)
+    await menuai.async_block_till_done()
+    _verify(menuai, 5, 2, 2, 5, None)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         INPUT_NUMBER_DOMAIN,
         INPUT_NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _MAXIMUM_INPUT_NUMBER, INPUT_NUMBER_ATTR_VALUE: 6},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    _verify(hass, 5, 2, 2, 6, None)
+    await menuai.async_block_till_done()
+    _verify(menuai, 5, 2, 2, 6, None)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _TEST_NUMBER, NUMBER_ATTR_VALUE: 2},
         blocking=True,
     )
-    _verify(hass, 2, 2, 2, 6, None)
+    _verify(menuai, 2, 2, 2, 6, None)
 
     # Check this variable can be used in set_value script
     assert len(calls) == 1
@@ -349,11 +349,11 @@ async def test_templates_with_entities(
     assert calls[-1].data["value"] == 2
 
 
-async def test_trigger_number(hass: HomeAssistant) -> None:
+async def test_trigger_number(menuai: menuai) -> None:
     """Test trigger based template number."""
-    events = async_capture_events(hass, "test_number_event")
+    events = async_capture_events(menuai, "test_number_event")
     assert await setup.async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -383,11 +383,11 @@ async def test_trigger_number(hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("number.hello_name")
+    state = menuai.states.get("number.hello_name")
     assert state is not None
     assert state.state == STATE_UNKNOWN
     assert state.attributes["min"] == 0.0
@@ -396,7 +396,7 @@ async def test_trigger_number(hass: HomeAssistant) -> None:
     assert state.attributes["unit_of_measurement"] == "beer"
 
     context = Context()
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         "test_event",
         {
             "beers_drank": 3,
@@ -406,16 +406,16 @@ async def test_trigger_number(hass: HomeAssistant) -> None:
         },
         context=context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("number.hello_name")
+    state = menuai.states.get("number.hello_name")
     assert state is not None
     assert state.state == "3.0"
     assert state.attributes["min"] == 1.0
     assert state.attributes["max"] == 5.0
     assert state.attributes["step"] == 0.5
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: "number.hello_name", NUMBER_ATTR_VALUE: 2},
@@ -429,7 +429,7 @@ async def test_trigger_number(hass: HomeAssistant) -> None:
 
 
 def _verify(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_value: int,
     expected_step: int,
     expected_minimum: int,
@@ -437,7 +437,7 @@ def _verify(
     expected_unit_of_measurement: str | None,
 ) -> None:
     """Verify number's state."""
-    state = hass.states.get(_TEST_NUMBER)
+    state = menuai.states.get(_TEST_NUMBER)
     attributes = state.attributes
     assert state.state == str(float(expected_value))
     assert attributes.get(ATTR_STEP) == float(expected_step)
@@ -446,18 +446,18 @@ def _verify(
     assert attributes.get(CONF_UNIT_OF_MEASUREMENT) == expected_unit_of_measurement
 
 
-async def test_icon_template(hass: HomeAssistant) -> None:
+async def test_icon_template(menuai: menuai) -> None:
     """Test template numbers with icon templates."""
     with assert_setup_component(1, "input_number"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "input_number",
             {"input_number": _VALUE_INPUT_NUMBER_CONFIG},
         )
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -480,41 +480,41 @@ async def test_icon_template(hass: HomeAssistant) -> None:
             },
         )
 
-    hass.states.async_set(_VALUE_INPUT_NUMBER, 49)
+    menuai.states.async_set(_VALUE_INPUT_NUMBER, 49)
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(_TEST_NUMBER)
+    state = menuai.states.get(_TEST_NUMBER)
     assert float(state.state) == 49
     assert state.attributes[ATTR_ICON] == "mdi:less"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         INPUT_NUMBER_DOMAIN,
         INPUT_NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _VALUE_INPUT_NUMBER, INPUT_NUMBER_ATTR_VALUE: 51},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(_TEST_NUMBER)
+    state = menuai.states.get(_TEST_NUMBER)
     assert float(state.state) == 51
     assert state.attributes[ATTR_ICON] == "mdi:greater"
 
 
-async def test_icon_template_with_trigger(hass: HomeAssistant) -> None:
+async def test_icon_template_with_trigger(menuai: menuai) -> None:
     """Test template numbers with icon templates."""
     with assert_setup_component(1, "input_number"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "input_number",
             {"input_number": _VALUE_INPUT_NUMBER_CONFIG},
         )
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -538,44 +538,44 @@ async def test_icon_template_with_trigger(hass: HomeAssistant) -> None:
             },
         )
 
-    hass.states.async_set(_VALUE_INPUT_NUMBER, 49)
+    menuai.states.async_set(_VALUE_INPUT_NUMBER, 49)
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(_TEST_NUMBER)
+    state = menuai.states.get(_TEST_NUMBER)
     assert float(state.state) == 49
     assert state.attributes[ATTR_ICON] == "mdi:less"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         INPUT_NUMBER_DOMAIN,
         INPUT_NUMBER_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _VALUE_INPUT_NUMBER, INPUT_NUMBER_ATTR_VALUE: 51},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(_TEST_NUMBER)
+    state = menuai.states.get(_TEST_NUMBER)
     assert float(state.state) == 51
     assert state.attributes[ATTR_ICON] == "mdi:greater"
 
 
 async def test_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for device for number template."""
 
     device_config_entry = MockConfigEntry()
-    device_config_entry.add_to_hass(hass)
+    device_config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=device_config_entry.entry_id,
         identifiers={("test", "identifier_test")},
         connections={("mac", "30:31:32:33:34:35")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert device_entry is not None
     assert device_entry.id is not None
 
@@ -598,10 +598,10 @@ async def test_device_id(
         },
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     template_entity = entity_registry.async_get("number.my_template")
     assert template_entity is not None
@@ -628,14 +628,14 @@ async def test_device_id(
         ConfigurationStyle.MODERN,
     ],
 )
-async def test_empty_action_config(hass: HomeAssistant, setup_number) -> None:
+async def test_empty_action_config(menuai: menuai, setup_number) -> None:
     """Test configuration with empty script."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         number.DOMAIN,
         number.SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: _TEST_NUMBER, "value": 4},
         blocking=True,
     )
 
-    state = hass.states.get(_TEST_NUMBER)
+    state = menuai.states.get(_TEST_NUMBER)
     assert float(state.state) == 4

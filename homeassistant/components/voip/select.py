@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.components.assist_pipeline.select import (
+from menuai.components.assist_pipeline.select import (
     AssistPipelineSelect,
     VadSensitivitySelect,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .devices import VoIPDevice
@@ -21,26 +21,26 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up VoIP switch entities."""
-    domain_data: DomainData = hass.data[DOMAIN]
+    domain_data: DomainData = menuai.data[DOMAIN]
 
     @callback
     def async_add_device(device: VoIPDevice) -> None:
         """Add device."""
         async_add_entities(
-            [VoipPipelineSelect(hass, device), VoipVadSensitivitySelect(hass, device)]
+            [VoipPipelineSelect(menuai, device), VoipVadSensitivitySelect(menuai, device)]
         )
 
     domain_data.devices.async_add_new_device_listener(async_add_device)
 
     entities: list[VoIPEntity] = []
     for device in domain_data.devices:
-        entities.append(VoipPipelineSelect(hass, device))
-        entities.append(VoipVadSensitivitySelect(hass, device))
+        entities.append(VoipPipelineSelect(menuai, device))
+        entities.append(VoipVadSensitivitySelect(menuai, device))
 
     async_add_entities(entities)
 
@@ -48,16 +48,16 @@ async def async_setup_entry(
 class VoipPipelineSelect(VoIPEntity, AssistPipelineSelect):
     """Pipeline selector for VoIP devices."""
 
-    def __init__(self, hass: HomeAssistant, device: VoIPDevice) -> None:
+    def __init__(self, menuai: menuai, device: VoIPDevice) -> None:
         """Initialize a pipeline selector."""
         VoIPEntity.__init__(self, device)
-        AssistPipelineSelect.__init__(self, hass, DOMAIN, device.voip_id)
+        AssistPipelineSelect.__init__(self, menuai, DOMAIN, device.voip_id)
 
 
 class VoipVadSensitivitySelect(VoIPEntity, VadSensitivitySelect):
     """VAD sensitivity selector for VoIP devices."""
 
-    def __init__(self, hass: HomeAssistant, device: VoIPDevice) -> None:
+    def __init__(self, menuai: menuai, device: VoIPDevice) -> None:
         """Initialize a VAD sensitivity selector."""
         VoIPEntity.__init__(self, device)
-        VadSensitivitySelect.__init__(self, hass, device.voip_id)
+        VadSensitivitySelect.__init__(self, menuai, device.voip_id)

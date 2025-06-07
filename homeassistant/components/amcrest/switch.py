@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import CONF_NAME, CONF_SWITCHES
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import CONF_NAME, CONF_SWITCHES
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DATA_AMCREST, DEVICES
 
@@ -29,7 +29,7 @@ SWITCH_KEYS: list[str] = [desc.key for desc in SWITCH_TYPES]
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -39,7 +39,7 @@ async def async_setup_platform(
         return
 
     name = discovery_info[CONF_NAME]
-    device = hass.data[DATA_AMCREST][DEVICES][name]
+    device = menuai.data[DATA_AMCREST][DEVICES][name]
     switches = discovery_info[CONF_SWITCHES]
     async_add_entities(
         [

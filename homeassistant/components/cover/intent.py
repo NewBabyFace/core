@@ -1,16 +1,16 @@
 """Intents for the cover integration."""
 
-from homeassistant.const import SERVICE_CLOSE_COVER, SERVICE_OPEN_COVER
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
+from menuai.const import SERVICE_CLOSE_COVER, SERVICE_OPEN_COVER
+from menuai.core import menuai
+from menuai.helpers import intent
 
 from . import DOMAIN, INTENT_CLOSE_COVER, INTENT_OPEN_COVER, CoverDeviceClass
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the cover intents."""
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_OPEN_COVER,
             DOMAIN,
@@ -22,7 +22,7 @@ async def async_setup_intents(hass: HomeAssistant) -> None:
         ),
     )
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_CLOSE_COVER,
             DOMAIN,

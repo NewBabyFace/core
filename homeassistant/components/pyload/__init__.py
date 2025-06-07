@@ -8,7 +8,7 @@ from aiohttp import CookieJar
 from pyloadapi import PyLoadAPI
 from yarl import URL
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -18,8 +18,8 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_create_clientsession
 
 from .coordinator import PyLoadConfigEntry, PyLoadCoordinator
 
@@ -28,11 +28,11 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.SENSOR, Platform.SWITCH]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PyLoadConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: PyLoadConfigEntry) -> bool:
     """Set up pyLoad from a config entry."""
 
     session = async_create_clientsession(
-        hass,
+        menuai,
         verify_ssl=entry.data[CONF_VERIFY_SSL],
         cookie_jar=CookieJar(unsafe=True),
     )
@@ -43,22 +43,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: PyLoadConfigEntry) -> bo
         password=entry.data[CONF_PASSWORD],
     )
 
-    coordinator = PyLoadCoordinator(hass, entry, pyloadapi)
+    coordinator = PyLoadCoordinator(menuai, entry, pyloadapi)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: PyLoadConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: PyLoadConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: PyLoadConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: PyLoadConfigEntry) -> bool:
     """Migrate config entry."""
     _LOGGER.debug(
         "Migrating configuration from version %s.%s", entry.version, entry.minor_version
@@ -70,7 +70,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: PyLoadConfigEntry) -> 
             host=entry.data[CONF_HOST],
             port=entry.data[CONF_PORT],
         ).human_repr()
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_URL: url}, minor_version=1, version=1
         )
 

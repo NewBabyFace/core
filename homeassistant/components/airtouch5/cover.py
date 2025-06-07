@@ -12,15 +12,15 @@ from airtouch5py.packets.zone_control import (
 from airtouch5py.packets.zone_name import ZoneName
 from airtouch5py.packets.zone_status import ZoneStatusZone
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import Airtouch5ConfigEntry
 from .const import DOMAIN
@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: Airtouch5ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -88,15 +88,15 @@ class Airtouch5ZoneOpenPercentage(CoverEntity, Airtouch5Entity):
             self._attr_is_closed = False
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add data updated listener after this object has been initialized."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._client.zone_status_callbacks.append(self._async_update_attrs)
         self._async_update_attrs(self._client.latest_zone_status)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove data updated listener after this object has been initialized."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._client.zone_status_callbacks.remove(self._async_update_attrs)
 
     async def async_open_cover(self, **kwargs: Any) -> None:

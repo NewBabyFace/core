@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from . import config_flow
 
 
 def register_oauth2_implementations(
-    hass: HomeAssistant, client_id: str, client_secret: str
+    menuai: menuai, client_id: str, client_secret: str
 ) -> None:
     """Register Toon OAuth2 implementations."""
     config_flow.ToonFlowHandler.async_register_implementation(
-        hass,
+        menuai,
         ToonLocalOAuth2Implementation(
-            hass,
+            menuai,
             client_id=client_id,
             client_secret=client_secret,
             name="Eneco Toon",
@@ -27,9 +27,9 @@ def register_oauth2_implementations(
         ),
     )
     config_flow.ToonFlowHandler.async_register_implementation(
-        hass,
+        menuai,
         ToonLocalOAuth2Implementation(
-            hass,
+            menuai,
             client_id=client_id,
             client_secret=client_secret,
             name="Engie Electrabel Boxx",
@@ -38,9 +38,9 @@ def register_oauth2_implementations(
         ),
     )
     config_flow.ToonFlowHandler.async_register_implementation(
-        hass,
+        menuai,
         ToonLocalOAuth2Implementation(
-            hass,
+            menuai,
             client_id=client_id,
             client_secret=client_secret,
             name="Viesgo",
@@ -54,7 +54,7 @@ class ToonLocalOAuth2Implementation(config_entry_oauth2_flow.LocalOAuth2Implemen
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         client_id: str,
         client_secret: str,
         name: str,
@@ -67,7 +67,7 @@ class ToonLocalOAuth2Implementation(config_entry_oauth2_flow.LocalOAuth2Implemen
         self.issuer = issuer
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             domain=tenant_id,
             client_id=client_id,
             client_secret=client_secret,
@@ -118,7 +118,7 @@ class ToonLocalOAuth2Implementation(config_entry_oauth2_flow.LocalOAuth2Implemen
 
     async def _token_request(self, data: dict) -> dict:
         """Make a token request."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         headers = {}
 
         data["client_id"] = self.client_id

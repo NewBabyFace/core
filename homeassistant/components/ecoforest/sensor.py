@@ -8,20 +8,20 @@ import logging
 
 from pyecoforest.models.device import Alarm, Device, State
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     UnitOfPressure,
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .coordinator import EcoforestConfigEntry
 from .entity import EcoforestEntity
@@ -141,7 +141,7 @@ SENSOR_TYPES: tuple[EcoforestSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EcoforestConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

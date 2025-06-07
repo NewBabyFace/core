@@ -21,15 +21,15 @@ from zwave_js_server.model.node import Node as ZwaveNode
 from zwave_js_server.model.node.statistics import NodeStatistics
 from zwave_js_server.util.command_class.meter import get_meter_type
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     LIGHT_LUX,
     PERCENTAGE,
@@ -44,12 +44,12 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import UNDEFINED, StateType
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import UNDEFINED, StateType
 
 from .binary_sensor import is_valid_notification_binary_sensor
 from .const import (
@@ -550,7 +550,7 @@ def get_entity_description(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -617,7 +617,7 @@ async def async_setup_entry(
     def async_add_statistics_sensors(node: ZwaveNode) -> None:
         """Add statistics sensors."""
         async_migrate_statistics_sensors(
-            hass,
+            menuai,
             driver,
             node,
             CONTROLLER_STATISTICS_KEY_MAP
@@ -642,7 +642,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_{SENSOR_DOMAIN}",
             async_add_sensor,
         )
@@ -650,7 +650,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_controller_status_sensor",
             async_add_controller_status_sensor,
         )
@@ -658,7 +658,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_node_status_sensor",
             async_add_node_status_sensor,
         )
@@ -666,7 +666,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_statistics_sensors",
             async_add_statistics_sensors,
         )
@@ -786,7 +786,7 @@ class ZWaveMeterSensor(ZWaveNumericSensor):
                 CommandClass.METER, "reset", *args, wait_for_result=False
             )
         except BaseZwaveJSServerError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to reset meters on node {node} endpoint {endpoint}: {err}"
             ) from err
         LOGGER.debug(
@@ -905,14 +905,14 @@ class ZWaveNodeStatusSensor(SensorEntity):
         self._attr_native_value = self.node.status.name.lower()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
         # Add value_changed callbacks.
         for evt in ("wake up", "sleep", "dead", "alive"):
             self.async_on_remove(self.node.on(evt, self._status_changed))
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.unique_id}_poll_value",
                 self.async_poll_value,
             )
@@ -922,7 +922,7 @@ class ZWaveNodeStatusSensor(SensorEntity):
         # be removed if the node is removed from the network.
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._base_unique_id}_remove_entity",
                 self.async_remove,
             )
@@ -968,13 +968,13 @@ class ZWaveControllerStatusSensor(SensorEntity):
         self._attr_native_value = self.controller.status.name.lower()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
         # Add value_changed callbacks.
         self.async_on_remove(self.controller.on("status changed", self._status_changed))
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.unique_id}_poll_value",
                 self.async_poll_value,
             )
@@ -983,7 +983,7 @@ class ZWaveControllerStatusSensor(SensorEntity):
         # a regular node
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._base_unique_id}_remove_entity",
                 self.async_remove,
             )
@@ -1041,18 +1041,18 @@ class ZWaveStatisticsSensor(SensorEntity):
         )
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.unique_id}_poll_value",
                 self.async_poll_value,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._base_unique_id}_remove_entity",
                 self.async_remove,
             )

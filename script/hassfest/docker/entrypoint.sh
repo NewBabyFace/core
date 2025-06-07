@@ -26,5 +26,5 @@ if [ "$core_path_provided" = false ]; then
     fi
 fi
 
-cd /usr/src/homeassistant || exit 1
-exec python3 -m script.hassfest --action validate $integrations "$@"
+cd /usr/src/menuai || exit 1
+exec python3 -m script.menuaifest --action validate $integrations "$@"

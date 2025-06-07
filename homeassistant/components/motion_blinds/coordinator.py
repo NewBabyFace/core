@@ -7,9 +7,9 @@ from typing import Any
 
 from motionblinds import DEVICE_TYPES_WIFI, ParseException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     ATTR_AVAILABLE,
@@ -30,14 +30,14 @@ class DataUpdateCoordinatorMotionBlinds(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         logger: logging.Logger,
         coordinator_info: dict[str, Any],
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=config_entry.title,
@@ -78,14 +78,14 @@ class DataUpdateCoordinatorMotionBlinds(DataUpdateCoordinator):
         data = {}
 
         async with self.api_lock:
-            data[KEY_GATEWAY] = await self.hass.async_add_executor_job(
+            data[KEY_GATEWAY] = await self.menuai.async_add_executor_job(
                 self.update_gateway
             )
 
         for blind in self._gateway.device_list.values():
             await asyncio.sleep(1.5)
             async with self.api_lock:
-                data[blind.mac] = await self.hass.async_add_executor_job(
+                data[blind.mac] = await self.menuai.async_add_executor_job(
                     self.update_blind, blind
                 )
 

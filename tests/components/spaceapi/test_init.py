@@ -1,4 +1,4 @@
-"""The tests for the Home Assistant SpaceAPI component."""
+"""The tests for the MenuAI SpaceAPI component."""
 
 from http import HTTPStatus
 from unittest.mock import patch
@@ -6,15 +6,15 @@ from unittest.mock import patch
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components.spaceapi import (
+from menuai.components.spaceapi import (
     ATTR_SENSOR_LOCATION,
     DOMAIN,
     SPACEAPI_VERSION,
     URL_API_SPACEAPI,
 )
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, PERCENTAGE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_UNIT_OF_MEASUREMENT, PERCENTAGE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -95,18 +95,18 @@ SENSOR_OUTPUT = {
 
 @pytest.fixture
 async def mock_client(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> TestClient:
-    """Start the Home Assistant HTTP component."""
-    with patch("homeassistant.components.spaceapi", return_value=True):
-        await async_setup_component(hass, "spaceapi", CONFIG)
+    """Start the MenuAI HTTP component."""
+    with patch("menuai.components.spaceapi", return_value=True):
+        await async_setup_component(menuai, "spaceapi", CONFIG)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.temp1",
         25,
         attributes={ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.temp2",
         23,
         attributes={
@@ -114,25 +114,25 @@ async def mock_client(
             ATTR_SENSOR_LOCATION: "outside",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.temp3",
         "foo",
         attributes={ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.temp3",
         "foo",
         attributes={ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.hum1", 88, attributes={ATTR_UNIT_OF_MEASUREMENT: PERCENTAGE}
     )
 
-    return await hass_client()
+    return await menuai_client()
 
 
-async def test_spaceapi_get(hass: HomeAssistant, mock_client) -> None:
-    """Test response after start-up Home Assistant."""
+async def test_spaceapi_get(menuai: menuai, mock_client) -> None:
+    """Test response after start-up MenuAI."""
     resp = await mock_client.get(URL_API_SPACEAPI)
     assert resp.status == HTTPStatus.OK
 
@@ -175,9 +175,9 @@ async def test_spaceapi_get(hass: HomeAssistant, mock_client) -> None:
     assert data["radio_show"][0]["end"] == "2019-09-02T12:00Z"
 
 
-async def test_spaceapi_state_get(hass: HomeAssistant, mock_client) -> None:
+async def test_spaceapi_state_get(menuai: menuai, mock_client) -> None:
     """Test response if the state entity was set."""
-    hass.states.async_set("test.test_door", True)
+    menuai.states.async_set("test.test_door", True)
 
     resp = await mock_client.get(URL_API_SPACEAPI)
     assert resp.status == HTTPStatus.OK
@@ -186,7 +186,7 @@ async def test_spaceapi_state_get(hass: HomeAssistant, mock_client) -> None:
     assert data["state"]["open"] == bool(1)
 
 
-async def test_spaceapi_sensors_get(hass: HomeAssistant, mock_client) -> None:
+async def test_spaceapi_sensors_get(menuai: menuai, mock_client) -> None:
     """Test the response for the sensors."""
     resp = await mock_client.get(URL_API_SPACEAPI)
     assert resp.status == HTTPStatus.OK

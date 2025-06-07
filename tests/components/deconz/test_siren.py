@@ -4,15 +4,15 @@ from collections.abc import Callable
 
 import pytest
 
-from homeassistant.components.siren import ATTR_DURATION, DOMAIN as SIREN_DOMAIN
-from homeassistant.const import (
+from menuai.components.siren import ATTR_DURATION, DOMAIN as SIREN_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .conftest import WebsocketDataType
 
@@ -32,16 +32,16 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_sirens(
-    hass: HomeAssistant,
+    menuai: menuai,
     light_ws_data: WebsocketDataType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
 ) -> None:
     """Test that siren entities are created."""
-    assert len(hass.states.async_all()) == 1
-    assert hass.states.get("siren.warning_device").state == STATE_ON
+    assert len(menuai.states.async_all()) == 1
+    assert menuai.states.get("siren.warning_device").state == STATE_ON
 
     await light_ws_data({"state": {"alert": None}})
-    assert hass.states.get("siren.warning_device").state == STATE_OFF
+    assert menuai.states.get("siren.warning_device").state == STATE_OFF
 
     # Verify service calls
 
@@ -49,7 +49,7 @@ async def test_sirens(
 
     # Service turn on siren
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SIREN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "siren.warning_device"},
@@ -59,7 +59,7 @@ async def test_sirens(
 
     # Service turn off siren
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SIREN_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "siren.warning_device"},
@@ -69,7 +69,7 @@ async def test_sirens(
 
     # Service turn on siren with duration
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SIREN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "siren.warning_device", ATTR_DURATION: 10},

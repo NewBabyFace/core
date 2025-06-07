@@ -2,12 +2,12 @@
 
 from typing import Any
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     AuthImplementation,
     AuthorizationServer,
     ClientCredential,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import AUTHORIZE_URL, SCOPES, TOKEN_URL
 
@@ -16,12 +16,12 @@ class TeslaUserImplementation(AuthImplementation):
     """Tesla Fleet API user Oauth2 implementation."""
 
     def __init__(
-        self, hass: HomeAssistant, auth_domain: str, credential: ClientCredential
+        self, menuai: menuai, auth_domain: str, credential: ClientCredential
     ) -> None:
         """Initialize user Oauth2 implementation."""
 
         super().__init__(
-            hass,
+            menuai,
             auth_domain,
             credential,
             AuthorizationServer(AUTHORIZE_URL, TOKEN_URL),

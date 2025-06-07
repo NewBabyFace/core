@@ -6,11 +6,11 @@ from typing import Any
 
 from subarulink.const import LATITUDE, LONGITUDE, TIMESTAMP
 
-from homeassistant.components.device_tracker.config_entry import TrackerEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.components.device_tracker.config_entry import TrackerEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -27,12 +27,12 @@ from .const import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Subaru device tracker by config_entry."""
-    entry: dict = hass.data[DOMAIN][config_entry.entry_id]
+    entry: dict = menuai.data[DOMAIN][config_entry.entry_id]
     coordinator: DataUpdateCoordinator = entry[ENTRY_COORDINATOR]
     vehicle_info: dict = entry[ENTRY_VEHICLES]
     async_add_entities(

@@ -8,11 +8,11 @@ from typing import cast
 
 from geocachingapi.models import GeocachingStatus
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import GeocachingConfigEntry, GeocachingDataUpdateCoordinator
@@ -63,7 +63,7 @@ SENSORS: tuple[GeocachingSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GeocachingConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

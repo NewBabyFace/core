@@ -4,14 +4,14 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from .common import ENTITY_HUMIDIFIER_MIST_LEVEL
 
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_set_mist_level_bad_range(
-    hass: HomeAssistant, humidifier_config_entry: MockConfigEntry
+    menuai: menuai, humidifier_config_entry: MockConfigEntry
 ) -> None:
     """Test set_mist_level invalid value."""
     with (
@@ -29,18 +29,18 @@ async def test_set_mist_level_bad_range(
             return_value=True,
         ) as method_mock,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: ENTITY_HUMIDIFIER_MIST_LEVEL, ATTR_VALUE: "10"},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     method_mock.assert_not_called()
 
 
 async def test_set_mist_level(
-    hass: HomeAssistant, humidifier_config_entry: MockConfigEntry
+    menuai: menuai, humidifier_config_entry: MockConfigEntry
 ) -> None:
     """Test set_mist_level usage."""
 
@@ -48,19 +48,19 @@ async def test_set_mist_level(
         "pyvesync.vesyncfan.VeSyncHumid200300S.set_mist_level",
         return_value=True,
     ) as method_mock:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: ENTITY_HUMIDIFIER_MIST_LEVEL, ATTR_VALUE: "3"},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     method_mock.assert_called_once()
 
 
 async def test_mist_level(
-    hass: HomeAssistant, humidifier_config_entry: MockConfigEntry
+    menuai: menuai, humidifier_config_entry: MockConfigEntry
 ) -> None:
     """Test the state of mist_level number entity."""
 
-    assert hass.states.get(ENTITY_HUMIDIFIER_MIST_LEVEL).state == "6"
+    assert menuai.states.get(ENTITY_HUMIDIFIER_MIST_LEVEL).state == "6"

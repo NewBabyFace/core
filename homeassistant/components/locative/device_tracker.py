@@ -1,16 +1,16 @@
 """Support for the Locative platform."""
 
-from homeassistant.components.device_tracker import TrackerEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import TrackerEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN, TRACKER_UPDATE
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -19,15 +19,15 @@ async def async_setup_entry(
     @callback
     def _receive_data(device, location, location_name):
         """Receive set location."""
-        if device in hass.data[DOMAIN]["devices"]:
+        if device in menuai.data[DOMAIN]["devices"]:
             return
 
-        hass.data[DOMAIN]["devices"].add(device)
+        menuai.data[DOMAIN]["devices"].add(device)
 
         async_add_entities([LocativeEntity(device, location, location_name)])
 
-    hass.data[DOMAIN]["unsub_device_tracker"][entry.entry_id] = (
-        async_dispatcher_connect(hass, TRACKER_UPDATE, _receive_data)
+    menuai.data[DOMAIN]["unsub_device_tracker"][entry.entry_id] = (
+        async_dispatcher_connect(menuai, TRACKER_UPDATE, _receive_data)
     )
 
 
@@ -47,13 +47,13 @@ class LocativeEntity(TrackerEntity):
         """Return the name of the device."""
         return self._name
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
         self._unsub_dispatcher = async_dispatcher_connect(
-            self.hass, TRACKER_UPDATE, self._async_receive_data
+            self.menuai, TRACKER_UPDATE, self._async_receive_data
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Clean up after entity before removal."""
         self._unsub_dispatcher()
 

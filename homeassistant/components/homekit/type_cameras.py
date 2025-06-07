@@ -14,22 +14,22 @@ from pyhap.camera import (
 from pyhap.const import CATEGORY_CAMERA
 from pyhap.util import callback as pyhap_callback
 
-from homeassistant.components import camera
-from homeassistant.components.ffmpeg import get_ffmpeg_manager
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import (
+from menuai.components import camera
+from menuai.components.ffmpeg import get_ffmpeg_manager
+from menuai.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HassJobType,
-    HomeAssistant,
+    menuaiJobType,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
-from homeassistant.util.async_ import create_eager_task
+from menuai.util.async_ import create_eager_task
 
 from .accessories import TYPES, HomeDriver
 from .const import (
@@ -140,13 +140,13 @@ CONFIG_DEFAULTS = {
 
 @TYPES.register("Camera")
 # False-positive on pylint, not a CameraEntity
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
     """Generate a Camera accessory."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         driver: HomeDriver,
         name: str,
         entity_id: str,
@@ -154,7 +154,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         config: dict[str, Any],
     ) -> None:
         """Initialize a Camera accessory object."""
-        self._ffmpeg = get_ffmpeg_manager(hass)
+        self._ffmpeg = get_ffmpeg_manager(menuai)
         for config_key, conf in CONFIG_DEFAULTS.items():
             if config_key not in config:
                 config[config_key] = conf
@@ -205,7 +205,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         }
 
         super().__init__(
-            hass,
+            menuai,
             driver,
             name,
             entity_id,
@@ -222,7 +222,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         self.motion_is_event = False
         if linked_motion_sensor := self.linked_motion_sensor:
             self.motion_is_event = linked_motion_sensor.startswith("event.")
-            if state := self.hass.states.get(linked_motion_sensor):
+            if state := self.menuai.states.get(linked_motion_sensor):
                 serv_motion = self.add_preload_service(SERV_MOTION_SENSOR)
                 self._char_motion_detected = serv_motion.configure_char(
                     CHAR_MOTION_DETECTED, value=False
@@ -234,16 +234,16 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
     def run(self) -> None:
         """Handle accessory driver started event.
 
-        Run inside the Home Assistant event loop.
+        Run inside the MenuAI event loop.
         """
         if self._char_motion_detected:
             assert self.linked_motion_sensor
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     self.linked_motion_sensor,
                     self._async_update_motion_state_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
@@ -306,7 +306,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             return stream_source
         try:
             stream_source = await camera.async_get_stream_source(
-                self.hass, self.entity_id
+                self.menuai, self.entity_id
             )
         except Exception:
             _LOGGER.exception(
@@ -391,7 +391,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             self._async_log_stderr_stream(stderr_reader)
         )
         session_info[FFMPEG_WATCHER] = async_track_time_interval(
-            self.hass,
+            self.menuai,
             watch_session,
             FFMPEG_WATCH_INTERVAL,
         )
@@ -433,7 +433,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
     def async_stop(self) -> None:
         """Stop any streams when the accessory is stopped."""
         for session_info in self.sessions.values():
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 self.stop_stream(session_info), "homekit.camera-stop-stream"
             )
         super().async_stop()
@@ -471,7 +471,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
     async def async_get_snapshot(self, image_size: dict[str, int]) -> bytes:
         """Return a jpeg of a snapshot from the camera."""
         image = await camera.async_get_image(
-            self.hass,
+            self.menuai,
             self.entity_id,
             width=image_size["image-width"],
             height=image_size["image-height"],

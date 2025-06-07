@@ -5,18 +5,18 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from homeassistant.components import logbook
-from homeassistant.components.logbook import processor
-from homeassistant.components.logbook.models import EventAsRow, LogbookConfig
-from homeassistant.components.recorder.models import (
+from menuai.components import logbook
+from menuai.components.logbook import processor
+from menuai.components.logbook.models import EventAsRow, LogbookConfig
+from menuai.components.recorder.models import (
     process_timestamp_to_utc_isoformat,
     ulid_to_bytes_or_none,
     uuid_hex_to_bytes_or_none,
 )
-from homeassistant.core import Context
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.util import dt as dt_util
+from menuai.core import Context
+from menuai.helpers import entity_registry as er
+from menuai.helpers.json import JSONEncoder
+from menuai.util import dt as dt_util
 
 IDX_TO_NAME = dict(enumerate(EventAsRow._fields))
 
@@ -65,13 +65,13 @@ class MockRow:
         return process_timestamp_to_utc_isoformat(self.time_fired)
 
 
-def mock_humanify(hass_, rows):
+def mock_humanify(menuai_, rows):
     """Wrap humanify with mocked logbook objects."""
-    entity_name_cache = processor.EntityNameCache(hass_)
-    ent_reg = er.async_get(hass_)
+    entity_name_cache = processor.EntityNameCache(menuai_)
+    ent_reg = er.async_get(menuai_)
     event_cache = processor.EventCache({})
     context_lookup = {}
-    logbook_config = hass_.data.get(logbook.DOMAIN, LogbookConfig({}, None, None))
+    logbook_config = menuai_.data.get(logbook.DOMAIN, LogbookConfig({}, None, None))
     external_events = logbook_config.external_events
     logbook_run = processor.LogbookRun(
         context_lookup,
@@ -84,7 +84,7 @@ def mock_humanify(hass_, rows):
     context_augmenter = processor.ContextAugmenter(logbook_run)
     return list(
         processor._humanify(
-            hass_,
+            menuai_,
             rows,
             ent_reg,
             logbook_run,

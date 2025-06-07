@@ -8,7 +8,7 @@ from typing import Any
 from thinqconnect import DeviceType
 from thinqconnect.integration import ExtendedProperty
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -19,10 +19,10 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.temperature import display_temp
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.temperature import display_temp
 
 from . import ThinqConfigEntry
 from .coordinator import DeviceDataUpdateCoordinator
@@ -68,7 +68,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ThinqConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -305,9 +305,9 @@ class ThinQClimateEntity(ThinQEntity, ClimateEntity):
         """Round the value by step."""
         if (
             target_temp := display_temp(
-                self.coordinator.hass,
+                self.coordinator.menuai,
                 temperature,
-                self.coordinator.hass.config.units.temperature_unit,
+                self.coordinator.menuai.config.units.temperature_unit,
                 self.target_temperature_step or 1,
             )
         ) is not None:

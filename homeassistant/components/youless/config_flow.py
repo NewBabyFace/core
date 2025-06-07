@@ -9,8 +9,8 @@ from urllib.error import HTTPError, URLError
 import voluptuous as vol
 from youless_api import YoulessAPI
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE, CONF_HOST
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE, CONF_HOST
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class YoulessConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 api = YoulessAPI(user_input[CONF_HOST])
-                await self.hass.async_add_executor_job(api.initialize)
+                await self.menuai.async_add_executor_job(api.initialize)
             except (HTTPError, URLError):
                 _LOGGER.exception("Cannot connect to host")
                 errors["base"] = "cannot_connect"

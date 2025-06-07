@@ -7,12 +7,12 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any, Self, cast
 
-from homeassistant.const import ATTR_RESTORED, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, State, callback, valid_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import json_loads
+from menuai.const import ATTR_RESTORED, EVENT_menuai_STOP
+from menuai.core import menuai, State, callback, valid_entity_id
+from menuai.exceptions import menuaiError
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import json_loads
 
 from . import start
 from .entity import Entity
@@ -21,7 +21,7 @@ from .json import JSONEncoder
 from .singleton import singleton
 from .storage import Store
 
-DATA_RESTORE_STATE: HassKey[RestoreStateData] = HassKey("restore_state")
+DATA_RESTORE_STATE: menuaiKey[RestoreStateData] = menuaiKey("restore_state")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class ExtraStoredData(ABC):
     def as_dict(self) -> dict[str, Any]:
         """Return a dict representation of the extra data.
 
-        Must be serializable by Home Assistant's JSONEncoder.
+        Must be serializable by MenuAI's JSONEncoder.
         """
 
 
@@ -95,31 +95,31 @@ class StoredState:
         )
 
 
-async def async_load(hass: HomeAssistant) -> None:
+async def async_load(menuai: menuai) -> None:
     """Load the restore state task."""
-    await async_get(hass).async_setup()
+    await async_get(menuai).async_setup()
 
 
 @callback
 @singleton(DATA_RESTORE_STATE)
-def async_get(hass: HomeAssistant) -> RestoreStateData:
+def async_get(menuai: menuai) -> RestoreStateData:
     """Get the restore state data helper."""
-    return RestoreStateData(hass)
+    return RestoreStateData(menuai)
 
 
 class RestoreStateData:
     """Helper class for managing the helper saved data."""
 
     @classmethod
-    async def async_save_persistent_states(cls, hass: HomeAssistant) -> None:
+    async def async_save_persistent_states(cls, menuai: menuai) -> None:
         """Dump states now."""
-        await async_get(hass).async_dump_states()
+        await async_get(menuai).async_dump_states()
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the restore state data class."""
-        self.hass: HomeAssistant = hass
+        self.menuai: menuai = menuai
         self.store = Store[list[dict[str, Any]]](
-            hass, STORAGE_VERSION, STORAGE_KEY, encoder=JSONEncoder
+            menuai, STORAGE_VERSION, STORAGE_KEY, encoder=JSONEncoder
         )
         self.last_states: dict[str, StoredState] = {}
         self.entities: dict[str, RestoreEntity] = {}
@@ -129,17 +129,17 @@ class RestoreStateData:
         await self.async_load()
 
         @callback
-        def hass_start(hass: HomeAssistant) -> None:
+        def menuai_start(menuai: menuai) -> None:
             """Start the restore state task."""
             self.async_setup_dump()
 
-        start.async_at_start(self.hass, hass_start)
+        start.async_at_start(self.menuai, menuai_start)
 
     async def async_load(self) -> None:
         """Load the instance of this data helper."""
         try:
             stored_states = await self.store.async_load()
-        except HomeAssistantError as exc:
+        except menuaiError as exc:
             _LOGGER.error("Error loading last states", exc_info=exc)
             stored_states = None
 
@@ -163,7 +163,7 @@ class RestoreStateData:
         entities on this run, and have not expired.
         """
         now = dt_util.utcnow()
-        all_states = self.hass.states.async_all()
+        all_states = self.menuai.states.async_all()
         # Entities currently backed by an entity object
         current_states_by_entity_id = {
             state.entity_id: state
@@ -208,7 +208,7 @@ class RestoreStateData:
                     for stored_state in self.async_get_stored_states()
                 ]
             )
-        except HomeAssistantError as exc:
+        except menuaiError as exc:
             _LOGGER.error("Error saving current states", exc_info=exc)
 
     @callback
@@ -219,15 +219,15 @@ class RestoreStateData:
             await self.async_dump_states()
 
         # Dump the initial states now. This helps minimize the risk of having
-        # old states loaded by overwriting the last states once Home Assistant
+        # old states loaded by overwriting the last states once MenuAI
         # has started and the old states have been read.
-        self.hass.async_create_task_internal(
+        self.menuai.async_create_task_internal(
             _async_dump_states(), "RestoreStateData dump"
         )
 
         # Dump states periodically
         cancel_interval = async_track_time_interval(
-            self.hass,
+            self.menuai,
             _async_dump_states,
             STATE_DUMP_INTERVAL,
             name="RestoreStateData dump states",
@@ -237,14 +237,14 @@ class RestoreStateData:
             cancel_interval()
             await self.async_dump_states()
 
-        # Dump states when stopping hass
-        self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, _async_dump_states_at_stop
+        # Dump states when stopping menuai
+        self.menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, _async_dump_states_at_stop
         )
 
     @callback
     def async_restore_entity_added(self, entity: RestoreEntity) -> None:
-        """Store this entity's state when hass is shutdown."""
+        """Store this entity's state when menuai is shutdown."""
         self.entities[entity.entity_id] = entity
 
     @callback
@@ -252,10 +252,10 @@ class RestoreStateData:
         self, entity_id: str, extra_data: ExtraStoredData | None
     ) -> None:
         """Unregister this entity from saving state."""
-        # When an entity is being removed from hass, store its last state. This
+        # When an entity is being removed from menuai, store its last state. This
         # allows us to support state restoration if the entity is removed, then
-        # re-added while hass is still running.
-        state = self.hass.states.get(entity_id)
+        # re-added while menuai is still running.
+        state = self.menuai.states.get(entity_id)
         # To fully mimic all the attribute data types when loaded from storage,
         # we're going to serialize it to JSON and then re-load it.
         if state is not None:
@@ -271,28 +271,28 @@ class RestoreStateData:
 class RestoreEntity(Entity):
     """Mixin class for restoring previous entity state."""
 
-    async def async_internal_added_to_hass(self) -> None:
+    async def async_internal_added_to_menuai(self) -> None:
         """Register this entity as a restorable entity."""
-        await super().async_internal_added_to_hass()
-        async_get(self.hass).async_restore_entity_added(self)
+        await super().async_internal_added_to_menuai()
+        async_get(self.menuai).async_restore_entity_added(self)
 
-    async def async_internal_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        async_get(self.hass).async_restore_entity_removed(
+    async def async_internal_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        async_get(self.menuai).async_restore_entity_removed(
             self.entity_id, self.extra_restore_state_data
         )
-        await super().async_internal_will_remove_from_hass()
+        await super().async_internal_will_remove_from_menuai()
 
     @callback
     def _async_get_restored_data(self) -> StoredState | None:
         """Get data stored for an entity, if any."""
-        if self.hass is None or self.entity_id is None:
-            # Return None if this entity isn't added to hass yet
+        if self.menuai is None or self.entity_id is None:
+            # Return None if this entity isn't added to menuai yet
             _LOGGER.warning(  # type: ignore[unreachable]
-                "Cannot get last state. Entity not added to hass"
+                "Cannot get last state. Entity not added to menuai"
             )
             return None
-        return async_get(self.hass).last_states.get(self.entity_id)
+        return async_get(self.menuai).last_states.get(self.entity_id)
 
     async def async_get_last_state(self) -> State | None:
         """Get the entity state from the previous run."""

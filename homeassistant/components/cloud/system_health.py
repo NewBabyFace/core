@@ -2,23 +2,23 @@
 
 from typing import Any
 
-from homeassistant.components import system_health
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import system_health
+from menuai.core import menuai, callback
 
 from .const import DATA_CLOUD
 
 
 @callback
 def async_register(
-    hass: HomeAssistant, register: system_health.SystemHealthRegistration
+    menuai: menuai, register: system_health.SystemHealthRegistration
 ) -> None:
     """Register system health callbacks."""
     register.async_register_info(system_health_info, "/config/cloud")
 
 
-async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
+async def system_health_info(menuai: menuai) -> dict[str, Any]:
     """Get info for the info page."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     client = cloud.client
 
     data: dict[str, Any] = {
@@ -39,14 +39,14 @@ async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
         data["instance_id"] = client.prefs.instance_id
 
     data["can_reach_cert_server"] = system_health.async_check_can_reach_url(
-        hass, f"https://{cloud.acme_server}/directory"
+        menuai, f"https://{cloud.acme_server}/directory"
     )
     data["can_reach_cloud_auth"] = system_health.async_check_can_reach_url(
-        hass,
+        menuai,
         f"https://cognito-idp.{cloud.region}.amazonaws.com/{cloud.user_pool_id}/.well-known/jwks.json",
     )
     data["can_reach_cloud"] = system_health.async_check_can_reach_url(
-        hass, f"https://{cloud.relayer_server}/status"
+        menuai, f"https://{cloud.relayer_server}/status"
     )
 
     return data

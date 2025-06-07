@@ -8,15 +8,15 @@ from typing import Any, Final
 
 import voluptuous as vol
 
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.util import dt as dt_util
+from menuai.exceptions import ServiceValidationError
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -33,7 +33,7 @@ SERVICE_SCHEMA: Final = vol.Schema(
 
 
 async def __get_prices(call: ServiceCall) -> ServiceResponse:
-    tibber_connection = call.hass.data[DOMAIN]
+    tibber_connection = call.menuai.data[DOMAIN]
 
     start = __get_date(call.data.get(ATTR_START), "start")
     end = __get_date(call.data.get(ATTR_END), "end")
@@ -87,10 +87,10 @@ def __get_date(date_input: str | None, mode: str | None) -> datetime:
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up services for Tibber integration."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         PRICE_SERVICE_NAME,
         __get_prices,

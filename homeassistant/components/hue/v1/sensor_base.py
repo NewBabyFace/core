@@ -10,10 +10,10 @@ from typing import Any
 from aiohue import AiohueException, Unauthorized
 from aiohue.v1.sensors import TYPE_ZLL_PRESENCE
 
-from homeassistant.components.sensor import SensorStateClass
-from homeassistant.core import callback
-from homeassistant.helpers import debounce, entity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.sensor import SensorStateClass
+from menuai.core import callback
+from menuai.helpers import debounce, entity
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from ..const import REQUEST_REFRESH_DELAY
 from .helpers import remove_devices
@@ -49,13 +49,13 @@ class SensorManager:
 
         self._enabled_platforms = ("binary_sensor", "sensor")
         self.coordinator = DataUpdateCoordinator(
-            bridge.hass,
+            bridge.menuai,
             LOGGER,
             name="sensor",
             update_method=self.async_update_data,
             update_interval=self.SCAN_INTERVAL,
             request_refresh_debouncer=debounce.Debouncer(
-                bridge.hass, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=True
+                bridge.menuai, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=True
             ),
         )
 
@@ -132,7 +132,7 @@ class SensorManager:
                 base_name = api[item_id].name
                 name = event_config["name_format"].format(base_name)
                 new_event = event_config["class"](api[item_id], name, self.bridge)
-                self.bridge.hass.async_create_task(
+                self.bridge.menuai.async_create_task(
                     new_event.async_update_device_registry()
                 )
                 self.current_events[uniqueid] = new_event
@@ -153,7 +153,7 @@ class SensorManager:
 
             to_add.setdefault(sensor_config["platform"], []).append(current[uniqueid])
 
-        self.bridge.hass.async_create_task(
+        self.bridge.menuai.async_create_task(
             remove_devices(
                 self.bridge,
                 [value.uniqueid for value in api.values()],
@@ -165,7 +165,7 @@ class SensorManager:
             self._component_add_entities[platform](value)
 
 
-class GenericHueSensor(GenericHueDevice, entity.Entity):  # pylint: disable=hass-enforce-class-module
+class GenericHueSensor(GenericHueDevice, entity.Entity):  # pylint: disable=menuai-enforce-class-module
     """Representation of a Hue sensor."""
 
     should_poll = False
@@ -184,9 +184,9 @@ class GenericHueSensor(GenericHueDevice, entity.Entity):  # pylint: disable=hass
         """Return the state class of this entity, from STATE_CLASSES, if any."""
         return SensorStateClass.MEASUREMENT
 
-    async def async_added_to_hass(self):
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self):
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.bridge.sensor_manager.coordinator.async_add_listener(
                 self.async_write_ha_state

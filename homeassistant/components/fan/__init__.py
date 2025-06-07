@@ -12,22 +12,22 @@ from typing import Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import ToggleEntity, ToggleEntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.percentage import (
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import ToggleEntity, ToggleEntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -35,7 +35,7 @@ from homeassistant.util.percentage import (
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "fan"
-DATA_COMPONENT: HassKey[EntityComponent[FanEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[FanEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -88,18 +88,18 @@ class NotValidPresetModeError(ServiceValidationError):
         )
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Return if the fans are on based on the statemachine."""
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity
     return entity.state == STATE_ON
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Expose fan control via statemachine and services."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[FanEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[FanEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
@@ -178,14 +178,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class FanEntityDescription(ToggleEntityDescription, frozen_or_thawed=True):
@@ -225,7 +225,7 @@ class FanEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Set the speed of the fan, as a percentage."""
         if percentage == 0:
             await self.async_turn_off()
-        await self.hass.async_add_executor_job(self.set_percentage, percentage)
+        await self.menuai.async_add_executor_job(self.set_percentage, percentage)
 
     async def async_increase_speed(self, percentage_step: int | None = None) -> None:
         """Increase the speed of the fan."""
@@ -268,7 +268,7 @@ class FanEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
-        await self.hass.async_add_executor_job(self.set_preset_mode, preset_mode)
+        await self.menuai.async_add_executor_job(self.set_preset_mode, preset_mode)
 
     @final
     @callback
@@ -290,7 +290,7 @@ class FanEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_direction(self, direction: str) -> None:
         """Set the direction of the fan."""
-        await self.hass.async_add_executor_job(self.set_direction, direction)
+        await self.menuai.async_add_executor_job(self.set_direction, direction)
 
     def turn_on(
         self,
@@ -320,7 +320,7 @@ class FanEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         **kwargs: Any,
     ) -> None:
         """Turn on the fan."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(
                 self.turn_on,
                 percentage=percentage,
@@ -335,7 +335,7 @@ class FanEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
-        await self.hass.async_add_executor_job(self.oscillate, oscillating)
+        await self.menuai.async_add_executor_job(self.oscillate, oscillating)
 
     @property
     def is_on(self) -> bool | None:

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from lru import LRU
 
-from homeassistant.util.event_type import EventType
+from menuai.util.event_type import EventType
 
 if TYPE_CHECKING:
     from ..core import Recorder

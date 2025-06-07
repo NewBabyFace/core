@@ -6,11 +6,11 @@ import pytest
 from requests import ConnectTimeout
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.rova import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
+from menuai.components.rova import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, issue_registry as ir
 
 from . import setup_with_selected_platforms
 
@@ -18,30 +18,30 @@ from tests.common import MockConfigEntry
 
 
 async def test_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rova: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reloading the integration."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.SENSOR])
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rova: MagicMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Rova service."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.SENSOR])
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_config_entry.unique_id)}
@@ -58,31 +58,31 @@ async def test_service(
     ],
 )
 async def test_retry_after_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rova: MagicMock,
     mock_config_entry: MockConfigEntry,
     method: str,
 ) -> None:
     """Test we retry after a failure."""
     getattr(mock_rova, method).side_effect = ConnectTimeout
-    mock_config_entry.add_to_hass(hass)
-    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    assert not await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_issue_if_not_rova_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rova: MagicMock,
     mock_config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test we create an issue if rova does not collect at the given address."""
     mock_rova.is_rova_area.return_value = False
-    mock_config_entry.add_to_hass(hass)
-    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    assert not await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
     assert len(issue_registry.issues) == 1

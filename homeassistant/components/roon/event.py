@@ -3,12 +3,12 @@
 import logging
 from typing import cast
 
-from homeassistant.components.event import EventDeviceClass, EventEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventDeviceClass, EventEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
@@ -16,12 +16,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Roon Event from Config Entry."""
-    roon_server = hass.data[DOMAIN][config_entry.entry_id]
+    roon_server = menuai.data[DOMAIN][config_entry.entry_id]
     event_entities = set()
 
     @callback
@@ -38,7 +38,7 @@ async def async_setup_entry(
     # start listening for players to be added from the server component
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass, "roon_media_player", async_add_roon_volume_entity
+            menuai, "roon_media_player", async_add_roon_volume_entity
         )
     )
 
@@ -91,7 +91,7 @@ class RoonEventEntity(EventEntity):
         self._trigger_event(event)
         self.schedule_update_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register volume hooks with the roon api."""
 
         self._server.roonapi.register_volume_control(
@@ -106,6 +106,6 @@ class RoonEventEntity(EventEntity):
             False,
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unregister volume hooks from the roon api."""
         self._server.roonapi.unregister_volume_control(self.unique_id)

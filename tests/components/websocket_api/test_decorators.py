@@ -4,12 +4,12 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import http, websocket_api
-from homeassistant.core import HomeAssistant
+from menuai.components import http, websocket_api
+from menuai.core import menuai
 
 
 async def test_async_response_request_context(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test we can access current request."""
 
@@ -22,18 +22,18 @@ async def test_async_response_request_context(
     @websocket_api.websocket_command({"type": "test-get-request-executor"})
     @websocket_api.async_response
     async def executor_get_request(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         handle_request(
-            await hass.async_add_executor_job(http.current_request.get), connection, msg
+            await menuai.async_add_executor_job(http.current_request.get), connection, msg
         )
 
     @websocket_api.websocket_command({"type": "test-get-request-async"})
     @websocket_api.async_response
     async def async_get_request(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
@@ -41,7 +41,7 @@ async def test_async_response_request_context(
 
     @websocket_api.websocket_command({"type": "test-get-request"})
     def get_request(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
@@ -51,16 +51,16 @@ async def test_async_response_request_context(
         {"type": "test-get-request-with-arg", vol.Required("arg"): str}
     )
     def get_with_arg_request(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         handle_request(http.current_request.get(), connection, msg)
 
-    websocket_api.async_register_command(hass, executor_get_request)
-    websocket_api.async_register_command(hass, async_get_request)
-    websocket_api.async_register_command(hass, get_request)
-    websocket_api.async_register_command(hass, get_with_arg_request)
+    websocket_api.async_register_command(menuai, executor_get_request)
+    websocket_api.async_register_command(menuai, async_get_request)
+    websocket_api.async_register_command(menuai, get_request)
+    websocket_api.async_register_command(menuai, get_with_arg_request)
 
     await websocket_client.send_json(
         {
@@ -158,19 +158,19 @@ async def test_async_response_request_context(
     )
 
 
-async def test_supervisor_only(hass: HomeAssistant, websocket_client) -> None:
+async def test_supervisor_only(menuai: menuai, websocket_client) -> None:
     """Test that only the Supervisor can make requests."""
 
     @websocket_api.ws_require_user(only_supervisor=True)
     @websocket_api.websocket_command({"type": "test-require-supervisor-user"})
     def require_supervisor_request(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         connection.send_result(msg["id"])
 
-    websocket_api.async_register_command(hass, require_supervisor_request)
+    websocket_api.async_register_command(menuai, require_supervisor_request)
 
     await websocket_client.send_json(
         {

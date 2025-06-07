@@ -7,10 +7,10 @@ from datetime import timedelta
 
 from pylast import LastFMNetwork, PyLastError, Track
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_USERS, DOMAIN, LOGGER
 
@@ -39,10 +39,10 @@ class LastFMDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LastFMUserData
     config_entry: ConfigEntry
     _client: LastFMNetwork
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the LastFM data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -53,7 +53,7 @@ class LastFMDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LastFMUserData
     async def _async_update_data(self) -> dict[str, LastFMUserData]:
         res = {}
         for username in self.config_entry.options[CONF_USERS]:
-            data = await self.hass.async_add_executor_job(self._get_user_data, username)
+            data = await self.menuai.async_add_executor_job(self._get_user_data, username)
             if data is not None:
                 res[username] = data
         if not res:

@@ -4,9 +4,9 @@ from collections.abc import Generator
 
 import pytest
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import Platform
+from menuai.core import menuai
 
 from tests.common import (
     MockConfigEntry,
@@ -22,9 +22,9 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, "test.config_flow")
+    mock_platform(menuai, "test.config_flow")
 
     with mock_config_flow("test", MockFlow):
         yield
@@ -32,32 +32,32 @@ def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
 
 @pytest.fixture
 def register_test_integration(
-    hass: HomeAssistant, config_flow_fixture: None
+    menuai: menuai, config_flow_fixture: None
 ) -> Generator:
     """Provide a mocked integration for tests."""
 
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     async def help_async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.CLIMATE]
         )
         return True
 
     async def help_async_unload_entry(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload test config emntry."""
-        return await hass.config_entries.async_unload_platforms(
+        return await menuai.config_entries.async_unload_platforms(
             config_entry, [Platform.CLIMATE]
         )
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,

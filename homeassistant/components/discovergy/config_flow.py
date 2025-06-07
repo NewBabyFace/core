@@ -11,10 +11,10 @@ from pydiscovergy.authentication import BasicAuth
 import pydiscovergy.error as discovergyError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.selector import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -69,7 +69,7 @@ class DiscovergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 await Discovergy(
                     email=user_input[CONF_EMAIL],
                     password=user_input[CONF_PASSWORD],
-                    httpx_client=get_async_client(self.hass),
+                    httpx_client=get_async_client(self.menuai),
                     authentication=BasicAuth(),
                 ).meters()
             except (discovergyError.HTTPError, discovergyError.DiscovergyClientError):

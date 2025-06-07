@@ -9,10 +9,10 @@ from pybalboa.enums import OffLowHighState, UnknownState
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fan import ATTR_PERCENTAGE
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.fan import ATTR_PERCENTAGE
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import client_update, init_integration
 
@@ -42,59 +42,59 @@ def mock_pump(client: MagicMock):
 
 
 async def test_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test spa fans."""
-    with patch("homeassistant.components.balboa.PLATFORMS", [Platform.FAN]):
-        entry = await init_integration(hass)
+    with patch("menuai.components.balboa.PLATFORMS", [Platform.FAN]):
+        entry = await init_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
-async def test_pump(hass: HomeAssistant, client: MagicMock, mock_pump) -> None:
+async def test_pump(menuai: menuai, client: MagicMock, mock_pump) -> None:
     """Test spa pump."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     # check if the initial state is off
-    state = hass.states.get(ENTITY_FAN)
+    state = menuai.states.get(ENTITY_FAN)
     assert state.state == STATE_OFF
 
     # just call turn on, pump should be at full speed
-    await common.async_turn_on(hass, ENTITY_FAN)
-    state = await client_update(hass, client, ENTITY_FAN)
+    await common.async_turn_on(menuai, ENTITY_FAN)
+    state = await client_update(menuai, client, ENTITY_FAN)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_PERCENTAGE] == 100
 
     # test setting percentage
-    await common.async_set_percentage(hass, ENTITY_FAN, 50)
-    state = await client_update(hass, client, ENTITY_FAN)
+    await common.async_set_percentage(menuai, ENTITY_FAN, 50)
+    state = await client_update(menuai, client, ENTITY_FAN)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_PERCENTAGE] == 50
 
     # test calling turn off
-    await common.async_turn_off(hass, ENTITY_FAN)
-    state = await client_update(hass, client, ENTITY_FAN)
+    await common.async_turn_off(menuai, ENTITY_FAN)
+    state = await client_update(menuai, client, ENTITY_FAN)
     assert state.state == STATE_OFF
 
     # test setting percentage to 0
-    await common.async_turn_on(hass, ENTITY_FAN)
-    await client_update(hass, client, ENTITY_FAN)
+    await common.async_turn_on(menuai, ENTITY_FAN)
+    await client_update(menuai, client, ENTITY_FAN)
 
-    await common.async_set_percentage(hass, ENTITY_FAN, 0)
-    state = await client_update(hass, client, ENTITY_FAN)
+    await common.async_set_percentage(menuai, ENTITY_FAN, 0)
+    state = await client_update(menuai, client, ENTITY_FAN)
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_PERCENTAGE] == 0
 
 
 async def test_pump_unknown_state(
-    hass: HomeAssistant, client: MagicMock, mock_pump
+    menuai: menuai, client: MagicMock, mock_pump
 ) -> None:
     """Tests spa pump with unknown state."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     mock_pump.state = UnknownState.UNKNOWN
-    state = await client_update(hass, client, ENTITY_FAN)
+    state = await client_update(menuai, client, ENTITY_FAN)
     assert state.state == STATE_UNKNOWN

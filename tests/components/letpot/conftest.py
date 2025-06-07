@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, patch
 from letpot.models import DeviceFeature, LetPotDevice, LetPotDeviceStatus
 import pytest
 
-from homeassistant.components.letpot.const import (
+from menuai.components.letpot.const import (
     CONF_ACCESS_TOKEN_EXPIRES,
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_EXPIRES,
     CONF_USER_ID,
     DOMAIN,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_EMAIL
+from menuai.const import CONF_ACCESS_TOKEN, CONF_EMAIL
 
 from . import AUTHENTICATION, MAX_STATUS, SE_STATUS
 
@@ -55,7 +55,7 @@ def _mock_device_status(device_type: str) -> LetPotDeviceStatus:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.letpot.async_setup_entry", return_value=True
+        "menuai.components.letpot.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -65,11 +65,11 @@ def mock_client(device_type: str) -> Generator[AsyncMock]:
     """Mock a LetPotClient."""
     with (
         patch(
-            "homeassistant.components.letpot.LetPotClient",
+            "menuai.components.letpot.LetPotClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.letpot.config_flow.LetPotClient",
+            "menuai.components.letpot.config_flow.LetPotClient",
             new=mock_client,
         ),
     ):
@@ -92,7 +92,7 @@ def mock_client(device_type: str) -> Generator[AsyncMock]:
 def mock_device_client(device_type: str) -> Generator[AsyncMock]:
     """Mock a LetPotDeviceClient."""
     with patch(
-        "homeassistant.components.letpot.coordinator.LetPotDeviceClient",
+        "menuai.components.letpot.coordinator.LetPotDeviceClient",
         autospec=True,
     ) as mock_device_client:
         device_client = mock_device_client.return_value

@@ -10,20 +10,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt.models import MessageCallbackType
-from homeassistant.components.mqtt.util import EnsureJobAfterCooldown
-from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.util.dt import utcnow
+from menuai.components import mqtt
+from menuai.components.mqtt.models import MessageCallbackType
+from menuai.components.mqtt.util import EnsureJobAfterCooldown
+from menuai.config_entries import ConfigEntryDisabler, ConfigEntryState
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import CoreState, menuai
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.typing import MqttMockHAClient, MqttMockPahoClient
 
 
 async def test_canceling_debouncer_on_shutdown(
-    hass: HomeAssistant,
+    menuai: menuai,
     record_calls: MessageCallbackType,
     mock_debouncer: asyncio.Event,
     setup_with_birth_msg_client_mock: MqttMockPahoClient,
@@ -32,37 +32,37 @@ async def test_canceling_debouncer_on_shutdown(
     mqtt_client_mock = setup_with_birth_msg_client_mock
     # Mock we are past initial setup
     await mock_debouncer.wait()
-    with patch("homeassistant.components.mqtt.client.SUBSCRIBE_COOLDOWN", 2):
+    with patch("menuai.components.mqtt.client.SUBSCRIBE_COOLDOWN", 2):
         mock_debouncer.clear()
-        await mqtt.async_subscribe(hass, "test/state1", record_calls)
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=0.1))
+        await mqtt.async_subscribe(menuai, "test/state1", record_calls)
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=0.1))
         # Stop HA so the scheduled debouncer task will be canceled
         mqtt_client_mock.subscribe.reset_mock()
-        hass.bus.fire(EVENT_HOMEASSISTANT_STOP)
-        await mqtt.async_subscribe(hass, "test/state2", record_calls)
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=0.1))
-        await mqtt.async_subscribe(hass, "test/state3", record_calls)
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=0.1))
-        await mqtt.async_subscribe(hass, "test/state4", record_calls)
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=0.1))
-        await mqtt.async_subscribe(hass, "test/state5", record_calls)
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        menuai.bus.fire(EVENT_menuai_STOP)
+        await mqtt.async_subscribe(menuai, "test/state2", record_calls)
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=0.1))
+        await mqtt.async_subscribe(menuai, "test/state3", record_calls)
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=0.1))
+        await mqtt.async_subscribe(menuai, "test/state4", record_calls)
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=0.1))
+        await mqtt.async_subscribe(menuai, "test/state5", record_calls)
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         # Assert the debouncer subscribe job was not executed
         assert not mock_debouncer.is_set()
         mqtt_client_mock.subscribe.assert_not_called()
 
         # Note that the broker connection will not be disconnected gracefully
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
         await asyncio.sleep(0)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         mqtt_client_mock.subscribe.assert_not_called()
         mqtt_client_mock.disconnect.assert_not_called()
 
 
 async def test_canceling_debouncer_normal(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test canceling the debouncer before completion."""
@@ -79,7 +79,7 @@ async def test_canceling_debouncer_normal(
 
 
 async def test_canceling_debouncer_throws(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test canceling the debouncer when HA shuts down."""
@@ -96,13 +96,13 @@ async def test_canceling_debouncer_throws(
         task.cancel = MagicMock(return_value=True)
         await debouncer.async_cleanup()
         assert "Error cleaning up task" in caplog.text
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+        await menuai.async_block_till_done()
 
 
 async def help_create_test_certificate_file(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_temp_dir: str,
     option: str,
     content: bytes = b"old content",
@@ -118,7 +118,7 @@ async def help_create_test_certificate_file(
             old_file.write(content)
             old_file.close()
 
-    await hass.async_add_executor_job(_create_file)
+    await menuai.async_add_executor_job(_create_file)
 
 
 @pytest.mark.parametrize(
@@ -131,7 +131,7 @@ async def help_create_test_certificate_file(
 )
 @pytest.mark.parametrize("temp_dir_prefix", ["create-test1"])
 async def test_async_create_certificate_temp_files(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_temp_dir: str,
     option: str,
     content: str,
@@ -140,12 +140,12 @@ async def test_async_create_certificate_temp_files(
     config = {option: content}
 
     # Create old file to be able to assert it is replaced and recovered
-    await help_create_test_certificate_file(hass, mock_temp_dir, option)
-    await mqtt.util.async_create_certificate_temp_files(hass, config)
-    file_path = await hass.async_add_executor_job(mqtt.util.get_file_path, option)
+    await help_create_test_certificate_file(menuai, mock_temp_dir, option)
+    await mqtt.util.async_create_certificate_temp_files(menuai, config)
+    file_path = await menuai.async_add_executor_job(mqtt.util.get_file_path, option)
     assert file_path is not None
     assert (
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             mqtt.util.migrate_certificate_file_to_content, file_path
         )
         == content
@@ -156,14 +156,14 @@ async def test_async_create_certificate_temp_files(
         temp_dir = Path(tempfile.gettempdir()) / mock_temp_dir
         shutil.rmtree(temp_dir)
 
-    await hass.async_add_executor_job(_remove_old_files)
+    await menuai.async_add_executor_job(_remove_old_files)
 
     # Test a new dir and file is created correctly
-    await mqtt.util.async_create_certificate_temp_files(hass, config)
-    file_path = await hass.async_add_executor_job(mqtt.util.get_file_path, option)
+    await mqtt.util.async_create_certificate_temp_files(menuai, config)
+    file_path = await menuai.async_add_executor_job(mqtt.util.get_file_path, option)
     assert file_path is not None
     assert (
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             mqtt.util.migrate_certificate_file_to_content, file_path
         )
         == content
@@ -172,19 +172,19 @@ async def test_async_create_certificate_temp_files(
 
 @pytest.mark.parametrize("temp_dir_prefix", ["create-test2"])
 async def test_certificate_temp_files_with_auto_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_temp_dir: str,
 ) -> None:
     """Test creating and reading and recovery certificate files with auto mode."""
     config = {mqtt.CONF_CERTIFICATE: "auto"}
 
     # Create old file to be able to assert it is removed with auto option
-    await help_create_test_certificate_file(hass, mock_temp_dir, mqtt.CONF_CERTIFICATE)
-    await mqtt.util.async_create_certificate_temp_files(hass, config)
-    file_path = await hass.async_add_executor_job(mqtt.util.get_file_path, "auto")
+    await help_create_test_certificate_file(menuai, mock_temp_dir, mqtt.CONF_CERTIFICATE)
+    await mqtt.util.async_create_certificate_temp_files(menuai, config)
+    file_path = await menuai.async_add_executor_job(mqtt.util.get_file_path, "auto")
     assert file_path is None
     assert (
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             mqtt.util.migrate_certificate_file_to_content, "auto"
         )
         == "auto"
@@ -199,7 +199,7 @@ async def test_reading_non_exitisting_certificate_file() -> None:
 
 
 async def test_return_default_get_file_path(
-    hass: HomeAssistant, mock_temp_dir: str
+    menuai: menuai, mock_temp_dir: str
 ) -> None:
     """Test get_file_path returns default."""
 
@@ -210,16 +210,16 @@ async def test_return_default_get_file_path(
         )
 
     temp_dir = Path(tempfile.gettempdir()) / mock_temp_dir
-    assert await hass.async_add_executor_job(_get_file_path, temp_dir)
+    assert await menuai.async_add_executor_job(_get_file_path, temp_dir)
 
 
 async def test_waiting_for_client_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
 ) -> None:
     """Test waiting for client while mqtt entry is not yet loaded."""
-    hass.set_state(CoreState.starting)
-    await hass.async_block_till_done()
+    menuai.set_state(CoreState.starting)
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=mqtt.DOMAIN,
@@ -228,29 +228,29 @@ async def test_waiting_for_client_not_loaded(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     unsubs: list[Callable[[], None]] = []
 
     async def _async_just_in_time_subscribe() -> None:
-        assert await mqtt.async_wait_for_mqtt_client(hass)
+        assert await mqtt.async_wait_for_mqtt_client(menuai)
         # Awaiting a second time should work too and return True
-        assert await mqtt.async_wait_for_mqtt_client(hass)
-        unsubs.append(await mqtt.async_subscribe(hass, "test_topic", lambda msg: None))
+        assert await mqtt.async_wait_for_mqtt_client(menuai)
+        unsubs.append(await mqtt.async_subscribe(menuai, "test_topic", lambda msg: None))
 
     # Simulate some integration waiting for the client to become available
     for _ in range(4):
-        hass.async_create_task(_async_just_in_time_subscribe())
+        menuai.async_create_task(_async_just_in_time_subscribe())
 
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert await hass.config_entries.async_setup(entry.entry_id)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
     assert len(unsubs) == 4
     for unsub in unsubs:
         unsub()
 
 
 async def test_waiting_for_client_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
 ) -> None:
     """Test waiting for client where mqtt entry is loaded."""
@@ -258,10 +258,10 @@ async def test_waiting_for_client_loaded(
 
     async def _async_just_in_time_subscribe() -> None:
         nonlocal unsub
-        assert await mqtt.async_wait_for_mqtt_client(hass)
-        unsub = await mqtt.async_subscribe(hass, "test_topic", lambda msg: None)
+        assert await mqtt.async_wait_for_mqtt_client(menuai)
+        unsub = await mqtt.async_subscribe(menuai, "test_topic", lambda msg: None)
 
-    entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     assert entry.state is ConfigEntryState.LOADED
 
     await _async_just_in_time_subscribe()
@@ -271,12 +271,12 @@ async def test_waiting_for_client_loaded(
 
 
 async def test_waiting_for_client_entry_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
 ) -> None:
     """Test waiting for client where mqtt entry is failing."""
-    hass.set_state(CoreState.starting)
-    await hass.async_block_till_done()
+    menuai.set_state(CoreState.starting)
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=mqtt.DOMAIN,
@@ -285,28 +285,28 @@ async def test_waiting_for_client_entry_fails(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     async def _async_just_in_time_subscribe() -> None:
-        assert not await mqtt.async_wait_for_mqtt_client(hass)
+        assert not await mqtt.async_wait_for_mqtt_client(menuai)
 
-    hass.async_create_task(_async_just_in_time_subscribe())
+    menuai.async_create_task(_async_just_in_time_subscribe())
     assert entry.state is ConfigEntryState.NOT_LOADED
     with patch(
-        "homeassistant.components.mqtt.async_setup_entry",
+        "menuai.components.mqtt.async_setup_entry",
         side_effect=Exception,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
+        await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_ERROR  # type:ignore[comparison-overlap]
 
 
 async def test_waiting_for_client_setup_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
 ) -> None:
     """Test waiting for client where mqtt entry is failing during setup."""
-    hass.set_state(CoreState.starting)
-    await hass.async_block_till_done()
+    menuai.set_state(CoreState.starting)
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=mqtt.DOMAIN,
@@ -315,27 +315,27 @@ async def test_waiting_for_client_setup_fails(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     async def _async_just_in_time_subscribe() -> None:
-        assert not await mqtt.async_wait_for_mqtt_client(hass)
+        assert not await mqtt.async_wait_for_mqtt_client(menuai)
 
-    hass.async_create_task(_async_just_in_time_subscribe())
+    menuai.async_create_task(_async_just_in_time_subscribe())
     assert entry.state is ConfigEntryState.NOT_LOADED
 
     # Simulate MQTT setup fails before the client would become available
     mqtt_client_mock.connect.side_effect = Exception
-    assert not await hass.config_entries.async_setup(entry.entry_id)
+    assert not await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_ERROR  # type:ignore[comparison-overlap]
 
 
-@patch("homeassistant.components.mqtt.util.AVAILABILITY_TIMEOUT", 0.01)
+@patch("menuai.components.mqtt.util.AVAILABILITY_TIMEOUT", 0.01)
 async def test_waiting_for_client_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test waiting for client with timeout."""
-    hass.set_state(CoreState.starting)
-    await hass.async_block_till_done()
+    menuai.set_state(CoreState.starting)
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=mqtt.DOMAIN,
@@ -344,19 +344,19 @@ async def test_waiting_for_client_timeout(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert entry.state is ConfigEntryState.NOT_LOADED
     # returns False after timeout
-    assert not await mqtt.async_wait_for_mqtt_client(hass)
+    assert not await mqtt.async_wait_for_mqtt_client(menuai)
 
 
 async def test_waiting_for_client_with_disabled_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test waiting for client with timeout."""
-    hass.set_state(CoreState.starting)
-    await hass.async_block_till_done()
+    menuai.set_state(CoreState.starting)
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=mqtt.DOMAIN,
@@ -365,14 +365,14 @@ async def test_waiting_for_client_with_disabled_entry(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Disable MQTT config entry
-    await hass.config_entries.async_set_disabled_by(
+    await menuai.config_entries.async_set_disabled_by(
         entry.entry_id, ConfigEntryDisabler.USER
     )
 
     assert entry.state is ConfigEntryState.NOT_LOADED
 
     # returns False because entry is disabled
-    assert not await mqtt.async_wait_for_mqtt_client(hass)
+    assert not await mqtt.async_wait_for_mqtt_client(menuai)

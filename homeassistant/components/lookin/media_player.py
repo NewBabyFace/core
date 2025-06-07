@@ -6,16 +6,16 @@ import logging
 
 from aiolookin import Remote
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, TYPE_TO_PLATFORM
 from .coordinator import LookinDataUpdateCoordinator
@@ -42,12 +42,12 @@ _FUNCTION_NAME_TO_FEATURE = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the media_player platform for lookin from a config entry."""
-    lookin_data: LookinData = hass.data[DOMAIN][config_entry.entry_id]
+    lookin_data: LookinData = menuai.data[DOMAIN][config_entry.entry_id]
     entities = []
 
     for remote in lookin_data.devices:
@@ -101,7 +101,7 @@ class LookinMedia(LookinPowerPushRemoteEntity, MediaPlayerEntity):
             return
         await self._async_send_command(command="mode", signal=self._source_list[source])
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Get list of available input sources."""
         if self._source_list is None and "mode" in self._function_names:
             if sources := await self._lookin_protocol.get_media_sources(
@@ -110,7 +110,7 @@ class LookinMedia(LookinPowerPushRemoteEntity, MediaPlayerEntity):
                 self._source_list = {
                     f"INPUT_{index}": f"{index:02x}" for index in range(len(sources))
                 }
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_volume_up(self) -> None:
         """Turn volume up for media player."""

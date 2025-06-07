@@ -8,8 +8,8 @@ import logging
 from aio_geojson_geonetnz_volcano import GeonetnzVolcanoFeedManager
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
@@ -17,12 +17,12 @@ from homeassistant.const import (
     CONF_UNIT_SYSTEM,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.unit_conversion import DistanceConverter
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
+from menuai.util.unit_conversion import DistanceConverter
 
 from .config_flow import configured_instances
 from .const import (
@@ -54,23 +54,23 @@ CONFIG_SCHEMA = vol.Schema(
 type GeonetnzVolcanoConfigEntry = ConfigEntry[GeonetnzVolcanoFeedEntityManager]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the GeoNet NZ Volcano component."""
     if DOMAIN not in config:
         return True
 
     conf = config[DOMAIN]
 
-    latitude = conf.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = conf.get(CONF_LONGITUDE, hass.config.longitude)
+    latitude = conf.get(CONF_LATITUDE, menuai.config.latitude)
+    longitude = conf.get(CONF_LONGITUDE, menuai.config.longitude)
     scan_interval = conf[CONF_SCAN_INTERVAL]
 
     identifier = f"{latitude}, {longitude}"
-    if identifier in configured_instances(hass):
+    if identifier in configured_instances(menuai):
         return True
 
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
             data={
@@ -86,7 +86,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: GeonetnzVolcanoConfigEntry
+    menuai: menuai, config_entry: GeonetnzVolcanoConfigEntry
 ) -> bool:
     """Set up the GeoNet NZ Volcano component as config entry."""
     radius = config_entry.data[CONF_RADIUS]
@@ -96,7 +96,7 @@ async def async_setup_entry(
             radius, UnitOfLength.MILES, UnitOfLength.KILOMETERS
         )
     # Create feed entity manager for all platforms.
-    manager = GeonetnzVolcanoFeedEntityManager(hass, config_entry, radius, unit_system)
+    manager = GeonetnzVolcanoFeedEntityManager(menuai, config_entry, radius, unit_system)
     config_entry.runtime_data = manager
     _LOGGER.debug("Feed entity manager added for %s", config_entry.entry_id)
     await manager.async_init()
@@ -104,25 +104,25 @@ async def async_setup_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: GeonetnzVolcanoConfigEntry
+    menuai: menuai, entry: GeonetnzVolcanoConfigEntry
 ) -> bool:
     """Unload an GeoNet NZ Volcano component config entry."""
     await entry.runtime_data.async_stop()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class GeonetnzVolcanoFeedEntityManager:
     """Feed Entity Manager for GeoNet NZ Volcano feed."""
 
-    def __init__(self, hass, config_entry, radius_in_km, unit_system):
+    def __init__(self, menuai, config_entry, radius_in_km, unit_system):
         """Initialize the Feed Entity Manager."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_entry = config_entry
         coordinates = (
             config_entry.data[CONF_LATITUDE],
             config_entry.data[CONF_LONGITUDE],
         )
-        websession = aiohttp_client.async_get_clientsession(hass)
+        websession = aiohttp_client.async_get_clientsession(menuai)
         self._feed_manager = GeonetnzVolcanoFeedManager(
             websession,
             self._generate_entity,
@@ -140,7 +140,7 @@ class GeonetnzVolcanoFeedEntityManager:
     async def async_init(self):
         """Schedule initial and regular updates based on configured time interval."""
 
-        await self._hass.config_entries.async_forward_entry_setups(
+        await self._menuai.config_entries.async_forward_entry_setups(
             self._config_entry, PLATFORMS
         )
 
@@ -150,7 +150,7 @@ class GeonetnzVolcanoFeedEntityManager:
 
         # Trigger updates at regular intervals.
         self._track_time_remove_callback = async_track_time_interval(
-            self._hass, update, self._scan_interval
+            self._menuai, update, self._scan_interval
         )
 
         _LOGGER.debug("Feed entity manager initialized")
@@ -189,7 +189,7 @@ class GeonetnzVolcanoFeedEntityManager:
     async def _generate_entity(self, external_id):
         """Generate new entity."""
         async_dispatcher_send(
-            self._hass,
+            self._menuai,
             self.async_event_new_entity(),
             self,
             external_id,
@@ -198,7 +198,7 @@ class GeonetnzVolcanoFeedEntityManager:
 
     async def _update_entity(self, external_id):
         """Update entity."""
-        async_dispatcher_send(self._hass, f"geonetnz_volcano_update_{external_id}")
+        async_dispatcher_send(self._menuai, f"geonetnz_volcano_update_{external_id}")
 
     async def _remove_entity(self, external_id):
         """Ignore removing entity."""

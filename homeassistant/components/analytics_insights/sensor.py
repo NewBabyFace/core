@@ -1,25 +1,25 @@
-"""Sensor for Home Assistant analytics."""
+"""Sensor for MenuAI analytics."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import AnalyticsInsightsConfigEntry
 from .const import DOMAIN
-from .coordinator import AnalyticsData, HomeassistantAnalyticsDataUpdateCoordinator
+from .coordinator import AnalyticsData, menuaiAnalyticsDataUpdateCoordinator
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -92,26 +92,26 @@ GENERAL_SENSORS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AnalyticsInsightsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize the entries."""
 
     analytics_data = entry.runtime_data
-    coordinator: HomeassistantAnalyticsDataUpdateCoordinator = (
+    coordinator: menuaiAnalyticsDataUpdateCoordinator = (
         analytics_data.coordinator
     )
-    entities: list[HomeassistantAnalyticsSensor] = []
+    entities: list[menuaiAnalyticsSensor] = []
     entities.extend(
-        HomeassistantAnalyticsSensor(
+        menuaiAnalyticsSensor(
             coordinator,
             get_addon_entity_description(addon_name_slug),
         )
         for addon_name_slug in coordinator.data.addons
     )
     entities.extend(
-        HomeassistantAnalyticsSensor(
+        menuaiAnalyticsSensor(
             coordinator,
             get_core_integration_entity_description(
                 integration_domain, analytics_data.names[integration_domain]
@@ -120,7 +120,7 @@ async def async_setup_entry(
         for integration_domain in coordinator.data.core_integrations
     )
     entities.extend(
-        HomeassistantAnalyticsSensor(
+        menuaiAnalyticsSensor(
             coordinator,
             get_custom_integration_entity_description(integration_domain),
         )
@@ -128,17 +128,17 @@ async def async_setup_entry(
     )
 
     entities.extend(
-        HomeassistantAnalyticsSensor(coordinator, entity_description)
+        menuaiAnalyticsSensor(coordinator, entity_description)
         for entity_description in GENERAL_SENSORS
     )
 
     async_add_entities(entities)
 
 
-class HomeassistantAnalyticsSensor(
-    CoordinatorEntity[HomeassistantAnalyticsDataUpdateCoordinator], SensorEntity
+class menuaiAnalyticsSensor(
+    CoordinatorEntity[menuaiAnalyticsDataUpdateCoordinator], SensorEntity
 ):
-    """Home Assistant Analytics Sensor."""
+    """MenuAI Analytics Sensor."""
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -147,7 +147,7 @@ class HomeassistantAnalyticsSensor(
 
     def __init__(
         self,
-        coordinator: HomeassistantAnalyticsDataUpdateCoordinator,
+        coordinator: menuaiAnalyticsDataUpdateCoordinator,
         entity_description: AnalyticsSensorEntityDescription,
     ) -> None:
         """Initialize the sensor."""

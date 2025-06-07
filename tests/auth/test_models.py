@@ -1,6 +1,6 @@
 """Tests for the auth models."""
 
-from homeassistant.auth import models, permissions
+from menuai.auth import models, permissions
 
 
 def test_owner_fetching_owner_permissions() -> None:

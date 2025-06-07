@@ -5,13 +5,13 @@ from unittest.mock import MagicMock
 from p1monitor import P1MonitorNoDataError
 import pytest
 
-from homeassistant.components.p1_monitor.const import DOMAIN
-from homeassistant.components.sensor import (
+from menuai.components.p1_monitor.const import DOMAIN
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_UNIT_OF_MEASUREMENT,
@@ -22,14 +22,14 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_smartmeter(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
@@ -37,7 +37,7 @@ async def test_smartmeter(
     """Test the P1 Monitor - SmartMeter sensors."""
     entry_id = init_integration.entry_id
 
-    state = hass.states.get("sensor.smartmeter_power_consumption")
+    state = menuai.states.get("sensor.smartmeter_power_consumption")
     entry = entity_registry.async_get("sensor.smartmeter_power_consumption")
     assert entry
     assert state
@@ -48,7 +48,7 @@ async def test_smartmeter(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfPower.WATT
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.POWER
 
-    state = hass.states.get("sensor.smartmeter_energy_consumption_high_tariff")
+    state = menuai.states.get("sensor.smartmeter_energy_consumption_high_tariff")
     entry = entity_registry.async_get(
         "sensor.smartmeter_energy_consumption_high_tariff"
     )
@@ -64,7 +64,7 @@ async def test_smartmeter(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfEnergy.KILO_WATT_HOUR
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.ENERGY
 
-    state = hass.states.get("sensor.smartmeter_energy_tariff_period")
+    state = menuai.states.get("sensor.smartmeter_energy_tariff_period")
     entry = entity_registry.async_get("sensor.smartmeter_energy_tariff_period")
     assert entry
     assert state
@@ -86,7 +86,7 @@ async def test_smartmeter(
 
 
 async def test_phases(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
@@ -94,7 +94,7 @@ async def test_phases(
     """Test the P1 Monitor - Phases sensors."""
     entry_id = init_integration.entry_id
 
-    state = hass.states.get("sensor.phases_voltage_phase_l1")
+    state = menuai.states.get("sensor.phases_voltage_phase_l1")
     entry = entity_registry.async_get("sensor.phases_voltage_phase_l1")
     assert entry
     assert state
@@ -107,7 +107,7 @@ async def test_phases(
     )
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.VOLTAGE
 
-    state = hass.states.get("sensor.phases_current_phase_l1")
+    state = menuai.states.get("sensor.phases_current_phase_l1")
     entry = entity_registry.async_get("sensor.phases_current_phase_l1")
     assert entry
     assert state
@@ -120,7 +120,7 @@ async def test_phases(
     )
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.CURRENT
 
-    state = hass.states.get("sensor.phases_power_consumed_phase_l1")
+    state = menuai.states.get("sensor.phases_power_consumed_phase_l1")
     entry = entity_registry.async_get("sensor.phases_power_consumed_phase_l1")
     assert entry
     assert state
@@ -143,7 +143,7 @@ async def test_phases(
 
 
 async def test_settings(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
@@ -151,7 +151,7 @@ async def test_settings(
     """Test the P1 Monitor - Settings sensors."""
     entry_id = init_integration.entry_id
 
-    state = hass.states.get("sensor.settings_energy_consumption_price_low")
+    state = menuai.states.get("sensor.settings_energy_consumption_price_low")
     entry = entity_registry.async_get("sensor.settings_energy_consumption_price_low")
     assert entry
     assert state
@@ -167,7 +167,7 @@ async def test_settings(
         == f"{CURRENCY_EURO}/{UnitOfEnergy.KILO_WATT_HOUR}"
     )
 
-    state = hass.states.get("sensor.settings_energy_production_price_low")
+    state = menuai.states.get("sensor.settings_energy_production_price_low")
     entry = entity_registry.async_get("sensor.settings_energy_production_price_low")
     assert entry
     assert state
@@ -195,14 +195,14 @@ async def test_settings(
 
 
 async def test_watermeter(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test the P1 Monitor - WaterMeter sensors."""
     entry_id = init_integration.entry_id
-    state = hass.states.get("sensor.watermeter_consumption_day")
+    state = menuai.states.get("sensor.watermeter_consumption_day")
     entry = entity_registry.async_get("sensor.watermeter_consumption_day")
     assert entry
     assert state
@@ -224,17 +224,17 @@ async def test_watermeter(
 
 
 async def test_no_watermeter(
-    hass: HomeAssistant, mock_p1monitor: MagicMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_p1monitor: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test the P1 Monitor - Without WaterMeter sensors."""
     mock_p1monitor.watermeter.side_effect = P1MonitorNoDataError
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.states.get("sensor.watermeter_consumption_day")
-    assert not hass.states.get("sensor.consumption_total")
-    assert not hass.states.get("sensor.pulse_count")
+    assert not menuai.states.get("sensor.watermeter_consumption_day")
+    assert not menuai.states.get("sensor.consumption_total")
+    assert not menuai.states.get("sensor.pulse_count")
 
 
 @pytest.mark.parametrize(
@@ -242,13 +242,13 @@ async def test_no_watermeter(
     ["sensor.smartmeter_gas_consumption"],
 )
 async def test_smartmeter_disabled_by_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     entity_id: str,
 ) -> None:
     """Test the P1 Monitor - SmartMeter sensors that are disabled by default."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
     entry = entity_registry.async_get(entity_id)

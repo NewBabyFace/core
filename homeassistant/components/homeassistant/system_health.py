@@ -4,28 +4,28 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components import system_health
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import system_info
+from menuai.components import system_health
+from menuai.core import menuai, callback
+from menuai.helpers import system_info
 
 
 @callback
 def async_register(
-    hass: HomeAssistant, register: system_health.SystemHealthRegistration
+    menuai: menuai, register: system_health.SystemHealthRegistration
 ) -> None:
     """Register system health callbacks."""
     register.async_register_info(system_health_info)
 
 
-async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
+async def system_health_info(menuai: menuai) -> dict[str, Any]:
     """Get info for the info page."""
-    info = await system_info.async_get_system_info(hass)
+    info = await system_info.async_get_system_info(menuai)
 
     return {
         "version": f"core-{info.get('version')}",
         "installation_type": info.get("installation_type"),
         "dev": info.get("dev"),
-        "hassio": info.get("hassio"),
+        "menuaiio": info.get("menuaiio"),
         "docker": info.get("docker"),
         "user": info.get("user"),
         "virtualenv": info.get("virtualenv"),
@@ -34,5 +34,5 @@ async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
         "os_version": info.get("os_version"),
         "arch": info.get("arch"),
         "timezone": info.get("timezone"),
-        "config_dir": hass.config.config_dir,
+        "config_dir": menuai.config.config_dir,
     }

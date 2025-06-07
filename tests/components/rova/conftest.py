@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.rova.const import (
+from menuai.components.rova.const import (
     CONF_HOUSE_NUMBER,
     CONF_HOUSE_NUMBER_SUFFIX,
     CONF_ZIP_CODE,
@@ -21,10 +21,10 @@ def mock_rova():
 
     with (
         patch(
-            "homeassistant.components.rova.config_flow.Rova",
+            "menuai.components.rova.config_flow.Rova",
             return_value=api,
         ) as api,
-        patch("homeassistant.components.rova.Rova", return_value=api),
+        patch("menuai.components.rova.Rova", return_value=api),
     ):
         api.is_rova_area.return_value = True
         api.get_calendar_items.return_value = load_json_array_fixture(

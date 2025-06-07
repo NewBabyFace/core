@@ -6,28 +6,28 @@ import pytest
 from reolink_aio.api import Chime
 from reolink_aio.exceptions import InvalidParameterError, ReolinkError
 
-from homeassistant.components.reolink.const import DOMAIN
-from homeassistant.components.reolink.services import ATTR_RINGTONE
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_DEVICE_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.reolink.const import DOMAIN
+from menuai.components.reolink.services import ATTR_RINGTONE
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_DEVICE_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_play_chime_service_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     test_chime: Chime,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test chime play service."""
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SELECT]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SELECT]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -38,7 +38,7 @@ async def test_play_chime_service_entity(
 
     # Test chime play service with device
     test_chime.play = AsyncMock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "play_chime",
         {ATTR_DEVICE_ID: [device_id], ATTR_RINGTONE: "attraction"},
@@ -48,7 +48,7 @@ async def test_play_chime_service_entity(
 
     # Test errors
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "play_chime",
             {ATTR_DEVICE_ID: ["invalid_id"], ATTR_RINGTONE: "attraction"},
@@ -56,8 +56,8 @@ async def test_play_chime_service_entity(
         )
 
     test_chime.play = AsyncMock(side_effect=ReolinkError("Test error"))
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             "play_chime",
             {ATTR_DEVICE_ID: [device_id], ATTR_RINGTONE: "attraction"},
@@ -66,7 +66,7 @@ async def test_play_chime_service_entity(
 
     test_chime.play = AsyncMock(side_effect=InvalidParameterError("Test error"))
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "play_chime",
             {ATTR_DEVICE_ID: [device_id], ATTR_RINGTONE: "attraction"},
@@ -75,7 +75,7 @@ async def test_play_chime_service_entity(
 
     reolink_connect.chime.return_value = None
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "play_chime",
             {ATTR_DEVICE_ID: [device_id], ATTR_RINGTONE: "attraction"},
@@ -84,16 +84,16 @@ async def test_play_chime_service_entity(
 
 
 async def test_play_chime_service_unloaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     test_chime: Chime,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test chime play service when config entry is unloaded."""
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SELECT]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SELECT]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
 
     entity_id = f"{Platform.SELECT}.test_chime_visitor_ringtone"
@@ -102,13 +102,13 @@ async def test_play_chime_service_unloaded(
     device_id = entity.device_id
 
     # Unload the config entry
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
     # Test chime play service
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "play_chime",
             {ATTR_DEVICE_ID: [device_id], ATTR_RINGTONE: "attraction"},

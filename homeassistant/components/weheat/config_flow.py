@@ -6,10 +6,10 @@ from typing import Any
 
 from weheat.abstractions.user import async_get_user_id_from_token
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import API_URL, DOMAIN, ENTRY_TITLE, OAUTH2_SCOPES
 
@@ -37,7 +37,7 @@ class OAuth2FlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
         user_id = await async_get_user_id_from_token(
             API_URL,
             data[CONF_TOKEN][CONF_ACCESS_TOKEN],
-            async_get_clientsession(self.hass),
+            async_get_clientsession(self.menuai),
         )
         await self.async_set_unique_id(user_id)
         if self.source != SOURCE_REAUTH:

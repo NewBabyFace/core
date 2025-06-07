@@ -1,21 +1,21 @@
 """Tests for the Sonos statistics."""
 
-from homeassistant.components.sonos.const import DATA_SONOS
-from homeassistant.core import HomeAssistant
+from menuai.components.sonos.const import DATA_SONOS
+from menuai.core import menuai
 
 
 async def test_statistics_duplicate(
-    hass: HomeAssistant, async_autosetup_sonos, soco, device_properties_event
+    menuai: menuai, async_autosetup_sonos, soco, device_properties_event
 ) -> None:
     """Test Sonos statistics."""
-    speaker = list(hass.data[DATA_SONOS].discovered.values())[0]
+    speaker = list(menuai.data[DATA_SONOS].discovered.values())[0]
 
     subscription = soco.deviceProperties.subscribe.return_value
     sub_callback = subscription.callback
 
     # Update the speaker with a callback event
     sub_callback(device_properties_event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     report = speaker.event_stats.report()
     assert report["DeviceProperties"]["received"] == 1
@@ -24,7 +24,7 @@ async def test_statistics_duplicate(
 
     # Ensure a duplicate is registered in the statistics
     sub_callback(device_properties_event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     report = speaker.event_stats.report()
     assert report["DeviceProperties"]["received"] == 2

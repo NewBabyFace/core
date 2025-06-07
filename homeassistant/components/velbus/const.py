@@ -2,7 +2,7 @@
 
 from typing import Final
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_COMFORT,
     PRESET_ECO,

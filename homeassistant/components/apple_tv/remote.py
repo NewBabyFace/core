@@ -7,7 +7,7 @@ from typing import Any
 
 from pyatv.const import InputAction
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_HOLD_SECS,
     ATTR_NUM_REPEATS,
@@ -15,9 +15,9 @@ from homeassistant.components.remote import (
     DEFAULT_HOLD_SECS,
     RemoteEntity,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AppleTvConfigEntry
 from .entity import AppleTVEntity
@@ -36,7 +36,7 @@ COMMAND_TO_ATTRIBUTE = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AppleTvConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

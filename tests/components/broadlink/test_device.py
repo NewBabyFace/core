@@ -4,27 +4,27 @@ from unittest.mock import patch
 
 import broadlink.exceptions as blke
 
-from homeassistant.components.broadlink.const import DOMAIN
-from homeassistant.components.broadlink.device import get_domains
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.broadlink.const import DOMAIN
+from menuai.components.broadlink.device import get_domains
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_FRIENDLY_NAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import get_device
 
-DEVICE_FACTORY = "homeassistant.components.broadlink.device.blk.gendevice"
+DEVICE_FACTORY = "menuai.components.broadlink.device.blk.gendevice"
 
 
-async def test_device_setup(hass: HomeAssistant) -> None:
+async def test_device_setup(menuai: menuai) -> None:
     """Test a successful setup."""
     device = get_device("Office")
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass)
+        mock_setup = await device.setup_entry(menuai)
 
     assert mock_setup.entry.state is ConfigEntryState.LOADED
     assert mock_setup.api.auth.call_count == 1
@@ -38,17 +38,17 @@ async def test_device_setup(hass: HomeAssistant) -> None:
     assert mock_init.call_count == 0
 
 
-async def test_device_setup_authentication_error(hass: HomeAssistant) -> None:
+async def test_device_setup_authentication_error(menuai: menuai) -> None:
     """Test we handle an authentication error."""
     device = get_device("Living Room")
     mock_api = device.get_mock_api()
     mock_api.auth.side_effect = blke.AuthenticationError()
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.SETUP_ERROR
     assert mock_setup.api.auth.call_count == 1
@@ -61,17 +61,17 @@ async def test_device_setup_authentication_error(hass: HomeAssistant) -> None:
     }
 
 
-async def test_device_setup_network_timeout(hass: HomeAssistant) -> None:
+async def test_device_setup_network_timeout(menuai: menuai) -> None:
     """Test we handle a network timeout."""
     device = get_device("Office")
     mock_api = device.get_mock_api()
     mock_api.auth.side_effect = blke.NetworkTimeoutError()
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.SETUP_RETRY
     assert mock_setup.api.auth.call_count == 1
@@ -79,17 +79,17 @@ async def test_device_setup_network_timeout(hass: HomeAssistant) -> None:
     assert mock_init.call_count == 0
 
 
-async def test_device_setup_os_error(hass: HomeAssistant) -> None:
+async def test_device_setup_os_error(menuai: menuai) -> None:
     """Test we handle an OS error."""
     device = get_device("Office")
     mock_api = device.get_mock_api()
     mock_api.auth.side_effect = OSError()
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.SETUP_RETRY
     assert mock_setup.api.auth.call_count == 1
@@ -97,17 +97,17 @@ async def test_device_setup_os_error(hass: HomeAssistant) -> None:
     assert mock_init.call_count == 0
 
 
-async def test_device_setup_broadlink_exception(hass: HomeAssistant) -> None:
+async def test_device_setup_broadlink_exception(menuai: menuai) -> None:
     """Test we handle a Broadlink exception."""
     device = get_device("Office")
     mock_api = device.get_mock_api()
     mock_api.auth.side_effect = blke.BroadlinkException()
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.SETUP_ERROR
     assert mock_setup.api.auth.call_count == 1
@@ -115,17 +115,17 @@ async def test_device_setup_broadlink_exception(hass: HomeAssistant) -> None:
     assert mock_init.call_count == 0
 
 
-async def test_device_setup_update_network_timeout(hass: HomeAssistant) -> None:
+async def test_device_setup_update_network_timeout(menuai: menuai) -> None:
     """Test we handle a network timeout in the update step."""
     device = get_device("Office")
     mock_api = device.get_mock_api()
     mock_api.check_sensors.side_effect = blke.NetworkTimeoutError()
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.SETUP_RETRY
     assert mock_setup.api.auth.call_count == 1
@@ -134,7 +134,7 @@ async def test_device_setup_update_network_timeout(hass: HomeAssistant) -> None:
     assert mock_init.call_count == 0
 
 
-async def test_device_setup_update_authorization_error(hass: HomeAssistant) -> None:
+async def test_device_setup_update_authorization_error(menuai: menuai) -> None:
     """Test we handle an authorization error in the update step."""
     device = get_device("Office")
     mock_api = device.get_mock_api()
@@ -144,10 +144,10 @@ async def test_device_setup_update_authorization_error(hass: HomeAssistant) -> N
     )
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.LOADED
     assert mock_setup.api.auth.call_count == 2
@@ -160,7 +160,7 @@ async def test_device_setup_update_authorization_error(hass: HomeAssistant) -> N
     assert mock_init.call_count == 0
 
 
-async def test_device_setup_update_authentication_error(hass: HomeAssistant) -> None:
+async def test_device_setup_update_authentication_error(menuai: menuai) -> None:
     """Test we handle an authentication error in the update step."""
     device = get_device("Garage")
     mock_api = device.get_mock_api()
@@ -168,10 +168,10 @@ async def test_device_setup_update_authentication_error(hass: HomeAssistant) -> 
     mock_api.auth.side_effect = (None, blke.AuthenticationError())
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.SETUP_RETRY
     assert mock_setup.api.auth.call_count == 2
@@ -185,17 +185,17 @@ async def test_device_setup_update_authentication_error(hass: HomeAssistant) -> 
     }
 
 
-async def test_device_setup_update_broadlink_exception(hass: HomeAssistant) -> None:
+async def test_device_setup_update_broadlink_exception(menuai: menuai) -> None:
     """Test we handle a Broadlink exception in the update step."""
     device = get_device("Garage")
     mock_api = device.get_mock_api()
     mock_api.check_sensors.side_effect = blke.BroadlinkException()
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.SETUP_RETRY
     assert mock_setup.api.auth.call_count == 1
@@ -205,7 +205,7 @@ async def test_device_setup_update_broadlink_exception(hass: HomeAssistant) -> N
 
 
 async def test_device_setup_get_fwversion_broadlink_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we load the device even if we cannot read the firmware version."""
     device = get_device("Office")
@@ -213,9 +213,9 @@ async def test_device_setup_get_fwversion_broadlink_exception(
     mock_api.get_fwversion.side_effect = blke.BroadlinkException()
 
     with patch.object(
-        hass.config_entries, "async_forward_entry_setups"
+        menuai.config_entries, "async_forward_entry_setups"
     ) as mock_forward:
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.LOADED
     forward_entries = set(mock_forward.mock_calls[0][1][1])
@@ -224,16 +224,16 @@ async def test_device_setup_get_fwversion_broadlink_exception(
     assert forward_entries == domains
 
 
-async def test_device_setup_get_fwversion_os_error(hass: HomeAssistant) -> None:
+async def test_device_setup_get_fwversion_os_error(menuai: menuai) -> None:
     """Test we load the device even if we cannot read the firmware version."""
     device = get_device("Office")
     mock_api = device.get_mock_api()
     mock_api.get_fwversion.side_effect = OSError()
 
     with patch.object(
-        hass.config_entries, "async_forward_entry_setups"
+        menuai.config_entries, "async_forward_entry_setups"
     ) as mock_forward:
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_setup.entry.state is ConfigEntryState.LOADED
     forward_entries = set(mock_forward.mock_calls[0][1][1])
@@ -243,15 +243,15 @@ async def test_device_setup_get_fwversion_os_error(hass: HomeAssistant) -> None:
 
 
 async def test_device_setup_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we register the device and the entries correctly."""
     device = get_device("Office")
 
-    mock_setup = await device.setup_entry(hass)
-    await hass.async_block_till_done()
+    mock_setup = await device.setup_entry(menuai)
+    await menuai.async_block_till_done()
 
     assert len(device_registry.devices) == 1
 
@@ -266,23 +266,23 @@ async def test_device_setup_registry(
 
     for entry in er.async_entries_for_device(entity_registry, device_entry.id):
         assert (
-            hass.states.get(entry.entity_id)
+            menuai.states.get(entry.entity_id)
             .attributes[ATTR_FRIENDLY_NAME]
             .startswith(device.name)
         )
 
 
-async def test_device_unload_works(hass: HomeAssistant) -> None:
+async def test_device_unload_works(menuai: menuai) -> None:
     """Test we unload the device."""
     device = get_device("Office")
 
-    with patch.object(hass.config_entries, "async_forward_entry_setups"):
-        mock_setup = await device.setup_entry(hass)
+    with patch.object(menuai.config_entries, "async_forward_entry_setups"):
+        mock_setup = await device.setup_entry(menuai)
 
     with patch.object(
-        hass.config_entries, "async_forward_entry_unload", return_value=True
+        menuai.config_entries, "async_forward_entry_unload", return_value=True
     ) as mock_forward:
-        await hass.config_entries.async_unload(mock_setup.entry.entry_id)
+        await menuai.config_entries.async_unload(mock_setup.entry.entry_id)
 
     assert mock_setup.entry.state is ConfigEntryState.NOT_LOADED
     forward_entries = {c[1][1] for c in mock_forward.mock_calls}
@@ -291,59 +291,59 @@ async def test_device_unload_works(hass: HomeAssistant) -> None:
     assert forward_entries == domains
 
 
-async def test_device_unload_authentication_error(hass: HomeAssistant) -> None:
+async def test_device_unload_authentication_error(menuai: menuai) -> None:
     """Test we unload a device that failed the authentication step."""
     device = get_device("Living Room")
     mock_api = device.get_mock_api()
     mock_api.auth.side_effect = blke.AuthenticationError()
 
     with (
-        patch.object(hass.config_entries, "async_forward_entry_setups"),
-        patch.object(hass.config_entries.flow, "async_init"),
+        patch.object(menuai.config_entries, "async_forward_entry_setups"),
+        patch.object(menuai.config_entries.flow, "async_init"),
     ):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     with patch.object(
-        hass.config_entries, "async_forward_entry_unload", return_value=True
+        menuai.config_entries, "async_forward_entry_unload", return_value=True
     ) as mock_forward:
-        await hass.config_entries.async_unload(mock_setup.entry.entry_id)
+        await menuai.config_entries.async_unload(mock_setup.entry.entry_id)
 
     assert mock_setup.entry.state is ConfigEntryState.NOT_LOADED
     assert mock_forward.call_count == 0
 
 
-async def test_device_unload_update_failed(hass: HomeAssistant) -> None:
+async def test_device_unload_update_failed(menuai: menuai) -> None:
     """Test we unload a device that failed the update step."""
     device = get_device("Office")
     mock_api = device.get_mock_api()
     mock_api.check_sensors.side_effect = blke.NetworkTimeoutError()
 
-    with patch.object(hass.config_entries, "async_forward_entry_setups"):
-        mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    with patch.object(menuai.config_entries, "async_forward_entry_setups"):
+        mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     with patch.object(
-        hass.config_entries, "async_forward_entry_unload", return_value=True
+        menuai.config_entries, "async_forward_entry_unload", return_value=True
     ) as mock_forward:
-        await hass.config_entries.async_unload(mock_setup.entry.entry_id)
+        await menuai.config_entries.async_unload(mock_setup.entry.entry_id)
 
     assert mock_setup.entry.state is ConfigEntryState.NOT_LOADED
     assert mock_forward.call_count == 0
 
 
 async def test_device_update_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we update device and entity registry when the entry is renamed."""
     device = get_device("Office")
 
-    mock_setup = await device.setup_entry(hass)
-    await hass.async_block_till_done()
+    mock_setup = await device.setup_entry(menuai)
+    await menuai.async_block_till_done()
 
     with patch(DEVICE_FACTORY, return_value=mock_setup.api):
-        hass.config_entries.async_update_entry(mock_setup.entry, title="New Name")
-        await hass.async_block_till_done()
+        menuai.config_entries.async_update_entry(mock_setup.entry, title="New Name")
+        await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -351,7 +351,7 @@ async def test_device_update_listener(
     assert device_entry.name == "New Name"
     for entry in er.async_entries_for_device(entity_registry, device_entry.id):
         assert (
-            hass.states.get(entry.entity_id)
+            menuai.states.get(entry.entity_id)
             .attributes[ATTR_FRIENDLY_NAME]
             .startswith("New Name")
         )

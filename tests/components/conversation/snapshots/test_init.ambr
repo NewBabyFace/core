@@ -28,7 +28,7 @@
 # name: test_get_agent_info
   dict({
     'id': 'conversation.home_assistant',
-    'name': 'Home Assistant',
+    'name': 'MenuAI',
     'supports_streaming': False,
   })
 # ---
@@ -42,7 +42,7 @@
 # name: test_get_agent_info.2
   dict({
     'id': 'conversation.home_assistant',
-    'name': 'Home Assistant',
+    'name': 'MenuAI',
     'supports_streaming': False,
   })
 # ---
@@ -108,7 +108,7 @@
     }),
   })
 # ---
-# name: test_turn_on_intent[None-turn kitchen on-homeassistant]
+# name: test_turn_on_intent[None-turn kitchen on-menuai]
   dict({
     'continue_conversation': False,
     'conversation_id': <ANY>,
@@ -201,7 +201,7 @@
     }),
   })
 # ---
-# name: test_turn_on_intent[None-turn on kitchen-homeassistant]
+# name: test_turn_on_intent[None-turn on kitchen-menuai]
   dict({
     'continue_conversation': False,
     'conversation_id': <ANY>,
@@ -294,7 +294,7 @@
     }),
   })
 # ---
-# name: test_turn_on_intent[my_new_conversation-turn kitchen on-homeassistant]
+# name: test_turn_on_intent[my_new_conversation-turn kitchen on-menuai]
   dict({
     'continue_conversation': False,
     'conversation_id': <ANY>,
@@ -387,7 +387,7 @@
     }),
   })
 # ---
-# name: test_turn_on_intent[my_new_conversation-turn on kitchen-homeassistant]
+# name: test_turn_on_intent[my_new_conversation-turn on kitchen-menuai]
   dict({
     'continue_conversation': False,
     'conversation_id': <ANY>,

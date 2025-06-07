@@ -6,23 +6,23 @@ import datetime
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DISARM_AFTER_TRIGGER,
     CONF_NAME,
     CONF_PAYLOAD,
     CONF_PAYLOAD_OFF,
     CONF_PAYLOAD_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import track_point_in_time
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import track_point_in_time
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from . import EVENT
 
@@ -48,7 +48,7 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -58,7 +58,7 @@ def setup_platform(
         add_entities(
             [
                 PilightTriggerSensor(
-                    hass=hass,
+                    menuai=menuai,
                     name=config.get(CONF_NAME),
                     variable=config.get(CONF_VARIABLE),
                     payload=config.get(CONF_PAYLOAD),
@@ -72,7 +72,7 @@ def setup_platform(
         add_entities(
             [
                 PilightBinarySensor(
-                    hass=hass,
+                    menuai=menuai,
                     name=config.get(CONF_NAME),
                     variable=config.get(CONF_VARIABLE),
                     payload=config.get(CONF_PAYLOAD),
@@ -86,17 +86,17 @@ def setup_platform(
 class PilightBinarySensor(BinarySensorEntity):
     """Representation of a binary sensor that can be updated using Pilight."""
 
-    def __init__(self, hass, name, variable, payload, on_value, off_value):
+    def __init__(self, menuai, name, variable, payload, on_value, off_value):
         """Initialize the sensor."""
         self._state = False
-        self._hass = hass
+        self._menuai = menuai
         self._name = name
         self._variable = variable
         self._payload = payload
         self._on_value = on_value
         self._off_value = off_value
 
-        hass.bus.listen(EVENT, self._handle_code)
+        menuai.bus.listen(EVENT, self._handle_code)
 
     @property
     def name(self):
@@ -136,11 +136,11 @@ class PilightTriggerSensor(BinarySensorEntity):
     """Representation of a binary sensor that can be updated using Pilight."""
 
     def __init__(
-        self, hass, name, variable, payload, on_value, off_value, rst_dly_sec=30
+        self, menuai, name, variable, payload, on_value, off_value, rst_dly_sec=30
     ):
         """Initialize the sensor."""
         self._state = False
-        self._hass = hass
+        self._menuai = menuai
         self._name = name
         self._variable = variable
         self._payload = payload
@@ -148,9 +148,9 @@ class PilightTriggerSensor(BinarySensorEntity):
         self._off_value = off_value
         self._reset_delay_sec = rst_dly_sec
         self._delay_after = None
-        self._hass = hass
+        self._menuai = menuai
 
-        hass.bus.listen(EVENT, self._handle_code)
+        menuai.bus.listen(EVENT, self._handle_code)
 
     @property
     def name(self):
@@ -192,5 +192,5 @@ class PilightTriggerSensor(BinarySensorEntity):
                 self._delay_after = dt_util.utcnow() + datetime.timedelta(
                     seconds=self._reset_delay_sec
                 )
-                track_point_in_time(self._hass, self._reset_state, self._delay_after)
+                track_point_in_time(self._menuai, self._reset_state, self._delay_after)
             self.schedule_update_ha_state()

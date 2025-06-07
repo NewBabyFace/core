@@ -8,32 +8,32 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components import logger
-from homeassistant.components.logger import LOGSEVERITY
-from homeassistant.components.logger.helpers import SAVE_DELAY_LONG
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import logger
+from menuai.components.logger import LOGSEVERITY
+from menuai.components.logger.helpers import SAVE_DELAY_LONG
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_call_logger_set_level, async_fire_time_changed
 
-HASS_NS = "unused.homeassistant"
-COMPONENTS_NS = f"{HASS_NS}.components"
+menuai_NS = "unused.menuai"
+COMPONENTS_NS = f"{menuai_NS}.components"
 ZONE_NS = f"{COMPONENTS_NS}.zone"
 GROUP_NS = f"{COMPONENTS_NS}.group"
 CONFIGED_NS = "otherlibx"
 UNCONFIG_NS = "unconfigurednamespace"
 INTEGRATION = "test_component"
-INTEGRATION_NS = f"homeassistant.components.{INTEGRATION}"
+INTEGRATION_NS = f"menuai.components.{INTEGRATION}"
 
 
 async def test_log_filtering(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test logging filters."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "logger",
         {
             "logger": {
@@ -53,7 +53,7 @@ async def test_log_filtering(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     filter_logger = logging.getLogger("test.filter")
 
@@ -74,7 +74,7 @@ async def test_log_filtering(
 
     # Filtering should work even if log level is modified
     async with async_call_logger_set_level(
-        "test.filter", "WARNING", hass=hass, caplog=caplog
+        "test.filter", "WARNING", menuai=menuai, caplog=caplog
     ):
         assert filter_logger.getEffectiveLevel() == logging.WARNING
         msg_test(
@@ -96,13 +96,13 @@ async def test_log_filtering(
         )
 
 
-async def test_setting_level(hass: HomeAssistant) -> None:
+async def test_setting_level(menuai: menuai) -> None:
     """Test we set log levels."""
     mocks = defaultdict(Mock)
 
     with patch("logging.getLogger", mocks.__getitem__):
         assert await async_setup_component(
-            hass,
+            menuai,
             "logger",
             {
                 "logger": {
@@ -115,7 +115,7 @@ async def test_setting_level(hass: HomeAssistant) -> None:
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mocks) == 4
 
@@ -136,7 +136,7 @@ async def test_setting_level(hass: HomeAssistant) -> None:
 
     # Test set default level
     with patch("logging.getLogger", mocks.__getitem__):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "logger", "set_default_level", {"level": "fatal"}, blocking=True
         )
     assert len(mocks[""].orig_setLevel.mock_calls) == 2
@@ -144,7 +144,7 @@ async def test_setting_level(hass: HomeAssistant) -> None:
 
     # Test update other loggers
     with patch("logging.getLogger", mocks.__getitem__):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "logger",
             "set_level",
             {"test.child": "info", "new_logger": "notset"},
@@ -161,11 +161,11 @@ async def test_setting_level(hass: HomeAssistant) -> None:
     )
 
 
-async def test_can_set_level_from_yaml(hass: HomeAssistant) -> None:
+async def test_can_set_level_from_yaml(menuai: menuai) -> None:
     """Test logger propagation."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "logger",
         {
             "logger": {
@@ -173,7 +173,7 @@ async def test_can_set_level_from_yaml(hass: HomeAssistant) -> None:
                     CONFIGED_NS: "warning",
                     f"{CONFIGED_NS}.info": "info",
                     f"{CONFIGED_NS}.debug": "debug",
-                    HASS_NS: "warning",
+                    menuai_NS: "warning",
                     COMPONENTS_NS: "info",
                     ZONE_NS: "debug",
                     GROUP_NS: "info",
@@ -181,15 +181,15 @@ async def test_can_set_level_from_yaml(hass: HomeAssistant) -> None:
             }
         },
     )
-    await _assert_log_levels(hass)
+    await _assert_log_levels(menuai)
     _reset_logging()
 
 
 async def test_can_set_level_from_store(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test setting up logs from store."""
-    hass_storage["core.logger"] = {
+    menuai_storage["core.logger"] = {
         "data": {
             "logs": {
                 CONFIGED_NS: {
@@ -207,7 +207,7 @@ async def test_can_set_level_from_store(
                     "persistence": "once",
                     "type": "module",
                 },
-                HASS_NS: {"level": "WARNING", "persistence": "once", "type": "module"},
+                menuai_NS: {"level": "WARNING", "persistence": "once", "type": "module"},
                 COMPONENTS_NS: {
                     "level": "INFO",
                     "persistence": "once",
@@ -220,12 +220,12 @@ async def test_can_set_level_from_store(
         "key": "core.logger",
         "version": 1,
     }
-    assert await async_setup_component(hass, "logger", {})
-    await _assert_log_levels(hass)
+    assert await async_setup_component(menuai, "logger", {})
+    await _assert_log_levels(menuai)
     _reset_logging()
 
 
-async def _assert_log_levels(hass: HomeAssistant) -> None:
+async def _assert_log_levels(menuai: menuai) -> None:
     assert logging.getLogger(UNCONFIG_NS).level == logging.NOTSET
     assert logging.getLogger(UNCONFIG_NS).isEnabledFor(logging.CRITICAL) is True
     assert (
@@ -258,8 +258,8 @@ async def _assert_log_levels(hass: HomeAssistant) -> None:
         is True
     )
 
-    assert logging.getLogger(HASS_NS).isEnabledFor(logging.DEBUG) is False
-    assert logging.getLogger(HASS_NS).isEnabledFor(logging.WARNING) is True
+    assert logging.getLogger(menuai_NS).isEnabledFor(logging.DEBUG) is False
+    assert logging.getLogger(menuai_NS).isEnabledFor(logging.WARNING) is True
 
     assert logging.getLogger(COMPONENTS_NS).isEnabledFor(logging.DEBUG) is False
     assert logging.getLogger(COMPONENTS_NS).isEnabledFor(logging.WARNING) is True
@@ -276,7 +276,7 @@ async def _assert_log_levels(hass: HomeAssistant) -> None:
     assert logging.getLogger(ZONE_NS).isEnabledFor(logging.DEBUG) is True
     assert logging.getLogger(f"{ZONE_NS}.any").isEnabledFor(logging.DEBUG) is True
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         logger.DOMAIN, "set_level", {f"{UNCONFIG_NS}.any": "debug"}, blocking=True
     )
 
@@ -284,7 +284,7 @@ async def _assert_log_levels(hass: HomeAssistant) -> None:
     assert logging.getLogger(f"{UNCONFIG_NS}.any").level == logging.DEBUG
     assert logging.getLogger(UNCONFIG_NS).level == logging.NOTSET
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         logger.DOMAIN, "set_default_level", {"level": "debug"}, blocking=True
     )
 
@@ -309,7 +309,7 @@ def _reset_logging():
     logging.getLogger(CONFIGED_NS).orig_setLevel(logging.NOTSET)
     logging.getLogger(f"{CONFIGED_NS}.info").orig_setLevel(logging.NOTSET)
     logging.getLogger(f"{CONFIGED_NS}.debug").orig_setLevel(logging.NOTSET)
-    logging.getLogger(HASS_NS).orig_setLevel(logging.NOTSET)
+    logging.getLogger(menuai_NS).orig_setLevel(logging.NOTSET)
     logging.getLogger(COMPONENTS_NS).orig_setLevel(logging.NOTSET)
     logging.getLogger(ZONE_NS).orig_setLevel(logging.NOTSET)
     logging.getLogger(GROUP_NS).orig_setLevel(logging.NOTSET)
@@ -317,10 +317,10 @@ def _reset_logging():
 
 
 async def test_can_set_integration_level_from_store(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test setting up integration logs from store."""
-    hass_storage["core.logger"] = {
+    menuai_storage["core.logger"] = {
         "data": {
             "logs": {
                 INTEGRATION: {
@@ -333,7 +333,7 @@ async def test_can_set_integration_level_from_store(
         "key": "core.logger",
         "version": 1,
     }
-    assert await async_setup_component(hass, "logger", {})
+    assert await async_setup_component(menuai, "logger", {})
 
     assert logging.getLogger(INTEGRATION_NS).isEnabledFor(logging.DEBUG) is False
     assert logging.getLogger(INTEGRATION_NS).isEnabledFor(logging.WARNING) is True
@@ -342,10 +342,10 @@ async def test_can_set_integration_level_from_store(
 
 
 async def test_chattier_log_level_wins_1(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test chattier log level in store takes precedence."""
-    hass_storage["core.logger"] = {
+    menuai_storage["core.logger"] = {
         "data": {
             "logs": {
                 INTEGRATION_NS: {
@@ -359,7 +359,7 @@ async def test_chattier_log_level_wins_1(
         "version": 1,
     }
     assert await async_setup_component(
-        hass,
+        menuai,
         "logger",
         {
             "logger": {
@@ -377,10 +377,10 @@ async def test_chattier_log_level_wins_1(
 
 
 async def test_chattier_log_level_wins_2(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test chattier log level in yaml takes precedence."""
-    hass_storage["core.logger"] = {
+    menuai_storage["core.logger"] = {
         "data": {
             "logs": {
                 INTEGRATION_NS: {
@@ -394,7 +394,7 @@ async def test_chattier_log_level_wins_2(
         "version": 1,
     }
     assert await async_setup_component(
-        hass, "logger", {"logger": {"logs": {INTEGRATION_NS: "debug"}}}
+        menuai, "logger", {"logger": {"logs": {INTEGRATION_NS: "debug"}}}
     )
 
     assert logging.getLogger(INTEGRATION_NS).isEnabledFor(logging.DEBUG) is True
@@ -404,7 +404,7 @@ async def test_chattier_log_level_wins_2(
 
 
 async def test_log_once_removed_from_store(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test logs with persistence "once" are removed from the store at startup."""
     store_contents = {
@@ -416,15 +416,15 @@ async def test_log_once_removed_from_store(
         "key": "core.logger",
         "version": 1,
     }
-    hass_storage["core.logger"] = store_contents
+    menuai_storage["core.logger"] = store_contents
 
-    assert await async_setup_component(hass, "logger", {})
+    assert await async_setup_component(menuai, "logger", {})
 
-    assert hass_storage["core.logger"]["data"] == store_contents["data"]
+    assert menuai_storage["core.logger"]["data"] == store_contents["data"]
 
     async_fire_time_changed(
-        hass, dt_util.utcnow() + datetime.timedelta(seconds=SAVE_DELAY_LONG)
+        menuai, dt_util.utcnow() + datetime.timedelta(seconds=SAVE_DELAY_LONG)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass_storage["core.logger"]["data"] == {"logs": {}}
+    assert menuai_storage["core.logger"]["data"] == {"logs": {}}

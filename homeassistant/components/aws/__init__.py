@@ -7,18 +7,18 @@ import logging
 from aiobotocore.session import AioSession
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CREDENTIALS,
     CONF_NAME,
     CONF_PROFILE_NAME,
     CONF_SERVICE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 # Loading the config flow file will register the flow
 from .const import (
@@ -31,7 +31,7 @@ from .const import (
     CONF_SECRET_ACCESS_KEY,
     CONF_VALIDATE,
     DATA_CONFIG,
-    DATA_HASS_CONFIG,
+    DATA_menuai_CONFIG,
     DATA_SESSIONS,
     DOMAIN,
 )
@@ -86,19 +86,19 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up AWS component."""
-    hass.data[DATA_HASS_CONFIG] = config
+    menuai.data[DATA_menuai_CONFIG] = config
 
     if (conf := config.get(DOMAIN)) is None:
         # create a default conf using default profile
         conf = CONFIG_SCHEMA({ATTR_CREDENTIALS: DEFAULT_CREDENTIAL})
 
-    hass.data[DATA_CONFIG] = conf
-    hass.data[DATA_SESSIONS] = OrderedDict()
+    menuai.data[DATA_CONFIG] = conf
+    menuai.data[DATA_SESSIONS] = OrderedDict()
 
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data=conf
         )
     )
@@ -106,30 +106,30 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Load a config entry.
 
     Validate and save sessions per aws credential.
     """
-    config = hass.data[DATA_HASS_CONFIG]
-    conf = hass.data[DATA_CONFIG]
+    config = menuai.data[DATA_menuai_CONFIG]
+    conf = menuai.data[DATA_CONFIG]
 
     if entry.source == config_entries.SOURCE_IMPORT:
         if conf is None:
             # user removed config from configuration.yaml, abort setup
-            hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+            menuai.async_create_task(menuai.config_entries.async_remove(entry.entry_id))
             return False
 
         if conf != entry.data:
             # user changed config from configuration.yaml, use conf to setup
-            hass.config_entries.async_update_entry(entry, data=conf)
+            menuai.config_entries.async_update_entry(entry, data=conf)
 
     if conf is None:
         conf = CONFIG_SCHEMA({DOMAIN: entry.data})[DOMAIN]
 
     # validate credentials and create sessions
     validation = True
-    tasks = [_validate_aws_credentials(hass, cred) for cred in conf[ATTR_CREDENTIALS]]
+    tasks = [_validate_aws_credentials(menuai, cred) for cred in conf[ATTR_CREDENTIALS]]
     if tasks:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for index, result in enumerate(results):
@@ -143,21 +143,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
                 validation = False
             else:
-                hass.data[DATA_SESSIONS][name] = result
+                menuai.data[DATA_SESSIONS][name] = result
 
     # set up notify platform, no entry support for notify component yet,
     # have to use discovery to load platform.
     for notify_config in conf[CONF_NOTIFY]:
-        hass.async_create_task(
+        menuai.async_create_task(
             discovery.async_load_platform(
-                hass, Platform.NOTIFY, DOMAIN, notify_config, config
+                menuai, Platform.NOTIFY, DOMAIN, notify_config, config
             )
         )
 
     return validation
 
 
-async def _validate_aws_credentials(hass, credential):
+async def _validate_aws_credentials(menuai, credential):
     """Validate AWS credential config."""
     aws_config = credential.copy()
     del aws_config[CONF_NAME]

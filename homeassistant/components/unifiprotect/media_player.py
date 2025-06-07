@@ -8,8 +8,8 @@ from typing import Any
 from uiprotect.data import Camera, ProtectAdoptableDeviceModel, StateType
 from uiprotect.exceptions import StreamError
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
@@ -19,9 +19,9 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .data import ProtectDeviceType, UFPConfigEntry
 from .entity import ProtectDeviceEntity
@@ -36,7 +36,7 @@ _SPEAKER_DESCRIPTION = MediaPlayerEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -117,12 +117,12 @@ class ProtectMediaPlayer(ProtectDeviceEntity, MediaPlayerEntity):
         if media_source.is_media_source_id(media_id):
             media_type = MediaType.MUSIC
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
-            media_id = async_process_play_media_url(self.hass, play_item.url)
+            media_id = async_process_play_media_url(self.menuai, play_item.url)
 
         if media_type != MediaType.MUSIC:
-            raise HomeAssistantError("Only music media type is supported")
+            raise menuaiError("Only music media type is supported")
 
         _LOGGER.debug(
             "Playing Media %s for %s Speaker", media_id, self.device.display_name
@@ -131,7 +131,7 @@ class ProtectMediaPlayer(ProtectDeviceEntity, MediaPlayerEntity):
         try:
             await self.device.play_audio(media_id, blocking=False)
         except StreamError as err:
-            raise HomeAssistantError(err) from err
+            raise menuaiError(err) from err
 
         # update state after starting player
         self._async_updated_event(self.device)
@@ -147,7 +147,7 @@ class ProtectMediaPlayer(ProtectDeviceEntity, MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

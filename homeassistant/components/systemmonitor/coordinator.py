@@ -12,10 +12,10 @@ from psutil import Process
 from psutil._common import sdiskusage, shwtemp, snetio, snicaddr, sswap
 import psutil_home_assistant as ha_psutil
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-from homeassistant.helpers.update_coordinator import TimestampDataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_component import DEFAULT_SCAN_INTERVAL
+from menuai.helpers.update_coordinator import TimestampDataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 if TYPE_CHECKING:
     from . import SystemMonitorConfigEntry
@@ -85,14 +85,14 @@ class SystemMonitorCoordinator(TimestampDataUpdateCoordinator[SensorData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SystemMonitorConfigEntry,
         psutil_wrapper: ha_psutil.PsutilWrapper,
         arguments: list[str],
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="System Monitor update coordinator",
@@ -132,7 +132,7 @@ class SystemMonitorCoordinator(TimestampDataUpdateCoordinator[SensorData]):
         """Fetch data."""
         _LOGGER.debug("Update list is: %s", self.update_subscribers)
 
-        _data = await self.hass.async_add_executor_job(self.update_data)
+        _data = await self.menuai.async_add_executor_job(self.update_data)
 
         load: tuple = (None, None, None)
         if self.update_subscribers[("load", "")] or self._initial_update:

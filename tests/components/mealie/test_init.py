@@ -6,10 +6,10 @@ from aiomealie import About, MealieAuthenticationError, MealieConnectionError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.mealie.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.mealie.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import setup_integration
 
@@ -17,14 +17,14 @@ from tests.common import MockConfigEntry
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test device registry integration."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_config_entry.unique_id)}
     )
@@ -49,7 +49,7 @@ async def test_device_info(
     ],
 )
 async def test_setup_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     field: str,
@@ -59,7 +59,7 @@ async def test_setup_failure(
     """Test setup failure."""
     getattr(mock_mealie_client, field).side_effect = exc
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is state
 
@@ -73,7 +73,7 @@ async def test_setup_failure(
     ],
 )
 async def test_setup_too_old(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     version,
@@ -81,13 +81,13 @@ async def test_setup_too_old(
     """Test setup of Mealie entry with too old version of Mealie."""
     mock_mealie_client.get_about.return_value = About(version=version)
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
 async def test_setup_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
@@ -95,7 +95,7 @@ async def test_setup_invalid(
     """Test setup of Mealie entry with too old version of Mealie."""
     mock_mealie_client.get_about.return_value = About(version="nightly")
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
         "It seems like you are using the nightly version of Mealie, nightly"
@@ -105,17 +105,17 @@ async def test_setup_invalid(
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload entry."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_remove(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -128,7 +128,7 @@ async def test_load_unload_entry(
     ],
 )
 async def test_mealplan_initialization_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     exc: Exception,
@@ -137,7 +137,7 @@ async def test_mealplan_initialization_failure(
     """Test initialization failure."""
     mock_mealie_client.get_mealplans.side_effect = exc
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is state
 
@@ -150,7 +150,7 @@ async def test_mealplan_initialization_failure(
     ],
 )
 async def test_shoppingitems_initialization_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     exc: Exception,
@@ -159,6 +159,6 @@ async def test_shoppingitems_initialization_failure(
     """Test initialization failure."""
     mock_mealie_client.get_shopping_items.side_effect = exc
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is state

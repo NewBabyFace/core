@@ -19,9 +19,9 @@ from pyprusalink import (
 )
 from pyprusalink.types import InvalidAuth, PrusaLinkError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -38,13 +38,13 @@ class PrusaLinkUpdateCoordinator(DataUpdateCoordinator[T], ABC):
     expect_change_until = 0.0
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, api: PrusaLink
+        self, menuai: menuai, config_entry: ConfigEntry, api: PrusaLink
     ) -> None:
         """Initialize the update coordinator."""
         self.api = api
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

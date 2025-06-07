@@ -9,10 +9,10 @@ import aiohttp
 from aiolookin import Device, LookInHttpProtocol, NoUsableService
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -85,7 +85,7 @@ class LookinFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _validate_device(self, host: str) -> Device:
         """Validate we can connect to the device."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         lookin_protocol = LookInHttpProtocol(f"http://{host}", session)
         return await lookin_protocol.get_info()
 

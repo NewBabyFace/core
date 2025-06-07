@@ -7,16 +7,16 @@ from dataclasses import dataclass
 
 from fjaraskupan import Device
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import async_setup_entry_platform
 from .coordinator import FjaraskupanConfigEntry, FjaraskupanCoordinator
@@ -46,7 +46,7 @@ SENSORS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FjaraskupanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,7 +63,7 @@ async def async_setup_entry(
             for entity_description in SENSORS
         ]
 
-    async_setup_entry_platform(hass, config_entry, async_add_entities, _constructor)
+    async_setup_entry_platform(menuai, config_entry, async_add_entities, _constructor)
 
 
 class BinarySensor(CoordinatorEntity[FjaraskupanCoordinator], BinarySensorEntity):

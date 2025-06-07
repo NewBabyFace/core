@@ -16,8 +16,8 @@ from aiohomekit.model import Accessories, AccessoriesState, Accessory
 from aiohomekit.model.services import Service
 from aiohomekit.testing import FakeController, FakePairing
 
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.homekit_controller.const import (
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.homekit_controller.const import (
     CONTROLLER,
     DEBOUNCE_COOLDOWN,
     DOMAIN,
@@ -25,14 +25,14 @@ from homeassistant.components.homekit_controller.const import (
     IDENTIFIER_ACCESSORY_ID,
     SUBSCRIBE_COOLDOWN,
 )
-from homeassistant.components.homekit_controller.utils import async_get_controller
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.homekit_controller.utils import async_get_controller
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, State, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -112,14 +112,14 @@ class Helper:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entity_id: str,
         pairing: FakePairing,
         accessory: Accessory,
         config_entry: ConfigEntry,
     ) -> None:
         """Create a helper for a given accessory/entity."""
-        self.hass = hass
+        self.menuai = menuai
         self.entity_id = entity_id
         self.pairing = pairing
         self.accessory = accessory
@@ -144,12 +144,12 @@ class Helper:
             # If events aren't enabled, explicitly do a poll
             # If they are enabled, then HA will pick up the changes next time
             # we yield control
-            await time_changed(self.hass, 60)
-            await time_changed(self.hass, DEBOUNCE_COOLDOWN)
+            await time_changed(self.menuai, 60)
+            await time_changed(self.menuai, DEBOUNCE_COOLDOWN)
 
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
 
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state is not None
         return state
 
@@ -158,7 +158,7 @@ class Helper:
     ) -> None:
         """Set the status of a set of aid/iid pairs."""
         self.pairing.testing.set_aid_iid_status(aid_iid_status)
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
 
     @callback
     def async_assert_service_values(
@@ -171,54 +171,54 @@ class Helper:
 
     async def poll_and_get_state(self) -> State:
         """Trigger a time based poll and return the current entity state."""
-        await time_changed(self.hass, 60)
-        await time_changed(self.hass, DEBOUNCE_COOLDOWN)
+        await time_changed(self.menuai, 60)
+        await time_changed(self.menuai, DEBOUNCE_COOLDOWN)
 
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state is not None
         return state
 
 
-async def time_changed(hass: HomeAssistant, seconds: int) -> None:
+async def time_changed(menuai: menuai, seconds: int) -> None:
     """Trigger time changed."""
     next_update = dt_util.utcnow() + timedelta(seconds)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done()
 
 
-async def setup_accessories_from_file(hass: HomeAssistant, path: str) -> Accessories:
+async def setup_accessories_from_file(menuai: menuai, path: str) -> Accessories:
     """Load an collection of accessory defs from JSON data."""
-    accessories_fixture = await hass.async_add_executor_job(
+    accessories_fixture = await menuai.async_add_executor_job(
         load_fixture, os.path.join("homekit_controller", path)
     )
     accessories_json = hkloads(accessories_fixture)
     return Accessories.from_list(accessories_json)
 
 
-async def setup_platform(hass: HomeAssistant) -> FakeController:
+async def setup_platform(menuai: menuai) -> FakeController:
     """Load the platform but with a fake Controller API."""
     config = {"discovery": {}}
 
     with mock.patch(
-        "homeassistant.components.homekit_controller.utils.Controller", FakeController
+        "menuai.components.homekit_controller.utils.Controller", FakeController
     ):
-        await async_setup_component(hass, DOMAIN, config)
+        await async_setup_component(menuai, DOMAIN, config)
 
-    return await async_get_controller(hass)
+    return await async_get_controller(menuai)
 
 
 async def setup_test_accessories(
-    hass: HomeAssistant, accessories: list[Accessory], connection: str | None = None
+    menuai: menuai, accessories: list[Accessory], connection: str | None = None
 ) -> tuple[MockConfigEntry, AbstractPairing]:
     """Load a fake homekit device based on captured JSON profile."""
-    fake_controller = await setup_platform(hass)
+    fake_controller = await setup_platform(menuai)
     return await setup_test_accessories_with_controller(
-        hass, accessories, fake_controller, connection
+        menuai, accessories, fake_controller, connection
     )
 
 
 async def setup_test_accessories_with_controller(
-    hass: HomeAssistant,
+    menuai: menuai,
     accessories: list[Accessory],
     fake_controller: FakeController,
     connection: str | None = None,
@@ -244,19 +244,19 @@ async def setup_test_accessories_with_controller(
         data=data,
         title="test",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await time_changed(hass, SUBSCRIBE_COOLDOWN)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await time_changed(menuai, SUBSCRIBE_COOLDOWN)
+    await menuai.async_block_till_done()
 
     return config_entry, pairing
 
 
-async def device_config_changed(hass: HomeAssistant, accessories: Accessories):
-    """Discover new devices added to Home Assistant at runtime."""
+async def device_config_changed(menuai: menuai, accessories: Accessories):
+    """Discover new devices added to MenuAI at runtime."""
     # Update the accessories our FakePairing knows about
-    controller = hass.data[CONTROLLER]
+    controller = menuai.data[CONTROLLER]
     pairing: AbstractPairing = controller.pairings["00:00:00:00:00:00"]
 
     accessories_obj = Accessories()
@@ -279,12 +279,12 @@ async def device_config_changed(hass: HomeAssistant, accessories: Accessories):
     pairing._accessories_state = AccessoriesState(accessories_obj, new_config_num)
 
     # Wait for services to reconfigure
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def setup_test_component(
-    hass: HomeAssistant,
+    menuai: menuai,
     aid: int,
     setup_accessory: Callable[[Accessory], Service | None],
     capitalize: bool = False,
@@ -309,19 +309,19 @@ async def setup_test_component(
             domain = HOMEKIT_ACCESSORY_DISPATCH[service_name]
             break
 
-    assert domain, "Cannot map test homekit services to Home Assistant domain"
+    assert domain, "Cannot map test homekit services to MenuAI domain"
 
-    config_entry, pairing = await setup_test_accessories(hass, [accessory], connection)
+    config_entry, pairing = await setup_test_accessories(menuai, [accessory], connection)
     entity = "testdevice" if suffix is None else f"testdevice_{suffix}"
-    return Helper(hass, f"{domain}.{entity}", pairing, accessory, config_entry)
+    return Helper(menuai, f"{domain}.{entity}", pairing, accessory, config_entry)
 
 
 async def assert_devices_and_entities_created(
-    hass: HomeAssistant, expected: DeviceTestInfo
+    menuai: menuai, expected: DeviceTestInfo
 ):
     """Check that all expected devices and entities are loaded and enumerated as expected."""
-    entity_registry = er.async_get(hass)
-    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(menuai)
+    device_registry = dr.async_get(menuai)
 
     async def _do_assertions(expected: DeviceTestInfo) -> dr.DeviceEntry:
         # Note: homekit_controller currently uses a 3-tuple for device identifiers
@@ -372,7 +372,7 @@ async def assert_devices_and_entities_created(
             assert entity.unit_of_measurement == entity_info.unit_of_measurement
             assert entity.capabilities == entity_info.capabilities
 
-            state = hass.states.get(entity_info.entity_id)
+            state = menuai.states.get(entity_info.entity_id)
             logger.debug("Comparing state %r to %r", state, entity_info)
 
             assert state is not None
@@ -380,7 +380,7 @@ async def assert_devices_and_entities_created(
             assert state.attributes["friendly_name"] == entity_info.friendly_name
 
         all_triggers = await async_get_device_automations(
-            hass, DeviceAutomationType.TRIGGER, device.id
+            menuai, DeviceAutomationType.TRIGGER, device.id
         )
         stateless_triggers = []
         for trigger in all_triggers:

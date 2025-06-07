@@ -8,28 +8,28 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.storage import Store
-from homeassistant.util.hass_dict import HassKey
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.core import menuai, callback
+from menuai.helpers.storage import Store
+from menuai.util.menuai_dict import menuaiKey
 
-DATA_STORAGE: HassKey[dict[str, UserStore]] = HassKey("frontend_storage")
+DATA_STORAGE: menuaiKey[dict[str, UserStore]] = menuaiKey("frontend_storage")
 STORAGE_VERSION_USER_DATA = 1
 
 
-async def async_setup_frontend_storage(hass: HomeAssistant) -> None:
+async def async_setup_frontend_storage(menuai: menuai) -> None:
     """Set up frontend storage."""
-    websocket_api.async_register_command(hass, websocket_set_user_data)
-    websocket_api.async_register_command(hass, websocket_get_user_data)
-    websocket_api.async_register_command(hass, websocket_subscribe_user_data)
+    websocket_api.async_register_command(menuai, websocket_set_user_data)
+    websocket_api.async_register_command(menuai, websocket_get_user_data)
+    websocket_api.async_register_command(menuai, websocket_subscribe_user_data)
 
 
-async def async_user_store(hass: HomeAssistant, user_id: str) -> UserStore:
+async def async_user_store(menuai: menuai, user_id: str) -> UserStore:
     """Access a user store."""
-    stores = hass.data.setdefault(DATA_STORAGE, {})
+    stores = menuai.data.setdefault(DATA_STORAGE, {})
     if (store := stores.get(user_id)) is None:
-        store = stores[user_id] = UserStore(hass, user_id)
+        store = stores[user_id] = UserStore(menuai, user_id)
         await store.async_load()
 
     return store
@@ -38,9 +38,9 @@ async def async_user_store(hass: HomeAssistant, user_id: str) -> UserStore:
 class UserStore:
     """User store for frontend data."""
 
-    def __init__(self, hass: HomeAssistant, user_id: str) -> None:
+    def __init__(self, menuai: menuai, user_id: str) -> None:
         """Initialize the user store."""
-        self._store = _UserStore(hass, user_id)
+        self._store = _UserStore(menuai, user_id)
         self.data: dict[str, Any] = {}
         self.subscriptions: dict[str | None, list[Callable[[], None]]] = {}
 
@@ -74,10 +74,10 @@ class UserStore:
 class _UserStore(Store[dict[str, Any]]):
     """User store for frontend data."""
 
-    def __init__(self, hass: HomeAssistant, user_id: str) -> None:
+    def __init__(self, menuai: menuai, user_id: str) -> None:
         """Initialize the user store."""
         super().__init__(
-            hass,
+            menuai,
             STORAGE_VERSION_USER_DATA,
             f"frontend.user_data_{user_id}",
         )
@@ -85,24 +85,24 @@ class _UserStore(Store[dict[str, Any]]):
 
 def with_user_store(
     orig_func: Callable[
-        [HomeAssistant, ActiveConnection, dict[str, Any], UserStore],
+        [menuai, ActiveConnection, dict[str, Any], UserStore],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
+    [menuai, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
 ]:
     """Decorate function to provide data."""
 
     @wraps(orig_func)
     async def with_user_store_func(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         """Provide user specific data and store to function."""
         user_id = connection.user.id
 
-        store = await async_user_store(hass, user_id)
+        store = await async_user_store(menuai, user_id)
 
-        await orig_func(hass, connection, msg, store)
+        await orig_func(menuai, connection, msg, store)
 
     return with_user_store_func
 
@@ -117,7 +117,7 @@ def with_user_store(
 @websocket_api.async_response
 @with_user_store
 async def websocket_set_user_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     store: UserStore,
@@ -133,7 +133,7 @@ async def websocket_set_user_data(
 @websocket_api.async_response
 @with_user_store
 async def websocket_get_user_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     store: UserStore,
@@ -151,7 +151,7 @@ async def websocket_get_user_data(
 @websocket_api.async_response
 @with_user_store
 async def websocket_subscribe_user_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     store: UserStore,

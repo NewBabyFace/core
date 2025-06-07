@@ -7,14 +7,14 @@ import os.path
 
 from notify_events import Message
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN
 
@@ -39,12 +39,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> NotifyEventsNotificationService:
     """Get the Notify.Events notification service."""
-    return NotifyEventsNotificationService(hass.data[DOMAIN][CONF_TOKEN])
+    return NotifyEventsNotificationService(menuai.data[DOMAIN][CONF_TOKEN])
 
 
 class NotifyEventsNotificationService(BaseNotificationService):
@@ -56,7 +56,7 @@ class NotifyEventsNotificationService(BaseNotificationService):
 
     def file_exists(self, filename) -> bool:
         """Check if a file exists on disk and is in authorized path."""
-        if not self.hass.config.is_allowed_path(filename):
+        if not self.menuai.config.is_allowed_path(filename):
             return False
         return os.path.isfile(filename)
 

@@ -7,14 +7,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.lektrico.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.lektrico.const import DOMAIN
+from menuai.const import (
     ATTR_HW_VERSION,
     ATTR_SERIAL_NUMBER,
     CONF_HOST,
     CONF_TYPE,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -44,15 +44,15 @@ def mock_device() -> Generator[AsyncMock]:
     """Mock a Lektrico device."""
     with (
         patch(
-            "homeassistant.components.lektrico.Device",
+            "menuai.components.lektrico.Device",
             autospec=True,
         ) as mock_device,
         patch(
-            "homeassistant.components.lektrico.config_flow.Device",
+            "menuai.components.lektrico.config_flow.Device",
             new=mock_device,
         ),
         patch(
-            "homeassistant.components.lektrico.coordinator.Device",
+            "menuai.components.lektrico.coordinator.Device",
             new=mock_device,
         ),
     ):
@@ -72,7 +72,7 @@ def mock_device() -> Generator[AsyncMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setup entry."""
     with patch(
-        "homeassistant.components.lektrico.async_setup_entry", return_value=True
+        "menuai.components.lektrico.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 

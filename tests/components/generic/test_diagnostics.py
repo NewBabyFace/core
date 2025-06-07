@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.components.generic.diagnostics import redact_url
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import REDACTED
+from menuai.components.generic.diagnostics import redact_url
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -12,13 +12,13 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup_entry: MockConfigEntry,
 ) -> None:
     """Test config entry diagnostics."""
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, setup_entry) == {
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, setup_entry) == {
         "title": "Test Camera",
         "data": {},
         "options": {

@@ -7,12 +7,12 @@ import logging
 
 from iotawattpy.iotawatt import Iotawatt
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import httpx_client
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import httpx_client
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONNECTION_ERRORS
 
@@ -30,16 +30,16 @@ class IotawattUpdater(DataUpdateCoordinator):
     api: Iotawatt | None = None
     config_entry: IotawattConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: IotawattConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: IotawattConfigEntry) -> None:
         """Initialize IotaWattUpdater object."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             config_entry=entry,
             name=entry.title,
             update_interval=timedelta(seconds=30),
             request_refresh_debouncer=Debouncer(
-                hass,
+                menuai,
                 _LOGGER,
                 cooldown=REQUEST_REFRESH_DEFAULT_COOLDOWN,
                 immediate=True,
@@ -62,7 +62,7 @@ class IotawattUpdater(DataUpdateCoordinator):
             api = Iotawatt(
                 self.config_entry.title,
                 self.config_entry.data[CONF_HOST],
-                httpx_client.get_async_client(self.hass),
+                httpx_client.get_async_client(self.menuai),
                 self.config_entry.data.get(CONF_USERNAME),
                 self.config_entry.data.get(CONF_PASSWORD),
                 integratedInterval="d",

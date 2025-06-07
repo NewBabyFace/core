@@ -15,12 +15,12 @@ from fyta_cli.fyta_exceptions import (
 )
 from fyta_cli.fyta_models import Plant
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_EXPIRATION, DOMAIN
 
@@ -35,11 +35,11 @@ class FytaCoordinator(DataUpdateCoordinator[dict[int, Plant]]):
     config_entry: FytaConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: FytaConfigEntry, fyta: FytaConnector
+        self, menuai: menuai, config_entry: FytaConfigEntry, fyta: FytaConnector
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="FYTA Coordinator",
@@ -94,7 +94,7 @@ class FytaCoordinator(DataUpdateCoordinator[dict[int, Plant]]):
         if removed_plants := self._plants_last_update - current_plants:
             _LOGGER.debug("Removed plant(s): %s", ", ".join(map(str, removed_plants)))
 
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             for plant_id in removed_plants:
                 if device := device_registry.async_get_device(
                     identifiers={
@@ -139,7 +139,7 @@ class FytaCoordinator(DataUpdateCoordinator[dict[int, Plant]]):
         new_config_entry[CONF_ACCESS_TOKEN] = credentials.access_token
         new_config_entry[CONF_EXPIRATION] = credentials.expiration.isoformat()
 
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self.config_entry, data=new_config_entry
         )
 

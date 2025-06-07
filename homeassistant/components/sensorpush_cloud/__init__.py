@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .coordinator import SensorPushCloudConfigEntry, SensorPushCloudCoordinator
 
@@ -11,18 +11,18 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: SensorPushCloudConfigEntry
+    menuai: menuai, entry: SensorPushCloudConfigEntry
 ) -> bool:
     """Set up SensorPush Cloud from a config entry."""
-    coordinator = SensorPushCloudCoordinator(hass, entry)
+    coordinator = SensorPushCloudCoordinator(menuai, entry)
     entry.runtime_data = coordinator
     await coordinator.async_config_entry_first_refresh()
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: SensorPushCloudConfigEntry
+    menuai: menuai, entry: SensorPushCloudConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

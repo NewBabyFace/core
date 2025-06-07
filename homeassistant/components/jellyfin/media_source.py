@@ -10,14 +10,14 @@ from typing import Any
 from jellyfin_apiclient_python.api import jellyfin_url
 from jellyfin_apiclient_python.client import JellyfinClient
 
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import (
     COLLECTION_TYPE_MOVIES,
@@ -52,13 +52,13 @@ from .coordinator import JellyfinConfigEntry
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_get_media_source(hass: HomeAssistant) -> MediaSource:
+async def async_get_media_source(menuai: menuai) -> MediaSource:
     """Set up Jellyfin media source."""
     # Currently only a single Jellyfin server is supported
-    entry: JellyfinConfigEntry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry: JellyfinConfigEntry = menuai.config_entries.async_entries(DOMAIN)[0]
     coordinator = entry.runtime_data
 
-    return JellyfinSource(hass, coordinator.api_client, entry)
+    return JellyfinSource(menuai, coordinator.api_client, entry)
 
 
 class JellyfinSource(MediaSource):
@@ -67,12 +67,12 @@ class JellyfinSource(MediaSource):
     name: str = "Jellyfin"
 
     def __init__(
-        self, hass: HomeAssistant, client: JellyfinClient, entry: JellyfinConfigEntry
+        self, menuai: menuai, client: JellyfinClient, entry: JellyfinConfigEntry
     ) -> None:
         """Initialize the Jellyfin media source."""
         super().__init__(DOMAIN)
 
-        self.hass = hass
+        self.menuai = menuai
         self.entry = entry
 
         self.client = client
@@ -81,7 +81,7 @@ class JellyfinSource(MediaSource):
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Return a streamable URL and associated mime type."""
-        media_item = await self.hass.async_add_executor_job(
+        media_item = await self.menuai.async_add_executor_job(
             self.api.get_item, item.identifier
         )
 
@@ -98,7 +98,7 @@ class JellyfinSource(MediaSource):
         if not item.identifier:
             return await self._build_libraries()
 
-        media_item = await self.hass.async_add_executor_job(
+        media_item = await self.menuai.async_add_executor_job(
             self.api.get_item, item.identifier
         )
 
@@ -140,7 +140,7 @@ class JellyfinSource(MediaSource):
 
     async def _get_libraries(self) -> list[dict[str, Any]]:
         """Return all supported libraries a user has access to."""
-        response = await self.hass.async_add_executor_job(self.api.get_media_folders)
+        response = await self.menuai.async_add_executor_job(self.api.get_media_folders)
         libraries = response["Items"]
         result = []
         for library in libraries:
@@ -509,7 +509,7 @@ class JellyfinSource(MediaSource):
         if item_type in PLAYABLE_ITEM_TYPES:
             params["Fields"] = ITEM_KEY_MEDIA_SOURCES
 
-        result = await self.hass.async_add_executor_job(self.api.user_items, "", params)
+        result = await self.menuai.async_add_executor_job(self.api.user_items, "", params)
         return result["Items"]  # type: ignore[no-any-return]
 
     def _get_thumbnail_url(self, media_item: dict[str, Any]) -> str | None:

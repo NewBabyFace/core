@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import DOMAIN as COVER_DOMAIN
-from homeassistant.const import (
+from menuai.components.cover import DOMAIN as COVER_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
@@ -15,8 +15,8 @@ from homeassistant.const import (
     STATE_OPEN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import find_update_callback, setup_integration
 
@@ -24,7 +24,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -32,11 +32,11 @@ async def test_cover(
 ) -> None:
     """Test all entities."""
     with patch(
-        "homeassistant.components.niko_home_control.PLATFORMS", [Platform.COVER]
+        "menuai.components.niko_home_control.PLATFORMS", [Platform.COVER]
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -46,16 +46,16 @@ async def test_cover(
     ],
 )
 async def test_open_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
     cover_id: int,
     entity_id: int,
 ) -> None:
     """Test opening the cover."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -71,16 +71,16 @@ async def test_open_cover(
     ],
 )
 async def test_close_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
     cover_id: int,
     entity_id: str,
 ) -> None:
     """Test closing the cover."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -96,16 +96,16 @@ async def test_close_cover(
     ],
 )
 async def test_stop_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
     cover_id: int,
     entity_id: str,
 ) -> None:
     """Test closing the cover."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -115,24 +115,24 @@ async def test_stop_cover(
 
 
 async def test_updating(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
     cover: AsyncMock,
 ) -> None:
     """Test closing the cover."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("cover.cover").state == STATE_OPEN
+    assert menuai.states.get("cover.cover").state == STATE_OPEN
 
     cover.state = 0
     await find_update_callback(mock_niko_home_control_connection, 3)(0)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("cover.cover").state == STATE_CLOSED
+    assert menuai.states.get("cover.cover").state == STATE_CLOSED
 
     cover.state = 100
     await find_update_callback(mock_niko_home_control_connection, 3)(100)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("cover.cover").state == STATE_OPEN
+    assert menuai.states.get("cover.cover").state == STATE_OPEN

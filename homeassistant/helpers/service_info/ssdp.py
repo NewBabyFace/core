@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Final
 
-from homeassistant.data_entry_flow import BaseServiceInfo
+from menuai.data_entry_flow import BaseServiceInfo
 
 # Attributes for accessing info from retrieved UPnP device description
 ATTR_ST: Final = "st"
@@ -38,4 +38,4 @@ class SsdpServiceInfo(BaseServiceInfo):
     ssdp_server: str | None = None
     ssdp_headers: Mapping[str, Any] = field(default_factory=dict)
     ssdp_all_locations: set[str] = field(default_factory=set)
-    x_homeassistant_matching_domains: set[str] = field(default_factory=set)
+    x_menuai_matching_domains: set[str] = field(default_factory=set)

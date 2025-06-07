@@ -10,21 +10,21 @@ from aioesphomeapi import (
     LockState as ESPHomeLockState,
 )
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     DOMAIN as LOCK_DOMAIN,
     SERVICE_LOCK,
     SERVICE_OPEN,
     SERVICE_UNLOCK,
     LockState,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_lock_entity_no_open(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -47,11 +47,11 @@ async def test_lock_entity_no_open(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("lock.test_mylock")
+    state = menuai.states.get("lock.test_mylock")
     assert state is not None
     assert state.state == LockState.UNLOCKING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_LOCK,
         {ATTR_ENTITY_ID: "lock.test_mylock"},
@@ -62,7 +62,7 @@ async def test_lock_entity_no_open(
 
 
 async def test_lock_entity_start_locked(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -83,13 +83,13 @@ async def test_lock_entity_start_locked(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("lock.test_mylock")
+    state = menuai.states.get("lock.test_mylock")
     assert state is not None
     assert state.state == LockState.LOCKED
 
 
 async def test_lock_entity_supports_open(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -112,11 +112,11 @@ async def test_lock_entity_supports_open(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("lock.test_mylock")
+    state = menuai.states.get("lock.test_mylock")
     assert state is not None
     assert state.state == LockState.LOCKING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_LOCK,
         {ATTR_ENTITY_ID: "lock.test_mylock"},
@@ -125,7 +125,7 @@ async def test_lock_entity_supports_open(
     mock_client.lock_command.assert_has_calls([call(1, LockCommand.LOCK)])
     mock_client.lock_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: "lock.test_mylock"},
@@ -134,7 +134,7 @@ async def test_lock_entity_supports_open(
     mock_client.lock_command.assert_has_calls([call(1, LockCommand.UNLOCK, None)])
 
     mock_client.lock_command.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_OPEN,
         {ATTR_ENTITY_ID: "lock.test_mylock"},

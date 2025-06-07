@@ -4,11 +4,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.climate import ClimateEntityFeature
-from homeassistant.components.cover import CoverEntityFeature
-from homeassistant.components.homekit import TYPE_AIR_PURIFIER
-from homeassistant.components.homekit.accessories import TYPES, get_accessory
-from homeassistant.components.homekit.const import (
+from menuai.components.climate import ClimateEntityFeature
+from menuai.components.cover import CoverEntityFeature
+from menuai.components.homekit import TYPE_AIR_PURIFIER
+from menuai.components.homekit.accessories import TYPES, get_accessory
+from menuai.components.homekit.const import (
     ATTR_INTEGRATION,
     CONF_FEATURE_LIST,
     FEATURE_ON_OFF,
@@ -20,14 +20,14 @@ from homeassistant.components.homekit.const import (
     TYPE_SWITCH,
     TYPE_VALVE,
 )
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntityFeature,
 )
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.components.switch import SwitchDeviceClass
-from homeassistant.components.vacuum import VacuumEntityFeature
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.components.switch import SwitchDeviceClass
+from menuai.components.vacuum import VacuumEntityFeature
+from menuai.const import (
     ATTR_CODE,
     ATTR_DEVICE_CLASS,
     ATTR_SUPPORTED_FEATURES,
@@ -39,7 +39,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import State
+from menuai.core import State
 
 
 def test_not_supported(caplog: pytest.LogCaptureFixture) -> None:

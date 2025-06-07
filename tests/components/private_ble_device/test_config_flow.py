@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.private_ble_device import const
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult, FlowResultType
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai import config_entries
+from menuai.components.private_ble_device import const
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult, FlowResultType
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 from tests.components.bluetooth import inject_bluetooth_service_info
 
@@ -21,9 +21,9 @@ def assert_form_error(result: FlowResult, key: str, value: str) -> None:
 
 
 @pytest.mark.usefixtures("mock_bluetooth_adapters")
-async def test_setup_user_no_bluetooth(hass: HomeAssistant) -> None:
+async def test_setup_user_no_bluetooth(menuai: menuai) -> None:
     """Test setting up via user interaction when bluetooth is not enabled."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
@@ -32,56 +32,56 @@ async def test_setup_user_no_bluetooth(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_invalid_irk(hass: HomeAssistant) -> None:
+async def test_invalid_irk(menuai: menuai) -> None:
     """Test invalid irk."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"irk": "irk:000000"}
     )
     assert_form_error(result, "irk", "irk_not_valid")
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_invalid_irk_base64(hass: HomeAssistant) -> None:
+async def test_invalid_irk_base64(menuai: menuai) -> None:
     """Test invalid irk."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"irk": "Ucredacted4T8n!!ZZZ=="}
     )
     assert_form_error(result, "irk", "irk_not_valid")
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_invalid_irk_hex(hass: HomeAssistant) -> None:
+async def test_invalid_irk_hex(menuai: menuai) -> None:
     """Test invalid irk."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"irk": "irk:abcdefghi"}
     )
     assert_form_error(result, "irk", "irk_not_valid")
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_irk_not_found(hass: HomeAssistant) -> None:
+async def test_irk_not_found(menuai: menuai) -> None:
     """Test irk not found."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"irk": "irk:00000000000000000000000000000000"},
     )
@@ -89,11 +89,11 @@ async def test_irk_not_found(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_flow_works(hass: HomeAssistant) -> None:
+async def test_flow_works(menuai: menuai) -> None:
     """Test config flow works."""
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         BluetoothServiceInfo(
             name="Test Test Test",
             address="40:01:02:0a:c4:a6",
@@ -105,17 +105,17 @@ async def test_flow_works(hass: HomeAssistant) -> None:
         ),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
     # Check you can finish the flow
     with patch(
-        "homeassistant.components.private_ble_device.async_setup_entry",
+        "menuai.components.private_ble_device.async_setup_entry",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"irk": "irk:00000000000000000000000000000000"},
         )
@@ -127,11 +127,11 @@ async def test_flow_works(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_flow_works_by_base64(hass: HomeAssistant) -> None:
+async def test_flow_works_by_base64(menuai: menuai) -> None:
     """Test config flow works."""
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         BluetoothServiceInfo(
             name="Test Test Test",
             address="40:01:02:0a:c4:a6",
@@ -143,17 +143,17 @@ async def test_flow_works_by_base64(hass: HomeAssistant) -> None:
         ),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
     # Check you can finish the flow
     with patch(
-        "homeassistant.components.private_ble_device.async_setup_entry",
+        "menuai.components.private_ble_device.async_setup_entry",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"irk": "AAAAAAAAAAAAAAAAAAAAAA=="},
         )

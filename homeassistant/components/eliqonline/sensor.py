@@ -8,18 +8,18 @@ import logging
 import eliqonline
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_NAME, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_ACCESS_TOKEN, CONF_NAME, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -48,7 +48,7 @@ async def async_setup_platform(
     access_token = config.get(CONF_ACCESS_TOKEN)
     name = config.get(CONF_NAME, DEFAULT_NAME)
     channel_id = config.get(CONF_CHANNEL_ID)
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     api = eliqonline.API(session=session, access_token=access_token)
 

@@ -118,7 +118,7 @@ ENCRYPTED_SWITCHBOT_MODEL_TO_CLASS: dict[
     SwitchbotModel.AIR_PURIFIER_TABLE: switchbot.SwitchbotAirPurifier,
 }
 
-HASS_SENSOR_TYPE_TO_SWITCHBOT_MODEL = {
+menuai_SENSOR_TYPE_TO_SWITCHBOT_MODEL = {
     str(v): k for k, v in SUPPORTED_MODEL_TYPES.items()
 }
 

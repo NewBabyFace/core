@@ -13,9 +13,9 @@ from sensoterra.customerapi import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN
-from homeassistant.helpers.selector import (
+from menuai.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -47,12 +47,12 @@ class SensoterraConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             api = CustomerApi(user_input[CONF_EMAIL], user_input[CONF_PASSWORD])
             # We need a unique tag per HA instance
-            uuid = self.hass.data["core.uuid"]
+            uuid = self.menuai.data["core.uuid"]
             expiration = datetime.now() + timedelta(TOKEN_EXPIRATION_DAYS)
 
             try:
                 token: str = await api.get_token(
-                    f"Home Assistant {uuid}", "READONLY", expiration
+                    f"MenuAI {uuid}", "READONLY", expiration
                 )
                 decoded_token = decode(
                     token, algorithms=["HS256"], options={"verify_signature": False}

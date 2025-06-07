@@ -1,8 +1,8 @@
 """Tests for handling accessories on a Hue bridge via HomeKit."""
 
-from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import PERCENTAGE, EntityCategory
-from homeassistant.core import HomeAssistant
+from menuai.components.sensor import SensorStateClass
+from menuai.const import PERCENTAGE, EntityCategory
+from menuai.core import menuai
 
 from ..common import (
     HUB_TEST_ACCESSORY_ID,
@@ -15,13 +15,13 @@ from ..common import (
 )
 
 
-async def test_hue_bridge_setup(hass: HomeAssistant) -> None:
+async def test_hue_bridge_setup(menuai: menuai) -> None:
     """Test that a Hue hub can be correctly setup in HA via HomeKit."""
-    accessories = await setup_accessories_from_file(hass, "hue_bridge.json")
-    await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, "hue_bridge.json")
+    await setup_test_accessories(menuai, accessories)
 
     await assert_devices_and_entities_created(
-        hass,
+        menuai,
         DeviceTestInfo(
             unique_id=HUB_TEST_ACCESSORY_ID,
             name="Philips hue - 482544",

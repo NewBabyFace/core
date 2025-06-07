@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 from freezegun import freeze_time
 
-from homeassistant.components.gdacs import DEFAULT_SCAN_INTERVAL
-from homeassistant.components.gdacs.const import CONF_CATEGORIES, DOMAIN
-from homeassistant.components.gdacs.sensor import (
+from menuai.components.gdacs import DEFAULT_SCAN_INTERVAL
+from menuai.components.gdacs.const import CONF_CATEGORIES, DOMAIN
+from menuai.components.gdacs.sensor import (
     ATTR_CREATED,
     ATTR_LAST_UPDATE,
     ATTR_LAST_UPDATE_SUCCESSFUL,
@@ -14,23 +14,23 @@ from homeassistant.components.gdacs.sensor import (
     ATTR_STATUS,
     ATTR_UPDATED,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import _generate_mock_feed_entry
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(menuai: menuai) -> None:
     """Test the general setup of the integration."""
     # Set up some mock feed entries for this test.
     mock_entry_1 = _generate_mock_feed_entry(
@@ -77,20 +77,20 @@ async def test_setup(hass: HomeAssistant) -> None:
             data=entry_data,
             unique_id="my_very_unique_id",
         )
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
         # Artificially trigger update and collect events.
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_START)
+        await menuai.async_block_till_done()
 
         # 3 geolocation and 1 sensor entities
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 4
         )
 
-        state = hass.states.get("sensor.32_87336_117_22743")
+        state = menuai.states.get("sensor.32_87336_117_22743")
         assert state is not None
         assert int(state.state) == 3
         assert state.name == "32.87336, -117.22743"
@@ -104,16 +104,16 @@ async def test_setup(hass: HomeAssistant) -> None:
 
         # Simulate an update - two existing, one new entry, one outdated entry
         mock_feed_update.return_value = "OK", [mock_entry_1, mock_entry_4, mock_entry_3]
-        async_fire_time_changed(hass, utcnow + DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done()
 
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 4
         )
 
-        state = hass.states.get("sensor.32_87336_117_22743")
+        state = menuai.states.get("sensor.32_87336_117_22743")
         attributes = state.attributes
         assert attributes[ATTR_CREATED] == 1
         assert attributes[ATTR_UPDATED] == 2
@@ -122,26 +122,26 @@ async def test_setup(hass: HomeAssistant) -> None:
         # Simulate an update - empty data, but successful update,
         # so no changes to entities.
         mock_feed_update.return_value = "OK_NO_DATA", None
-        async_fire_time_changed(hass, utcnow + 2 * DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + 2 * DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done()
 
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 4
         )
 
         # Simulate an update - empty data, removes all entities
         mock_feed_update.return_value = "ERROR", None
-        async_fire_time_changed(hass, utcnow + 3 * DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + 3 * DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done()
 
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 1
         )
 
-        state = hass.states.get("sensor.32_87336_117_22743")
+        state = menuai.states.get("sensor.32_87336_117_22743")
         attributes = state.attributes
         assert attributes[ATTR_REMOVED] == 3

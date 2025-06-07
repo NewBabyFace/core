@@ -1,8 +1,8 @@
 """Tests for the diagnostics data provided by the Nut integration."""
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.components.nut.diagnostics import TO_REDACT
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.components.nut.diagnostics import TO_REDACT
+from menuai.core import menuai
 
 from .util import async_init_integration
 
@@ -11,8 +11,8 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test diagnostics."""
     list_commands: set[str] = ["beeper.enable"]
@@ -21,7 +21,7 @@ async def test_diagnostics(
     }
 
     mock_config_entry = await async_init_integration(
-        hass,
+        menuai,
         username="someuser",
         password="somepassword",
         list_vars={"ups.status": "OL"},
@@ -37,7 +37,7 @@ async def test_diagnostics(
     }
 
     result = await get_diagnostics_for_config_entry(
-        hass, hass_client, mock_config_entry
+        menuai, menuai_client, mock_config_entry
     )
     assert result["entry"] == entry_dict | {"discovery_keys": {}}
     assert result["nut_data"] == nut_data_dict

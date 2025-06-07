@@ -6,33 +6,33 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from teslemetry_stream import Signal
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import assert_entities, assert_entities_alt, reload_platform, setup_platform
 from .const import COMMAND_OK, VEHICLE_DATA_ALT
 
 
 async def test_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_legacy: AsyncMock,
 ) -> None:
     """Tests that the switch entities are correct."""
 
-    entry = await setup_platform(hass, [Platform.SWITCH])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.SWITCH])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 async def test_switch_alt(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_vehicle_data: AsyncMock,
@@ -41,8 +41,8 @@ async def test_switch_alt(
     """Tests that the switch entities are correct."""
 
     mock_vehicle_data.return_value = VEHICLE_DATA_ALT
-    entry = await setup_platform(hass, [Platform.SWITCH])
-    assert_entities_alt(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.SWITCH])
+    assert_entities_alt(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -88,24 +88,24 @@ async def test_switch_alt(
     ],
 )
 async def test_switch_services(
-    hass: HomeAssistant, name: str, on: str, off: str
+    menuai: menuai, name: str, on: str, off: str
 ) -> None:
     """Tests that the switch service calls work."""
 
-    await setup_platform(hass, [Platform.SWITCH])
+    await setup_platform(menuai, [Platform.SWITCH])
 
     entity_id = f"switch.{name}"
     with patch(
         f"tesla_fleet_api.teslemetry.{on}",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_ON
         call.assert_called_once()
 
@@ -113,19 +113,19 @@ async def test_switch_services(
         f"tesla_fleet_api.teslemetry.{off}",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_OFF
         call.assert_called_once()
 
 
 async def test_switch_streaming(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_vehicle_data: AsyncMock,
@@ -133,7 +133,7 @@ async def test_switch_streaming(
 ) -> None:
     """Tests that the switch entities with streaming are correct."""
 
-    entry = await setup_platform(hass, [Platform.SWITCH])
+    entry = await setup_platform(menuai, [Platform.SWITCH])
 
     # Stream update
     mock_add_listener.send(
@@ -150,10 +150,10 @@ async def test_switch_streaming(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reload the entry
-    await reload_platform(hass, entry, [Platform.SWITCH])
+    await reload_platform(menuai, entry, [Platform.SWITCH])
 
     # Assert the entities restored their values
     for entity_id in (
@@ -164,5 +164,5 @@ async def test_switch_streaming(
         "switch.test_defrost",
         "switch.test_charge",
     ):
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == snapshot(name=entity_id)

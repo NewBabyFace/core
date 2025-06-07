@@ -10,13 +10,13 @@ from hatasmota import switch as tasmota_switch
 from hatasmota.entity import TasmotaEntity as HATasmotaEntity
 from hatasmota.models import DiscoveryHashType
 
-from homeassistant.components import binary_sensor
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import event as evt
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import binary_sensor
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import event as evt
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DATA_REMOVE_DISCOVER_COMPONENT
 from .discovery import TASMOTA_DISCOVERY_ENTITY_NEW
@@ -24,7 +24,7 @@ from .entity import TasmotaAvailability, TasmotaDiscoveryUpdate
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -43,9 +43,9 @@ async def async_setup_entry(
             ]
         )
 
-    hass.data[DATA_REMOVE_DISCOVER_COMPONENT.format(binary_sensor.DOMAIN)] = (
+    menuai.data[DATA_REMOVE_DISCOVER_COMPONENT.format(binary_sensor.DOMAIN)] = (
         async_dispatcher_connect(
-            hass,
+            menuai,
             TASMOTA_DISCOVERY_ENTITY_NEW.format(binary_sensor.DOMAIN),
             async_discover,
         )
@@ -71,10 +71,10 @@ class TasmotaBinarySensor(
         if self._tasmota_entity.off_delay is not None:
             self._attr_force_update = True
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
         self._tasmota_entity.set_on_state_callback(self.on_off_state_updated)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def off_delay_listener(self, now: datetime) -> None:
@@ -95,7 +95,7 @@ class TasmotaBinarySensor(
         off_delay = self._tasmota_entity.off_delay
         if self._on_off_state and off_delay is not None:
             self._delay_listener = evt.async_call_later(
-                self.hass, off_delay, self.off_delay_listener
+                self.menuai, off_delay, self.off_delay_listener
             )
 
         self.async_write_ha_state()

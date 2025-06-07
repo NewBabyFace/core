@@ -10,13 +10,13 @@ from pyatmo import ApiError as NetatmoApiError, modules as NaModules
 from pyatmo.event import Event as NaEvent
 import voluptuous as vol
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_CAMERA_LIGHT_MODE,
@@ -48,7 +48,7 @@ DEFAULT_QUALITY = "high"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,7 +60,7 @@ async def async_setup_entry(
         async_add_entities([entity])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, NETATMO_CREATE_CAMERA, _create_entity)
+        async_dispatcher_connect(menuai, NETATMO_CREATE_CAMERA, _create_entity)
     )
 
     platform = entity_platform.async_get_current_platform()
@@ -119,20 +119,20 @@ class NetatmoCamera(NetatmoModuleEntity, Camera):
             ]
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         for event_type in (EVENT_TYPE_LIGHT_MODE, EVENT_TYPE_OFF, EVENT_TYPE_ON):
             self.async_on_remove(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     f"signal-{DOMAIN}-webhook-{event_type}",
                     self.handle_event,
                 )
             )
 
-        self.hass.data[DOMAIN][DATA_CAMERAS][self.device.entity_id] = self.device.name
+        self.menuai.data[DOMAIN][DATA_CAMERAS][self.device.entity_id] = self.device.name
 
     @callback
     def handle_event(self, event: dict) -> None:
@@ -215,7 +215,7 @@ class NetatmoCamera(NetatmoModuleEntity, Camera):
             self._attr_is_streaming = self.device.monitoring
             self._attr_motion_detection_enabled = self.device.monitoring
 
-        self.hass.data[DOMAIN][DATA_EVENTS][self.device.entity_id] = (
+        self.menuai.data[DOMAIN][DATA_EVENTS][self.device.entity_id] = (
             self.process_events(self.device.events)
         )
 
@@ -271,7 +271,7 @@ class NetatmoCamera(NetatmoModuleEntity, Camera):
                 person_id_errors.append(person)
 
         if person_id_errors:
-            raise HomeAssistantError(f"Person(s) not registered {person_id_errors}")
+            raise menuaiError(f"Person(s) not registered {person_id_errors}")
 
         return person_ids
 
@@ -301,7 +301,7 @@ class NetatmoCamera(NetatmoModuleEntity, Camera):
     async def _service_set_camera_light(self, **kwargs: Any) -> None:
         """Service to set light mode."""
         if not isinstance(self.device, NaModules.netatmo.NOC):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"{self.device_type} <{self.device.name}> does not have a floodlight"
             )
 

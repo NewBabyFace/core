@@ -28,7 +28,7 @@
           "backup_path": "Path"
         },
         "data_description": {
-          "backup_share": "Select the shared folder where the automatic Home Assistant backup should be stored.",
+          "backup_share": "Select the shared folder where the automatic MenuAI backup should be stored.",
           "backup_path": "Define the path on the selected shared folder (will automatically be created, if not exist)."
         }
       },

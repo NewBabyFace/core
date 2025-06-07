@@ -16,28 +16,28 @@ import slugify as unicode_slug
 import voluptuous as vol
 from voluptuous_openapi import UNSUPPORTED, convert
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     DOMAIN as CALENDAR_DOMAIN,
     SERVICE_GET_EVENTS,
 )
-from homeassistant.components.cover import INTENT_CLOSE_COVER, INTENT_OPEN_COVER
-from homeassistant.components.homeassistant import async_should_expose
-from homeassistant.components.intent import async_device_supports_timers
-from homeassistant.components.script import DOMAIN as SCRIPT_DOMAIN
-from homeassistant.components.todo import DOMAIN as TODO_DOMAIN, TodoServices
-from homeassistant.components.weather import INTENT_GET_WEATHER
-from homeassistant.const import (
+from menuai.components.cover import INTENT_CLOSE_COVER, INTENT_OPEN_COVER
+from menuai.components.menuai import async_should_expose
+from menuai.components.intent import async_device_supports_timers
+from menuai.components.script import DOMAIN as SCRIPT_DOMAIN
+from menuai.components.todo import DOMAIN as TODO_DOMAIN, TodoServices
+from menuai.components.weather import INTENT_GET_WEATHER
+from menuai.const import (
     ATTR_DOMAIN,
     ATTR_SERVICE,
-    EVENT_HOMEASSISTANT_CLOSE,
+    EVENT_menuai_CLOSE,
     EVENT_SERVICE_REMOVED,
 )
-from homeassistant.core import Context, Event, HomeAssistant, callback, split_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import dt as dt_util, yaml as yaml_util
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import JsonObjectType
-from homeassistant.util.ulid import ulid_now
+from menuai.core import Context, Event, menuai, callback, split_entity_id
+from menuai.exceptions import menuaiError
+from menuai.util import dt as dt_util, yaml as yaml_util
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import JsonObjectType
+from menuai.util.ulid import ulid_now
 
 from . import (
     area_registry as ar,
@@ -51,9 +51,9 @@ from . import (
 )
 from .singleton import singleton
 
-ACTION_PARAMETERS_CACHE: HassKey[
+ACTION_PARAMETERS_CACHE: menuaiKey[
     dict[str, dict[str, tuple[str | None, vol.Schema]]]
-] = HassKey("llm_action_parameters_cache")
+] = menuaiKey("llm_action_parameters_cache")
 
 
 LLM_API_ASSIST = "assist"
@@ -63,14 +63,14 @@ BASE_PROMPT = (
     'Today\'s date is {{ now().strftime("%Y-%m-%d") }}.\n'
 )
 
-DEFAULT_INSTRUCTIONS_PROMPT = """You are a voice assistant for Home Assistant.
+DEFAULT_INSTRUCTIONS_PROMPT = """You are a voice assistant for MenuAI.
 Answer questions about the world truthfully.
 Answer in plain text. Keep it simple and to the point.
 """
 
 NO_ENTITIES_PROMPT = (
     "Only if the user wants to control a device, tell them to expose entities "
-    "to their voice assistant in Home Assistant."
+    "to their voice assistant in MenuAI."
 )
 
 DYNAMIC_CONTEXT_PROMPT = """You ARE equipped to answer questions about the current state of
@@ -88,30 +88,30 @@ For general knowledge questions not about the home: Answer truthfully from inter
 
 
 @callback
-def async_render_no_api_prompt(hass: HomeAssistant) -> str:
+def async_render_no_api_prompt(menuai: menuai) -> str:
     """Return the prompt to be used when no API is configured.
 
-    No longer used since Home Assistant 2024.7.
+    No longer used since MenuAI 2024.7.
     """
     return ""
 
 
 @singleton("llm")
 @callback
-def _async_get_apis(hass: HomeAssistant) -> dict[str, API]:
+def _async_get_apis(menuai: menuai) -> dict[str, API]:
     """Get all the LLM APIs."""
     return {
-        LLM_API_ASSIST: AssistAPI(hass=hass),
+        LLM_API_ASSIST: AssistAPI(menuai=menuai),
     }
 
 
 @callback
-def async_register_api(hass: HomeAssistant, api: API) -> Callable[[], None]:
+def async_register_api(menuai: menuai, api: API) -> Callable[[], None]:
     """Register an API to be exposed to LLMs."""
-    apis = _async_get_apis(hass)
+    apis = _async_get_apis(menuai)
 
     if api.id in apis:
-        raise HomeAssistantError(f"API {api.id} is already registered")
+        raise menuaiError(f"API {api.id} is already registered")
 
     apis[api.id] = api
 
@@ -124,21 +124,21 @@ def async_register_api(hass: HomeAssistant, api: API) -> Callable[[], None]:
 
 
 async def async_get_api(
-    hass: HomeAssistant, api_id: str | list[str], llm_context: LLMContext
+    menuai: menuai, api_id: str | list[str], llm_context: LLMContext
 ) -> APIInstance:
     """Get an API.
 
     This returns a single APIInstance for one or more API ids, merging into
     a single instance of necessary.
     """
-    apis = _async_get_apis(hass)
+    apis = _async_get_apis(menuai)
 
     if isinstance(api_id, str):
         api_id = [api_id]
 
     for key in api_id:
         if key not in apis:
-            raise HomeAssistantError(f"API {key} not found")
+            raise menuaiError(f"API {key} not found")
 
     api: API
     if len(api_id) == 1:
@@ -150,9 +150,9 @@ async def async_get_api(
 
 
 @callback
-def async_get_apis(hass: HomeAssistant) -> list[API]:
+def async_get_apis(menuai: menuai) -> list[API]:
     """Get all the LLM APIs."""
-    return list(_async_get_apis(hass).values())
+    return list(_async_get_apis(menuai).values())
 
 
 @dataclass(slots=True)
@@ -186,7 +186,7 @@ class Tool:
 
     @abstractmethod
     async def async_call(
-        self, hass: HomeAssistant, tool_input: ToolInput, llm_context: LLMContext
+        self, menuai: menuai, tool_input: ToolInput, llm_context: LLMContext
     ) -> JsonObjectType:
         """Call the tool."""
         raise NotImplementedError
@@ -209,7 +209,7 @@ class APIInstance:
     async def async_call_tool(self, tool_input: ToolInput) -> JsonObjectType:
         """Call a LLM tool, validate args and return the response."""
         # pylint: disable=import-outside-toplevel
-        from homeassistant.components.conversation import (
+        from menuai.components.conversation import (
             ConversationTraceEventType,
             async_conversation_trace_append,
         )
@@ -223,16 +223,16 @@ class APIInstance:
             if tool.name == tool_input.tool_name:
                 break
         else:
-            raise HomeAssistantError(f'Tool "{tool_input.tool_name}" not found')
+            raise menuaiError(f'Tool "{tool_input.tool_name}" not found')
 
-        return await tool.async_call(self.api.hass, tool_input, self.llm_context)
+        return await tool.async_call(self.api.menuai, tool_input, self.llm_context)
 
 
 @dataclass(slots=True, kw_only=True)
 class API(ABC):
     """An API to expose to LLMs."""
 
-    hass: HomeAssistant
+    menuai: menuai
     id: str
     name: str
 
@@ -253,7 +253,7 @@ class IntentTool(Tool):
         """Init the class."""
         self.name = name
         self.description = (
-            intent_handler.description or f"Execute Home Assistant {self.name} intent"
+            intent_handler.description or f"Execute MenuAI {self.name} intent"
         )
         self.extra_slots = None
         if not (slot_schema := intent_handler.slot_schema):
@@ -272,22 +272,22 @@ class IntentTool(Tool):
             self.extra_slots = extra_slots
 
     async def async_call(
-        self, hass: HomeAssistant, tool_input: ToolInput, llm_context: LLMContext
+        self, menuai: menuai, tool_input: ToolInput, llm_context: LLMContext
     ) -> JsonObjectType:
         """Handle the intent."""
         slots = {key: {"value": val} for key, val in tool_input.tool_args.items()}
 
         if self.extra_slots and llm_context.device_id:
-            device_reg = dr.async_get(hass)
+            device_reg = dr.async_get(menuai)
             device = device_reg.async_get(llm_context.device_id)
 
             area: ar.AreaEntry | None = None
             floor: fr.FloorEntry | None = None
             if device:
-                area_reg = ar.async_get(hass)
+                area_reg = ar.async_get(menuai)
                 if device.area_id and (area := area_reg.async_get_area(device.area_id)):
                     if area.floor_id:
-                        floor_reg = fr.async_get(hass)
+                        floor_reg = fr.async_get(menuai)
                         floor = floor_reg.async_get_floor(area.floor_id)
 
             for slot_name, slot_value in (
@@ -298,7 +298,7 @@ class IntentTool(Tool):
                     slots[slot_name] = {"value": slot_value}
 
         intent_response = await intent.async_handle(
-            hass=hass,
+            menuai=menuai,
             platform=llm_context.platform,
             intent_type=self.name,
             slots=slots,
@@ -330,11 +330,11 @@ class NamespacedTool(Tool):
         self.tool = tool
 
     async def async_call(
-        self, hass: HomeAssistant, tool_input: ToolInput, llm_context: LLMContext
+        self, menuai: menuai, tool_input: ToolInput, llm_context: LLMContext
     ) -> JsonObjectType:
         """Handle the intent."""
         return await self.tool.async_call(
-            hass,
+            menuai,
             ToolInput(
                 tool_name=self.tool.name,
                 tool_args=tool_input.tool_args,
@@ -351,12 +351,12 @@ class MergedAPI(API):
         """Init the class."""
         if not llm_apis:
             raise ValueError("No APIs provided")
-        hass = llm_apis[0].hass
+        menuai = llm_apis[0].menuai
         api_ids = [unicode_slug.slugify(api.id) for api in llm_apis]
         if len(set(api_ids)) != len(api_ids):
             raise ValueError("API IDs must be unique")
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             id="|".join(unicode_slug.slugify(api.id) for api in llm_apis),
             name="Merged LLM API",
         )
@@ -426,10 +426,10 @@ class AssistAPI(API):
         intent.INTENT_RESPOND,
     }
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Init the class."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             id=LLM_API_ASSIST,
             name="Assist",
         )
@@ -441,7 +441,7 @@ class AssistAPI(API):
         """Return the instance of the API."""
         if llm_context.assistant:
             exposed_entities: dict | None = _get_exposed_entities(
-                self.hass, llm_context.assistant, include_state=False
+                self.menuai, llm_context.assistant, include_state=False
             )
         else:
             exposed_entities = None
@@ -473,8 +473,8 @@ class AssistAPI(API):
 
         prompt = [
             (
-                "When controlling Home Assistant always call the intent tools. "
-                "Use HassTurnOn to lock and HassTurnOff to unlock a lock. "
+                "When controlling MenuAI always call the intent tools. "
+                "Use menuaiTurnOn to lock and menuaiTurnOff to unlock a lock. "
                 "When controlling a device, prefer passing just name and domain. "
                 "When controlling an area, prefer passing just area name and domain."
             )
@@ -482,13 +482,13 @@ class AssistAPI(API):
         area: ar.AreaEntry | None = None
         floor: fr.FloorEntry | None = None
         if llm_context.device_id:
-            device_reg = dr.async_get(self.hass)
+            device_reg = dr.async_get(self.menuai)
             device = device_reg.async_get(llm_context.device_id)
 
             if device:
-                area_reg = ar.async_get(self.hass)
+                area_reg = ar.async_get(self.menuai)
                 if device.area_id and (area := area_reg.async_get_area(device.area_id)):
-                    floor_reg = fr.async_get(self.hass)
+                    floor_reg = fr.async_get(self.menuai)
                     if area.floor_id:
                         floor = floor_reg.async_get_floor(area.floor_id)
 
@@ -505,7 +505,7 @@ class AssistAPI(API):
             )
 
         if not llm_context.device_id or not async_device_supports_timers(
-            self.hass, llm_context.device_id
+            self.menuai, llm_context.device_id
         ):
             prompt.append("This device is not able to start timers.")
 
@@ -535,7 +535,7 @@ class AssistAPI(API):
         """Return a list of LLM tools."""
         ignore_intents = self.IGNORE_INTENTS
         if not llm_context.device_id or not async_device_supports_timers(
-            self.hass, llm_context.device_id
+            self.menuai, llm_context.device_id
         ):
             ignore_intents = ignore_intents | {
                 intent.INTENT_START_TIMER,
@@ -549,7 +549,7 @@ class AssistAPI(API):
 
         intent_handlers = [
             intent_handler
-            for intent_handler in intent.async_get(self.hass)
+            for intent_handler in intent.async_get(self.menuai)
             if intent_handler.intent_type not in ignore_intents
         ]
 
@@ -587,7 +587,7 @@ class AssistAPI(API):
                 tools.append(TodoGetItemsTool(names))
 
             tools.extend(
-                ScriptTool(self.hass, script_entity_id)
+                ScriptTool(self.menuai, script_entity_id)
                 for script_entity_id in exposed_entities[SCRIPT_DOMAIN]
             )
 
@@ -598,7 +598,7 @@ class AssistAPI(API):
 
 
 def _get_exposed_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     assistant: str,
     include_state: bool = True,
 ) -> dict[str, dict[str, dict[str, Any]]]:
@@ -606,9 +606,9 @@ def _get_exposed_entities(
 
     Splits out calendars and scripts.
     """
-    area_registry = ar.async_get(hass)
-    entity_registry = er.async_get(hass)
-    device_registry = dr.async_get(hass)
+    area_registry = ar.async_get(menuai)
+    entity_registry = er.async_get(menuai)
+    device_registry = dr.async_get(menuai)
     interesting_attributes = {
         "temperature",
         "current_temperature",
@@ -631,8 +631,8 @@ def _get_exposed_entities(
         CALENDAR_DOMAIN: {},
     }
 
-    for state in sorted(hass.states.async_all(), key=attrgetter("name")):
-        if not async_should_expose(hass, assistant, state.entity_id):
+    for state in sorted(menuai.states.async_all(), key=attrgetter("name")):
+        if not async_should_expose(menuai, assistant, state.entity_id):
             continue
 
         description: str | None = None
@@ -803,16 +803,16 @@ def _selector_serializer(schema: Any) -> Any:  # noqa: C901
 
 
 def _get_cached_action_parameters(
-    hass: HomeAssistant, domain: str, action: str
+    menuai: menuai, domain: str, action: str
 ) -> tuple[str | None, vol.Schema]:
     """Get action description and schema."""
     description = None
     parameters = vol.Schema({})
 
-    parameters_cache = hass.data.get(ACTION_PARAMETERS_CACHE)
+    parameters_cache = menuai.data.get(ACTION_PARAMETERS_CACHE)
 
     if parameters_cache is None:
-        parameters_cache = hass.data[ACTION_PARAMETERS_CACHE] = {}
+        parameters_cache = menuai.data[ACTION_PARAMETERS_CACHE] = {}
 
         @callback
         def clear_cache(event: Event) -> None:
@@ -824,20 +824,20 @@ def _get_cached_action_parameters(
             ):
                 parameters_cache[event.data[ATTR_DOMAIN]].pop(event.data[ATTR_SERVICE])
 
-        cancel = hass.bus.async_listen(EVENT_SERVICE_REMOVED, clear_cache)
+        cancel = menuai.bus.async_listen(EVENT_SERVICE_REMOVED, clear_cache)
 
         @callback
-        def on_homeassistant_close(event: Event) -> None:
+        def on_menuai_close(event: Event) -> None:
             """Cleanup."""
             cancel()
 
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, on_homeassistant_close)
+        menuai.bus.async_listen_once(EVENT_menuai_CLOSE, on_menuai_close)
 
     if domain in parameters_cache and action in parameters_cache[domain]:
         return parameters_cache[domain][action]
 
     if action_desc := service.async_get_cached_service_description(
-        hass, domain, action
+        menuai, domain, action
     ):
         description = action_desc.get("description")
         schema: dict[vol.Marker, Any] = {}
@@ -860,7 +860,7 @@ def _get_cached_action_parameters(
         parameters = vol.Schema(schema)
 
         if domain == SCRIPT_DOMAIN:
-            entity_registry = er.async_get(hass)
+            entity_registry = er.async_get(menuai)
             if (
                 entity_id := entity_registry.async_get_entity_id(domain, domain, action)
             ) and (entity_entry := entity_registry.async_get(entity_id)):
@@ -885,7 +885,7 @@ class ActionTool(Tool):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         domain: str,
         action: str,
     ) -> None:
@@ -894,11 +894,11 @@ class ActionTool(Tool):
         self._action = action
         self.name = f"{domain}.{action}"
         self.description, self.parameters = _get_cached_action_parameters(
-            hass, domain, action
+            menuai, domain, action
         )
 
     async def async_call(
-        self, hass: HomeAssistant, tool_input: ToolInput, llm_context: LLMContext
+        self, menuai: menuai, tool_input: ToolInput, llm_context: LLMContext
     ) -> JsonObjectType:
         """Call the action."""
 
@@ -906,7 +906,7 @@ class ActionTool(Tool):
             if field not in tool_input.tool_args:
                 continue
             if isinstance(validator, selector.AreaSelector):
-                area_reg = ar.async_get(hass)
+                area_reg = ar.async_get(menuai)
                 if validator.config.get("multiple"):
                     areas: list[ar.AreaEntry] = []
                     for area in tool_input.tool_args[field]:
@@ -918,7 +918,7 @@ class ActionTool(Tool):
                     tool_input.tool_args[field] = area
 
             elif isinstance(validator, selector.FloorSelector):
-                floor_reg = fr.async_get(hass)
+                floor_reg = fr.async_get(menuai)
                 if validator.config.get("multiple"):
                     floors: list[fr.FloorEntry] = []
                     for floor in tool_input.tool_args[field]:
@@ -931,7 +931,7 @@ class ActionTool(Tool):
                     floor = list(intent.find_floors(floor, floor_reg))[0].floor_id
                     tool_input.tool_args[field] = floor
 
-        result = await hass.services.async_call(
+        result = await menuai.services.async_call(
             self._domain,
             self._action,
             tool_input.tool_args,
@@ -948,19 +948,19 @@ class ScriptTool(ActionTool):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         script_entity_id: str,
     ) -> None:
         """Init the class."""
         script_name = split_entity_id(script_entity_id)[1]
 
         action = script_name
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         entity_entry = entity_registry.async_get(script_entity_id)
         if entity_entry and entity_entry.unique_id:
             action = entity_entry.unique_id
 
-        super().__init__(hass, SCRIPT_DOMAIN, action)
+        super().__init__(menuai, SCRIPT_DOMAIN, action)
 
         self.name = script_name
         if self.name[0].isdigit():
@@ -987,12 +987,12 @@ class CalendarGetEventsTool(Tool):
         )
 
     async def async_call(
-        self, hass: HomeAssistant, tool_input: ToolInput, llm_context: LLMContext
+        self, menuai: menuai, tool_input: ToolInput, llm_context: LLMContext
     ) -> JsonObjectType:
         """Query a calendar."""
         data = self.parameters(tool_input.tool_args)
         result = intent.async_match_targets(
-            hass,
+            menuai,
             intent.MatchTargetsConstraints(
                 name=data["calendar"],
                 domains=[CALENDAR_DOMAIN],
@@ -1016,7 +1016,7 @@ class CalendarGetEventsTool(Tool):
             "end_date_time": end.isoformat(),
         }
 
-        service_result = await hass.services.async_call(
+        service_result = await menuai.services.async_call(
             CALENDAR_DOMAIN,
             SERVICE_GET_EVENTS,
             service_data,
@@ -1057,12 +1057,12 @@ class TodoGetItemsTool(Tool):
         )
 
     async def async_call(
-        self, hass: HomeAssistant, tool_input: ToolInput, llm_context: LLMContext
+        self, menuai: menuai, tool_input: ToolInput, llm_context: LLMContext
     ) -> JsonObjectType:
         """Query a to-do list."""
         data = self.parameters(tool_input.tool_args)
         result = intent.async_match_targets(
-            hass,
+            menuai,
             intent.MatchTargetsConstraints(
                 name=data["todo_list"],
                 domains=[TODO_DOMAIN],
@@ -1078,7 +1078,7 @@ class TodoGetItemsTool(Tool):
                 service_data["status"] = ["needs_action", "completed"]
             else:
                 service_data["status"] = [status]
-        service_result = await hass.services.async_call(
+        service_result = await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.GET_ITEMS,
             service_data,
@@ -1110,7 +1110,7 @@ class GetLiveContextTool(Tool):
 
     async def async_call(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         tool_input: ToolInput,
         llm_context: LLMContext,
     ) -> JsonObjectType:
@@ -1120,7 +1120,7 @@ class GetLiveContextTool(Tool):
             # exposed if no assistant is configured.
             return {"success": False, "error": "No assistant configured"}
 
-        exposed_entities = _get_exposed_entities(hass, llm_context.assistant)
+        exposed_entities = _get_exposed_entities(menuai, llm_context.assistant)
         if not exposed_entities["entities"]:
             return {"success": False, "error": NO_ENTITIES_PROMPT}
         prompt = [

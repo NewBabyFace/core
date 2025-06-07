@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.components.media_player import BrowseError, BrowseMedia, MediaClass
+from menuai.components.media_player import BrowseError, BrowseMedia, MediaClass
 
 
 class UnknownMediaType(BrowseError):

@@ -16,15 +16,15 @@
     },
     "deprecated_yaml": {
       "title": "The {integration_title} YAML configuration is being removed",
-      "description": "Configuring {integration_title} using YAML is being removed.\n\nYour existing YAML configuration has been imported into the UI automatically.\n\nRemove the `{domain}` configuration from your configuration.yaml file and restart Home Assistant to fix this issue."
+      "description": "Configuring {integration_title} using YAML is being removed.\n\nYour existing YAML configuration has been imported into the UI automatically.\n\nRemove the `{domain}` configuration from your configuration.yaml file and restart MenuAI to fix this issue."
     },
     "deprecated_system_packages_config_flow_integration": {
       "title": "The {integration_title} integration is being removed",
-      "description": "The {integration_title} integration is being removed as it requires additional system packages, which can't be installed on supported Home Assistant installations. Remove all \"{integration_title}\" config entries to fix this issue."
+      "description": "The {integration_title} integration is being removed as it requires additional system packages, which can't be installed on supported MenuAI installations. Remove all \"{integration_title}\" config entries to fix this issue."
     },
     "deprecated_system_packages_yaml_integration": {
       "title": "The {integration_title} integration is being removed",
-      "description": "The {integration_title} integration is being removed as it requires additional system packages, which can't be installed on supported Home Assistant installations. Remove the `{domain}` configuration from your configuration.yaml file and restart Home Assistant to fix this issue."
+      "description": "The {integration_title} integration is being removed as it requires additional system packages, which can't be installed on supported MenuAI installations. Remove the `{domain}` configuration from your configuration.yaml file and restart MenuAI to fix this issue."
     },
     "historic_currency": {
       "title": "The configured currency is no longer in use",
@@ -32,35 +32,35 @@
     },
     "legacy_templates_false": {
       "title": "legacy_templates config key is being removed",
-      "description": "Nothing will change with your templates.\n\nRemove the `legacy_templates` key from the `homeassistant` configuration in your configuration.yaml file and restart Home Assistant to fix this issue."
+      "description": "Nothing will change with your templates.\n\nRemove the `legacy_templates` key from the `menuai` configuration in your configuration.yaml file and restart MenuAI to fix this issue."
     },
     "legacy_templates_true": {
       "title": "The support for legacy templates is being removed",
-      "description": "Please do the following steps:\n- Adopt your configuration to support template rendering to native python types.\n- Remove the `legacy_templates` key from the `homeassistant` configuration in your configuration.yaml file.\n- Restart Home Assistant to fix this issue."
+      "description": "Please do the following steps:\n- Adopt your configuration to support template rendering to native python types.\n- Remove the `legacy_templates` key from the `menuai` configuration in your configuration.yaml file.\n- Restart MenuAI to fix this issue."
     },
     "python_version": {
       "title": "Support for Python {current_python_version} is being removed",
-      "description": "Support for running Home Assistant in the current used Python version {current_python_version} is deprecated and will be removed in Home Assistant {breaks_in_ha_version}. Please upgrade Python to {required_python_version} to prevent your Home Assistant instance from breaking."
+      "description": "Support for running MenuAI in the current used Python version {current_python_version} is deprecated and will be removed in MenuAI {breaks_in_ha_version}. Please upgrade Python to {required_python_version} to prevent your MenuAI instance from breaking."
     },
     "config_entry_only": {
       "title": "The {domain} integration does not support YAML configuration",
-      "description": "The {domain} integration does not support configuration via YAML file. You may not notice any obvious issues with the integration, but any configuration settings defined in YAML are not actually applied.\n\nTo resolve this:\n\n1. If you've not already done so, [set up the integration]({add_integration}).\n\n2. Remove `{domain}:` from your YAML configuration file.\n\n3. Restart Home Assistant."
+      "description": "The {domain} integration does not support configuration via YAML file. You may not notice any obvious issues with the integration, but any configuration settings defined in YAML are not actually applied.\n\nTo resolve this:\n\n1. If you've not already done so, [set up the integration]({add_integration}).\n\n2. Remove `{domain}:` from your YAML configuration file.\n\n3. Restart MenuAI."
     },
     "platform_only": {
       "title": "The {domain} integration does not support YAML configuration under its own key",
-      "description": "The {domain} integration does not support configuration under its own key, it must be configured under its supported platforms.\n\nTo resolve this:\n\n1. Remove `{domain}:` from your YAML configuration file.\n\n2. Restart Home Assistant."
+      "description": "The {domain} integration does not support configuration under its own key, it must be configured under its supported platforms.\n\nTo resolve this:\n\n1. Remove `{domain}:` from your YAML configuration file.\n\n2. Restart MenuAI."
     },
     "no_platform_setup": {
       "title": "Unused YAML configuration for the {platform} integration",
-      "description": "It's not possible to configure {platform} {domain} by adding `{platform_key}` to the {domain} configuration. Please check the documentation for more information on how to set up this integration.\n\nTo resolve this:\n1. Remove `{platform_key}` occurrences from the `{domain}:` configuration in your YAML configuration file.\n2. Restart Home Assistant.\n\nExample that should be removed:\n{yaml_example}"
+      "description": "It's not possible to configure {platform} {domain} by adding `{platform_key}` to the {domain} configuration. Please check the documentation for more information on how to set up this integration.\n\nTo resolve this:\n1. Remove `{platform_key}` occurrences from the `{domain}:` configuration in your YAML configuration file.\n2. Restart MenuAI.\n\nExample that should be removed:\n{yaml_example}"
     },
     "storage_corruption": {
       "title": "Storage corruption detected for {storage_key}",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "[%key:component::homeassistant::issues::storage_corruption::title%]",
-            "description": "The `{storage_key}` storage could not be parsed and has been renamed to `{corrupt_path}` to allow Home Assistant to continue.\n\nA default `{storage_key}` may have been created automatically.\n\nIf you made manual edits to the storage file, fix any syntax errors in `{corrupt_path}`, restore the file to the original path `{original_path}`, and restart Home Assistant. Otherwise, restore the system from a backup.\n\nSelect **Submit** below to confirm you have repaired the file or restored from a backup.\n\nThe exact error was: {error}"
+            "title": "[%key:component::menuai::issues::storage_corruption::title%]",
+            "description": "The `{storage_key}` storage could not be parsed and has been renamed to `{corrupt_path}` to allow MenuAI to continue.\n\nA default `{storage_key}` may have been created automatically.\n\nIf you made manual edits to the storage file, fix any syntax errors in `{corrupt_path}`, restore the file to the original path `{original_path}`, and restart MenuAI. Otherwise, restore the system from a backup.\n\nSelect **Submit** below to confirm you have repaired the file or restored from a backup.\n\nThe exact error was: {error}"
           }
         }
       }
@@ -74,7 +74,7 @@
       "description": "There are multiple {domain} config entries with the same unique ID.\nThe config entries are named {titles}.\n\nTo fix this error, [configure the integration]({configure_url}) and remove all except one of the duplicates.\n\nNote: Another group of duplicates may be revealed after removing these duplicates."
     },
     "config_entry_unique_id_collision_many": {
-      "title": "[%key:component::homeassistant::issues::config_entry_unique_id_collision::title%]",
+      "title": "[%key:component::menuai::issues::config_entry_unique_id_collision::title%]",
       "description": "There are multiple ({number_of_entries}) {domain} config entries with the same unique ID.\nThe first {title_limit} config entries are named {titles}.\n\nTo fix this error, [configure the integration]({configure_url}) and remove all except one of the duplicates.\n\nNote: Another group of duplicates may be revealed after removing these duplicates."
     },
     "integration_not_found": {
@@ -85,8 +85,8 @@
         },
         "step": {
           "init": {
-            "title": "[%key:component::homeassistant::issues::integration_not_found::title%]",
-            "description": "The integration `{domain}` could not be found. This happens when a (custom) integration was removed from Home Assistant, but there are still configurations for this `integration`. Please use the buttons below to either remove the previous configurations for `{domain}` or ignore this.",
+            "title": "[%key:component::menuai::issues::integration_not_found::title%]",
+            "description": "The integration `{domain}` could not be found. This happens when a (custom) integration was removed from MenuAI, but there are still configurations for this `integration`. Please use the buttons below to either remove the previous configurations for `{domain}` or ignore this.",
             "menu_options": {
               "confirm": "Remove previous configurations",
               "ignore": "Ignore"
@@ -97,27 +97,27 @@
     },
     "deprecated_method": {
       "title": "Deprecation notice: Installation method",
-      "description": "This system is using the {installation_type} installation type, which has been deprecated and will become unsupported following the release of Home Assistant 2025.12. While you can continue using your current setup after that point, we strongly recommend migrating to a supported installation method."
+      "description": "This system is using the {installation_type} installation type, which has been deprecated and will become unsupported following the release of MenuAI 2025.12. While you can continue using your current setup after that point, we strongly recommend migrating to a supported installation method."
     },
     "deprecated_method_architecture": {
       "title": "Deprecation notice",
-      "description": "This system is using the {installation_type} installation type, and 32-bit hardware (`{arch}`), both of which have been deprecated and will no longer be supported after the release of Home Assistant 2025.12."
+      "description": "This system is using the {installation_type} installation type, and 32-bit hardware (`{arch}`), both of which have been deprecated and will no longer be supported after the release of MenuAI 2025.12."
     },
     "deprecated_architecture": {
       "title": "Deprecation notice: 32-bit architecture",
-      "description": "This system uses 32-bit hardware (`{arch}`), which has been deprecated and will no longer receive updates after the release of Home Assistant 2025.12. As your hardware is no longer capable of running newer versions of Home Assistant, you will need to migrate to new hardware."
+      "description": "This system uses 32-bit hardware (`{arch}`), which has been deprecated and will no longer receive updates after the release of MenuAI 2025.12. As your hardware is no longer capable of running newer versions of MenuAI, you will need to migrate to new hardware."
     },
     "deprecated_container_armv7": {
-      "title": "[%key:component::homeassistant::issues::deprecated_architecture::title%]",
-      "description": "This system is running on a 32-bit operating system (`armv7`), which has been deprecated and will no longer receive updates after the release of Home Assistant 2025.12. Check if your system is capable of running a 64-bit operating system. If not, you will need to migrate to new hardware."
+      "title": "[%key:component::menuai::issues::deprecated_architecture::title%]",
+      "description": "This system is running on a 32-bit operating system (`armv7`), which has been deprecated and will no longer receive updates after the release of MenuAI 2025.12. Check if your system is capable of running a 64-bit operating system. If not, you will need to migrate to new hardware."
     },
     "deprecated_os_aarch64": {
-      "title": "[%key:component::homeassistant::issues::deprecated_architecture::title%]",
-      "description": "This system is running on a 32-bit operating system (`armv7`), which has been deprecated and will no longer receive updates after the release of Home Assistant 2025.12. To continue using Home Assistant on this hardware, you will need to install a 64-bit operating system. Please refer to our [installation guide]({installation_guide})."
+      "title": "[%key:component::menuai::issues::deprecated_architecture::title%]",
+      "description": "This system is running on a 32-bit operating system (`armv7`), which has been deprecated and will no longer receive updates after the release of MenuAI 2025.12. To continue using MenuAI on this hardware, you will need to install a 64-bit operating system. Please refer to our [installation guide]({installation_guide})."
     },
     "deprecated_os_armv7": {
-      "title": "[%key:component::homeassistant::issues::deprecated_architecture::title%]",
-      "description": "This system is running on a 32-bit operating system (`armv7`), which has been deprecated and will no longer receive updates after the release of Home Assistant 2025.12. As your hardware is no longer capable of running newer versions of Home Assistant, you will need to migrate to new hardware."
+      "title": "[%key:component::menuai::issues::deprecated_architecture::title%]",
+      "description": "This system is running on a 32-bit operating system (`armv7`), which has been deprecated and will no longer receive updates after the release of MenuAI 2025.12. As your hardware is no longer capable of running newer versions of MenuAI, you will need to migrate to new hardware."
     }
   },
   "system_health": {
@@ -126,7 +126,7 @@
       "config_dir": "Configuration directory",
       "dev": "Development",
       "docker": "Docker",
-      "hassio": "Supervisor",
+      "menuaiio": "Supervisor",
       "installation_type": "Installation type",
       "os_name": "Operating system family",
       "os_version": "Operating system version",
@@ -140,7 +140,7 @@
   "services": {
     "check_config": {
       "name": "Check configuration",
-      "description": "Checks the Home Assistant YAML-configuration files for errors. Errors will be shown in the Home Assistant logs."
+      "description": "Checks the MenuAI YAML-configuration files for errors. Errors will be shown in the MenuAI logs."
     },
     "reload_core_config": {
       "name": "Reload Core configuration",
@@ -148,7 +148,7 @@
     },
     "restart": {
       "name": "[%key:common::action::restart%]",
-      "description": "Restarts Home Assistant.",
+      "description": "Restarts MenuAI.",
       "fields": {
         "safe_mode": {
           "name": "Safe mode",
@@ -158,7 +158,7 @@
     },
     "set_location": {
       "name": "Set location",
-      "description": "Updates the Home Assistant location.",
+      "description": "Updates the MenuAI location.",
       "fields": {
         "latitude": {
           "name": "[%key:common::config_flow::data::latitude%]",
@@ -176,7 +176,7 @@
     },
     "stop": {
       "name": "[%key:common::action::stop%]",
-      "description": "Stops Home Assistant."
+      "description": "Stops MenuAI."
     },
     "toggle": {
       "name": "Generic toggle",
@@ -220,7 +220,7 @@
     },
     "reload_all": {
       "name": "Reload all",
-      "description": "Reloads all YAML configuration that can be reloaded without restarting Home Assistant."
+      "description": "Reloads all YAML configuration that can be reloaded without restarting MenuAI."
     }
   },
   "exceptions": {
@@ -249,7 +249,7 @@
       "message": "Platform error: {domain} - {error}."
     },
     "platform_component_load_exc": {
-      "message": "[%key:component::homeassistant::exceptions::platform_component_load_err::message%]"
+      "message": "[%key:component::menuai::exceptions::platform_component_load_err::message%]"
     },
     "platform_config_validation_err": {
       "message": "Invalid config for {domain} from integration {p_name} at file {config_file}, line {line}: {error}. Check the logs for more information."

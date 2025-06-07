@@ -5,11 +5,11 @@ from unittest.mock import patch
 import pytest
 from simplepush import UnknownError
 
-from homeassistant import config_entries
-from homeassistant.components.simplepush.const import CONF_DEVICE_KEY, CONF_SALT, DOMAIN
-from homeassistant.const import CONF_NAME, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.simplepush.const import CONF_DEVICE_KEY, CONF_SALT, DOMAIN
+from menuai.const import CONF_NAME, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -23,7 +23,7 @@ MOCK_CONFIG = {
 def simplepush_setup_fixture():
     """Patch simplepush setup entry."""
     with patch(
-        "homeassistant.components.simplepush.async_setup_entry", return_value=True
+        "menuai.components.simplepush.async_setup_entry", return_value=True
     ):
         yield
 
@@ -31,17 +31,17 @@ def simplepush_setup_fixture():
 @pytest.fixture(autouse=True)
 def mock_api_request():
     """Patch simplepush api request."""
-    with patch("homeassistant.components.simplepush.config_flow.send"):
+    with patch("menuai.components.simplepush.config_flow.send"):
         yield
 
 
-async def test_flow_successful(hass: HomeAssistant) -> None:
+async def test_flow_successful(menuai: menuai) -> None:
     """Test user initialized flow with minimum config."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_CONFIG,
     )
@@ -50,14 +50,14 @@ async def test_flow_successful(hass: HomeAssistant) -> None:
     assert result["data"] == MOCK_CONFIG
 
 
-async def test_flow_with_password(hass: HomeAssistant) -> None:
+async def test_flow_with_password(menuai: menuai) -> None:
     """Test user initialized flow with password and salt."""
     mock_config_pass = {**MOCK_CONFIG, CONF_PASSWORD: "password", CONF_SALT: "salt"}
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=mock_config_pass,
     )
@@ -66,7 +66,7 @@ async def test_flow_with_password(hass: HomeAssistant) -> None:
     assert result["data"] == mock_config_pass
 
 
-async def test_flow_user_device_key_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_user_device_key_already_configured(menuai: menuai) -> None:
     """Test user initialized flow with duplicate device key."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -74,13 +74,13 @@ async def test_flow_user_device_key_already_configured(hass: HomeAssistant) -> N
         unique_id="abc",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_CONFIG,
     )
@@ -88,7 +88,7 @@ async def test_flow_user_device_key_already_configured(hass: HomeAssistant) -> N
     assert result["reason"] == "already_configured"
 
 
-async def test_flow_user_name_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_user_name_already_configured(menuai: menuai) -> None:
     """Test user initialized flow with duplicate name."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -96,16 +96,16 @@ async def test_flow_user_name_already_configured(hass: HomeAssistant) -> None:
         unique_id="abc",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     new_entry = MOCK_CONFIG.copy()
     new_entry[CONF_DEVICE_KEY] = "abc1"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_CONFIG,
     )
@@ -113,17 +113,17 @@ async def test_flow_user_name_already_configured(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_error_on_connection_failure(hass: HomeAssistant) -> None:
+async def test_error_on_connection_failure(menuai: menuai) -> None:
     """Test when connection to api fails."""
     with patch(
-        "homeassistant.components.simplepush.config_flow.send",
+        "menuai.components.simplepush.config_flow.send",
         side_effect=UnknownError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=MOCK_CONFIG,
         )

@@ -9,7 +9,7 @@ from typing import Literal
 from pymata_express.pymata_express import PymataExpress
 from pymata_express.pymata_express_serial import serial
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_BINARY_SENSORS,
     CONF_LIGHTS,
     CONF_NAME,

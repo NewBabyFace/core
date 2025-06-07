@@ -31,7 +31,7 @@
       },
       "dvrID": "dvr",
       "videoAvailable": false,
-      "hasSubscription": false
+      "menuaiubscription": false
     },
     "callingUser": {
       "LastName": "User",

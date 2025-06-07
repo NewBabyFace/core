@@ -5,19 +5,19 @@ from typing import Any, Generic, TypeVar
 
 from twitchAPI.object.base import TwitchObject
 
-from homeassistant.components.twitch.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonArrayType
+from menuai.components.twitch.const import DOMAIN
+from menuai.core import menuai
+from menuai.util.json import JsonArrayType
 
 from tests.common import MockConfigEntry, async_load_json_array_fixture
 
 
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 TwitchType = TypeVar("TwitchType", bound=TwitchObject)
@@ -31,10 +31,10 @@ class TwitchIterObject(Generic[TwitchType]):
     total: int
 
     def __init__(
-        self, hass: HomeAssistant, fixture: str, target_type: type[TwitchType]
+        self, menuai: menuai, fixture: str, target_type: type[TwitchType]
     ) -> None:
         """Initialize object."""
-        self.hass = hass
+        self.menuai = menuai
         self.fixture = fixture
         self.target_type = target_type
 
@@ -42,7 +42,7 @@ class TwitchIterObject(Generic[TwitchType]):
         """Return async iterator."""
         if not hasattr(self, "raw_data"):
             self.raw_data = await async_load_json_array_fixture(
-                self.hass, self.fixture, DOMAIN
+                self.menuai, self.fixture, DOMAIN
             )
             self.data = [self.target_type(**item) for item in self.raw_data]
             self.total = len(self.raw_data)
@@ -51,10 +51,10 @@ class TwitchIterObject(Generic[TwitchType]):
 
 
 async def get_generator(
-    hass: HomeAssistant, fixture: str, target_type: type[TwitchType]
+    menuai: menuai, fixture: str, target_type: type[TwitchType]
 ) -> AsyncGenerator[TwitchType]:
     """Return async generator."""
-    data = await async_load_json_array_fixture(hass, fixture, DOMAIN)
+    data = await async_load_json_array_fixture(menuai, fixture, DOMAIN)
     async for item in get_generator_from_data(data, target_type):
         yield item
 

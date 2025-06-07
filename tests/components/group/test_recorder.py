@@ -6,32 +6,32 @@ from datetime import timedelta
 
 import pytest
 
-from homeassistant.components import group
-from homeassistant.components.group import ATTR_AUTO, ATTR_ENTITY_ID, ATTR_ORDER
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.const import ATTR_FRIENDLY_NAME, STATE_ON
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import group
+from menuai.components.group import ATTR_AUTO, ATTR_ENTITY_ID, ATTR_ORDER
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.history import get_significant_states
+from menuai.const import ATTR_FRIENDLY_NAME, STATE_ON
+from menuai.core import menuai, split_entity_id
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 from tests.components.recorder.common import async_wait_recording_done
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant():
+async def setup_menuai():
     """Override the fixture in group.conftest."""
 
 
-async def test_exclude_attributes(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_exclude_attributes(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test number registered attributes to be excluded."""
     now = dt_util.utcnow()
-    hass.states.async_set("light.bowl", STATE_ON)
+    menuai.states.async_set("light.bowl", STATE_ON)
 
-    assert await async_setup_component(hass, "light", {})
+    assert await async_setup_component(menuai, "light", {})
     assert await async_setup_component(
-        hass,
+        menuai,
         group.DOMAIN,
         {
             group.DOMAIN: {
@@ -41,13 +41,13 @@ async def test_exclude_attributes(recorder_mock: Recorder, hass: HomeAssistant) 
             }
         },
     )
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5))
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5))
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, hass.states.async_entity_ids()
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, menuai.states.async_entity_ids()
     )
     assert len(states) > 1
     for entity_states in states.values():

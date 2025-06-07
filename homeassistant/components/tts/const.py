@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from . import SpeechManager, TextToSpeechEntity
 
@@ -26,9 +26,9 @@ DEFAULT_CACHE_DIR = "tts"
 DEFAULT_TIME_MEMORY = 300
 
 DOMAIN = "tts"
-DATA_COMPONENT: HassKey[EntityComponent[TextToSpeechEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[TextToSpeechEntity]] = menuaiKey(DOMAIN)
 
-DATA_TTS_MANAGER: HassKey[SpeechManager] = HassKey("tts_manager")
+DATA_TTS_MANAGER: menuaiKey[SpeechManager] = menuaiKey("tts_manager")
 
 MEDIA_SOURCE_STREAM_PATH = "-stream-"
 

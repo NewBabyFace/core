@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.input_datetime import (
+from menuai.components.input_datetime import (
     ATTR_DATE,
     ATTR_DATETIME,
     ATTR_EDITABLE,
@@ -23,7 +23,7 @@ from homeassistant.components.input_datetime import (
     DOMAIN,
     SERVICE_RELOAD,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     ATTR_NAME,
@@ -31,11 +31,11 @@ from homeassistant.const import (
     FORMAT_DATETIME,
     FORMAT_TIME,
 )
-from homeassistant.core import Context, CoreState, HomeAssistant, State
-from homeassistant.exceptions import Unauthorized
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import Context, CoreState, menuai, State
+from menuai.exceptions import Unauthorized
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockUser, mock_restore_cache
 from tests.typing import WebSocketGenerator
@@ -46,12 +46,12 @@ INITIAL_DATETIME = f"{INITIAL_DATE} {INITIAL_TIME}"
 
 
 @pytest.fixture
-def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
+def storage_setup(menuai: menuai, menuai_storage: dict[str, Any]):
     """Storage setup."""
 
     async def _storage(items=None, config=None):
         if items is None:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "data": {
@@ -67,23 +67,23 @@ def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
                 },
             }
         else:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "data": {"items": items},
             }
         if config is None:
             config = {DOMAIN: {}}
-        return await async_setup_component(hass, DOMAIN, config)
+        return await async_setup_component(menuai, DOMAIN, config)
 
     return _storage
 
 
 async def async_set_date_and_time(
-    hass: HomeAssistant, entity_id: str, dt_value: datetime.datetime
+    menuai: menuai, entity_id: str, dt_value: datetime.datetime
 ) -> None:
     """Set date and / or time of input_datetime."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "set_datetime",
         {
@@ -96,10 +96,10 @@ async def async_set_date_and_time(
 
 
 async def async_set_datetime(
-    hass: HomeAssistant, entity_id: str, dt_value: datetime.datetime
+    menuai: menuai, entity_id: str, dt_value: datetime.datetime
 ) -> None:
     """Set date and / or time of input_datetime."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "set_datetime",
         {ATTR_ENTITY_ID: entity_id, ATTR_DATETIME: dt_value},
@@ -108,10 +108,10 @@ async def async_set_datetime(
 
 
 async def async_set_timestamp(
-    hass: HomeAssistant, entity_id: str, timestamp: float
+    menuai: menuai, entity_id: str, timestamp: float
 ) -> None:
     """Set date and / or time of input_datetime."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "set_datetime",
         {ATTR_ENTITY_ID: entity_id, ATTR_TIMESTAMP: timestamp},
@@ -133,21 +133,21 @@ def test_invalid_configs(config) -> None:
         CONFIG_SCHEMA({DOMAIN: config})
 
 
-async def test_set_datetime(hass: HomeAssistant) -> None:
+async def test_set_datetime(menuai: menuai) -> None:
     """Test set_datetime method using date & time."""
     await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
+        menuai, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
     )
 
     entity_id = "input_datetime.test_datetime"
 
     dt_obj = datetime.datetime(
-        2017, 9, 7, 19, 46, 30, tzinfo=dt_util.get_time_zone(hass.config.time_zone)
+        2017, 9, 7, 19, 46, 30, tzinfo=dt_util.get_time_zone(menuai.config.time_zone)
     )
 
-    await async_set_date_and_time(hass, entity_id, dt_obj)
+    await async_set_date_and_time(menuai, entity_id, dt_obj)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == dt_obj.strftime(FORMAT_DATETIME)
     assert state.attributes["has_time"]
     assert state.attributes["has_date"]
@@ -161,21 +161,21 @@ async def test_set_datetime(hass: HomeAssistant) -> None:
     assert state.attributes["timestamp"] == dt_obj.timestamp()
 
 
-async def test_set_datetime_2(hass: HomeAssistant) -> None:
+async def test_set_datetime_2(menuai: menuai) -> None:
     """Test set_datetime method using datetime."""
     await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
+        menuai, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
     )
 
     entity_id = "input_datetime.test_datetime"
 
     dt_obj = datetime.datetime(
-        2017, 9, 7, 19, 46, 30, tzinfo=dt_util.get_time_zone(hass.config.time_zone)
+        2017, 9, 7, 19, 46, 30, tzinfo=dt_util.get_time_zone(menuai.config.time_zone)
     )
 
-    await async_set_datetime(hass, entity_id, dt_obj)
+    await async_set_datetime(menuai, entity_id, dt_obj)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == dt_obj.strftime(FORMAT_DATETIME)
     assert state.attributes["has_time"]
     assert state.attributes["has_date"]
@@ -189,21 +189,21 @@ async def test_set_datetime_2(hass: HomeAssistant) -> None:
     assert state.attributes["timestamp"] == dt_obj.timestamp()
 
 
-async def test_set_datetime_3(hass: HomeAssistant) -> None:
+async def test_set_datetime_3(menuai: menuai) -> None:
     """Test set_datetime method using timestamp."""
     await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
+        menuai, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
     )
 
     entity_id = "input_datetime.test_datetime"
 
     dt_obj = datetime.datetime(
-        2017, 9, 7, 19, 46, 30, tzinfo=dt_util.get_time_zone(hass.config.time_zone)
+        2017, 9, 7, 19, 46, 30, tzinfo=dt_util.get_time_zone(menuai.config.time_zone)
     )
 
-    await async_set_timestamp(hass, entity_id, dt_util.as_utc(dt_obj).timestamp())
+    await async_set_timestamp(menuai, entity_id, dt_util.as_utc(dt_obj).timestamp())
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == dt_obj.strftime(FORMAT_DATETIME)
     assert state.attributes["has_time"]
     assert state.attributes["has_date"]
@@ -217,21 +217,21 @@ async def test_set_datetime_3(hass: HomeAssistant) -> None:
     assert state.attributes["timestamp"] == dt_obj.timestamp()
 
 
-async def test_set_datetime_4(hass: HomeAssistant) -> None:
+async def test_set_datetime_4(menuai: menuai) -> None:
     """Test set_datetime method using timestamp 0."""
     await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
+        menuai, DOMAIN, {DOMAIN: {"test_datetime": {"has_time": True, "has_date": True}}}
     )
 
     entity_id = "input_datetime.test_datetime"
 
     dt_obj = datetime.datetime(
-        1969, 12, 31, 16, 00, 00, tzinfo=dt_util.get_time_zone(hass.config.time_zone)
+        1969, 12, 31, 16, 00, 00, tzinfo=dt_util.get_time_zone(menuai.config.time_zone)
     )
 
-    await async_set_timestamp(hass, entity_id, 0)
+    await async_set_timestamp(menuai, entity_id, 0)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == dt_obj.strftime(FORMAT_DATETIME)
     assert state.attributes["has_time"]
     assert state.attributes["has_date"]
@@ -245,19 +245,19 @@ async def test_set_datetime_4(hass: HomeAssistant) -> None:
     assert state.attributes["timestamp"] == 0
 
 
-async def test_set_datetime_time(hass: HomeAssistant) -> None:
+async def test_set_datetime_time(menuai: menuai) -> None:
     """Test set_datetime method with only time."""
     await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {"test_time": {"has_time": True, "has_date": False}}}
+        menuai, DOMAIN, {DOMAIN: {"test_time": {"has_time": True, "has_date": False}}}
     )
 
     entity_id = "input_datetime.test_time"
 
     dt_obj = datetime.datetime(2017, 9, 7, 19, 46, 30)
 
-    await async_set_date_and_time(hass, entity_id, dt_obj)
+    await async_set_date_and_time(menuai, entity_id, dt_obj)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == dt_obj.strftime(FORMAT_TIME)
     assert state.attributes["has_time"]
     assert not state.attributes["has_date"]
@@ -265,11 +265,11 @@ async def test_set_datetime_time(hass: HomeAssistant) -> None:
     assert state.attributes["timestamp"] == (19 * 3600) + (46 * 60) + 30
 
 
-async def test_set_invalid(hass: HomeAssistant) -> None:
+async def test_set_invalid(menuai: menuai) -> None:
     """Test set_datetime method with only time."""
     initial = "2017-01-01"
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -284,22 +284,22 @@ async def test_set_invalid(hass: HomeAssistant) -> None:
     time_portion = dt_obj.time()
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "input_datetime",
             "set_datetime",
             {"entity_id": entity_id, "time": time_portion},
             blocking=True,
         )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == initial
 
 
-async def test_set_invalid_2(hass: HomeAssistant) -> None:
+async def test_set_invalid_2(menuai: menuai) -> None:
     """Test set_datetime method with date and datetime."""
     initial = "2017-01-01"
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -314,21 +314,21 @@ async def test_set_invalid_2(hass: HomeAssistant) -> None:
     time_portion = dt_obj.time()
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "input_datetime",
             "set_datetime",
             {"entity_id": entity_id, "time": time_portion, "datetime": dt_obj},
             blocking=True,
         )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == initial
 
 
-async def test_set_datetime_date(hass: HomeAssistant) -> None:
+async def test_set_datetime_date(menuai: menuai) -> None:
     """Test set_datetime method with only date."""
     await async_setup_component(
-        hass, DOMAIN, {DOMAIN: {"test_date": {"has_time": False, "has_date": True}}}
+        menuai, DOMAIN, {DOMAIN: {"test_date": {"has_time": False, "has_date": True}}}
     )
 
     entity_id = "input_datetime.test_date"
@@ -336,9 +336,9 @@ async def test_set_datetime_date(hass: HomeAssistant) -> None:
     dt_obj = datetime.datetime(2017, 9, 7, 19, 46)
     date_portion = dt_obj.date()
 
-    await async_set_date_and_time(hass, entity_id, dt_obj)
+    await async_set_date_and_time(menuai, entity_id, dt_obj)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == str(date_portion)
     assert not state.attributes["has_time"]
     assert state.attributes["has_date"]
@@ -347,10 +347,10 @@ async def test_set_datetime_date(hass: HomeAssistant) -> None:
     assert state.attributes["timestamp"] == date_dt_obj.timestamp()
 
 
-async def test_restore_state(hass: HomeAssistant) -> None:
+async def test_restore_state(menuai: menuai) -> None:
     """Ensure states are restored on startup."""
     mock_restore_cache(
-        hass,
+        menuai,
         (
             State("input_datetime.test_time", "19:46:00"),
             State("input_datetime.test_date", "2017-09-07"),
@@ -361,13 +361,13 @@ async def test_restore_state(hass: HomeAssistant) -> None:
         ),
     )
 
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
     initial = datetime.datetime(2017, 1, 1, 23, 42)
     default = datetime.datetime.combine(datetime.date.today(), DEFAULT_TIME)
 
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -386,29 +386,29 @@ async def test_restore_state(hass: HomeAssistant) -> None:
     )
 
     dt_obj = datetime.datetime(2017, 9, 7, 19, 46)
-    state_time = hass.states.get("input_datetime.test_time")
+    state_time = menuai.states.get("input_datetime.test_time")
     assert state_time.state == dt_obj.strftime(FORMAT_TIME)
 
-    state_date = hass.states.get("input_datetime.test_date")
+    state_date = menuai.states.get("input_datetime.test_date")
     assert state_date.state == dt_obj.strftime(FORMAT_DATE)
 
-    state_datetime = hass.states.get("input_datetime.test_datetime")
+    state_datetime = menuai.states.get("input_datetime.test_datetime")
     assert state_datetime.state == dt_obj.strftime(FORMAT_DATETIME)
 
-    state_bogus = hass.states.get("input_datetime.test_bogus_data")
+    state_bogus = menuai.states.get("input_datetime.test_bogus_data")
     assert state_bogus.state == initial.strftime(FORMAT_DATETIME)
 
-    state_was_time = hass.states.get("input_datetime.test_was_time")
+    state_was_time = menuai.states.get("input_datetime.test_was_time")
     assert state_was_time.state == default.strftime(FORMAT_DATE)
 
-    state_was_date = hass.states.get("input_datetime.test_was_date")
+    state_was_date = menuai.states.get("input_datetime.test_was_date")
     assert state_was_date.state == default.strftime(FORMAT_TIME)
 
 
-async def test_default_value(hass: HomeAssistant) -> None:
+async def test_default_value(menuai: menuai) -> None:
     """Test default value if none has been set via initial or restore state."""
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -420,55 +420,55 @@ async def test_default_value(hass: HomeAssistant) -> None:
     )
 
     dt_obj = datetime.datetime.combine(datetime.date.today(), DEFAULT_TIME)
-    state_time = hass.states.get("input_datetime.test_time")
+    state_time = menuai.states.get("input_datetime.test_time")
     assert state_time.state == dt_obj.strftime(FORMAT_TIME)
     assert state_time.attributes.get("timestamp") is not None
 
-    state_date = hass.states.get("input_datetime.test_date")
+    state_date = menuai.states.get("input_datetime.test_date")
     assert state_date.state == dt_obj.strftime(FORMAT_DATE)
     assert state_date.attributes.get("timestamp") is not None
 
-    state_datetime = hass.states.get("input_datetime.test_datetime")
+    state_datetime = menuai.states.get("input_datetime.test_datetime")
     assert state_datetime.state == dt_obj.strftime(FORMAT_DATETIME)
     assert state_datetime.attributes.get("timestamp") is not None
 
 
 async def test_input_datetime_context(
-    hass: HomeAssistant, hass_admin_user: MockUser
+    menuai: menuai, menuai_admin_user: MockUser
 ) -> None:
     """Test that input_datetime context works."""
     assert await async_setup_component(
-        hass, "input_datetime", {"input_datetime": {"only_date": {"has_date": True}}}
+        menuai, "input_datetime", {"input_datetime": {"only_date": {"has_date": True}}}
     )
 
-    state = hass.states.get("input_datetime.only_date")
+    state = menuai.states.get("input_datetime.only_date")
     assert state is not None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {"entity_id": state.entity_id, "date": "2018-01-02"},
         blocking=True,
-        context=Context(user_id=hass_admin_user.id),
+        context=Context(user_id=menuai_admin_user.id),
     )
 
-    state2 = hass.states.get("input_datetime.only_date")
+    state2 = menuai.states.get("input_datetime.only_date")
     assert state2 is not None
     assert state.state != state2.state
-    assert state2.context.user_id == hass_admin_user.id
+    assert state2.context.user_id == menuai_admin_user.id
 
 
 async def test_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_admin_user: MockUser,
-    hass_read_only_user: MockUser,
+    menuai_admin_user: MockUser,
+    menuai_read_only_user: MockUser,
 ) -> None:
     """Test reload service."""
-    count_start = len(hass.states.async_entity_ids())
+    count_start = len(menuai.states.async_entity_ids())
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -478,11 +478,11 @@ async def test_reload(
         },
     )
 
-    assert count_start + 2 == len(hass.states.async_entity_ids())
+    assert count_start + 2 == len(menuai.states.async_entity_ids())
 
-    state_1 = hass.states.get("input_datetime.dt1")
-    state_2 = hass.states.get("input_datetime.dt2")
-    state_3 = hass.states.get("input_datetime.dt3")
+    state_1 = menuai.states.get("input_datetime.dt1")
+    state_2 = menuai.states.get("input_datetime.dt2")
+    state_3 = menuai.states.get("input_datetime.dt3")
 
     dt_obj = datetime.datetime(2019, 1, 1, 0, 0)
     assert state_1 is not None
@@ -494,7 +494,7 @@ async def test_reload(
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, "dt3") == f"{DOMAIN}.dt3"
 
     with patch(
-        "homeassistant.config.load_yaml_config_file",
+        "menuai.config.load_yaml_config_file",
         autospec=True,
         return_value={
             DOMAIN: {
@@ -504,24 +504,24 @@ async def test_reload(
         },
     ):
         with pytest.raises(Unauthorized):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_RELOAD,
                 blocking=True,
-                context=Context(user_id=hass_read_only_user.id),
+                context=Context(user_id=menuai_read_only_user.id),
             )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             blocking=True,
-            context=Context(user_id=hass_admin_user.id),
+            context=Context(user_id=menuai_admin_user.id),
         )
 
-    assert count_start + 2 == len(hass.states.async_entity_ids())
+    assert count_start + 2 == len(menuai.states.async_entity_ids())
 
-    state_1 = hass.states.get("input_datetime.dt1")
-    state_2 = hass.states.get("input_datetime.dt2")
-    state_3 = hass.states.get("input_datetime.dt3")
+    state_1 = menuai.states.get("input_datetime.dt1")
+    state_2 = menuai.states.get("input_datetime.dt2")
+    state_3 = menuai.states.get("input_datetime.dt3")
 
     assert state_1 is not None
     assert state_2 is not None
@@ -536,15 +536,15 @@ async def test_reload(
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, "dt3") is None
 
 
-async def test_load_from_storage(hass: HomeAssistant, storage_setup) -> None:
+async def test_load_from_storage(menuai: menuai, storage_setup) -> None:
     """Test set up from storage."""
     assert await storage_setup()
-    state = hass.states.get(f"{DOMAIN}.datetime_from_storage")
+    state = menuai.states.get(f"{DOMAIN}.datetime_from_storage")
     assert state.state == INITIAL_DATETIME
     assert state.attributes.get(ATTR_EDITABLE)
 
 
-async def test_editable_state_attribute(hass: HomeAssistant, storage_setup) -> None:
+async def test_editable_state_attribute(menuai: menuai, storage_setup) -> None:
     """Test editable attribute."""
     assert await storage_setup(
         config={
@@ -559,22 +559,22 @@ async def test_editable_state_attribute(hass: HomeAssistant, storage_setup) -> N
         }
     )
 
-    state = hass.states.get(f"{DOMAIN}.datetime_from_storage")
+    state = menuai.states.get(f"{DOMAIN}.datetime_from_storage")
     assert state.state == INITIAL_DATETIME
     assert state.attributes.get(ATTR_EDITABLE)
 
-    state = hass.states.get(f"{DOMAIN}.from_yaml")
+    state = menuai.states.get(f"{DOMAIN}.from_yaml")
     assert state.state == "2001-01-02 12:34:56"
     assert not state.attributes[ATTR_EDITABLE]
 
 
 async def test_ws_list(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, storage_setup
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, storage_setup
 ) -> None:
     """Test listing via WS."""
     assert await storage_setup(config={DOMAIN: {"from_yaml": {CONF_HAS_DATE: True}}})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 6, "type": f"{DOMAIN}/list"})
     resp = await client.receive_json()
@@ -591,9 +591,9 @@ async def test_ws_list(
 
 
 async def test_ws_delete(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     storage_setup,
 ) -> None:
     """Test WS delete cleans up entity registry."""
@@ -602,13 +602,13 @@ async def test_ws_delete(
     input_id = "from_storage"
     input_entity_id = f"{DOMAIN}.datetime_from_storage"
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state is not None
     assert (
         entity_registry.async_get_entity_id(DOMAIN, DOMAIN, input_id) == input_entity_id
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 6, "type": f"{DOMAIN}/delete", f"{DOMAIN}_id": f"{input_id}"}
@@ -616,15 +616,15 @@ async def test_ws_delete(
     resp = await client.receive_json()
     assert resp["success"]
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state is None
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, input_id) is None
 
 
 async def test_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     storage_setup,
 ) -> None:
     """Test updating min/max updates the state."""
@@ -634,14 +634,14 @@ async def test_update(
     input_id = "from_storage"
     input_entity_id = f"{DOMAIN}.datetime_from_storage"
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state.attributes[ATTR_FRIENDLY_NAME] == "datetime from storage"
     assert state.state == INITIAL_DATETIME
     assert (
         entity_registry.async_get_entity_id(DOMAIN, DOMAIN, input_id) == input_entity_id
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     updated_settings = {
         CONF_NAME: "even newer name",
@@ -661,15 +661,15 @@ async def test_update(
     assert resp["success"]
     assert resp["result"] == {"id": "from_storage"} | updated_settings
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state.state == INITIAL_TIME
     assert state.attributes[ATTR_FRIENDLY_NAME] == "even newer name"
 
 
 async def test_ws_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     storage_setup,
 ) -> None:
     """Test create WS."""
@@ -678,11 +678,11 @@ async def test_ws_create(
     input_id = "new_datetime"
     input_entity_id = f"{DOMAIN}.{input_id}"
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state is None
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, input_id) is None
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -697,36 +697,36 @@ async def test_ws_create(
     resp = await client.receive_json()
     assert resp["success"]
 
-    state = hass.states.get(input_entity_id)
+    state = menuai.states.get(input_entity_id)
     assert state.state == "1991-01-02 01:02:03"
     assert state.attributes[ATTR_FRIENDLY_NAME] == "New DateTime"
     assert state.attributes[ATTR_EDITABLE]
 
 
-async def test_setup_no_config(hass: HomeAssistant, hass_admin_user: MockUser) -> None:
+async def test_setup_no_config(menuai: menuai, menuai_admin_user: MockUser) -> None:
     """Test component setup with no config."""
-    count_start = len(hass.states.async_entity_ids())
-    assert await async_setup_component(hass, DOMAIN, {})
+    count_start = len(menuai.states.async_entity_ids())
+    assert await async_setup_component(menuai, DOMAIN, {})
 
     with patch(
-        "homeassistant.config.load_yaml_config_file", autospec=True, return_value={}
+        "menuai.config.load_yaml_config_file", autospec=True, return_value={}
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             blocking=True,
-            context=Context(user_id=hass_admin_user.id),
+            context=Context(user_id=menuai_admin_user.id),
         )
 
-    assert count_start == len(hass.states.async_entity_ids())
+    assert count_start == len(menuai.states.async_entity_ids())
 
 
-async def test_timestamp(hass: HomeAssistant) -> None:
+async def test_timestamp(menuai: menuai) -> None:
     """Test timestamp."""
-    await hass.config.async_set_time_zone("America/Los_Angeles")
+    await menuai.config.async_set_time_zone("America/Los_Angeles")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -750,7 +750,7 @@ async def test_timestamp(hass: HomeAssistant) -> None:
     )
 
     # initial has been converted to the set timezone
-    state_with_tz = hass.states.get("input_datetime.test_datetime_initial_with_tz")
+    state_with_tz = menuai.states.get("input_datetime.test_datetime_initial_with_tz")
     assert state_with_tz is not None
     # Timezone LA is UTC-8 => timestamp carries +01:00 => delta is -9 => 10:00 - 09:00 => 01:00
     assert state_with_tz.state == "2020-12-13 01:00:00"
@@ -762,7 +762,7 @@ async def test_timestamp(hass: HomeAssistant) -> None:
     )
 
     # initial has been interpreted as being part of set timezone
-    state_without_tz = hass.states.get(
+    state_without_tz = menuai.states.get(
         "input_datetime.test_datetime_initial_without_tz"
     )
     assert state_without_tz is not None
@@ -791,13 +791,13 @@ async def test_timestamp(hass: HomeAssistant) -> None:
     )
 
     # Test initial time sets timestamp correctly.
-    state_time = hass.states.get("input_datetime.test_time_initial")
+    state_time = menuai.states.get("input_datetime.test_time_initial")
     assert state_time is not None
     assert state_time.state == "10:00:00"
     assert state_time.attributes[ATTR_TIMESTAMP] == 10 * 60 * 60
 
     # Test that setting the timestamp of an entity works.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "set_datetime",
         {
@@ -806,7 +806,7 @@ async def test_timestamp(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    state_with_tz_updated = hass.states.get(
+    state_with_tz_updated = menuai.states.get(
         "input_datetime.test_datetime_initial_with_tz"
     )
     assert state_with_tz_updated.state == "2020-12-13 10:00:00"
@@ -834,11 +834,11 @@ async def test_timestamp(hass: HomeAssistant) -> None:
     ],
 )
 async def test_invalid_initial(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, config, error
+    menuai: menuai, caplog: pytest.LogCaptureFixture, config, error
 ) -> None:
     """Test configuration is rejected if the initial value is invalid."""
     assert not await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {DOMAIN: {"test_date": config}},
     )

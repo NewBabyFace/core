@@ -4,17 +4,17 @@ from unittest.mock import patch
 
 from pyipma import IPMAException
 
-from homeassistant.components.ipma.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_MODE
-from homeassistant.core import HomeAssistant
+from menuai.components.ipma.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_MODE
+from menuai.core import menuai
 
 from .test_weather import MockLocation
 
 from tests.common import MockConfigEntry
 
 
-async def test_async_setup_raises_entry_not_ready(hass: HomeAssistant) -> None:
+async def test_async_setup_raises_entry_not_ready(menuai: menuai) -> None:
     """Test that it throws ConfigEntryNotReady when exception occurs during setup."""
 
     with patch(
@@ -26,14 +26,14 @@ async def test_async_setup_raises_entry_not_ready(hass: HomeAssistant) -> None:
             data={CONF_LATITUDE: 0, CONF_LONGITUDE: 0, CONF_MODE: "daily"},
         )
 
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
 
         assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_unload_config_entry(hass: HomeAssistant) -> None:
+async def test_unload_config_entry(menuai: menuai) -> None:
     """Test entry unloading."""
 
     with patch(
@@ -44,14 +44,14 @@ async def test_unload_config_entry(hass: HomeAssistant) -> None:
             domain="ipma",
             data={CONF_LATITUDE: 0, CONF_LONGITUDE: 0, CONF_MODE: "daily"},
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert config_entry.state is ConfigEntryState.LOADED
 
-        await hass.config_entries.async_unload(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert config_entry.state is ConfigEntryState.NOT_LOADED

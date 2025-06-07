@@ -7,15 +7,15 @@ from typing import Any
 from aiosomecomfort import SomeComfortError
 from aiosomecomfort.device import Device as SomeComfortDevice
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HoneywellConfigEntry, HoneywellData
 from .const import DOMAIN
@@ -32,7 +32,7 @@ SWITCH_TYPES: tuple[SwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HoneywellConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -73,7 +73,7 @@ class HoneywellSwitch(SwitchEntity):
         try:
             await self._device.set_system_mode("emheat")
         except SomeComfortError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="switch_failed_on"
             ) from err
 
@@ -84,7 +84,7 @@ class HoneywellSwitch(SwitchEntity):
                 await self._device.set_system_mode("off")
 
             except SomeComfortError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN, translation_key="switch_failed_off"
                 ) from err
 

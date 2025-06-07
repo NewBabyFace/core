@@ -9,10 +9,10 @@ from pysnooz.commands import SnoozCommandData
 from pysnooz.device import DisconnectionReason, SnoozConnectionStatus
 from pysnooz.testing import MockSnoozDevice as ParentMockSnoozDevice
 
-from homeassistant.components.snooz.const import DOMAIN
-from homeassistant.const import CONF_ADDRESS, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.components.snooz.const import DOMAIN
+from menuai.const import CONF_ADDRESS, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 from tests.common import MockConfigEntry
 from tests.components.bluetooth import generate_ble_device
@@ -114,14 +114,14 @@ async def create_mock_snooz(
 
 
 async def create_mock_snooz_config_entry(
-    hass: HomeAssistant, device: MockSnoozDevice
+    menuai: menuai, device: MockSnoozDevice
 ) -> MockConfigEntry:
     """Create a mock config entry."""
 
     with (
-        patch("homeassistant.components.snooz.SnoozDevice", return_value=device),
+        patch("menuai.components.snooz.SnoozDevice", return_value=device),
         patch(
-            "homeassistant.components.snooz.async_ble_device_from_address",
+            "menuai.components.snooz.async_ble_device_from_address",
             return_value=generate_ble_device(device.address, device.name),
         ),
     ):
@@ -130,9 +130,9 @@ async def create_mock_snooz_config_entry(
             unique_id=TEST_ADDRESS,
             data={CONF_ADDRESS: TEST_ADDRESS, CONF_TOKEN: TEST_PAIRING_TOKEN},
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         return entry

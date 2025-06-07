@@ -5,11 +5,11 @@ import logging
 
 import psutil_home_assistant as ha_psutil
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .coordinator import SystemMonitorCoordinator
 from .util import get_all_disk_mounts
@@ -30,13 +30,13 @@ class SystemMonitorData:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: SystemMonitorConfigEntry
+    menuai: menuai, entry: SystemMonitorConfigEntry
 ) -> bool:
     """Set up System Monitor from a config entry."""
-    psutil_wrapper = await hass.async_add_executor_job(ha_psutil.PsutilWrapper)
+    psutil_wrapper = await menuai.async_add_executor_job(ha_psutil.PsutilWrapper)
 
     disk_arguments = list(
-        await hass.async_add_executor_job(get_all_disk_mounts, hass, psutil_wrapper)
+        await menuai.async_add_executor_job(get_all_disk_mounts, menuai, psutil_wrapper)
     )
     legacy_resources: set[str] = set(entry.options.get("resources", []))
     for resource in legacy_resources:
@@ -50,30 +50,30 @@ async def async_setup_entry(
     _LOGGER.debug("disk arguments to be added: %s", disk_arguments)
 
     coordinator: SystemMonitorCoordinator = SystemMonitorCoordinator(
-        hass, entry, psutil_wrapper, disk_arguments
+        menuai, entry, psutil_wrapper, disk_arguments
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = SystemMonitorData(coordinator, psutil_wrapper)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(update_listener))
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: SystemMonitorConfigEntry
+    menuai: menuai, entry: SystemMonitorConfigEntry
 ) -> bool:
     """Unload System Monitor config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def update_listener(hass: HomeAssistant, entry: SystemMonitorConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: SystemMonitorConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, entry: SystemMonitorConfigEntry
+    menuai: menuai, entry: SystemMonitorConfigEntry
 ) -> bool:
     """Migrate old entry."""
 
@@ -88,7 +88,7 @@ async def async_migrate_entry(
             # Repair will remove sensors when user submit the fix
             if processes := entry.options.get(SENSOR_DOMAIN):
                 new_options[BINARY_SENSOR_DOMAIN] = processes
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, options=new_options, version=1, minor_version=2
         )
 
@@ -96,7 +96,7 @@ async def async_migrate_entry(
             new_options = {**entry.options}
             if SENSOR_DOMAIN in new_options:
                 new_options.pop(SENSOR_DOMAIN)
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry, options=new_options, version=1, minor_version=3
             )
 

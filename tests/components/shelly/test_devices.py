@@ -5,10 +5,10 @@ from unittest.mock import Mock
 from aioshelly.const import MODEL_2PM_G3, MODEL_PRO_EM3
 import pytest
 
-from homeassistant.components.shelly.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.shelly.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import init_integration
 
@@ -16,7 +16,7 @@ from tests.common import async_load_json_object_fixture
 
 
 async def test_shelly_2pm_gen3_no_relay_names(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
@@ -27,17 +27,17 @@ async def test_shelly_2pm_gen3_no_relay_names(
     This device has two relays/channels,we should get a main device and two sub
     devices.
     """
-    device_fixture = await async_load_json_object_fixture(hass, "2pm_gen3.json", DOMAIN)
+    device_fixture = await async_load_json_object_fixture(menuai, "2pm_gen3.json", DOMAIN)
     monkeypatch.setattr(mock_rpc_device, "shelly", device_fixture["shelly"])
     monkeypatch.setattr(mock_rpc_device, "status", device_fixture["status"])
     monkeypatch.setattr(mock_rpc_device, "config", device_fixture["config"])
 
-    await init_integration(hass, gen=3, model=MODEL_2PM_G3)
+    await init_integration(menuai, gen=3, model=MODEL_2PM_G3)
 
     # Relay 0 sub-device
     entity_id = "switch.test_name_switch_0"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -49,7 +49,7 @@ async def test_shelly_2pm_gen3_no_relay_names(
 
     entity_id = "sensor.test_name_switch_0_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -62,7 +62,7 @@ async def test_shelly_2pm_gen3_no_relay_names(
     # Relay 1 sub-device
     entity_id = "switch.test_name_switch_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -74,7 +74,7 @@ async def test_shelly_2pm_gen3_no_relay_names(
 
     entity_id = "sensor.test_name_switch_1_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -87,7 +87,7 @@ async def test_shelly_2pm_gen3_no_relay_names(
     # Main device
     entity_id = "update.test_name_firmware"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -99,7 +99,7 @@ async def test_shelly_2pm_gen3_no_relay_names(
 
 
 async def test_shelly_2pm_gen3_relay_names(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
@@ -110,19 +110,19 @@ async def test_shelly_2pm_gen3_relay_names(
     This device has two relays/channels,we should get a main device and two sub
     devices.
     """
-    device_fixture = await async_load_json_object_fixture(hass, "2pm_gen3.json", DOMAIN)
+    device_fixture = await async_load_json_object_fixture(menuai, "2pm_gen3.json", DOMAIN)
     device_fixture["config"]["switch:0"]["name"] = "Kitchen light"
     device_fixture["config"]["switch:1"]["name"] = "Living room light"
     monkeypatch.setattr(mock_rpc_device, "shelly", device_fixture["shelly"])
     monkeypatch.setattr(mock_rpc_device, "status", device_fixture["status"])
     monkeypatch.setattr(mock_rpc_device, "config", device_fixture["config"])
 
-    await init_integration(hass, gen=3, model=MODEL_2PM_G3)
+    await init_integration(menuai, gen=3, model=MODEL_2PM_G3)
 
     # Relay 0 sub-device
     entity_id = "switch.kitchen_light"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -134,7 +134,7 @@ async def test_shelly_2pm_gen3_relay_names(
 
     entity_id = "sensor.kitchen_light_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -147,7 +147,7 @@ async def test_shelly_2pm_gen3_relay_names(
     # Relay 1 sub-device
     entity_id = "switch.living_room_light"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -159,7 +159,7 @@ async def test_shelly_2pm_gen3_relay_names(
 
     entity_id = "sensor.living_room_light_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -172,7 +172,7 @@ async def test_shelly_2pm_gen3_relay_names(
     # Main device
     entity_id = "update.test_name_firmware"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -184,7 +184,7 @@ async def test_shelly_2pm_gen3_relay_names(
 
 
 async def test_shelly_2pm_gen3_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
@@ -195,17 +195,17 @@ async def test_shelly_2pm_gen3_cover(
     With the cover profile we should only get the main device and no subdevices.
     """
     device_fixture = await async_load_json_object_fixture(
-        hass, "2pm_gen3_cover.json", DOMAIN
+        menuai, "2pm_gen3_cover.json", DOMAIN
     )
     monkeypatch.setattr(mock_rpc_device, "shelly", device_fixture["shelly"])
     monkeypatch.setattr(mock_rpc_device, "status", device_fixture["status"])
     monkeypatch.setattr(mock_rpc_device, "config", device_fixture["config"])
 
-    await init_integration(hass, gen=3, model=MODEL_2PM_G3)
+    await init_integration(menuai, gen=3, model=MODEL_2PM_G3)
 
     entity_id = "cover.test_name"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -217,7 +217,7 @@ async def test_shelly_2pm_gen3_cover(
 
     entity_id = "sensor.test_name_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -229,7 +229,7 @@ async def test_shelly_2pm_gen3_cover(
 
     entity_id = "update.test_name_firmware"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -241,7 +241,7 @@ async def test_shelly_2pm_gen3_cover(
 
 
 async def test_shelly_2pm_gen3_cover_with_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
@@ -252,18 +252,18 @@ async def test_shelly_2pm_gen3_cover_with_name(
     With the cover profile we should only get the main device and no subdevices.
     """
     device_fixture = await async_load_json_object_fixture(
-        hass, "2pm_gen3_cover.json", DOMAIN
+        menuai, "2pm_gen3_cover.json", DOMAIN
     )
     device_fixture["config"]["cover:0"]["name"] = "Bedroom blinds"
     monkeypatch.setattr(mock_rpc_device, "shelly", device_fixture["shelly"])
     monkeypatch.setattr(mock_rpc_device, "status", device_fixture["status"])
     monkeypatch.setattr(mock_rpc_device, "config", device_fixture["config"])
 
-    await init_integration(hass, gen=3, model=MODEL_2PM_G3)
+    await init_integration(menuai, gen=3, model=MODEL_2PM_G3)
 
     entity_id = "cover.test_name_bedroom_blinds"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -275,7 +275,7 @@ async def test_shelly_2pm_gen3_cover_with_name(
 
     entity_id = "sensor.test_name_bedroom_blinds_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -287,7 +287,7 @@ async def test_shelly_2pm_gen3_cover_with_name(
 
     entity_id = "update.test_name_firmware"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -299,7 +299,7 @@ async def test_shelly_2pm_gen3_cover_with_name(
 
 
 async def test_shelly_pro_3em(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
@@ -309,17 +309,17 @@ async def test_shelly_pro_3em(
 
     We should get the main device and three subdevices, one subdevice per one phase.
     """
-    device_fixture = await async_load_json_object_fixture(hass, "pro_3em.json", DOMAIN)
+    device_fixture = await async_load_json_object_fixture(menuai, "pro_3em.json", DOMAIN)
     monkeypatch.setattr(mock_rpc_device, "shelly", device_fixture["shelly"])
     monkeypatch.setattr(mock_rpc_device, "status", device_fixture["status"])
     monkeypatch.setattr(mock_rpc_device, "config", device_fixture["config"])
 
-    await init_integration(hass, gen=2, model=MODEL_PRO_EM3)
+    await init_integration(menuai, gen=2, model=MODEL_PRO_EM3)
 
     # Main device
     entity_id = "sensor.test_name_total_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -332,7 +332,7 @@ async def test_shelly_pro_3em(
     # Phase A sub-device
     entity_id = "sensor.test_name_phase_a_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -345,7 +345,7 @@ async def test_shelly_pro_3em(
     # Phase B sub-device
     entity_id = "sensor.test_name_phase_b_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -358,7 +358,7 @@ async def test_shelly_pro_3em(
     # Phase C sub-device
     entity_id = "sensor.test_name_phase_c_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -370,7 +370,7 @@ async def test_shelly_pro_3em(
 
 
 async def test_shelly_pro_3em_with_emeter_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
@@ -380,18 +380,18 @@ async def test_shelly_pro_3em_with_emeter_name(
 
     We should get the main device and three subdevices, one subdevice per one phase.
     """
-    device_fixture = await async_load_json_object_fixture(hass, "pro_3em.json", DOMAIN)
+    device_fixture = await async_load_json_object_fixture(menuai, "pro_3em.json", DOMAIN)
     device_fixture["config"]["em:0"]["name"] = "Emeter name"
     monkeypatch.setattr(mock_rpc_device, "shelly", device_fixture["shelly"])
     monkeypatch.setattr(mock_rpc_device, "status", device_fixture["status"])
     monkeypatch.setattr(mock_rpc_device, "config", device_fixture["config"])
 
-    await init_integration(hass, gen=2, model=MODEL_PRO_EM3)
+    await init_integration(menuai, gen=2, model=MODEL_PRO_EM3)
 
     # Main device
     entity_id = "sensor.test_name_total_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -404,7 +404,7 @@ async def test_shelly_pro_3em_with_emeter_name(
     # Phase A sub-device
     entity_id = "sensor.test_name_phase_a_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -417,7 +417,7 @@ async def test_shelly_pro_3em_with_emeter_name(
     # Phase B sub-device
     entity_id = "sensor.test_name_phase_b_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -430,7 +430,7 @@ async def test_shelly_pro_3em_with_emeter_name(
     # Phase C sub-device
     entity_id = "sensor.test_name_phase_c_active_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -443,7 +443,7 @@ async def test_shelly_pro_3em_with_emeter_name(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_block_channel_with_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
@@ -454,12 +454,12 @@ async def test_block_channel_with_name(
         mock_block_device.settings["relays"][0], "name", "Kitchen light"
     )
 
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
     # channel 1 sub-device; num_outputs is 2 so the name of the channel should be used
     entity_id = "switch.kitchen_light"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)
@@ -472,7 +472,7 @@ async def test_block_channel_with_name(
     # main device
     entity_id = "update.test_name_firmware"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     entry = entity_registry.async_get(entity_id)

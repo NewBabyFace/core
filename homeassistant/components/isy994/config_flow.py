@@ -14,19 +14,19 @@ from pyisy.configuration import Configuration
 from pyisy.connection import Connection
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IGNORE,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -71,7 +71,7 @@ def _data_schema(schema_input: dict[str, str]) -> vol.Schema:
     )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -85,12 +85,12 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         https = False
         port = host.port or HTTP_PORT
         session = aiohttp_client.async_create_clientsession(
-            hass, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
+            menuai, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
         )
     elif host.scheme == SCHEME_HTTPS:
         https = True
         port = host.port or HTTPS_PORT
-        session = aiohttp_client.async_get_clientsession(hass)
+        session = aiohttp_client.async_get_clientsession(menuai)
     else:
         _LOGGER.error("The ISY/IoX host value in configuration is invalid")
         raise InvalidHost
@@ -155,7 +155,7 @@ class Isy994ConfigFlow(ConfigFlow, domain=DOMAIN):
         info: dict[str, str] = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidHost:
@@ -195,7 +195,7 @@ class Isy994ConfigFlow(ConfigFlow, domain=DOMAIN):
                 new_netloc = f"{ip_address}:{port}"
             elif parsed_url.port:
                 new_netloc = f"{ip_address}:{parsed_url.port}"
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 existing_entry,
                 data={
                     **existing_entry.data,
@@ -287,7 +287,7 @@ class Isy994ConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: user_input[CONF_PASSWORD],
             }
             try:
-                await validate_input(self.hass, new_data)
+                await validate_input(self.menuai, new_data)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -350,13 +350,13 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=options_schema)
 
 
-class InvalidHost(HomeAssistantError):
+class InvalidHost(menuaiError):
     """Error to indicate the host value is invalid."""
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

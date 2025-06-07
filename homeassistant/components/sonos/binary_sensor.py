@@ -5,15 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SONOS_CREATE_BATTERY, SONOS_CREATE_MIC_SENSOR
 from .entity import SonosEntity
@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -45,13 +45,13 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass, SONOS_CREATE_BATTERY, _async_create_battery_entity
+            menuai, SONOS_CREATE_BATTERY, _async_create_battery_entity
         )
     )
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass, SONOS_CREATE_MIC_SENSOR, _async_create_mic_entity
+            menuai, SONOS_CREATE_MIC_SENSOR, _async_create_mic_entity
         )
     )
 
@@ -102,7 +102,7 @@ class SonosMicrophoneSensorEntity(SonosEntity, BinarySensorEntity):
 
     async def _async_fallback_poll(self) -> None:
         """Handle polling when subscription fails."""
-        await self.hass.async_add_executor_job(self.poll_state)
+        await self.menuai.async_add_executor_job(self.poll_state)
 
     @soco_error()
     def poll_state(self) -> None:

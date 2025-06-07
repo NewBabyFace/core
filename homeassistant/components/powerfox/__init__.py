@@ -6,22 +6,22 @@ import asyncio
 
 from powerfox import Powerfox, PowerfoxConnectionError
 
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import PowerfoxConfigEntry, PowerfoxDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PowerfoxConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: PowerfoxConfigEntry) -> bool:
     """Set up Powerfox from a config entry."""
     client = Powerfox(
         username=entry.data[CONF_EMAIL],
         password=entry.data[CONF_PASSWORD],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
 
     try:
@@ -31,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerfoxConfigEntry) -> 
         raise ConfigEntryNotReady from err
 
     coordinators: list[PowerfoxDataUpdateCoordinator] = [
-        PowerfoxDataUpdateCoordinator(hass, entry, client, device) for device in devices
+        PowerfoxDataUpdateCoordinator(menuai, entry, client, device) for device in devices
     ]
 
     await asyncio.gather(
@@ -43,10 +43,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerfoxConfigEntry) -> 
 
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: PowerfoxConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: PowerfoxConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

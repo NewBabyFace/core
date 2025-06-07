@@ -11,8 +11,8 @@ from elevenlabs.core import ApiError
 from elevenlabs.types import GetVoicesResponse, VoiceSettings
 import pytest
 
-from homeassistant.components import tts
-from homeassistant.components.elevenlabs.const import (
+from menuai.components import tts
+from menuai.components.elevenlabs.const import (
     ATTR_MODEL,
     CONF_MODEL,
     CONF_OPTIMIZE_LATENCY,
@@ -28,14 +28,14 @@ from homeassistant.components.elevenlabs.const import (
     DEFAULT_USE_SPEAKER_BOOST,
     DOMAIN,
 )
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     DOMAIN as DOMAIN_MP,
     SERVICE_PLAY_MEDIA,
 )
-from homeassistant.const import ATTR_ENTITY_ID, CONF_API_KEY
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.core_config import async_process_ha_core_config
+from menuai.const import ATTR_ENTITY_ID, CONF_API_KEY
+from menuai.core import menuai, ServiceCall
+from menuai.core_config import async_process_ha_core_config
 
 from .const import MOCK_MODELS, MOCK_VOICES
 
@@ -55,16 +55,16 @@ def mock_tts_cache_dir_autouse(mock_tts_cache_dir: Path) -> None:
 
 
 @pytest.fixture
-async def calls(hass: HomeAssistant) -> list[ServiceCall]:
+async def calls(menuai: menuai) -> list[ServiceCall]:
     """Mock media player calls."""
-    return async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    return async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
 
 @pytest.fixture(autouse=True)
-async def setup_internal_url(hass: HomeAssistant) -> None:
+async def setup_internal_url(menuai: menuai) -> None:
     """Set up internal url."""
     await async_process_ha_core_config(
-        hass, {"internal_url": "http://example.local:8123"}
+        menuai, {"internal_url": "http://example.local:8123"}
     )
 
 
@@ -82,7 +82,7 @@ def mock_latency():
 
 @pytest.fixture(name="setup")
 async def setup_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_data: dict[str, Any],
     config_options: dict[str, Any],
     config_options_voice: dict[str, Any],
@@ -91,13 +91,13 @@ async def setup_fixture(
 ) -> AsyncMock:
     """Set up the test environment."""
     if request.param == "mock_config_entry_setup":
-        await mock_config_entry_setup(hass, config_data, config_options)
+        await mock_config_entry_setup(menuai, config_data, config_options)
     elif request.param == "mock_config_entry_setup_voice":
-        await mock_config_entry_setup(hass, config_data, config_options_voice)
+        await mock_config_entry_setup(menuai, config_data, config_options_voice)
     else:
         raise RuntimeError("Invalid setup fixture")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return mock_async_client
 
 
@@ -126,7 +126,7 @@ def config_options_voice_fixture(mock_similarity, mock_latency) -> dict[str, Any
 
 
 async def mock_config_entry_setup(
-    hass: HomeAssistant, config_data: dict[str, Any], config_options: dict[str, Any]
+    menuai: menuai, config_data: dict[str, Any], config_options: dict[str, Any]
 ) -> None:
     """Mock config entry setup."""
     default_config_data = {
@@ -141,14 +141,14 @@ async def mock_config_entry_setup(
         data=default_config_data | config_data,
         options=default_config_options | config_options,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     client_mock = AsyncMock()
     client_mock.voices.get_all.return_value = GetVoicesResponse(voices=MOCK_VOICES)
     client_mock.models.get_all.return_value = MOCK_MODELS
     with patch(
-        "homeassistant.components.elevenlabs.AsyncElevenLabs", return_value=client_mock
+        "menuai.components.elevenlabs.AsyncElevenLabs", return_value=client_mock
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -209,14 +209,14 @@ async def mock_config_entry_setup(
 )
 async def test_tts_service_speak(
     setup: AsyncMock,
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     calls: list[ServiceCall],
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test tts service."""
-    tts_entity = hass.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
+    tts_entity = menuai.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
     tts_entity._client.generate.reset_mock()
     assert tts_entity._voice_settings == VoiceSettings(
         stability=DEFAULT_STABILITY,
@@ -225,7 +225,7 @@ async def test_tts_service_speak(
         use_speaker_boost=DEFAULT_USE_SPEAKER_BOOST,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -234,7 +234,7 @@ async def test_tts_service_speak(
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
     voice_id = service_data[tts.ATTR_OPTIONS].get(tts.ATTR_VOICE, "voice1")
@@ -279,17 +279,17 @@ async def test_tts_service_speak(
 )
 async def test_tts_service_speak_lang_config(
     setup: AsyncMock,
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     calls: list[ServiceCall],
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say with other langcodes in the config."""
-    tts_entity = hass.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
+    tts_entity = menuai.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
     tts_entity._client.generate.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -298,7 +298,7 @@ async def test_tts_service_speak_lang_config(
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -329,18 +329,18 @@ async def test_tts_service_speak_lang_config(
 )
 async def test_tts_service_speak_error(
     setup: AsyncMock,
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     calls: list[ServiceCall],
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say with http response 400."""
-    tts_entity = hass.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
+    tts_entity = menuai.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
     tts_entity._client.generate.reset_mock()
     tts_entity._client.generate.side_effect = ApiError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -349,7 +349,7 @@ async def test_tts_service_speak_error(
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.INTERNAL_SERVER_ERROR
     )
 
@@ -390,8 +390,8 @@ async def test_tts_service_speak_error(
 )
 async def test_tts_service_speak_voice_settings(
     setup: AsyncMock,
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     calls: list[ServiceCall],
     tts_service: str,
     service_data: dict[str, Any],
@@ -399,7 +399,7 @@ async def test_tts_service_speak_voice_settings(
     mock_latency: int,
 ) -> None:
     """Test tts service."""
-    tts_entity = hass.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
+    tts_entity = menuai.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
     tts_entity._client.generate.reset_mock()
     assert tts_entity._voice_settings == VoiceSettings(
         stability=DEFAULT_STABILITY,
@@ -409,7 +409,7 @@ async def test_tts_service_speak_voice_settings(
     )
     assert tts_entity._latency == mock_latency
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -418,7 +418,7 @@ async def test_tts_service_speak_voice_settings(
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -449,17 +449,17 @@ async def test_tts_service_speak_voice_settings(
 )
 async def test_tts_service_speak_without_options(
     setup: AsyncMock,
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     calls: list[ServiceCall],
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say with http response 200."""
-    tts_entity = hass.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
+    tts_entity = menuai.data[tts.DOMAIN].get_entity(service_data[ATTR_ENTITY_ID])
     tts_entity._client.generate.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -468,7 +468,7 @@ async def test_tts_service_speak_without_options(
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 from openwebif.api import OpenWebIfDevice, OpenWebIfServiceEvent, OpenWebIfStatus
 import pytest
 
-from homeassistant.components.enigma2.const import (
+from menuai.components.enigma2.const import (
     CONF_DEEP_STANDBY,
     CONF_SOURCE_BOUQUET,
     CONF_USE_CHANNEL_ICON,
@@ -16,7 +16,7 @@ from homeassistant.components.enigma2.const import (
     DEFAULT_VERIFY_SSL,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -66,11 +66,11 @@ def openwebif_device_mock() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.enigma2.coordinator.OpenWebIfDevice",
+            "menuai.components.enigma2.coordinator.OpenWebIfDevice",
             spec=OpenWebIfDevice,
         ) as openwebif_device_mock,
         patch(
-            "homeassistant.components.enigma2.config_flow.OpenWebIfDevice",
+            "menuai.components.enigma2.config_flow.OpenWebIfDevice",
             new=openwebif_device_mock,
         ),
     ):

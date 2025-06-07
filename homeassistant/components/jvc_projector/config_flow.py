@@ -9,10 +9,10 @@ from jvcprojector import JvcProjector, JvcProjectorAuthError, JvcProjectorConnec
 from jvcprojector.projector import DEFAULT_PORT
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.util.network import is_host_valid
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
+from menuai.helpers.device_registry import format_mac
+from menuai.util.network import is_host_valid
 
 from .const import DOMAIN, NAME
 

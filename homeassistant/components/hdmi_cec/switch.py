@@ -7,10 +7,10 @@ from typing import Any
 
 from pycec.const import POWER_OFF, POWER_ON
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN, SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN, SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import ATTR_NEW, DOMAIN
 from .entity import CecEntity
@@ -21,7 +21,7 @@ ENTITY_ID_FORMAT = SWITCH_DOMAIN + ".{}"
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -31,7 +31,7 @@ def setup_platform(
         _LOGGER.debug("Setting up HDMI devices %s", discovery_info[ATTR_NEW])
         entities = []
         for device in discovery_info[ATTR_NEW]:
-            hdmi_device = hass.data[DOMAIN][device]
+            hdmi_device = menuai.data[DOMAIN][device]
             entities.append(CecSwitchEntity(hdmi_device, hdmi_device.logical_address))
         add_entities(entities, True)
 

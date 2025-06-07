@@ -11,18 +11,18 @@ from aiohttp import web
 from aiohttp.web_exceptions import HTTPUnauthorized
 import voluptuous as vol
 
-from homeassistant.auth.const import GROUP_ID_ADMIN
-from homeassistant.auth.providers.homeassistant import HassAuthProvider
-from homeassistant.components import person
-from homeassistant.components.auth import indieauth
-from homeassistant.components.http import KEY_HASS, KEY_HASS_REFRESH_TOKEN_ID
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.components.http.view import HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import area_registry as ar, integration_platform
-from homeassistant.helpers.system_info import async_get_system_info
-from homeassistant.helpers.translation import async_get_translations
-from homeassistant.setup import async_setup_component, async_wait_component
+from menuai.auth.const import GROUP_ID_ADMIN
+from menuai.auth.providers.menuai import menuaiAuthProvider
+from menuai.components import person
+from menuai.components.auth import indieauth
+from menuai.components.http import KEY_menuai, KEY_menuai_REFRESH_TOKEN_ID
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.components.http.view import menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers import area_registry as ar, integration_platform
+from menuai.helpers.system_info import async_get_system_info
+from menuai.helpers.translation import async_get_translations
+from menuai.setup import async_setup_component, async_wait_component
 
 if TYPE_CHECKING:
     from . import OnboardingData, OnboardingStorage, OnboardingStoreData
@@ -41,37 +41,37 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(
-    hass: HomeAssistant, data: OnboardingStoreData, store: OnboardingStorage
+    menuai: menuai, data: OnboardingStoreData, store: OnboardingStorage
 ) -> None:
     """Set up the onboarding view."""
-    await async_process_onboarding_platforms(hass)
-    hass.http.register_view(OnboardingStatusView(data, store))
-    hass.http.register_view(InstallationTypeOnboardingView(data))
-    hass.http.register_view(UserOnboardingView(data, store))
-    hass.http.register_view(CoreConfigOnboardingView(data, store))
-    hass.http.register_view(IntegrationOnboardingView(data, store))
-    hass.http.register_view(AnalyticsOnboardingView(data, store))
-    hass.http.register_view(WaitIntegrationOnboardingView(data))
+    await async_process_onboarding_platforms(menuai)
+    menuai.http.register_view(OnboardingStatusView(data, store))
+    menuai.http.register_view(InstallationTypeOnboardingView(data))
+    menuai.http.register_view(UserOnboardingView(data, store))
+    menuai.http.register_view(CoreConfigOnboardingView(data, store))
+    menuai.http.register_view(IntegrationOnboardingView(data, store))
+    menuai.http.register_view(AnalyticsOnboardingView(data, store))
+    menuai.http.register_view(WaitIntegrationOnboardingView(data))
 
 
 class OnboardingPlatformProtocol(Protocol):
     """Define the format of onboarding platforms."""
 
     async def async_setup_views(
-        self, hass: HomeAssistant, data: OnboardingStoreData
+        self, menuai: menuai, data: OnboardingStoreData
     ) -> None:
         """Set up onboarding views."""
 
 
-async def async_process_onboarding_platforms(hass: HomeAssistant) -> None:
+async def async_process_onboarding_platforms(menuai: menuai) -> None:
     """Start processing onboarding platforms."""
     await integration_platform.async_process_integration_platforms(
-        hass, DOMAIN, _register_onboarding_platform, wait_for_platforms=False
+        menuai, DOMAIN, _register_onboarding_platform, wait_for_platforms=False
     )
 
 
 async def _register_onboarding_platform(
-    hass: HomeAssistant, integration_domain: str, platform: OnboardingPlatformProtocol
+    menuai: menuai, integration_domain: str, platform: OnboardingPlatformProtocol
 ) -> None:
     """Register a onboarding platform."""
     if not hasattr(platform, "async_setup_views"):
@@ -80,10 +80,10 @@ async def _register_onboarding_platform(
             integration_domain,
         )
         return
-    await platform.async_setup_views(hass, hass.data[DOMAIN].steps)
+    await platform.async_setup_views(menuai, menuai.data[DOMAIN].steps)
 
 
-class BaseOnboardingView(HomeAssistantView):
+class BaseOnboardingView(menuaiView):
     """Base class for onboarding views."""
 
     def __init__(self, data: OnboardingStoreData) -> None:
@@ -126,8 +126,8 @@ class InstallationTypeOnboardingView(NoAuthBaseOnboardingView):
         if self._data["done"]:
             raise HTTPUnauthorized
 
-        hass = request.app[KEY_HASS]
-        info = await async_get_system_info(hass)
+        menuai = request.app[KEY_menuai]
+        info = await async_get_system_info(menuai)
         return self.json({"installation_type": info["installation_type"]})
 
 
@@ -147,13 +147,13 @@ class _BaseOnboardingStepView(BaseOnboardingView):
         """Return if this step is done."""
         return self.step in self._data["done"]
 
-    async def _async_mark_done(self, hass: HomeAssistant) -> None:
+    async def _async_mark_done(self, menuai: menuai) -> None:
         """Mark step as done."""
         self._data["done"].append(self.step)
         await self._store.async_save(self._data)
 
         if set(self._data["done"]) == set(STEPS):
-            data: OnboardingData = hass.data[DOMAIN]
+            data: OnboardingData = menuai.data[DOMAIN]
             data.onboarded = True
             for listener in data.listeners:
                 listener()
@@ -180,32 +180,32 @@ class UserOnboardingView(_BaseOnboardingStepView):
     )
     async def post(self, request: web.Request, data: dict[str, str]) -> web.Response:
         """Handle user creation, area creation."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         async with self._lock:
             if self._async_is_done():
                 return self.json_message("User step already done", HTTPStatus.FORBIDDEN)
 
-            provider = _async_get_hass_provider(hass)
+            provider = _async_get_menuai_provider(menuai)
             await provider.async_initialize()
 
-            user = await hass.auth.async_create_user(
+            user = await menuai.auth.async_create_user(
                 data["name"], group_ids=[GROUP_ID_ADMIN]
             )
             await provider.async_add_auth(data["username"], data["password"])
             credentials = await provider.async_get_or_create_credentials(
                 {"username": data["username"]}
             )
-            await hass.auth.async_link_user(user, credentials)
-            if await async_wait_component(hass, "person"):
-                await person.async_create_person(hass, data["name"], user_id=user.id)
+            await menuai.auth.async_link_user(user, credentials)
+            if await async_wait_component(menuai, "person"):
+                await person.async_create_person(menuai, data["name"], user_id=user.id)
 
             # Create default areas using the users supplied language.
             translations = await async_get_translations(
-                hass, data["language"], "area", {DOMAIN}
+                menuai, data["language"], "area", {DOMAIN}
             )
 
-            area_registry = ar.async_get(hass)
+            area_registry = ar.async_get(menuai)
 
             for area in DEFAULT_AREAS:
                 name = translations[f"component.onboarding.area.{area}"]
@@ -214,14 +214,14 @@ class UserOnboardingView(_BaseOnboardingStepView):
                 if not area_registry.async_get_area_by_name(name):
                     area_registry.async_create(name)
 
-            await self._async_mark_done(hass)
+            await self._async_mark_done(menuai)
 
             # Return authorization code for fetching tokens and connect
             # during onboarding.
             # pylint: disable-next=import-outside-toplevel
-            from homeassistant.components.auth import create_auth_code
+            from menuai.components.auth import create_auth_code
 
-            auth_code = create_auth_code(hass, data["client_id"], credentials)
+            auth_code = create_auth_code(menuai, data["client_id"], credentials)
             return self.json({"auth_code": auth_code})
 
 
@@ -234,7 +234,7 @@ class CoreConfigOnboardingView(_BaseOnboardingStepView):
 
     async def post(self, request: web.Request) -> web.Response:
         """Handle finishing core config step."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         async with self._lock:
             if self._async_is_done():
@@ -242,7 +242,7 @@ class CoreConfigOnboardingView(_BaseOnboardingStepView):
                     "Core config step already done", HTTPStatus.FORBIDDEN
                 )
 
-            await self._async_mark_done(hass)
+            await self._async_mark_done(menuai)
 
             # Integrations to set up when finishing onboarding
             onboard_integrations = [
@@ -255,18 +255,18 @@ class CoreConfigOnboardingView(_BaseOnboardingStepView):
             for domain in onboard_integrations:
                 # Create tasks so onboarding isn't affected
                 # by errors in these integrations.
-                hass.async_create_task(
-                    hass.config_entries.flow.async_init(
+                menuai.async_create_task(
+                    menuai.config_entries.flow.async_init(
                         domain, context={"source": "onboarding"}
                     ),
                     f"onboarding_setup_{domain}",
                 )
 
-            if "analytics" not in hass.config.components:
+            if "analytics" not in menuai.config.components:
                 # If by some chance that analytics has not finished
                 # setting up, wait for it here so its ready for the
                 # next step.
-                await async_setup_component(hass, "analytics", {})
+                await async_setup_component(menuai, "analytics", {})
 
             return self.json({})
 
@@ -283,8 +283,8 @@ class IntegrationOnboardingView(_BaseOnboardingStepView):
     )
     async def post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Handle token creation."""
-        hass = request.app[KEY_HASS]
-        refresh_token_id = request[KEY_HASS_REFRESH_TOKEN_ID]
+        menuai = request.app[KEY_menuai]
+        refresh_token_id = request[KEY_menuai_REFRESH_TOKEN_ID]
 
         async with self._lock:
             if self._async_is_done():
@@ -292,17 +292,17 @@ class IntegrationOnboardingView(_BaseOnboardingStepView):
                     "Integration step already done", HTTPStatus.FORBIDDEN
                 )
 
-            await self._async_mark_done(hass)
+            await self._async_mark_done(menuai)
 
             # Validate client ID and redirect uri
             if not await indieauth.verify_redirect_uri(
-                request.app[KEY_HASS], data["client_id"], data["redirect_uri"]
+                request.app[KEY_menuai], data["client_id"], data["redirect_uri"]
             ):
                 return self.json_message(
                     "invalid client id or redirect uri", HTTPStatus.BAD_REQUEST
                 )
 
-            refresh_token = hass.auth.async_get_refresh_token(refresh_token_id)
+            refresh_token = menuai.auth.async_get_refresh_token(refresh_token_id)
             if refresh_token is None or refresh_token.credential is None:
                 return self.json_message(
                     "Credentials for user not available", HTTPStatus.FORBIDDEN
@@ -310,10 +310,10 @@ class IntegrationOnboardingView(_BaseOnboardingStepView):
 
             # Return authorization code so we can redirect user and log them in
             # pylint: disable-next=import-outside-toplevel
-            from homeassistant.components.auth import create_auth_code
+            from menuai.components.auth import create_auth_code
 
             auth_code = create_auth_code(
-                hass, data["client_id"], refresh_token.credential
+                menuai, data["client_id"], refresh_token.credential
             )
             return self.json({"auth_code": auth_code})
 
@@ -333,11 +333,11 @@ class WaitIntegrationOnboardingView(NoAuthBaseOnboardingView):
     )
     async def post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Handle wait for integration command."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         domain = data["domain"]
         return self.json(
             {
-                "integration_loaded": await async_wait_component(hass, domain),
+                "integration_loaded": await async_wait_component(menuai, domain),
             }
         )
 
@@ -351,7 +351,7 @@ class AnalyticsOnboardingView(_BaseOnboardingStepView):
 
     async def post(self, request: web.Request) -> web.Response:
         """Handle finishing analytics step."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         async with self._lock:
             if self._async_is_done():
@@ -359,16 +359,16 @@ class AnalyticsOnboardingView(_BaseOnboardingStepView):
                     "Analytics config step already done", HTTPStatus.FORBIDDEN
                 )
 
-            await self._async_mark_done(hass)
+            await self._async_mark_done(menuai)
 
             return self.json({})
 
 
 @callback
-def _async_get_hass_provider(hass: HomeAssistant) -> HassAuthProvider:
-    """Get the Home Assistant auth provider."""
-    for prv in hass.auth.auth_providers:
-        if prv.type == "homeassistant":
-            return cast(HassAuthProvider, prv)
+def _async_get_menuai_provider(menuai: menuai) -> menuaiAuthProvider:
+    """Get the MenuAI auth provider."""
+    for prv in menuai.auth.auth_providers:
+        if prv.type == "menuai":
+            return cast(menuaiAuthProvider, prv)
 
-    raise RuntimeError("No Home Assistant provider found")
+    raise RuntimeError("No MenuAI provider found")

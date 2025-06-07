@@ -14,13 +14,13 @@ from iottycloud.verbs import (
     OU_DEVICE_TYPE_UID,
 )
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .api import IottyProxy
 from .coordinator import IottyConfigEntry, IottyDataUpdateCoordinator
@@ -43,7 +43,7 @@ ENTITIES: dict[str, SwitchEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IottyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

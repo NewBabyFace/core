@@ -12,12 +12,12 @@ from zcc import (
     ControlPointTimeoutError,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.zimi.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.device_registry import format_mac
+from menuai import config_entries
+from menuai.components.zimi.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.device_registry import format_mac
 
 from tests.common import MockConfigEntry
 
@@ -37,7 +37,7 @@ SELECTED_HOST_AND_PORT = "selected_host_and_port"
 def discovery_mock():
     """Mock the ControlPointDiscoveryService."""
     with patch(
-        "homeassistant.components.zimi.config_flow.ControlPointDiscoveryService",
+        "menuai.components.zimi.config_flow.ControlPointDiscoveryService",
         autospec=True,
     ) as mock:
         mock.return_value = mock
@@ -45,7 +45,7 @@ def discovery_mock():
 
 
 async def test_user_discovery_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_mock: MagicMock,
 ) -> None:
     """Test user form transitions to creation if zcc discovery succeeds."""
@@ -58,7 +58,7 @@ async def test_user_discovery_success(
         ControlPointDescription(host=INPUT_HOST, port=INPUT_PORT, mac=INPUT_MAC)
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -75,7 +75,7 @@ async def test_user_discovery_success(
 
 
 async def test_user_discovery_success_selection(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_mock: MagicMock,
 ) -> None:
     """Test user form transitions via selection to creation if zcc discovery succeeds has multiple hosts."""
@@ -85,7 +85,7 @@ async def test_user_discovery_success_selection(
         ControlPointDescription(host=INPUT_HOST_EXTRA, port=INPUT_PORT_EXTRA),
     ]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -99,7 +99,7 @@ async def test_user_discovery_success_selection(
         )
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             SELECTED_HOST_AND_PORT: f"{INPUT_HOST_EXTRA}:{INPUT_PORT_EXTRA!s}",
@@ -115,7 +115,7 @@ async def test_user_discovery_success_selection(
 
 
 async def test_user_discovery_duplicates(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_mock: MagicMock,
 ) -> None:
     """Test that flow is aborted if duplicates are added."""
@@ -128,7 +128,7 @@ async def test_user_discovery_duplicates(
             CONF_PORT: INPUT_PORT,
             "mac": format_mac(INPUT_MAC),
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     discovery_mock.discovers.return_value = [
         ControlPointDescription(host=INPUT_HOST, port=INPUT_PORT)
@@ -138,7 +138,7 @@ async def test_user_discovery_duplicates(
         ControlPointDescription(host=INPUT_HOST, port=INPUT_PORT, mac=INPUT_MAC)
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -147,7 +147,7 @@ async def test_user_discovery_duplicates(
 
 
 async def test_finish_manual_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_mock: MagicMock,
 ) -> None:
     """Test manual form transitions to creation with valid data."""
@@ -157,7 +157,7 @@ async def test_finish_manual_success(
         ControlPointDescription(host=INPUT_HOST, port=INPUT_PORT, mac=INPUT_MAC)
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -165,7 +165,7 @@ async def test_finish_manual_success(
     assert result["step_id"] == "manual"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: INPUT_HOST,
@@ -183,14 +183,14 @@ async def test_finish_manual_success(
 
 
 async def test_manual_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_mock: MagicMock,
 ) -> None:
     """Test manual form transitions via cannot_connect to creation."""
 
     discovery_mock.discovers.side_effect = ControlPointError("Discovery failed")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -203,7 +203,7 @@ async def test_manual_cannot_connect(
         ControlPointCannotConnectError
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: INPUT_HOST,
@@ -221,7 +221,7 @@ async def test_manual_cannot_connect(
         ControlPointDescription(host=INPUT_HOST, port=INPUT_PORT, mac=INPUT_MAC)
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: INPUT_HOST,
@@ -239,14 +239,14 @@ async def test_manual_cannot_connect(
 
 
 async def test_manual_gethostbyname_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_mock: MagicMock,
 ) -> None:
     """Test manual form transitions via gethostbyname failure to creation."""
 
     discovery_mock.discovers.side_effect = ControlPointError("Discovery failed")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -259,7 +259,7 @@ async def test_manual_gethostbyname_error(
         ControlPointInvalidHostError
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: INPUT_HOST,
@@ -277,7 +277,7 @@ async def test_manual_gethostbyname_error(
         ControlPointDescription(host=INPUT_HOST, port=INPUT_PORT, mac=INPUT_MAC)
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: INPUT_HOST,
@@ -320,7 +320,7 @@ async def test_manual_gethostbyname_error(
     ],
 )
 async def test_manual_connection_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_mock: MagicMock,
     side_effect: Exception,
     error_expected: dict,
@@ -329,7 +329,7 @@ async def test_manual_connection_errors(
 
     discovery_mock.discovers.side_effect = ControlPointError("Discovery failed")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -340,7 +340,7 @@ async def test_manual_connection_errors(
     # First attempt fails with connection errors
     discovery_mock.return_value.validate_connection.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: INPUT_HOST,
@@ -358,7 +358,7 @@ async def test_manual_connection_errors(
         ControlPointDescription(host=INPUT_HOST, port=INPUT_PORT, mac=INPUT_MAC)
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: INPUT_HOST,

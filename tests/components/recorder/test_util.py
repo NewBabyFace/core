@@ -17,22 +17,22 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import Recorder, util
-from homeassistant.components.recorder.const import (
+from menuai.components import recorder
+from menuai.components.recorder import Recorder, util
+from menuai.components.recorder.const import (
     DOMAIN,
     SQLITE_URL_PREFIX,
     SupportedDialect,
 )
-from homeassistant.components.recorder.db_schema import RecorderRuns
-from homeassistant.components.recorder.history.modern import (
+from menuai.components.recorder.db_schema import RecorderRuns
+from menuai.components.recorder.history.modern import (
     _get_single_entity_start_time_stmt,
 )
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder.models import (
     UnsupportedDialect,
     process_timestamp,
 )
-from homeassistant.components.recorder.util import (
+from menuai.components.recorder.util import (
     MIN_VERSION_SQLITE,
     RETRYABLE_MYSQL_ERRORS,
     database_job_retry_wrapper,
@@ -43,10 +43,10 @@ from homeassistant.components.recorder.util import (
     retryable_database_job_method,
     session_scope,
 )
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.util import dt as dt_util
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.util import dt as dt_util
 
 from .common import (
     async_wait_recording_done,
@@ -59,7 +59,7 @@ from tests.typing import RecorderInstanceContextManager, RecorderInstanceGenerat
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
@@ -71,19 +71,19 @@ def setup_recorder(recorder_mock: Recorder) -> None:
 
 
 async def test_session_scope_not_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Try to create a session scope when not setup."""
     with (
-        patch.object(util.get_instance(hass), "get_session", return_value=None),
+        patch.object(util.get_instance(menuai), "get_session", return_value=None),
         pytest.raises(RuntimeError),
-        util.session_scope(hass=hass),
+        util.session_scope(menuai=menuai),
     ):
         pass
 
 
-async def test_recorder_bad_execute(hass: HomeAssistant, setup_recorder: None) -> None:
+async def test_recorder_bad_execute(menuai: menuai, setup_recorder: None) -> None:
     """Bad execute, retry 3 times."""
 
     def to_native(validate_entity_id=True):
@@ -95,7 +95,7 @@ async def test_recorder_bad_execute(hass: HomeAssistant, setup_recorder: None) -
 
     with (
         pytest.raises(SQLAlchemyError),
-        patch("homeassistant.components.recorder.core.time.sleep") as e_mock,
+        patch("menuai.components.recorder.core.time.sleep") as e_mock,
     ):
         util.execute((mck1,), to_native=True)
 
@@ -103,7 +103,7 @@ async def test_recorder_bad_execute(hass: HomeAssistant, setup_recorder: None) -
 
 
 def test_validate_or_move_away_sqlite_database(
-    hass: HomeAssistant, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    menuai: menuai, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Ensure a malformed sqlite database is moved away."""
     test_dir = tmp_path.joinpath("test_validate_or_move_away_sqlite_database")
@@ -131,7 +131,7 @@ def test_validate_or_move_away_sqlite_database(
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_last_run_was_recently_clean(
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
@@ -142,7 +142,7 @@ async def test_last_run_was_recently_clean(
     config = {
         recorder.CONF_COMMIT_INTERVAL: 1,
     }
-    async with async_test_home_assistant() as hass:
+    async with async_test_home_assistant() as menuai:
         return_values = []
         real_last_run_was_recently_clean = util.last_run_was_recently_clean
 
@@ -152,52 +152,52 @@ async def test_last_run_was_recently_clean(
 
         # Test last_run_was_recently_clean is not called on new DB
         with patch(
-            "homeassistant.components.recorder.util.last_run_was_recently_clean",
+            "menuai.components.recorder.util.last_run_was_recently_clean",
             wraps=_last_run_was_recently_clean,
         ) as last_run_was_recently_clean_mock:
-            await async_setup_recorder_instance(hass, config)
-            await hass.async_block_till_done()
+            await async_setup_recorder_instance(menuai, config)
+            await menuai.async_block_till_done()
             last_run_was_recently_clean_mock.assert_not_called()
 
         # Restart HA, last_run_was_recently_clean should return True
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
-        await hass.async_stop()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
+        await menuai.async_stop()
 
-    async with async_test_home_assistant() as hass:
+    async with async_test_home_assistant() as menuai:
         with patch(
-            "homeassistant.components.recorder.util.last_run_was_recently_clean",
+            "menuai.components.recorder.util.last_run_was_recently_clean",
             wraps=_last_run_was_recently_clean,
         ) as last_run_was_recently_clean_mock:
-            await async_setup_recorder_instance(hass, config)
+            await async_setup_recorder_instance(menuai, config)
             last_run_was_recently_clean_mock.assert_called_once()
             assert return_values[-1] is True
 
         # Restart HA with a long downtime, last_run_was_recently_clean should return False
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
-        await hass.async_stop()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
+        await menuai.async_stop()
 
     thirty_min_future_time = dt_util.utcnow() + timedelta(minutes=30)
 
-    async with async_test_home_assistant() as hass:
+    async with async_test_home_assistant() as menuai:
         with (
             patch(
-                "homeassistant.components.recorder.util.last_run_was_recently_clean",
+                "menuai.components.recorder.util.last_run_was_recently_clean",
                 wraps=_last_run_was_recently_clean,
             ) as last_run_was_recently_clean_mock,
             patch(
-                "homeassistant.components.recorder.core.dt_util.utcnow",
+                "menuai.components.recorder.core.dt_util.utcnow",
                 return_value=thirty_min_future_time,
             ),
         ):
-            await async_setup_recorder_instance(hass, config)
+            await async_setup_recorder_instance(menuai, config)
             last_run_was_recently_clean_mock.assert_called_once()
             assert return_values[-1] is False
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
-        await hass.async_stop()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
+        await menuai.async_stop()
 
 
 @pytest.mark.parametrize(
@@ -637,7 +637,7 @@ def test_warn_unsupported_dialect(
     ],
 )
 async def test_issue_for_mariadb_with_MDEV_25020(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mysql_version,
     min_version,
@@ -648,7 +648,7 @@ async def test_issue_for_mariadb_with_MDEV_25020(
     See https://jira.mariadb.org/browse/MDEV-25020.
     """
     instance_mock = MagicMock()
-    instance_mock.hass = hass
+    instance_mock.menuai = menuai
     execute_args = []
     close_mock = MagicMock()
 
@@ -667,14 +667,14 @@ async def test_issue_for_mariadb_with_MDEV_25020(
 
     dbapi_connection = MagicMock(cursor=_make_cursor_mock)
 
-    database_engine = await hass.async_add_executor_job(
+    database_engine = await menuai.async_add_executor_job(
         util.setup_connection_for_dialect,
         instance_mock,
         "mysql",
         dbapi_connection,
         True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     issue = issue_registry.async_get_issue(DOMAIN, "maria_db_range_index_regression")
     assert issue is not None
@@ -696,7 +696,7 @@ async def test_issue_for_mariadb_with_MDEV_25020(
     ],
 )
 async def test_no_issue_for_mariadb_with_MDEV_25020(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mysql_version,
     issue_registry: ir.IssueRegistry,
@@ -706,7 +706,7 @@ async def test_no_issue_for_mariadb_with_MDEV_25020(
     See https://jira.mariadb.org/browse/MDEV-25020.
     """
     instance_mock = MagicMock()
-    instance_mock.hass = hass
+    instance_mock.menuai = menuai
     execute_args = []
     close_mock = MagicMock()
 
@@ -725,14 +725,14 @@ async def test_no_issue_for_mariadb_with_MDEV_25020(
 
     dbapi_connection = MagicMock(cursor=_make_cursor_mock)
 
-    database_engine = await hass.async_add_executor_job(
+    database_engine = await menuai.async_add_executor_job(
         util.setup_connection_for_dialect,
         instance_mock,
         "mysql",
         dbapi_connection,
         True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     issue = issue_registry.async_get_issue(DOMAIN, "maria_db_range_index_regression")
     assert issue is None
@@ -745,13 +745,13 @@ async def test_no_issue_for_mariadb_with_MDEV_25020(
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_basic_sanity_check(
-    hass: HomeAssistant, setup_recorder: None, recorder_db_url: str
+    menuai: menuai, setup_recorder: None, recorder_db_url: str
 ) -> None:
     """Test the basic sanity checks with a missing table.
 
     This test is specific for SQLite.
     """
-    cursor = util.get_instance(hass).engine.raw_connection().cursor()
+    cursor = util.get_instance(menuai).engine.raw_connection().cursor()
 
     assert util.basic_sanity_check(cursor) is True
 
@@ -764,7 +764,7 @@ async def test_basic_sanity_check(
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_combined_checks(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     recorder_db_url: str,
@@ -773,7 +773,7 @@ async def test_combined_checks(
 
     This test is specific for SQLite.
     """
-    instance = util.get_instance(hass)
+    instance = util.get_instance(menuai)
     instance.db_retry_wait = 0
 
     cursor = instance.engine.raw_connection().cursor()
@@ -786,7 +786,7 @@ async def test_combined_checks(
     # We are patching recorder.util here in order
     # to avoid creating the full database on disk
     with patch(
-        "homeassistant.components.recorder.util.basic_sanity_check", return_value=False
+        "menuai.components.recorder.util.basic_sanity_check", return_value=False
     ):
         caplog.clear()
         assert util.run_checks_on_open_db("fake_db_path", cursor) is None
@@ -794,7 +794,7 @@ async def test_combined_checks(
 
     # We are patching recorder.util here in order
     # to avoid creating the full database on disk
-    with patch("homeassistant.components.recorder.util.last_run_was_recently_clean"):
+    with patch("menuai.components.recorder.util.last_run_was_recently_clean"):
         caplog.clear()
         assert util.run_checks_on_open_db("fake_db_path", cursor) is None
         assert "restarted cleanly and passed the basic sanity check" in caplog.text
@@ -802,7 +802,7 @@ async def test_combined_checks(
     caplog.clear()
     with (
         patch(
-            "homeassistant.components.recorder.util.last_run_was_recently_clean",
+            "menuai.components.recorder.util.last_run_was_recently_clean",
             side_effect=sqlite3.DatabaseError,
         ),
         pytest.raises(sqlite3.DatabaseError),
@@ -812,7 +812,7 @@ async def test_combined_checks(
     caplog.clear()
     with (
         patch(
-            "homeassistant.components.recorder.util.last_run_was_recently_clean",
+            "menuai.components.recorder.util.last_run_was_recently_clean",
             side_effect=sqlite3.DatabaseError,
         ),
         pytest.raises(sqlite3.DatabaseError),
@@ -831,10 +831,10 @@ async def test_combined_checks(
 
 
 async def test_end_incomplete_runs(
-    hass: HomeAssistant, setup_recorder: None, caplog: pytest.LogCaptureFixture
+    menuai: menuai, setup_recorder: None, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Ensure we can end incomplete runs."""
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         run_info = run_information_with_session(session)
         assert isinstance(run_info, RecorderRuns)
         assert run_info.closed_incorrect is False
@@ -857,14 +857,14 @@ async def test_end_incomplete_runs(
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_periodic_db_cleanups(
-    hass: HomeAssistant, setup_recorder: None, recorder_db_url: str
+    menuai: menuai, setup_recorder: None, recorder_db_url: str
 ) -> None:
     """Test periodic db cleanups.
 
     This test is specific for SQLite.
     """
-    with patch.object(util.get_instance(hass).engine, "connect") as connect_mock:
-        util.periodic_db_cleanups(util.get_instance(hass))
+    with patch.object(util.get_instance(menuai).engine, "connect") as connect_mock:
+        util.periodic_db_cleanups(util.get_instance(menuai))
 
     text_obj = connect_mock.return_value.__enter__.return_value.execute.mock_calls[0][
         1
@@ -878,7 +878,7 @@ async def test_periodic_db_cleanups(
 @pytest.mark.parametrize("persistent_database", [True])
 async def test_write_lock_db(
     async_setup_recorder_instance: RecorderInstanceGenerator,
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_db_url: str,
 ) -> None:
     """Test database write lock.
@@ -889,8 +889,8 @@ async def test_write_lock_db(
     """
 
     config = {recorder.CONF_DB_URL: recorder_db_url + "?timeout=0.1"}
-    instance = await async_setup_recorder_instance(hass, config)
-    await hass.async_block_till_done()
+    instance = await async_setup_recorder_instance(menuai, config)
+    await menuai.async_block_till_done()
 
     def _drop_table():
         with instance.engine.connect() as connection:
@@ -936,16 +936,16 @@ def test_build_mysqldb_conv() -> None:
     )
 
 
-@patch("homeassistant.components.recorder.util.QUERY_RETRY_WAIT", 0)
+@patch("menuai.components.recorder.util.QUERY_RETRY_WAIT", 0)
 async def test_execute_stmt_lambda_element(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test executing with execute_stmt_lambda_element."""
-    instance = recorder.get_instance(hass)
-    hass.states.async_set("sensor.on", "on")
-    new_state = hass.states.get("sensor.on")
-    await async_wait_recording_done(hass)
+    instance = recorder.get_instance(menuai)
+    menuai.states.async_set("sensor.on", "on")
+    new_state = menuai.states.get("sensor.on")
+    await async_wait_recording_done(menuai)
     now = dt_util.utcnow()
     tomorrow = now + timedelta(days=1)
     one_week_from_now = now + timedelta(days=7)
@@ -962,7 +962,7 @@ async def test_execute_stmt_lambda_element(
                 return ["mock_row"]
             raise SQLAlchemyError
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         # No time window, we always get a list
         metadata_id = instance.states_meta_manager.get("sensor.on", session, True)
         start_time_ts = dt_util.utcnow().timestamp()
@@ -1063,13 +1063,13 @@ async def test_execute_stmt_lambda_element(
     ],
 )
 async def test_resolve_period(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     start_time: datetime,
     periods: dict[tuple[str, int], tuple[str, str]],
 ) -> None:
     """Test resolve_period."""
-    assert hass.config.time_zone == "US/Pacific"
+    assert menuai.config.time_zone == "US/Pacific"
     freezer.move_to(start_time)
 
     now = dt_util.utcnow()

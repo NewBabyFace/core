@@ -1,9 +1,9 @@
 """Errors for the Axis component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class AxisException(HomeAssistantError):
+class AxisException(menuaiError):
     """Base class for Axis exceptions."""
 
 

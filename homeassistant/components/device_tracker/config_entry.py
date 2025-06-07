@@ -7,9 +7,9 @@ from typing import final
 
 from propcache.api import cached_property
 
-from homeassistant.components import zone
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import zone
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_GPS_ACCURACY,
     ATTR_LATITUDE,
@@ -18,18 +18,18 @@ from homeassistant.const import (
     STATE_NOT_HOME,
     EntityCategory,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import (
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import (
     DeviceInfo,
     EventDeviceRegistryUpdatedData,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_platform import EntityPlatform
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.entity_platform import EntityPlatform
+from menuai.helpers.typing import StateType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     ATTR_HOST_NAME,
@@ -42,35 +42,35 @@ from .const import (
     SourceType,
 )
 
-DATA_COMPONENT: HassKey[EntityComponent[BaseTrackerEntity]] = HassKey(DOMAIN)
-DATA_KEY: HassKey[dict[str, tuple[str, str]]] = HassKey(f"{DOMAIN}_mac")
+DATA_COMPONENT: menuaiKey[EntityComponent[BaseTrackerEntity]] = menuaiKey(DOMAIN)
+DATA_KEY: menuaiKey[dict[str, tuple[str, str]]] = menuaiKey(f"{DOMAIN}_mac")
 
 # mypy: disallow-any-generics
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up an entry."""
-    component: EntityComponent[BaseTrackerEntity] | None = hass.data.get(DOMAIN)
+    component: EntityComponent[BaseTrackerEntity] | None = menuai.data.get(DOMAIN)
 
     if component is not None:
         return await component.async_setup_entry(entry)
 
-    component = hass.data[DATA_COMPONENT] = EntityComponent[BaseTrackerEntity](
-        LOGGER, DOMAIN, hass
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[BaseTrackerEntity](
+        LOGGER, DOMAIN, menuai
     )
     component.register_shutdown()
 
     return await component.async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload an entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 @callback
 def _async_connected_device_registered(
-    hass: HomeAssistant, mac: str, ip_address: str | None, hostname: str | None
+    menuai: menuai, mac: str, ip_address: str | None, hostname: str | None
 ) -> None:
     """Register a newly seen connected device.
 
@@ -79,7 +79,7 @@ def _async_connected_device_registered(
     for discovery.
     """
     async_dispatcher_send(
-        hass,
+        menuai,
         CONNECTED_DEVICE_REGISTERED,
         {
             ATTR_IP: ip_address,
@@ -91,21 +91,21 @@ def _async_connected_device_registered(
 
 @callback
 def _async_register_mac(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     mac: str,
     unique_id: str,
 ) -> None:
     """Register a mac address with a unique ID."""
     mac = dr.format_mac(mac)
-    if DATA_KEY in hass.data:
-        hass.data[DATA_KEY][mac] = (domain, unique_id)
+    if DATA_KEY in menuai.data:
+        menuai.data[DATA_KEY][mac] = (domain, unique_id)
         return
 
     # Setup listening.
 
     # dict mapping mac -> partial unique ID
-    data = hass.data[DATA_KEY] = {mac: (domain, unique_id)}
+    data = menuai.data[DATA_KEY] = {mac: (domain, unique_id)}
 
     @callback
     def handle_device_event(ev: Event[EventDeviceRegistryUpdatedData]) -> None:
@@ -114,7 +114,7 @@ def _async_register_mac(
         if ev.data["action"] != "create":
             return
 
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         device_entry = dev_reg.async_get(ev.data["device_id"])
 
         if device_entry is None:
@@ -135,7 +135,7 @@ def _async_register_mac(
         if (unique_id := data.get(mac)) is None:
             return
 
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
 
         if (entity_id := ent_reg.async_get_entity_id(DOMAIN, *unique_id)) is None:
             return
@@ -149,7 +149,7 @@ def _async_register_mac(
             entity_entry.config_entry_id is None
             or (
                 (
-                    config_entry := hass.config_entries.async_get_entry(
+                    config_entry := menuai.config_entries.async_get_entry(
                         entity_entry.config_entry_id
                     )
                 )
@@ -163,7 +163,7 @@ def _async_register_mac(
         # Enable entity
         ent_reg.async_update_entity(entity_id, disabled_by=None)
 
-    hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, handle_device_event)
+    menuai.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, handle_device_event)
 
 
 class BaseTrackerEntity(Entity):
@@ -264,7 +264,7 @@ class TrackerEntity(
 
         if self.latitude is not None and self.longitude is not None:
             zone_state = zone.async_active_zone(
-                self.hass, self.latitude, self.longitude, self.location_accuracy
+                self.menuai, self.latitude, self.longitude, self.location_accuracy
             )
             if zone_state is None:
                 state = STATE_NOT_HOME
@@ -366,22 +366,22 @@ class ScannerEntity(
     @callback
     def add_to_platform_start(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         platform: EntityPlatform,
         parallel_updates: asyncio.Semaphore | None,
     ) -> None:
         """Start adding an entity to a platform."""
-        super().add_to_platform_start(hass, platform, parallel_updates)
+        super().add_to_platform_start(menuai, platform, parallel_updates)
         if self.mac_address and self.unique_id:
             _async_register_mac(
-                hass,
+                menuai,
                 platform.platform_name,
                 self.mac_address,
                 self.unique_id,
             )
             if self.is_connected and self.ip_address:
                 _async_connected_device_registered(
-                    hass,
+                    menuai,
                     self.mac_address,
                     self.ip_address,
                     self.hostname,
@@ -392,12 +392,12 @@ class ScannerEntity(
         """Return device entry."""
         assert self.mac_address is not None
 
-        return dr.async_get(self.hass).async_get_device(
+        return dr.async_get(self.menuai).async_get_device(
             connections={(dr.CONNECTION_NETWORK_MAC, self.mac_address)}
         )
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Handle added to Home Assistant."""
+    async def async_internal_added_to_menuai(self) -> None:
+        """Handle added to MenuAI."""
         # Entities without a unique ID don't have a device
         if (
             not self.registry_entry
@@ -410,24 +410,24 @@ class ScannerEntity(
         ):
             if self.device_info:
                 LOGGER.debug("Entity %s unexpectedly has a device info", self.entity_id)
-            await super().async_internal_added_to_hass()
+            await super().async_internal_added_to_menuai()
             return
 
         # Attach entry to device
         if self.registry_entry.device_id != device_entry.id:
-            self.registry_entry = er.async_get(self.hass).async_update_entity(
+            self.registry_entry = er.async_get(self.menuai).async_update_entity(
                 self.entity_id, device_id=device_entry.id
             )
 
         # Attach device to config entry
         if self.platform.config_entry.entry_id not in device_entry.config_entries:
-            dr.async_get(self.hass).async_update_device(
+            dr.async_get(self.menuai).async_update_device(
                 device_entry.id,
                 add_config_entry_id=self.platform.config_entry.entry_id,
             )
 
         # Do this last or else the entity registry update listener has been installed
-        await super().async_internal_added_to_hass()
+        await super().async_internal_added_to_menuai()
 
     @final
     @property

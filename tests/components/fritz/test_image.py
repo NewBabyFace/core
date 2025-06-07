@@ -8,13 +8,13 @@ import pytest
 from requests.exceptions import ReadTimeout
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fritz.const import DOMAIN
-from homeassistant.components.image import DOMAIN as IMAGE_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.components.fritz.const import DOMAIN
+from menuai.components.image import DOMAIN as IMAGE_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util.dt import utcnow
 
 from .const import MOCK_FB_SERVICES, MOCK_USER_DATA
 
@@ -90,8 +90,8 @@ GUEST_WIFI_DISABLED: dict[str, dict] = {
     ],
 )
 async def test_image_entity(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     fc_class_mock,
@@ -101,18 +101,18 @@ async def test_image_entity(
 
     # setup component with image platform only
     with patch(
-        "homeassistant.components.fritz.PLATFORMS",
+        "menuai.components.fritz.PLATFORMS",
         [Platform.IMAGE],
     ):
         entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
     # test image entity is generated as expected
-    states = hass.states.async_all(IMAGE_DOMAIN)
+    states = menuai.states.async_all(IMAGE_DOMAIN)
     assert len(states) == 1
 
     state = states[0]
@@ -130,7 +130,7 @@ async def test_image_entity(
     assert entity_entry.unique_id == "1c_ed_6f_12_34_11_guestwifi_qr_code"
 
     # test image download
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/api/image_proxy/image.mock_title_guestwifi")
     assert resp.status == HTTPStatus.OK
 
@@ -140,8 +140,8 @@ async def test_image_entity(
 
 @pytest.mark.parametrize(("fc_data"), [({**MOCK_FB_SERVICES, **GUEST_WIFI_ENABLED})])
 async def test_image_update(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
     fc_class_mock,
     fh_class_mock,
@@ -150,24 +150,24 @@ async def test_image_update(
 
     # setup component with image platform only
     with patch(
-        "homeassistant.components.fritz.PLATFORMS",
+        "menuai.components.fritz.PLATFORMS",
         [Platform.IMAGE],
     ):
         entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/api/image_proxy/image.mock_title_guestwifi")
     resp_body = await resp.read()
     assert resp.status == HTTPStatus.OK
 
     fc_class_mock().override_services({**MOCK_FB_SERVICES, **GUEST_WIFI_CHANGED})
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     resp = await client.get("/api/image_proxy/image.mock_title_guestwifi")
     resp_body_new = await resp.read()
@@ -178,7 +178,7 @@ async def test_image_update(
 
 @pytest.mark.parametrize(("fc_data"), [({**MOCK_FB_SERVICES, **GUEST_WIFI_ENABLED})])
 async def test_image_update_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     fc_class_mock,
     fh_class_mock,
 ) -> None:
@@ -186,31 +186,31 @@ async def test_image_update_unavailable(
 
     # setup component with image platform only
     with patch(
-        "homeassistant.components.fritz.PLATFORMS",
+        "menuai.components.fritz.PLATFORMS",
         [Platform.IMAGE],
     ):
         entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
-    state = hass.states.get("image.mock_title_guestwifi")
+    state = menuai.states.get("image.mock_title_guestwifi")
     assert state
 
     # fritzbox becomes unavailable
     fc_class_mock().call_action_side_effect(ReadTimeout)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("image.mock_title_guestwifi")
+    state = menuai.states.get("image.mock_title_guestwifi")
     assert state.state == STATE_UNKNOWN
 
     # fritzbox is available again
     fc_class_mock().call_action_side_effect(None)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("image.mock_title_guestwifi")
+    state = menuai.states.get("image.mock_title_guestwifi")
     assert state.state != STATE_UNKNOWN

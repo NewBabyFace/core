@@ -9,13 +9,13 @@ from unittest.mock import patch
 from google_nest_sdm.exceptions import AuthException
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.nest.const import DOMAIN, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult, FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries
+from menuai.components.nest.const import DOMAIN, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult, FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .common import (
     CLIENT_ID,
@@ -51,7 +51,7 @@ def nest_test_config() -> NestTestConfig:
 def mock_rand_topic_name_fixture() -> None:
     """Set the topic name random string to a constant."""
     with patch(
-        "homeassistant.components.nest.config_flow.get_random_string",
+        "menuai.components.nest.config_flow.get_random_string",
         return_value=RAND_SUFFIX,
     ):
         yield
@@ -67,13 +67,13 @@ class OAuthFixture:
 
     def __init__(
         self,
-        hass: HomeAssistant,
-        hass_client_no_auth: ClientSessionGenerator,
+        menuai: menuai,
+        menuai_client_no_auth: ClientSessionGenerator,
         aioclient_mock: AiohttpClientMocker,
     ) -> None:
         """Initialize OAuthFixture."""
-        self.hass = hass
-        self.hass_client = hass_client_no_auth
+        self.menuai = menuai
+        self.menuai_client = menuai_client_no_auth
         self.aioclient_mock = aioclient_mock
 
     async def async_app_creds_flow(
@@ -107,35 +107,35 @@ class OAuthFixture:
         )
 
         # Simulate user redirect back with auth code
-        client = await self.hass_client()
+        client = await self.menuai_client()
         resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
         assert resp.status == 200
         assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     async def async_reauth(self, config_entry: ConfigEntry) -> dict:
         """Initiate a reuath flow."""
-        config_entry.async_start_reauth(self.hass)
-        await self.hass.async_block_till_done()
+        config_entry.async_start_reauth(self.menuai)
+        await self.menuai.async_block_till_done()
 
         # Advance through the reauth flow
         result = self.async_progress()
         assert result["step_id"] == "reauth_confirm"
 
         # Advance to the oauth flow
-        return await self.hass.config_entries.flow.async_configure(
+        return await self.menuai.config_entries.flow.async_configure(
             result["flow_id"], {}
         )
 
     def async_progress(self) -> FlowResult:
         """Return the current step of the config flow."""
-        flows = self.hass.config_entries.flow.async_progress()
+        flows = self.menuai.config_entries.flow.async_progress()
         assert len(flows) == 1
         return flows[0]
 
     def create_state(self, result: dict, redirect_url: str) -> str:
         """Create state object based on redirect url."""
         return config_entry_oauth2_flow._encode_jwt(
-            self.hass,
+            self.menuai,
             {
                 "flow_id": result["flow_id"],
                 "redirect_uri": redirect_url,
@@ -216,38 +216,38 @@ class OAuthFixture:
     ) -> ConfigEntry:
         """Finish the OAuth flow exchanging auth token for refresh token."""
         with patch(
-            "homeassistant.components.nest.async_setup_entry", return_value=True
+            "menuai.components.nest.async_setup_entry", return_value=True
         ) as mock_setup:
             await self.async_configure(result, user_input)
             assert len(mock_setup.mock_calls) == 1
-            await self.hass.async_block_till_done()
+            await self.menuai.async_block_till_done()
         return self.get_config_entry()
 
     async def async_configure(
         self, result: dict[str, Any], user_input: dict[str, Any]
     ) -> dict:
         """Advance to the next step in the config flow."""
-        return await self.hass.config_entries.flow.async_configure(
+        return await self.menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input,
         )
 
     def get_config_entry(self) -> ConfigEntry:
         """Get the config entry."""
-        entries = self.hass.config_entries.async_entries(DOMAIN)
+        entries = self.menuai.config_entries.async_entries(DOMAIN)
         assert len(entries) >= 1
         return entries[0]
 
 
 @pytest.fixture
 async def oauth(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     current_request_with_host: None,
 ) -> OAuthFixture:
     """Create the simulated oauth flow."""
-    return OAuthFixture(hass, hass_client_no_auth, aioclient_mock)
+    return OAuthFixture(menuai, menuai_client_no_auth, aioclient_mock)
 
 
 @pytest.fixture(name="sdm_managed_topic")
@@ -405,11 +405,11 @@ def mock_pubsub_api_responses(
 
 @pytest.mark.parametrize(("sdm_managed_topic"), [(True)])
 async def test_app_credentials(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -443,9 +443,9 @@ async def test_app_credentials(
     ("sdm_managed_topic", "device_access_project_id", "cloud_project_id"),
     [(True, "new-project-id", "new-cloud-project-id")],
 )
-async def test_config_flow_restart(hass: HomeAssistant, oauth: OAuthFixture) -> None:
+async def test_config_flow_restart(menuai: menuai, oauth: OAuthFixture) -> None:
     """Check with auth implementation is re-initialized when aborting the flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -454,7 +454,7 @@ async def test_config_flow_restart(hass: HomeAssistant, oauth: OAuthFixture) -> 
     # At this point, we should have a valid auth implementation configured.
     # Simulate aborting the flow and starting over to ensure we get prompted
     # again to configure everything.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
@@ -497,11 +497,11 @@ async def test_config_flow_restart(hass: HomeAssistant, oauth: OAuthFixture) -> 
 
 @pytest.mark.parametrize(("sdm_managed_topic"), [(True)])
 async def test_config_flow_wrong_project_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Check the case where the wrong project ids are entered."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
@@ -522,7 +522,7 @@ async def test_config_flow_wrong_project_id(
     # Fix with a correct value and complete the rest of the flow
     result = await oauth.async_configure(result, {"project_id": PROJECT_ID})
     await oauth.async_oauth_web_flow(result)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     oauth.async_mock_refresh()
 
     result = await oauth.async_configure(result, {"code": "1234"})
@@ -553,11 +553,11 @@ async def test_config_flow_wrong_project_id(
     ("sdm_managed_topic", "create_subscription_status"), [(True, HTTPStatus.NOT_FOUND)]
 )
 async def test_config_flow_pubsub_configuration_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Check full flow fails with configuration error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -604,11 +604,11 @@ async def test_config_flow_pubsub_configuration_error(
     [(True, HTTPStatus.INTERNAL_SERVER_ERROR)],
 )
 async def test_config_flow_pubsub_subscriber_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Check full flow with a subscriber error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -655,15 +655,15 @@ async def test_config_flow_pubsub_subscriber_error(
     [(TEST_CONFIG_APP_CREDS, True, "project-id-2")],
 )
 async def test_multiple_config_entries(
-    hass: HomeAssistant, oauth, setup_platform
+    menuai: menuai, oauth, setup_platform
 ) -> None:
     """Verify config flow can be started when existing config entry exists."""
     await setup_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result, project_id="project-id-2")
@@ -675,7 +675,7 @@ async def test_multiple_config_entries(
     assert entry.title == "Mock Title"
     assert "token" in entry.data
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
 
 
@@ -683,15 +683,15 @@ async def test_multiple_config_entries(
     ("nest_test_config", "sdm_managed_topic"), [(TEST_CONFIG_APP_CREDS, True)]
 )
 async def test_duplicate_config_entries(
-    hass: HomeAssistant, oauth, setup_platform
+    menuai: menuai, oauth, setup_platform
 ) -> None:
     """Verify that config entries must be for unique projects."""
     await setup_platform()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
@@ -710,7 +710,7 @@ async def test_duplicate_config_entries(
     ("nest_test_config", "sdm_managed_topic"), [(TEST_CONFIG_APP_CREDS, True)]
 )
 async def test_reauth_multiple_config_entries(
-    hass: HomeAssistant, oauth, setup_platform, config_entry
+    menuai: menuai, oauth, setup_platform, config_entry
 ) -> None:
     """Test Nest reauthentication with multiple existing config entries."""
     await setup_platform()
@@ -722,9 +722,9 @@ async def test_reauth_multiple_config_entries(
             "extra_data": True,
         },
     )
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
 
     orig_subscriber_id = config_entry.data.get("subscriber_id")
@@ -738,7 +738,7 @@ async def test_reauth_multiple_config_entries(
     await oauth.async_finish_setup(result)
 
     # Only reauth entry was updated, the other entry is preserved
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
     entry = entries[0]
     assert entry.unique_id == PROJECT_ID
@@ -764,10 +764,10 @@ async def test_reauth_multiple_config_entries(
     [(True, HTTPStatus.UNAUTHORIZED)],
 )
 async def test_pubsub_subscription_auth_failure(
-    hass: HomeAssistant, oauth, mock_subscriber
+    menuai: menuai, oauth, mock_subscriber
 ) -> None:
     """Check flow that creates a pub/sub subscription."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -814,7 +814,7 @@ async def test_pubsub_subscription_auth_failure(
     ("nest_test_config", "sdm_managed_topic"), [(TEST_CONFIG_APP_CREDS, True)]
 )
 async def test_pubsub_subscriber_config_entry_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
     setup_platform: PlatformSetup,
     config_entry: MockConfigEntry,
@@ -843,7 +843,7 @@ async def test_pubsub_subscriber_config_entry_reauth(
 
 @pytest.mark.parametrize(("sdm_managed_topic"), [(True)])
 async def test_config_entry_title_from_home(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
     auth: FakeAuth,
 ) -> None:
@@ -860,7 +860,7 @@ async def test_config_entry_title_from_home(
         }
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -885,7 +885,7 @@ async def test_config_entry_title_from_home(
 
 @pytest.mark.parametrize(("sdm_managed_topic"), [(True)])
 async def test_config_entry_title_multiple_homes(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
     auth: FakeAuth,
 ) -> None:
@@ -911,7 +911,7 @@ async def test_config_entry_title_multiple_homes(
         ]
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -926,10 +926,10 @@ async def test_config_entry_title_multiple_homes(
 
 @pytest.mark.parametrize(("sdm_managed_topic"), [(True)])
 async def test_title_failure_fallback(
-    hass: HomeAssistant, oauth, mock_subscriber
+    menuai: menuai, oauth, mock_subscriber
 ) -> None:
     """Test exception handling when determining the structure names."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -957,7 +957,7 @@ async def test_title_failure_fallback(
 
 @pytest.mark.parametrize(("sdm_managed_topic"), [(True)])
 async def test_structure_missing_trait(
-    hass: HomeAssistant, oauth: OAuthFixture, auth: FakeAuth
+    menuai: menuai, oauth: OAuthFixture, auth: FakeAuth
 ) -> None:
     """Test handling the case where a structure has no name set."""
 
@@ -969,7 +969,7 @@ async def test_structure_missing_trait(
         }
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -985,15 +985,15 @@ async def test_structure_missing_trait(
 
 @pytest.mark.parametrize("nest_test_config", [NestTestConfig()])
 async def test_dhcp_discovery(
-    hass: HomeAssistant, oauth: OAuthFixture, nest_test_config: NestTestConfig
+    menuai: menuai, oauth: OAuthFixture, nest_test_config: NestTestConfig
 ) -> None:
     """Exercise discovery dhcp starts the config flow and kicks user to frontend creds flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=FAKE_DHCP_DATA,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "create_cloud_project"
 
@@ -1007,11 +1007,11 @@ async def test_dhcp_discovery(
     [(TEST_CONFIG_APP_CREDS, True, "project-id-2")],
 )
 async def test_dhcp_discovery_already_setup(
-    hass: HomeAssistant, oauth: OAuthFixture, setup_platform
+    menuai: menuai, oauth: OAuthFixture, setup_platform
 ) -> None:
     """Exercise discovery dhcp with existing config entry."""
     await setup_platform()
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=FAKE_DHCP_DATA,
@@ -1022,16 +1022,16 @@ async def test_dhcp_discovery_already_setup(
 
 @pytest.mark.parametrize(("sdm_managed_topic"), [(True)])
 async def test_dhcp_discovery_with_creds(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Exercise discovery dhcp with no config present (can't run)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=FAKE_DHCP_DATA,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "cloud_project"
 
@@ -1076,13 +1076,13 @@ async def test_dhcp_discovery_with_creds(
     ],
 )
 async def test_token_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
     status_code: HTTPStatus,
     error_reason: str,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -1111,11 +1111,11 @@ async def test_token_error(
     ],
 )
 async def test_existing_topic_and_subscription(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Test selecting existing user managed topic and subscription."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -1149,11 +1149,11 @@ async def test_existing_topic_and_subscription(
 
 
 async def test_no_eligible_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Test the case where there are no eligible pub/sub topics and the topic is created."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -1200,11 +1200,11 @@ async def test_no_eligible_topics(
     ],
 )
 async def test_list_topics_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Test selecting existing user managed topic and subscription."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -1220,7 +1220,7 @@ async def test_list_topics_failure(
     [(HTTPStatus.INTERNAL_SERVER_ERROR)],
 )
 async def test_create_topic_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
     aioclient_mock: AiohttpClientMocker,
     cloud_project_id: str,
@@ -1228,7 +1228,7 @@ async def test_create_topic_failed(
     auth: FakeAuth,
 ) -> None:
     """Test the case where there are no eligible pub/sub topics and the topic is created."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)
@@ -1302,11 +1302,11 @@ async def test_create_topic_failed(
     ],
 )
 async def test_list_subscriptions_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     oauth: OAuthFixture,
 ) -> None:
     """Test selecting existing user managed topic and subscription."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     await oauth.async_app_creds_flow(result)

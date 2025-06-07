@@ -8,12 +8,12 @@ from pyisy.constants import ISY_VALUE_UNKNOWN
 from pyisy.helpers import NodeProperty
 from pyisy.nodes import Node
 
-from homeassistant.components.light import ColorMode, LightEntity
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.light import ColorMode, LightEntity
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import _LOGGER, CONF_RESTORE_LIGHT_STATE, UOM_PERCENTAGE
 from .entity import ISYNodeEntity
@@ -23,7 +23,7 @@ ATTR_LAST_BRIGHTNESS = "last_brightness"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -107,9 +107,9 @@ class ISYLightEntity(ISYNodeEntity, LightEntity, RestoreEntity):
         attribs[ATTR_LAST_BRIGHTNESS] = self._last_brightness
         return attribs
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last_brightness on restart."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._last_brightness = self.brightness or 255
         if not (last_state := await self.async_get_last_state()):

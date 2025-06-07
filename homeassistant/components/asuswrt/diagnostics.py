@@ -6,16 +6,16 @@ from typing import Any
 
 import attr
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import (
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_IDENTIFIERS,
     CONF_PASSWORD,
     CONF_UNIQUE_ID,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import AsusWrtConfigEntry
 
@@ -24,36 +24,36 @@ TO_REDACT_DEV = {ATTR_CONNECTIONS, ATTR_IDENTIFIERS}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: AsusWrtConfigEntry
+    menuai: menuai, entry: AsusWrtConfigEntry
 ) -> dict[str, dict[str, Any]]:
     """Return diagnostics for a config entry."""
     data = {"entry": async_redact_data(entry.as_dict(), TO_REDACT)}
 
     router = entry.runtime_data
 
-    # Gather information how this AsusWrt device is represented in Home Assistant
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
-    hass_device = device_registry.async_get_device(
+    # Gather information how this AsusWrt device is represented in MenuAI
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
+    menuai_device = device_registry.async_get_device(
         identifiers=router.device_info[ATTR_IDENTIFIERS]
     )
-    if not hass_device:
+    if not menuai_device:
         return data
 
     data["device"] = {
-        **async_redact_data(attr.asdict(hass_device), TO_REDACT_DEV),
+        **async_redact_data(attr.asdict(menuai_device), TO_REDACT_DEV),
         "entities": {},
         "tracked_devices": [],
     }
 
-    hass_entities = er.async_entries_for_device(
+    menuai_entities = er.async_entries_for_device(
         entity_registry,
-        device_id=hass_device.id,
+        device_id=menuai_device.id,
         include_disabled_entities=True,
     )
 
-    for entity_entry in hass_entities:
-        state = hass.states.get(entity_entry.entity_id)
+    for entity_entry in menuai_entities:
+        state = menuai.states.get(entity_entry.entity_id)
         state_dict = None
         if state:
             state_dict = dict(state.as_dict())

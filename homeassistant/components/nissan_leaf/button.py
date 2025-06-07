@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.button import ButtonEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_CHARGING, DATA_LEAF
 from .entity import LeafEntity
@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -26,7 +26,7 @@ def setup_platform(
         return
 
     entities: list[LeafEntity] = []
-    for vin, datastore in hass.data[DATA_LEAF].items():
+    for vin, datastore in menuai.data[DATA_LEAF].items():
         _LOGGER.debug("Adding button for vin=%s", vin)
         entities.append(LeafChargingButton(datastore))
 

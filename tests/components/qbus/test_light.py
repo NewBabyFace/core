@@ -1,13 +1,13 @@
 """Test Qbus light entities."""
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     DOMAIN as LIGHT_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from tests.common import async_fire_mqtt_message
 from tests.typing import MqttMockHAClient
@@ -37,7 +37,7 @@ _LIGHT_ENTITY_ID = "light.media_room"
 
 
 async def test_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     setup_integration: None,
 ) -> None:
@@ -45,7 +45,7 @@ async def test_light(
 
     # Switch ON
     mqtt_mock.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: _LIGHT_ENTITY_ID},
@@ -57,14 +57,14 @@ async def test_light(
     )
 
     # Simulate response
-    async_fire_mqtt_message(hass, _TOPIC_LIGHT_STATE, _PAYLOAD_LIGHT_STATE_ON)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, _TOPIC_LIGHT_STATE, _PAYLOAD_LIGHT_STATE_ON)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(_LIGHT_ENTITY_ID).state == STATE_ON
+    assert menuai.states.get(_LIGHT_ENTITY_ID).state == STATE_ON
 
     # Set brightness
     mqtt_mock.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -79,16 +79,16 @@ async def test_light(
     )
 
     # Simulate response
-    async_fire_mqtt_message(hass, _TOPIC_LIGHT_STATE, _PAYLOAD_LIGHT_STATE_BRIGHTNESS)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, _TOPIC_LIGHT_STATE, _PAYLOAD_LIGHT_STATE_BRIGHTNESS)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(_LIGHT_ENTITY_ID)
+    entity = menuai.states.get(_LIGHT_ENTITY_ID)
     assert entity.state == STATE_ON
     assert entity.attributes.get(ATTR_BRIGHTNESS) == _BRIGHTNESS
 
     # Switch OFF
     mqtt_mock.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: _LIGHT_ENTITY_ID},
@@ -100,7 +100,7 @@ async def test_light(
     )
 
     # Simulate response
-    async_fire_mqtt_message(hass, _TOPIC_LIGHT_STATE, _PAYLOAD_LIGHT_STATE_OFF)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, _TOPIC_LIGHT_STATE, _PAYLOAD_LIGHT_STATE_OFF)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(_LIGHT_ENTITY_ID).state == STATE_OFF
+    assert menuai.states.get(_LIGHT_ENTITY_ID).state == STATE_OFF

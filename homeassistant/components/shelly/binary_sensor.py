@@ -7,16 +7,16 @@ from typing import Final, cast
 
 from aioshelly.const import RPC_GENERATIONS
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_PLATFORM,
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import STATE_ON, EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import CONF_SLEEP_PERIOD
 from .coordinator import ShellyConfigEntry, ShellyRpcCoordinator
@@ -289,7 +289,7 @@ RPC_SENSORS: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -297,7 +297,7 @@ async def async_setup_entry(
     if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
         if config_entry.data[CONF_SLEEP_PERIOD]:
             async_setup_entry_rpc(
-                hass,
+                menuai,
                 config_entry,
                 async_add_entities,
                 RPC_SENSORS,
@@ -308,7 +308,7 @@ async def async_setup_entry(
             assert coordinator
 
             async_setup_entry_rpc(
-                hass, config_entry, async_add_entities, RPC_SENSORS, RpcBinarySensor
+                menuai, config_entry, async_add_entities, RPC_SENSORS, RpcBinarySensor
             )
 
             # the user can remove virtual components from the device configuration, so
@@ -317,7 +317,7 @@ async def async_setup_entry(
                 coordinator.device.config, BINARY_SENSOR_PLATFORM
             )
             async_remove_orphaned_entities(
-                hass,
+                menuai,
                 config_entry.entry_id,
                 coordinator.mac,
                 BINARY_SENSOR_PLATFORM,
@@ -328,7 +328,7 @@ async def async_setup_entry(
 
     if config_entry.data[CONF_SLEEP_PERIOD]:
         async_setup_entry_attribute_entities(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             SENSORS,
@@ -336,14 +336,14 @@ async def async_setup_entry(
         )
     else:
         async_setup_entry_attribute_entities(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             SENSORS,
             BlockBinarySensor,
         )
         async_setup_entry_rest(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             REST_SENSORS,
@@ -380,9 +380,9 @@ class BlockSleepingBinarySensor(
 
     entity_description: BlockBinarySensorDescription
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.last_state = await self.async_get_last_state()
 
     @property
@@ -404,9 +404,9 @@ class RpcSleepingBinarySensor(
 
     entity_description: RpcBinarySensorDescription
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.last_state = await self.async_get_last_state()
 
     @property

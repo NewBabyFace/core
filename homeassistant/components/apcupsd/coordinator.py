@@ -9,11 +9,11 @@ from typing import Final
 
 import aioapcaccess
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import (
     REQUEST_REFRESH_DEFAULT_IMMEDIATE,
     DataUpdateCoordinator,
     UpdateFailed,
@@ -63,20 +63,20 @@ class APCUPSdCoordinator(DataUpdateCoordinator[APCUPSdData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: APCUPSdConfigEntry,
         host: str,
         port: int,
     ) -> None:
         """Initialize the data object."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=UPDATE_INTERVAL,
             request_refresh_debouncer=Debouncer(
-                hass,
+                menuai,
                 _LOGGER,
                 cooldown=REQUEST_REFRESH_COOLDOWN,
                 immediate=REQUEST_REFRESH_DEFAULT_IMMEDIATE,

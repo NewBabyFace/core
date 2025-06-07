@@ -7,10 +7,10 @@ from uuid import UUID
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.auth.const import GROUP_ID_ADMIN
-from homeassistant.components.hassio.const import DATA_CONFIG_STORE, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.auth.const import GROUP_ID_ADMIN
+from menuai.components.menuaiio.const import DATA_CONFIG_STORE, DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockUser
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -27,13 +27,13 @@ def mock_all(
     addon_info: AsyncMock,
 ) -> None:
     """Mock all setup requests."""
-    aioclient_mock.post("http://127.0.0.1/homeassistant/options", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/options", json={"result": "ok"})
     aioclient_mock.post("http://127.0.0.1/supervisor/options", json={"result": "ok"})
     aioclient_mock.get(
         "http://127.0.0.1/info",
         json={
             "result": "ok",
-            "data": {"supervisor": "222", "homeassistant": "0.110.0", "hassos": None},
+            "data": {"supervisor": "222", "menuai": "0.110.0", "menuaios": None},
         },
     )
     aioclient_mock.get(
@@ -43,7 +43,7 @@ def mock_all(
             "data": {
                 "result": "ok",
                 "data": {
-                    "chassis": "vm",
+                    "cmenuaiis": "vm",
                     "operating_system": "Debian GNU/Linux 10 (buster)",
                     "kernel": "4.19.0-6-amd64",
                 },
@@ -98,37 +98,37 @@ def mock_all(
     )
 
 
-@pytest.mark.usefixtures("hassio_env")
+@pytest.mark.usefixtures("menuaiio_env")
 @pytest.mark.parametrize(
     "storage_data",
     [
         {},
         {
-            "hassio": {
+            "menuaiio": {
                 "data": {
-                    "hassio_user": "00112233445566778899aabbccddeeff",
+                    "menuaiio_user": "00112233445566778899aabbccddeeff",
                     "update_config": {
                         "add_on_backup_before_update": False,
                         "add_on_backup_retain_copies": 1,
                         "core_backup_before_update": False,
                     },
                 },
-                "key": "hassio",
+                "key": "menuaiio",
                 "minor_version": 1,
                 "version": 1,
             }
         },
         {
-            "hassio": {
+            "menuaiio": {
                 "data": {
-                    "hassio_user": "00112233445566778899aabbccddeeff",
+                    "menuaiio_user": "00112233445566778899aabbccddeeff",
                     "update_config": {
                         "add_on_backup_before_update": True,
                         "add_on_backup_retain_copies": 2,
                         "core_backup_before_update": True,
                     },
                 },
-                "key": "hassio",
+                "key": "menuaiio",
                 "minor_version": 1,
                 "version": 1,
             }
@@ -136,47 +136,47 @@ def mock_all(
     ],
 )
 async def test_load_config_store(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     supervisor_client: AsyncMock,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     storage_data: dict[str, dict[str, Any]],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test loading the config store."""
-    hass_storage.update(storage_data)
+    menuai_storage.update(storage_data)
 
     user = MockUser(id="00112233445566778899aabbccddeeff", system_generated=True)
-    user.add_to_hass(hass)
-    await hass.auth.async_create_refresh_token(user)
-    await hass.auth.async_update_user(user, group_ids=[GROUP_ID_ADMIN])
+    user.add_to_menuai(menuai)
+    await menuai.auth.async_create_refresh_token(user)
+    await menuai.auth.async_update_user(user, group_ids=[GROUP_ID_ADMIN])
 
     with (
-        patch("homeassistant.components.hassio.config.STORE_DELAY_SAVE", 0),
+        patch("menuai.components.menuaiio.config.STORE_DELAY_SAVE", 0),
         patch("uuid.uuid4", return_value=UUID(bytes=b"very_very_random", version=4)),
     ):
-        assert await async_setup_component(hass, "hassio", {})
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "menuaiio", {})
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.data[DATA_CONFIG_STORE].data.to_dict() == snapshot
+    assert menuai.data[DATA_CONFIG_STORE].data.to_dict() == snapshot
 
 
-@pytest.mark.usefixtures("hassio_env")
+@pytest.mark.usefixtures("menuaiio_env")
 async def test_save_config_store(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     supervisor_client: AsyncMock,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test saving the config store."""
     with (
-        patch("homeassistant.components.hassio.config.STORE_DELAY_SAVE", 0),
+        patch("menuai.components.menuaiio.config.STORE_DELAY_SAVE", 0),
         patch("uuid.uuid4", return_value=UUID(bytes=b"very_very_random", version=4)),
     ):
-        assert await async_setup_component(hass, "hassio", {})
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "menuaiio", {})
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass_storage[DOMAIN] == snapshot
+    assert menuai_storage[DOMAIN] == snapshot

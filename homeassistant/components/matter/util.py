@@ -14,17 +14,17 @@ def renormalize(
     return (delta2 * (number - from_range[0]) / delta1) + to_range[0]
 
 
-def convert_to_matter_hs(hass_hs: tuple[float, float]) -> tuple[float, float]:
-    """Convert Home Assistant HS to Matter HS."""
+def convert_to_matter_hs(menuai_hs: tuple[float, float]) -> tuple[float, float]:
+    """Convert MenuAI HS to Matter HS."""
 
     return (
-        hass_hs[0] / 360 * 254,
-        renormalize(hass_hs[1], (0, 100), (0, 254)),
+        menuai_hs[0] / 360 * 254,
+        renormalize(menuai_hs[1], (0, 100), (0, 254)),
     )
 
 
-def convert_to_hass_hs(matter_hs: tuple[float, float]) -> tuple[float, float]:
-    """Convert Matter HS to Home Assistant HS."""
+def convert_to_menuai_hs(matter_hs: tuple[float, float]) -> tuple[float, float]:
+    """Convert Matter HS to MenuAI HS."""
 
     return (
         matter_hs[0] * 360 / 254,
@@ -32,13 +32,13 @@ def convert_to_hass_hs(matter_hs: tuple[float, float]) -> tuple[float, float]:
     )
 
 
-def convert_to_matter_xy(hass_xy: tuple[float, float]) -> tuple[float, float]:
-    """Convert Home Assistant XY to Matter XY."""
+def convert_to_matter_xy(menuai_xy: tuple[float, float]) -> tuple[float, float]:
+    """Convert MenuAI XY to Matter XY."""
 
-    return (hass_xy[0] * XY_COLOR_FACTOR, hass_xy[1] * XY_COLOR_FACTOR)
+    return (menuai_xy[0] * XY_COLOR_FACTOR, menuai_xy[1] * XY_COLOR_FACTOR)
 
 
-def convert_to_hass_xy(matter_xy: tuple[float, float]) -> tuple[float, float]:
-    """Convert Matter XY to Home Assistant XY."""
+def convert_to_menuai_xy(matter_xy: tuple[float, float]) -> tuple[float, float]:
+    """Convert Matter XY to MenuAI XY."""
 
     return (matter_xy[0] / XY_COLOR_FACTOR, matter_xy[1] / XY_COLOR_FACTOR)

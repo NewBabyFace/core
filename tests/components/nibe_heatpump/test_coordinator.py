@@ -9,8 +9,8 @@ from nibe.heatpump import Model
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from . import MockConnection, async_add_model
 
@@ -18,13 +18,13 @@ from . import MockConnection, async_add_model
 @pytest.fixture(autouse=True)
 async def fixture_single_platform():
     """Only allow this platform to load."""
-    with patch("homeassistant.components.nibe_heatpump.PLATFORMS", [Platform.NUMBER]):
+    with patch("menuai.components.nibe_heatpump.PLATFORMS", [Platform.NUMBER]):
         yield
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_partial_refresh(
-    hass: HomeAssistant,
+    menuai: menuai,
     coils: dict[int, Any],
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -33,21 +33,21 @@ async def test_partial_refresh(
     coils[40035] = None
     coils[40039] = 10
 
-    await async_add_model(hass, Model.S320)
+    await async_add_model(menuai, Model.S320)
 
-    data = hass.states.get("number.heating_offset_climate_system_1_40031")
+    data = menuai.states.get("number.heating_offset_climate_system_1_40031")
     assert data == snapshot(name="1. Sensor is available")
 
-    data = hass.states.get("number.min_supply_climate_system_1_40035")
+    data = menuai.states.get("number.min_supply_climate_system_1_40035")
     assert data == snapshot(name="2. Sensor is not available")
 
-    data = hass.states.get("number.max_supply_climate_system_1_40035")
+    data = menuai.states.get("number.max_supply_climate_system_1_40035")
     assert data == snapshot(name="3. Sensor is available")
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_invalid_coil(
-    hass: HomeAssistant,
+    menuai: menuai,
     coils: dict[int, Any],
     snapshot: SnapshotAssertion,
     freezer_ticker: Any,
@@ -57,19 +57,19 @@ async def test_invalid_coil(
     coil_id = 40031
 
     coils[coil_id] = 10
-    await async_add_model(hass, Model.S320)
+    await async_add_model(menuai, Model.S320)
 
-    assert hass.states.get(entity_id) == snapshot(name="Sensor is available")
+    assert menuai.states.get(entity_id) == snapshot(name="Sensor is available")
 
     coils.pop(coil_id)
     await freezer_ticker(60)
 
-    assert hass.states.get(entity_id) == snapshot(name="Sensor is not available")
+    assert menuai.states.get(entity_id) == snapshot(name="Sensor is not available")
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_pushed_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     coils: dict[int, Any],
     snapshot: SnapshotAssertion,
     mock_connection: MockConnection,
@@ -80,26 +80,26 @@ async def test_pushed_update(
     coil_id = 40031
 
     coils[coil_id] = 10
-    await async_add_model(hass, Model.S320)
+    await async_add_model(menuai, Model.S320)
 
-    assert hass.states.get(entity_id) == snapshot(name="1. initial values")
+    assert menuai.states.get(entity_id) == snapshot(name="1. initial values")
 
     mock_connection.mock_coil_update(coil_id, 20)
-    assert hass.states.get(entity_id) == snapshot(name="2. pushed values")
+    assert menuai.states.get(entity_id) == snapshot(name="2. pushed values")
 
     coils[coil_id] = 30
     await freezer_ticker(60)
 
-    assert hass.states.get(entity_id) == snapshot(name="3. seeded values")
+    assert menuai.states.get(entity_id) == snapshot(name="3. seeded values")
 
     await freezer_ticker(60)
 
-    assert hass.states.get(entity_id) == snapshot(name="4. final values")
+    assert menuai.states.get(entity_id) == snapshot(name="4. final values")
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_shutdown(
-    hass: HomeAssistant,
+    menuai: menuai,
     coils: dict[int, Any],
     mock_connection: MockConnection,
     freezer_ticker: Any,
@@ -107,7 +107,7 @@ async def test_shutdown(
     """Check that shutdown, cancel a long running update."""
     coils[40031] = 10
 
-    entry = await async_add_model(hass, Model.S320)
+    entry = await async_add_model(menuai, Model.S320)
     mock_connection.start.assert_called_once()
 
     done = asyncio.Event()
@@ -125,7 +125,7 @@ async def test_shutdown(
     await freezer_ticker(60, block=False)
     await hang.wait()
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
     assert done.is_set()
     mock_connection.stop.assert_called_once()

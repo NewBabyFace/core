@@ -8,8 +8,8 @@ from typing import Any
 from tuya_sharing import LoginControl
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.helpers import selector
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.helpers import selector
 
 from .const import (
     CONF_ENDPOINT,
@@ -92,7 +92,7 @@ class TuyaConfigFlow(ConfigFlow, domain=DOMAIN):
                 ),
             )
 
-        ret, info = await self.hass.async_add_executor_job(
+        ret, info = await self.menuai.async_add_executor_job(
             self.__login_control.login_result,
             self.__qr_code,
             TUYA_CLIENT_ID,
@@ -193,7 +193,7 @@ class TuyaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def __async_get_qr_code(self, user_code: str) -> tuple[bool, dict[str, Any]]:
         """Get the QR code."""
-        response = await self.hass.async_add_executor_job(
+        response = await self.menuai.async_add_executor_job(
             self.__login_control.qr_code,
             TUYA_CLIENT_ID,
             TUYA_SCHEMA,

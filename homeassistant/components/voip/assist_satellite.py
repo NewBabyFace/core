@@ -17,21 +17,21 @@ import wave
 from voip_utils import SIP_PORT, RtpDatagramProtocol
 from voip_utils.sip import SipDatagramProtocol, SipEndpoint, get_sip_endpoint
 
-from homeassistant.components import intent, tts
-from homeassistant.components.assist_pipeline import PipelineEvent, PipelineEventType
-from homeassistant.components.assist_satellite import (
+from menuai.components import intent, tts
+from menuai.components.assist_pipeline import PipelineEvent, PipelineEventType
+from menuai.components.assist_satellite import (
     AssistSatelliteAnnouncement,
     AssistSatelliteConfiguration,
     AssistSatelliteEntity,
     AssistSatelliteEntityDescription,
     AssistSatelliteEntityFeature,
 )
-from homeassistant.components.intent import TimerEventType, TimerInfo
-from homeassistant.components.network import async_get_source_ip
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.intent import TimerEventType, TimerInfo
+from menuai.components.network import async_get_source_ip
+from menuai.config_entries import ConfigEntry
+from menuai.core import Context, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CHANNELS,
@@ -73,22 +73,22 @@ _TONE_FILENAMES: dict[Tones, str] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up VoIP Assist satellite entity."""
-    domain_data: DomainData = hass.data[DOMAIN]
+    domain_data: DomainData = menuai.data[DOMAIN]
 
     @callback
     def async_add_device(device: VoIPDevice) -> None:
         """Add device."""
-        async_add_entities([VoipAssistSatellite(hass, device, config_entry)])
+        async_add_entities([VoipAssistSatellite(menuai, device, config_entry)])
 
     domain_data.devices.async_add_new_device_listener(async_add_device)
 
     entities: list[VoIPEntity] = [
-        VoipAssistSatellite(hass, device, config_entry)
+        VoipAssistSatellite(menuai, device, config_entry)
         for device in domain_data.devices
     ]
 
@@ -109,7 +109,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         voip_device: VoIPDevice,
         config_entry: ConfigEntry,
         tones=Tones.LISTENING | Tones.PROCESSING | Tones.ERROR,
@@ -143,12 +143,12 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
     @property
     def pipeline_entity_id(self) -> str | None:
         """Return the entity ID of the pipeline to use for the next conversation."""
-        return self.voip_device.get_pipeline_entity_id(self.hass)
+        return self.voip_device.get_pipeline_entity_id(self.menuai)
 
     @property
     def vad_sensitivity_entity_id(self) -> str | None:
         """Return the entity ID of the VAD sensitivity to use for the next conversation."""
-        return self.voip_device.get_vad_sensitivity_entity_id(self.hass)
+        return self.voip_device.get_vad_sensitivity_entity_id(self.menuai)
 
     @property
     def tts_options(self) -> dict[str, Any] | None:
@@ -160,21 +160,21 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
             tts.ATTR_PREFERRED_SAMPLE_BYTES: 2,
         }
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self.voip_device.protocol = self
 
         assert self.device_entry is not None
         self.async_on_remove(
             intent.async_register_timer_handler(
-                self.hass, self.device_entry.id, self.async_handle_timer_event
+                self.menuai, self.device_entry.id, self.async_handle_timer_event
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         assert self.voip_device.protocol == self
         self.voip_device.protocol = None
 
@@ -205,7 +205,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
             await self.async_announce(announcement)
 
         self.config_entry.async_create_background_task(
-            self.hass, announce_message(), "voip_announce_timer"
+            self.menuai, announce_message(), "voip_announce_timer"
         )
 
     async def async_set_configuration(
@@ -229,7 +229,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
         Optionally run a voice pipeline after the announcement has finished.
         """
         if announcement.media_id_source != "tts":
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="non_tts_announcement",
             )
@@ -246,7 +246,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
             sock.close()
 
         # HA SIP server
-        source_ip = await async_get_source_ip(self.hass)
+        source_ip = await async_get_source_ip(self.menuai)
         sip_port = self.config_entry.options.get(CONF_SIP_PORT, SIP_PORT)
         sip_user = self.config_entry.options.get(CONF_SIP_USER)
         source_endpoint = get_sip_endpoint(
@@ -268,7 +268,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
         self._announcement = announcement
 
         # Make the call
-        sip_protocol: SipDatagramProtocol = self.hass.data[DOMAIN].protocol
+        sip_protocol: SipDatagramProtocol = self.menuai.data[DOMAIN].protocol
         call_info = sip_protocol.outgoing_call(
             source=source_endpoint,
             destination=destination_endpoint,
@@ -278,7 +278,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
         # Check if caller didn't pick up
         self._check_announcement_pickup_task = (
             self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._check_announcement_pickup(),
                 "voip_announcement_pickup",
             )
@@ -370,7 +370,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
         self._last_chunk_time = time.monotonic()
         # Check if caller hung up
         self._check_hangup_task = self.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self._check_hangup(),
             "voip_hangup",
         )
@@ -387,7 +387,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
                 self._tts_done.clear()
                 self._run_pipeline_task = (
                     self.config_entry.async_create_background_task(
-                        self.hass,
+                        self.menuai,
                         self._run_pipeline(),
                         "voip_pipeline_run",
                     )
@@ -398,7 +398,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
             # Announcement only
             # Play announcement (will repeat)
             self._run_pipeline_task = self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._play_announcement(self._announcement),
                 "voip_play_announcement",
             )
@@ -474,7 +474,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
             return
 
         await asyncio.sleep(_ANNOUNCEMENT_BEFORE_DELAY)
-        stream = tts.async_get_stream(self.hass, announcement.tts_token)
+        stream = tts.async_get_stream(self.menuai, announcement.tts_token)
         if stream is None:
             _LOGGER.error("TTS stream no longer available")
             return
@@ -507,17 +507,17 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
             if (self._tones & Tones.PROCESSING) == Tones.PROCESSING:
                 self._processing_tone_done.clear()
                 self.config_entry.async_create_background_task(
-                    self.hass, self._play_tone(Tones.PROCESSING), "voip_process_tone"
+                    self.menuai, self._play_tone(Tones.PROCESSING), "voip_process_tone"
                 )
         elif event.type == PipelineEventType.TTS_END:
             # Send TTS audio to caller over RTP
             if (
                 event.data
                 and (tts_output := event.data["tts_output"])
-                and (stream := tts.async_get_stream(self.hass, tts_output["token"]))
+                and (stream := tts.async_get_stream(self.menuai, tts_output["token"]))
             ):
                 self.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     self._send_tts(tts_stream=stream),
                     "voip_pipeline_tts",
                 )
@@ -591,7 +591,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
 
     async def _async_send_audio(self, audio_bytes: bytes, **kwargs):
         """Send audio in executor."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(self.send_audio, audio_bytes, **RTP_AUDIO_SETTINGS, **kwargs)
         )
 
@@ -602,7 +602,7 @@ class VoipAssistSatellite(VoIPEntity, AssistSatelliteEntity, RtpDatagramProtocol
 
         if tone not in self._tone_bytes:
             # Do I/O in executor
-            self._tone_bytes[tone] = await self.hass.async_add_executor_job(
+            self._tone_bytes[tone] = await self.menuai.async_add_executor_job(
                 self._load_pcm,
                 _TONE_FILENAMES[tone],
             )

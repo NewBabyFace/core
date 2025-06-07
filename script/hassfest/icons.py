@@ -8,8 +8,8 @@ import orjson
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.icon import convert_shorthand_service_icon
+import menuai.helpers.config_validation as cv
+from menuai.helpers.icon import convert_shorthand_service_icon
 
 from .model import Config, Integration
 from .translations import translation_key_validator

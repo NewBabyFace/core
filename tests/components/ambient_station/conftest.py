@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.ambient_station.const import CONF_APP_KEY, DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonArrayType, JsonObjectType
+from menuai.components.ambient_station.const import CONF_APP_KEY, DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.util.json import JsonArrayType, JsonObjectType
 
 from tests.common import (
     MockConfigEntry,
@@ -35,7 +35,7 @@ def config_fixture() -> dict[str, Any]:
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     entry = MockConfigEntry(
@@ -43,7 +43,7 @@ def config_entry_fixture(
         data=config,
         entry_id="382cf7643f016fd48b3fe52163fe8877",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -64,7 +64,7 @@ def mock_aioambient_fixture(api: Mock) -> Generator[None]:
     """Define a fixture to patch aioambient."""
     with (
         patch(
-            "homeassistant.components.ambient_station.config_flow.API",
+            "menuai.components.ambient_station.config_flow.API",
             return_value=api,
         ),
         patch("aioambient.websocket.Websocket.connect"),
@@ -74,8 +74,8 @@ def mock_aioambient_fixture(api: Mock) -> Generator[None]:
 
 @pytest.fixture(name="setup_config_entry")
 async def setup_config_entry_fixture(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_aioambient: None
+    menuai: menuai, config_entry: MockConfigEntry, mock_aioambient: None
 ) -> None:
     """Define a fixture to set up ambient_station."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

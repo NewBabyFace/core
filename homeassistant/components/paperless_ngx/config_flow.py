@@ -15,9 +15,9 @@ from pypaperless.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, LOGGER
 
@@ -128,7 +128,7 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         client = Paperless(
             user_input[CONF_URL],
             user_input[CONF_API_KEY],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
 
         try:

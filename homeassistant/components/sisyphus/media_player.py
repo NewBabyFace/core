@@ -5,16 +5,16 @@ from __future__ import annotations
 import aiohttp
 from sisyphus_control import Track
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_SISYPHUS
 
@@ -22,7 +22,7 @@ MEDIA_TYPE_TRACK = "sisyphus_track"
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -32,7 +32,7 @@ async def async_setup_platform(
         return
     host = discovery_info[CONF_HOST]
     try:
-        table_holder = hass.data[DATA_SISYPHUS][host]
+        table_holder = menuai.data[DATA_SISYPHUS][host]
         table = await table_holder.get_table()
     except aiohttp.ClientError as err:
         raise PlatformNotReady from err
@@ -61,7 +61,7 @@ class SisyphusPlayer(MediaPlayerEntity):
         self._host = host
         self._table = table
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add listeners after this object has been initialized."""
         self._table.add_listener(self.async_write_ha_state)
 

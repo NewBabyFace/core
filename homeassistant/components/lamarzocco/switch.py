@@ -14,11 +14,11 @@ from pylamarzocco.models import (
     WakeUpScheduleSettings,
 )
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LaMarzoccoConfigEntry, LaMarzoccoUpdateCoordinator
@@ -96,7 +96,7 @@ ENTITIES: tuple[LaMarzoccoSwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LaMarzoccoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -129,7 +129,7 @@ class LaMarzoccoSwitchEntity(LaMarzoccoEntity, SwitchEntity):
         try:
             await self.entity_description.control_fn(self.coordinator.device, True)
         except RequestNotSuccessful as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="switch_on_error",
                 translation_placeholders={"key": self.entity_description.key},
@@ -141,7 +141,7 @@ class LaMarzoccoSwitchEntity(LaMarzoccoEntity, SwitchEntity):
         try:
             await self.entity_description.control_fn(self.coordinator.device, False)
         except RequestNotSuccessful as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="switch_off_error",
                 translation_placeholders={"key": self.entity_description.key},
@@ -179,7 +179,7 @@ class LaMarzoccoAutoOnOffSwitchEntity(LaMarzoccoBaseEntity, SwitchEntity):
         try:
             await self.coordinator.device.set_wakeup_schedule(self._schedule_entry)
         except RequestNotSuccessful as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="auto_on_off_error",
                 translation_placeholders={"id": self._identifier, "state": str(state)},

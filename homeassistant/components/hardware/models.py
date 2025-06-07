@@ -7,8 +7,8 @@ from typing import Protocol
 
 import psutil_home_assistant as ha_psutil
 
-from homeassistant.components import websocket_api
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from menuai.components import websocket_api
+from menuai.core import CALLBACK_TYPE, menuai, callback
 
 
 @dataclass
@@ -32,7 +32,7 @@ class SystemStatus:
 class BoardInfo:
     """Board info type."""
 
-    hassio_board_id: str | None
+    menuaiio_board_id: str | None
     manufacturer: str
     model: str | None
     revision: str | None
@@ -64,5 +64,5 @@ class HardwareProtocol(Protocol):
     """Define the format of hardware platforms."""
 
     @callback
-    def async_info(self, hass: HomeAssistant) -> list[HardwareInfo]:
+    def async_info(self, menuai: menuai) -> list[HardwareInfo]:
         """Return info."""

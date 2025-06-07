@@ -8,9 +8,9 @@ from typing import Any
 
 from geocachingapi.geocachingapi import GeocachingApi
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.config_entries import ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import DOMAIN, ENVIRONMENT
 
@@ -45,7 +45,7 @@ class GeocachingFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
         api = GeocachingApi(
             environment=ENVIRONMENT,
             token=data["token"]["access_token"],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         status = await api.update()
         if not status.user or not status.user.username:
@@ -54,7 +54,7 @@ class GeocachingFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
         if existing_entry := await self.async_set_unique_id(
             status.user.username.lower()
         ):
-            self.hass.config_entries.async_update_entry(existing_entry, data=data)
-            await self.hass.config_entries.async_reload(existing_entry.entry_id)
+            self.menuai.config_entries.async_update_entry(existing_entry, data=data)
+            await self.menuai.config_entries.async_reload(existing_entry.entry_id)
             return self.async_abort(reason="reauth_successful")
         return self.async_create_entry(title=status.user.username, data=data)

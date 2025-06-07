@@ -6,10 +6,10 @@ from typing import Any
 
 from pyheos import HeosError
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import ATTR_PASSWORD, ATTR_USERNAME, DOMAIN
 from .coordinator import HeosConfigEntry
@@ -38,7 +38,7 @@ def _as_dict(
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: HeosConfigEntry
+    menuai: menuai, config_entry: HeosConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = config_entry.runtime_data
@@ -66,10 +66,10 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: HeosConfigEntry, device: DeviceEntry
+    menuai: menuai, config_entry: HeosConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entities = entity_registry.entities.get_entries_for_device_id(device.id, True)
     player_id = next(
         int(value) for domain, value in device.identifiers if domain == DOMAIN
@@ -81,7 +81,7 @@ async def async_get_device_diagnostics(
             {
                 "entity": entity.as_partial_dict,
                 "state": state.as_dict()
-                if (state := hass.states.get(entity.entity_id))
+                if (state := menuai.states.get(entity.entity_id))
                 else None,
             }
             for entity in entities

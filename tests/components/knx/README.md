@@ -2,12 +2,12 @@
 
 A KNXTestKit instance can be requested from a fixture. It provides convenience methods
 to test outgoing KNX telegrams and inject incoming telegrams.
-To test something add a test function requesting the `hass` and `knx` fixture and
+To test something add a test function requesting the `menuai` and `knx` fixture and
 set up the KNX integration with `knx.setup_integration`.
 You can pass a KNX YAML-config dict or a ConfigStore fixture filename to the setup method. The fixture should be placed in the `tests/components/knx/fixtures` directory.
 
 ```python
-async def test_some_yaml(hass: HomeAssistant, knx: KNXTestKit):
+async def test_some_yaml(menuai: menuai, knx: KNXTestKit):
     await knx.setup_integration(
         yaml_config={
             "switch": {
@@ -17,7 +17,7 @@ async def test_some_yaml(hass: HomeAssistant, knx: KNXTestKit):
         }
     )
 
-async def test_some_config_store(hass: HomeAssistant, knx: KNXTestKit):
+async def test_some_config_store(menuai: menuai, knx: KNXTestKit):
     await knx.setup_integration(config_store_fixture="config_store_filename.json")
 ```
 
@@ -44,7 +44,7 @@ Change some states or call some services and assert outgoing telegrams.
 
 ```python
     # turn on switch
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.test_switch"}, blocking=True
     )
     # assert ON telegram
@@ -66,13 +66,13 @@ Receive some telegrams and assert state.
     # receive OFF telegram
     await knx.receive_write("1/2/3", False)
     # assert OFF state
-    state = hass.states.get("switch.test_switch")
+    state = menuai.states.get("switch.test_switch")
     assert state.state is STATE_OFF
 ```
 
 ## Notes
 
 - For `payload` in `assert_*` and `receive_*` use `int` for DPT 1, 2 and 3 payload values (DPTBinary) and `tuple` for other DPTs (DPTArray).
-- `await self.hass.async_block_till_done()` is called before `KNXTestKit.assert_*` and after `KNXTestKit.receive_*` so you don't have to explicitly call it.
+- `await self.menuai.async_block_till_done()` is called before `KNXTestKit.assert_*` and after `KNXTestKit.receive_*` so you don't have to explicitly call it.
 - Make sure to assert every outgoing telegram that was created in a test. `assert_no_telegram` is automatically called on teardown.
 - Make sure to `knx.receive_response()` for every Read-request sent form StateUpdater, or to pass its timeout, to not have lingering tasks when finishing the tests.

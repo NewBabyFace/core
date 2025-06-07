@@ -6,20 +6,20 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.image_processing import (
+from menuai.components.image_processing import (
     ATTR_CONFIDENCE,
     CONF_CONFIDENCE,
     PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
     FaceInformation,
     ImageProcessingFaceEntity,
 )
-from homeassistant.components.microsoft_face import DATA_MICROSOFT_FACE, MicrosoftFace
-from homeassistant.const import ATTR_NAME, CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.microsoft_face import DATA_MICROSOFT_FACE, MicrosoftFace
+from menuai.const import ATTR_NAME, CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
+from menuai.core import menuai, split_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,13 +31,13 @@ PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Microsoft Face identify platform."""
-    api = hass.data[DATA_MICROSOFT_FACE]
+    api = menuai.data[DATA_MICROSOFT_FACE]
     face_group: str = config[CONF_GROUP]
     confidence: float = config[CONF_CONFIDENCE]
     source: list[dict[str, str]] = config[CONF_SOURCE]
@@ -95,7 +95,7 @@ class MicrosoftFaceIdentifyEntity(ImageProcessingFaceEntity):
                     {"faceIds": face_ids, "personGroupId": self._face_group},
                 )
 
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Can't process image on Microsoft face: %s", err)
             return
 

@@ -8,10 +8,10 @@ from urllib.parse import urlparse
 
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_HASSIO, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import SOURCE_menuaiIO, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 from .data import WyomingService
@@ -31,7 +31,7 @@ class WyomingConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    _hassio_discovery: HassioServiceInfo
+    _menuaiio_discovery: menuaiioServiceInfo
     _service: WyomingService | None = None
     _name: str | None = None
 
@@ -61,8 +61,8 @@ class WyomingConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_abort(reason="no_services")
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
         """Handle Supervisor add-on discovery."""
         _LOGGER.debug("Supervisor discovery info: %s", discovery_info)
@@ -82,37 +82,37 @@ class WyomingConfigFlow(ConfigFlow, domain=DOMAIN):
                     reason="already_configured",
                 )
 
-        self._hassio_discovery = discovery_info
+        self._menuaiio_discovery = discovery_info
         self.context.update(
             {
                 "title_placeholders": {"name": discovery_info.name},
-                "configuration_url": f"homeassistant://hassio/addon/{discovery_info.slug}/info",
+                "configuration_url": f"menuai://menuaiio/addon/{discovery_info.slug}/info",
             }
         )
-        return await self.async_step_hassio_confirm()
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm Supervisor discovery."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            uri = urlparse(self._hassio_discovery.config["uri"])
+            uri = urlparse(self._menuaiio_discovery.config["uri"])
             if service := await WyomingService.create(uri.hostname, uri.port):
                 if not service.has_services():
                     return self.async_abort(reason="no_services")
 
                 return self.async_create_entry(
-                    title=self._hassio_discovery.name,
+                    title=self._menuaiio_discovery.name,
                     data={CONF_HOST: uri.hostname, CONF_PORT: uri.port},
                 )
 
             errors = {"base": "cannot_connect"}
 
         return self.async_show_form(
-            step_id="hassio_confirm",
-            description_placeholders={"addon": self._hassio_discovery.name},
+            step_id="menuaiio_confirm",
+            description_placeholders={"addon": self._menuaiio_discovery.name},
             errors=errors,
         )
 
@@ -143,7 +143,7 @@ class WyomingConfigFlow(ConfigFlow, domain=DOMAIN):
             if (
                 entry.data[CONF_HOST] == service.host
                 and entry.data[CONF_PORT] == service.port
-                and entry.source != SOURCE_HASSIO
+                and entry.source != SOURCE_menuaiIO
             ):
                 return self.async_update_reload_and_abort(
                     entry,

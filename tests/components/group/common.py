@@ -4,7 +4,7 @@ All containing methods are legacy helpers that should not be used by new
 components. Instead call the service directly.
 """
 
-from homeassistant.components.group import (
+from menuai.components.group import (
     ATTR_ADD_ENTITIES,
     ATTR_ENTITIES,
     ATTR_OBJECT_ID,
@@ -12,27 +12,27 @@ from homeassistant.components.group import (
     SERVICE_REMOVE,
     SERVICE_SET,
 )
-from homeassistant.const import ATTR_ICON, ATTR_NAME, SERVICE_RELOAD
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.loader import bind_hass
+from menuai.const import ATTR_ICON, ATTR_NAME, SERVICE_RELOAD
+from menuai.core import menuai, callback
+from menuai.loader import bind_menuai
 
 
-@bind_hass
-def reload(hass: HomeAssistant) -> None:
+@bind_menuai
+def reload(menuai: menuai) -> None:
     """Reload the automation from config."""
-    hass.add_job(async_reload, hass)
+    menuai.add_job(async_reload, menuai)
 
 
 @callback
-@bind_hass
-def async_reload(hass: HomeAssistant) -> None:
+@bind_menuai
+def async_reload(menuai: menuai) -> None:
     """Reload the automation from config."""
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_RELOAD))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_RELOAD))
 
 
-@bind_hass
+@bind_menuai
 def set_group(
-    hass: HomeAssistant,
+    menuai: menuai,
     object_id: str,
     name: str | None = None,
     entity_ids: list[str] | None = None,
@@ -40,9 +40,9 @@ def set_group(
     add: list[str] | None = None,
 ) -> None:
     """Create/Update a group."""
-    hass.add_job(
+    menuai.add_job(
         async_set_group,
-        hass,
+        menuai,
         object_id,
         name,
         entity_ids,
@@ -52,9 +52,9 @@ def set_group(
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_set_group(
-    hass: HomeAssistant,
+    menuai: menuai,
     object_id: str,
     name: str | None = None,
     entity_ids: list[str] | None = None,
@@ -74,12 +74,12 @@ def async_set_group(
         if value is not None
     }
 
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_SET, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_SET, data))
 
 
 @callback
-@bind_hass
-def async_remove(hass: HomeAssistant, object_id: str) -> None:
+@bind_menuai
+def async_remove(menuai: menuai, object_id: str) -> None:
     """Remove a user group."""
     data = {ATTR_OBJECT_ID: object_id}
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_REMOVE, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_REMOVE, data))

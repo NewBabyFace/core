@@ -14,7 +14,7 @@ annotatedyaml==0.4.5
 astral==2.2
 async-interrupt==1.2.2
 async-upnp-client==0.44.0
-atomicwrites-homeassistant==1.4.1
+atomicwrites-menuai==1.4.1
 attrs==25.3.0
 audioop-lts==0.2.1
 av==13.1.0
@@ -35,8 +35,8 @@ fnv-hash-fast==1.5.0
 go2rtc-client==0.2.1
 ha-ffmpeg==3.2.2
 habluetooth==3.49.0
-hass-nabucasa==0.101.0
-hassil==2.2.3
+menuai-nabucasa==0.101.0
+menuaiil==2.2.3
 home-assistant-bluetooth==1.13.1
 home-assistant-frontend==20250531.0
 home-assistant-intents==2025.5.28

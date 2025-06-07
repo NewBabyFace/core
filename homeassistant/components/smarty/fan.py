@@ -6,15 +6,15 @@ import logging
 import math
 from typing import Any
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
+from menuai.util.scaling import int_states_in_range
 
 from . import SmartyConfigEntry
 from .coordinator import SmartyCoordinator
@@ -27,7 +27,7 @@ SPEED_RANGE = (1, 3)  # off is not included
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -82,7 +82,7 @@ class SmartyFan(SmartyEntity, FanEntity):
 
         fan_speed = math.ceil(percentage_to_ranged_value(SPEED_RANGE, percentage))
         if not self._smarty.set_fan_speed(fan_speed):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set the fan speed percentage to {percentage}"
             )
 
@@ -103,7 +103,7 @@ class SmartyFan(SmartyEntity, FanEntity):
         """Turn off the fan."""
         _LOGGER.debug("Turning off fan")
         if not self._smarty.turn_off():
-            raise HomeAssistantError("Failed to turn off the fan")
+            raise menuaiError("Failed to turn off the fan")
 
         self._smarty_fan_speed = 0
         self.schedule_update_ha_state()

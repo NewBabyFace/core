@@ -3,15 +3,15 @@
 from typing import cast
 from unittest.mock import Mock
 
-from homeassistant.components.dlna_dms.const import (
+from menuai.components.dlna_dms.const import (
     CONF_SOURCE_ID,
     CONFIG_VERSION,
     DOMAIN,
 )
-from homeassistant.components.dlna_dms.dms import DlnaDmsData
-from homeassistant.const import CONF_DEVICE_ID, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.dlna_dms.dms import DlnaDmsData
+from menuai.const import CONF_DEVICE_ID, CONF_URL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .conftest import (
     MOCK_DEVICE_LOCATION,
@@ -25,7 +25,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_resource_lifecycle(
-    hass: HomeAssistant,
+    menuai: menuai,
     aiohttp_session_requester_mock: Mock,
     config_entry_mock: MockConfigEntry,
     ssdp_scanner_mock: Mock,
@@ -33,12 +33,12 @@ async def test_resource_lifecycle(
 ) -> None:
     """Test that resources are acquired/released as the entity is setup/unloaded."""
     # Set up the config entry
-    config_entry_mock.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {}) is True
-    await hass.async_block_till_done()
+    config_entry_mock.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {}) is True
+    await menuai.async_block_till_done()
 
     # Check the device source is created and working
-    domain_data = cast(DlnaDmsData, hass.data[DOMAIN])
+    domain_data = cast(DlnaDmsData, menuai.data[DOMAIN])
     assert len(domain_data.devices) == 1
     assert len(domain_data.sources) == 1
     entity = next(iter(domain_data.devices.values()))
@@ -55,7 +55,7 @@ async def test_resource_lifecycle(
     assert dms_device_mock.on_event is None
 
     # Unload the config entry
-    assert await hass.config_entries.async_remove(config_entry_mock.entry_id) == {
+    assert await menuai.config_entries.async_remove(config_entry_mock.entry_id) == {
         "require_restart": False
     }
 
@@ -74,7 +74,7 @@ async def test_resource_lifecycle(
     assert not domain_data.sources
 
 
-async def test_migrate_entry(hass: HomeAssistant) -> None:
+async def test_migrate_entry(menuai: menuai) -> None:
     """Test migrating a config entry from version 1 to version 2."""
     # Create mock entry with version 1
     mock_entry = MockConfigEntry(
@@ -89,23 +89,23 @@ async def test_migrate_entry(hass: HomeAssistant) -> None:
     )
 
     # Set it up
-    mock_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {}) is True
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {}) is True
+    await menuai.async_block_till_done()
 
     # Check that it has a source_id now
-    updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    updated_entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
     assert updated_entry
     assert updated_entry.version == CONFIG_VERSION
     assert updated_entry.data.get(CONF_SOURCE_ID) == MOCK_SOURCE_ID
 
 
 async def test_migrate_entry_collision(
-    hass: HomeAssistant, config_entry_mock: MockConfigEntry
+    menuai: menuai, config_entry_mock: MockConfigEntry
 ) -> None:
     """Test migrating a config entry with a potentially colliding source ID."""
     # Use existing mock entry
-    config_entry_mock.add_to_hass(hass)
+    config_entry_mock.add_to_menuai(menuai)
 
     # Create mock entry with same name, and old version, that needs migrating
     mock_entry = MockConfigEntry(
@@ -118,14 +118,14 @@ async def test_migrate_entry_collision(
         },
         title=MOCK_DEVICE_NAME,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     # Set the integration up
-    assert await async_setup_component(hass, DOMAIN, {}) is True
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {}) is True
+    await menuai.async_block_till_done()
 
     # Check that it has a source_id now
-    updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    updated_entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
     assert updated_entry
     assert updated_entry.version == CONFIG_VERSION
     assert updated_entry.data.get(CONF_SOURCE_ID) == f"{MOCK_SOURCE_ID}_1"

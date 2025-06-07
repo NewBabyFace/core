@@ -2,11 +2,11 @@
 
 from knocki import Event, KnockiClient, KnockiConnectionError, Trigger
 
-from homeassistant.components.event import DOMAIN as EVENT_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.event import DOMAIN as EVENT_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -19,11 +19,11 @@ class KnockiCoordinator(DataUpdateCoordinator[dict[int, Trigger]]):
     config_entry: KnockiConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: KnockiConfigEntry, client: KnockiClient
+        self, menuai: menuai, config_entry: KnockiConfigEntry, client: KnockiClient
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -58,7 +58,7 @@ class KnockiCoordinator(DataUpdateCoordinator[dict[int, Trigger]]):
     def _async_delete_device(self, trigger: tuple[str, int]) -> None:
         """Delete a device from the coordinator."""
         device_id, trigger_id = trigger
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         entity_entry = entity_registry.async_get_entity_id(
             EVENT_DOMAIN, DOMAIN, f"{device_id}_{trigger_id}"
         )

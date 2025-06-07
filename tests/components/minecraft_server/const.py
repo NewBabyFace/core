@@ -14,7 +14,7 @@ from mcstatus.responses import (
     RawJavaResponseVersion,
 )
 
-from homeassistant.components.minecraft_server.api import MinecraftServerData
+from menuai.components.minecraft_server.api import MinecraftServerData
 
 TEST_CONFIG_ENTRY_ID: str = "01234567890123456789012345678901"
 TEST_HOST = "mc.dummyserver.com"

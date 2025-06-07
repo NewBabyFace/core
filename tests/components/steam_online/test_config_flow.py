@@ -4,12 +4,12 @@ from unittest.mock import patch
 
 import steam
 
-from homeassistant.components.steam_online.const import CONF_ACCOUNTS, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import entity_registry as er
+from menuai.components.steam_online.const import CONF_ACCOUNTS, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import entity_registry as er
 
 from . import (
     ACCOUNT_1,
@@ -25,20 +25,20 @@ from . import (
 )
 
 
-async def test_flow_user(hass: HomeAssistant) -> None:
+async def test_flow_user(menuai: menuai) -> None:
     """Test user initialized flow."""
     with (
         patch_interface(),
         patch(
-            "homeassistant.components.steam_online.async_setup_entry",
+            "menuai.components.steam_online.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=CONF_DATA,
         )
@@ -49,11 +49,11 @@ async def test_flow_user(hass: HomeAssistant) -> None:
         assert result["result"].unique_id == ACCOUNT_1
 
 
-async def test_flow_user_cannot_connect(hass: HomeAssistant) -> None:
+async def test_flow_user_cannot_connect(menuai: menuai) -> None:
     """Test user initialized flow with unreachable server."""
     with patch_interface() as servicemock:
         servicemock.side_effect = steam.api.HTTPTimeoutError
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.FORM
@@ -61,11 +61,11 @@ async def test_flow_user_cannot_connect(hass: HomeAssistant) -> None:
         assert result["errors"]["base"] == "cannot_connect"
 
 
-async def test_flow_user_invalid_auth(hass: HomeAssistant) -> None:
+async def test_flow_user_invalid_auth(menuai: menuai) -> None:
     """Test user initialized flow with invalid authentication."""
     with patch_interface() as servicemock:
         servicemock.side_effect = steam.api.HTTPError("403")
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.FORM
@@ -73,10 +73,10 @@ async def test_flow_user_invalid_auth(hass: HomeAssistant) -> None:
         assert result["errors"]["base"] == "invalid_auth"
 
 
-async def test_flow_user_invalid_account(hass: HomeAssistant) -> None:
+async def test_flow_user_invalid_account(menuai: menuai) -> None:
     """Test user initialized flow with invalid account ID."""
     with patch_user_interface_null():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.FORM
@@ -84,11 +84,11 @@ async def test_flow_user_invalid_account(hass: HomeAssistant) -> None:
         assert result["errors"]["base"] == "invalid_account"
 
 
-async def test_flow_user_unknown(hass: HomeAssistant) -> None:
+async def test_flow_user_unknown(menuai: menuai) -> None:
     """Test user initialized flow with unknown error."""
     with patch_interface() as servicemock:
         servicemock.side_effect = Exception
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
         )
         assert result["type"] is FlowResultType.FORM
@@ -96,11 +96,11 @@ async def test_flow_user_unknown(hass: HomeAssistant) -> None:
         assert result["errors"]["base"] == "unknown"
 
 
-async def test_flow_user_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_user_already_configured(menuai: menuai) -> None:
     """Test user initialized flow with duplicate account."""
-    create_entry(hass)
+    create_entry(menuai)
     with patch_interface():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONF_DATA
         )
 
@@ -108,21 +108,21 @@ async def test_flow_user_already_configured(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_flow_reauth(hass: HomeAssistant) -> None:
+async def test_flow_reauth(menuai: menuai) -> None:
     """Test reauth step."""
-    entry = create_entry(hass)
-    result = await entry.start_reauth_flow(hass)
+    entry = create_entry(menuai)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     with patch_interface():
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={},
         )
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "user"
         new_conf = CONF_DATA | {CONF_API_KEY: "1234567890"}
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=new_conf,
         )
@@ -131,104 +131,104 @@ async def test_flow_reauth(hass: HomeAssistant) -> None:
         assert entry.data == new_conf
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test updating options."""
-    entry = create_entry(hass)
+    entry = create_entry(menuai)
     with (
         patch_interface(),
         patch(
-            "homeassistant.components.steam_online.config_flow.MAX_IDS_TO_REQUEST",
+            "menuai.components.steam_online.config_flow.MAX_IDS_TO_REQUEST",
             return_value=2,
         ),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        result = await hass.config_entries.options.async_init(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={CONF_ACCOUNTS: [ACCOUNT_1, ACCOUNT_2]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == CONF_OPTIONS_2
 
 
 async def test_options_flow_deselect(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test deselecting user."""
-    entry = create_entry(hass)
+    entry = create_entry(menuai)
     with (
         patch_interface(),
         patch(
-            "homeassistant.components.steam_online.config_flow.MAX_IDS_TO_REQUEST",
+            "menuai.components.steam_online.config_flow.MAX_IDS_TO_REQUEST",
             return_value=2,
         ),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        result = await hass.config_entries.options.async_init(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
+        await menuai.async_block_till_done()
 
     with (
         patch_interface(),
         patch(
-            "homeassistant.components.steam_online.async_setup_entry",
+            "menuai.components.steam_online.async_setup_entry",
             return_value=True,
         ),
     ):
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={CONF_ACCOUNTS: []},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {CONF_ACCOUNTS: {}}
     assert len(entity_registry.entities) == 0
 
 
-async def test_options_flow_timeout(hass: HomeAssistant) -> None:
+async def test_options_flow_timeout(menuai: menuai) -> None:
     """Test updating options timeout getting friends list."""
-    entry = create_entry(hass)
+    entry = create_entry(menuai)
     with patch_interface() as servicemock:
         servicemock.side_effect = steam.api.HTTPTimeoutError
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={CONF_ACCOUNTS: [ACCOUNT_1]},
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == CONF_OPTIONS
 
 
-async def test_options_flow_unauthorized(hass: HomeAssistant) -> None:
+async def test_options_flow_unauthorized(menuai: menuai) -> None:
     """Test updating options when user's friends list is not public."""
-    entry = create_entry(hass)
+    entry = create_entry(menuai)
     with patch_interface_private():
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await menuai.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={CONF_ACCOUNTS: [ACCOUNT_1]},
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == CONF_OPTIONS

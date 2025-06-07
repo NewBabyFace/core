@@ -2,9 +2,9 @@
 
 from pycoolmasternet_async import CoolMasterNet
 
-from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.const import CONF_HOST, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import CONF_SWING_SUPPORT
 from .coordinator import CoolmasterConfigEntry, CoolmasterDataUpdateCoordinator
@@ -12,7 +12,7 @@ from .coordinator import CoolmasterConfigEntry, CoolmasterDataUpdateCoordinator
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.CLIMATE, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: CoolmasterConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: CoolmasterConfigEntry) -> bool:
     """Set up Coolmaster from a config entry."""
     host = entry.data[CONF_HOST]
     port = entry.data[CONF_PORT]
@@ -37,14 +37,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: CoolmasterConfigEntry) -
             raise ConfigEntryNotReady
     except OSError as error:
         raise ConfigEntryNotReady from error
-    coordinator = CoolmasterDataUpdateCoordinator(hass, entry, coolmaster, info)
+    coordinator = CoolmasterDataUpdateCoordinator(menuai, entry, coolmaster, info)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: CoolmasterConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: CoolmasterConfigEntry) -> bool:
     """Unload a Coolmaster config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

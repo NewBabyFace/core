@@ -14,11 +14,11 @@ from p1monitor import (
     WaterMeter,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     DOMAIN,
@@ -50,12 +50,12 @@ class P1MonitorDataUpdateCoordinator(DataUpdateCoordinator[P1MonitorData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: P1MonitorConfigEntry,
     ) -> None:
         """Initialize global P1 Monitor data updater."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -65,7 +65,7 @@ class P1MonitorDataUpdateCoordinator(DataUpdateCoordinator[P1MonitorData]):
         self.p1monitor = P1Monitor(
             host=self.config_entry.data[CONF_HOST],
             port=self.config_entry.data[CONF_PORT],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
 
     async def _async_update_data(self) -> P1MonitorData:

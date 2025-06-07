@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.escea.const import DOMAIN, ESCEA_FIREPLACE
-from homeassistant.components.escea.discovery import DiscoveryServiceListener
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.escea.const import DOMAIN, ESCEA_FIREPLACE
+from menuai.components.escea.discovery import DiscoveryServiceListener
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -42,27 +42,27 @@ def _mock_start_discovery(
 
 
 async def test_not_found(
-    hass: HomeAssistant, mock_discovery_service: MagicMock
+    menuai: menuai, mock_discovery_service: MagicMock
 ) -> None:
     """Test not finding any Escea controllers."""
 
     with (
         patch(
-            "homeassistant.components.escea.discovery.pescea_discovery_service"
+            "menuai.components.escea.discovery.pescea_discovery_service"
         ) as discovery_service,
-        patch("homeassistant.components.escea.config_flow.TIMEOUT_DISCOVERY", 0),
+        patch("menuai.components.escea.config_flow.TIMEOUT_DISCOVERY", 0),
     ):
         discovery_service.return_value = mock_discovery_service
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
         # Confirmation form
         assert result["type"] is FlowResultType.FORM
 
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
@@ -70,18 +70,18 @@ async def test_not_found(
 
 
 async def test_found(
-    hass: HomeAssistant, mock_controller: MagicMock, mock_discovery_service: AsyncMock
+    menuai: menuai, mock_controller: MagicMock, mock_discovery_service: AsyncMock
 ) -> None:
     """Test finding an Escea controller."""
     mock_discovery_service.controllers["test-uid"] = mock_controller
 
     with (
         patch(
-            "homeassistant.components.escea.async_setup_entry",
+            "menuai.components.escea.async_setup_entry",
             return_value=True,
         ) as mock_setup,
         patch(
-            "homeassistant.components.escea.discovery.pescea_discovery_service"
+            "menuai.components.escea.discovery.pescea_discovery_service"
         ) as discovery_service,
     ):
         discovery_service.return_value = mock_discovery_service
@@ -89,32 +89,32 @@ async def test_found(
             discovery_service, mock_controller
         )
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
         # Confirmation form
         assert result["type"] is FlowResultType.FORM
 
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert mock_setup.call_count == 1
 
 
-async def test_single_instance_allowed(hass: HomeAssistant) -> None:
+async def test_single_instance_allowed(menuai: menuai) -> None:
     """Test single instance allowed."""
     config_entry = MockConfigEntry(domain=DOMAIN, title=ESCEA_FIREPLACE)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.escea.discovery.pescea_discovery_service"
+        "menuai.components.escea.discovery.pescea_discovery_service"
     ) as discovery_service:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"

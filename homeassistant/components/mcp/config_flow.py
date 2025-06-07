@@ -10,13 +10,13 @@ import httpx
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.components.application_credentials import AuthorizationServer
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_TOKEN, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.components.application_credentials import AuthorizationServer
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_TOKEN, CONF_URL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.config_entry_oauth2_flow import (
     AbstractOAuth2FlowHandler,
     async_get_implementations,
 )
@@ -42,7 +42,7 @@ MCP_DISCOVERY_HEADERS = {
 
 
 async def async_discover_oauth_config(
-    hass: HomeAssistant, mcp_server_url: str
+    menuai: menuai, mcp_server_url: str
 ) -> AuthorizationServer:
     """Discover the OAuth configuration for the MCP server.
 
@@ -88,7 +88,7 @@ async def async_discover_oauth_config(
 
 
 async def validate_input(
-    hass: HomeAssistant, data: dict[str, Any], token_manager: TokenManager | None = None
+    menuai: menuai, data: dict[str, Any], token_manager: TokenManager | None = None
 ) -> dict[str, Any]:
     """Validate the user input and connect to the MCP server."""
     url = data[CONF_URL]
@@ -138,7 +138,7 @@ class ModelContextProtocolConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except InvalidUrl:
                 errors[CONF_URL] = "invalid_url"
             except TimeoutConnectError:
@@ -171,7 +171,7 @@ class ModelContextProtocolConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         """
         try:
             authorization_server = await async_discover_oauth_config(
-                self.hass, self.data[CONF_URL]
+                self.menuai, self.data[CONF_URL]
             )
         except TimeoutConnectError:
             return self.async_abort(reason="timeout_connect")
@@ -206,7 +206,7 @@ class ModelContextProtocolConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         should be used given they may be for another existing server.
         """
         with authorization_server_context(self.authorization_server()):
-            if not await async_get_implementations(self.hass, self.DOMAIN):
+            if not await async_get_implementations(self.menuai, self.DOMAIN):
                 return await self.async_step_new_credentials()
             return self.async_show_menu(
                 step_id="credentials_choice",
@@ -244,7 +244,7 @@ class ModelContextProtocolConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
             return cast(str, data[CONF_TOKEN][CONF_ACCESS_TOKEN])
 
         try:
-            info = await validate_input(self.hass, config_entry_data, token_manager)
+            info = await validate_input(self.menuai, config_entry_data, token_manager)
         except TimeoutConnectError:
             return self.async_abort(reason="timeout_connect")
         except CannotConnect:
@@ -281,26 +281,26 @@ class ModelContextProtocolConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         config_entry = self._get_reauth_entry()
         self.data = {**config_entry.data}
         self.flow_impl = await async_get_config_entry_implementation(  # type: ignore[assignment]
-            self.hass, config_entry
+            self.menuai, config_entry
         )
         return await self.async_step_auth()
 
 
-class InvalidUrl(HomeAssistantError):
+class InvalidUrl(menuaiError):
     """Error to indicate the URL format is invalid."""
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class TimeoutConnectError(HomeAssistantError):
+class TimeoutConnectError(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class MissingCapabilities(HomeAssistantError):
+class MissingCapabilities(menuaiError):
     """Error to indicate that the MCP server is missing required capabilities."""

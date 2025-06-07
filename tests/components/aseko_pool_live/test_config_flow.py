@@ -5,48 +5,48 @@ from unittest.mock import patch
 from aioaseko import AsekoAPIError, AsekoInvalidCredentials, User
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.aseko_pool_live.const import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.aseko_pool_live.const import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_async_step_user_form(hass: HomeAssistant) -> None:
+async def test_async_step_user_form(menuai: menuai) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
 
-async def test_async_step_user_success(hass: HomeAssistant, user: User) -> None:
+async def test_async_step_user_success(menuai: menuai, user: User) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with (
         patch(
-            "homeassistant.components.aseko_pool_live.config_flow.Aseko.login",
+            "menuai.components.aseko_pool_live.config_flow.Aseko.login",
             return_value=user,
         ),
         patch(
-            "homeassistant.components.aseko_pool_live.async_setup_entry",
+            "menuai.components.aseko_pool_live.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_EMAIL: "aseko@example.com",
                 CONF_PASSWORD: "passw0rd",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "aseko@example.com"
@@ -66,19 +66,19 @@ async def test_async_step_user_success(hass: HomeAssistant, user: User) -> None:
     ],
 )
 async def test_async_step_user_exception(
-    hass: HomeAssistant, user: User, error_web: Exception, reason: str
+    menuai: menuai, user: User, error_web: Exception, reason: str
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.aseko_pool_live.config_flow.Aseko.login",
+        "menuai.components.aseko_pool_live.config_flow.Aseko.login",
         return_value=user,
         side_effect=error_web,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_EMAIL: "aseko@example.com",
@@ -99,19 +99,19 @@ async def test_async_step_user_exception(
     ],
 )
 async def test_get_account_info_exceptions(
-    hass: HomeAssistant, user: User, error_web: Exception, reason: str
+    menuai: menuai, user: User, error_web: Exception, reason: str
 ) -> None:
     """Test we handle config flow exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.aseko_pool_live.config_flow.Aseko.login",
+        "menuai.components.aseko_pool_live.config_flow.Aseko.login",
         return_value=user,
         side_effect=error_web,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_EMAIL: "aseko@example.com",
@@ -123,7 +123,7 @@ async def test_get_account_info_exceptions(
     assert result2["errors"] == {"base": reason}
 
 
-async def test_async_step_reauth_success(hass: HomeAssistant, user: User) -> None:
+async def test_async_step_reauth_success(menuai: menuai, user: User) -> None:
     """Test successful reauthentication."""
 
     mock_entry = MockConfigEntry(
@@ -132,9 +132,9 @@ async def test_async_step_reauth_success(hass: HomeAssistant, user: User) -> Non
         data={CONF_EMAIL: "aseko@example.com", CONF_PASSWORD: "passw0rd"},
         version=2,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -142,19 +142,19 @@ async def test_async_step_reauth_success(hass: HomeAssistant, user: User) -> Non
 
     with (
         patch(
-            "homeassistant.components.aseko_pool_live.config_flow.Aseko.login",
+            "menuai.components.aseko_pool_live.config_flow.Aseko.login",
             return_value=user,
         ),
         patch(
-            "homeassistant.components.aseko_pool_live.async_setup_entry",
+            "menuai.components.aseko_pool_live.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_EMAIL: "aseko@example.com", CONF_PASSWORD: "new_password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -166,7 +166,7 @@ async def test_async_step_reauth_success(hass: HomeAssistant, user: User) -> Non
     }
 
 
-async def test_async_step_reauth_mismatch(hass: HomeAssistant, user: User) -> None:
+async def test_async_step_reauth_mismatch(menuai: menuai, user: User) -> None:
     """Test mismatch reauthentication."""
 
     mock_entry = MockConfigEntry(
@@ -175,9 +175,9 @@ async def test_async_step_reauth_mismatch(hass: HomeAssistant, user: User) -> No
         data={CONF_EMAIL: "aseko@example.com", CONF_PASSWORD: "passw0rd"},
         version=2,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -185,19 +185,19 @@ async def test_async_step_reauth_mismatch(hass: HomeAssistant, user: User) -> No
 
     with (
         patch(
-            "homeassistant.components.aseko_pool_live.config_flow.Aseko.login",
+            "menuai.components.aseko_pool_live.config_flow.Aseko.login",
             return_value=user,
         ),
         patch(
-            "homeassistant.components.aseko_pool_live.async_setup_entry",
+            "menuai.components.aseko_pool_live.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_EMAIL: "aseko@example.com", CONF_PASSWORD: "new_password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "unique_id_mismatch"
@@ -218,7 +218,7 @@ async def test_async_step_reauth_mismatch(hass: HomeAssistant, user: User) -> No
     ],
 )
 async def test_async_step_reauth_exception(
-    hass: HomeAssistant, user: User, error_web: Exception, reason: str
+    menuai: menuai, user: User, error_web: Exception, reason: str
 ) -> None:
     """Test we get the form."""
 
@@ -227,16 +227,16 @@ async def test_async_step_reauth_exception(
         unique_id="UID",
         data={CONF_EMAIL: "aseko@example.com"},
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     with patch(
-        "homeassistant.components.aseko_pool_live.config_flow.Aseko.login",
+        "menuai.components.aseko_pool_live.config_flow.Aseko.login",
         return_value=user,
         side_effect=error_web,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_EMAIL: "aseko@example.com",

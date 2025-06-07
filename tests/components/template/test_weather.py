@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_WEATHER_APPARENT_TEMPERATURE,
     ATTR_WEATHER_CLOUD_COVERAGE,
     ATTR_WEATHER_DEW_POINT,
@@ -21,11 +21,11 @@ from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
     Forecast,
 )
-from homeassistant.const import ATTR_ATTRIBUTION, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import Context, HomeAssistant, State
-from homeassistant.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_ATTRIBUTION, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import Context, menuai, State
+from menuai.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     assert_setup_component,
@@ -65,7 +65,7 @@ ATTR_FORECAST = "forecast"
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_template_state_text(hass: HomeAssistant) -> None:
+async def test_template_state_text(menuai: menuai) -> None:
     """Test the state text of a template."""
     for attr, v_attr, value in (
         (
@@ -85,9 +85,9 @@ async def test_template_state_text(hass: HomeAssistant) -> None:
         ("sensor.dew_point", ATTR_WEATHER_DEW_POINT, 2.2),
         ("sensor.apparent_temperature", ATTR_WEATHER_APPARENT_TEMPERATURE, 25),
     ):
-        hass.states.async_set(attr, value)
-        await hass.async_block_till_done()
-        state = hass.states.get("weather.test")
+        menuai.states.async_set(attr, value)
+        await menuai.async_block_till_done()
+        state = menuai.states.get("weather.test")
         assert state is not None
         assert state.state == "sunny"
         assert state.attributes.get(v_attr) == value
@@ -119,17 +119,17 @@ async def test_template_state_text(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_forecasts(
-    hass: HomeAssistant, snapshot: SnapshotAssertion, service: str
+    menuai: menuai, snapshot: SnapshotAssertion, service: str
 ) -> None:
     """Test forecast service."""
     for attr, _v_attr, value in (
         ("sensor.temperature", ATTR_WEATHER_TEMPERATURE, 22.3),
         ("sensor.humidity", ATTR_WEATHER_HUMIDITY, 60),
     ):
-        hass.states.async_set(attr, value)
-        await hass.async_block_till_done()
+        menuai.states.async_set(attr, value)
+        await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast",
         "sunny",
         {
@@ -142,7 +142,7 @@ async def test_forecasts(
             ]
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast_twice_daily",
         "fog",
         {
@@ -156,15 +156,15 @@ async def test_forecasts(
             ]
         },
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("weather.forecast")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("weather.forecast")
     assert state is not None
     assert state.state == "sunny"
-    state2 = hass.states.get("weather.forecast_twice_daily")
+    state2 = menuai.states.get("weather.forecast_twice_daily")
     assert state2 is not None
     assert state2.state == "fog"
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "daily"},
@@ -172,7 +172,7 @@ async def test_forecasts(
         return_response=True,
     )
     assert response == snapshot
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "hourly"},
@@ -180,7 +180,7 @@ async def test_forecasts(
         return_response=True,
     )
     assert response == snapshot
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "twice_daily"},
@@ -189,7 +189,7 @@ async def test_forecasts(
     )
     assert response == snapshot
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast",
         "sunny",
         {
@@ -202,12 +202,12 @@ async def test_forecasts(
             ]
         },
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("weather.forecast")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("weather.forecast")
     assert state is not None
     assert state.state == "sunny"
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "daily"},
@@ -244,7 +244,7 @@ async def test_forecasts(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_forecast_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     service: str,
     expected: dict[str, Any],
@@ -254,10 +254,10 @@ async def test_forecast_invalid(
         ("sensor.temperature", ATTR_WEATHER_TEMPERATURE, 22.3),
         ("sensor.humidity", ATTR_WEATHER_HUMIDITY, 60),
     ):
-        hass.states.async_set(attr, value)
-        await hass.async_block_till_done()
+        menuai.states.async_set(attr, value)
+        await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast",
         "sunny",
         {
@@ -271,17 +271,17 @@ async def test_forecast_invalid(
             ]
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast_hourly",
         "sunny",
         {ATTR_FORECAST: None},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("weather.forecast_hourly")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("weather.forecast_hourly")
     assert state is not None
     assert state.state == "sunny"
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "daily"},
@@ -289,7 +289,7 @@ async def test_forecast_invalid(
         return_response=True,
     )
     assert response == expected
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "hourly"},
@@ -326,7 +326,7 @@ async def test_forecast_invalid(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_forecast_invalid_is_daytime_missing_in_twice_daily(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     service: str,
     expected: dict[str, Any],
@@ -336,10 +336,10 @@ async def test_forecast_invalid_is_daytime_missing_in_twice_daily(
         ("sensor.temperature", ATTR_WEATHER_TEMPERATURE, 22.3),
         ("sensor.humidity", ATTR_WEATHER_HUMIDITY, 60),
     ):
-        hass.states.async_set(attr, value)
-        await hass.async_block_till_done()
+        menuai.states.async_set(attr, value)
+        await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast_twice_daily",
         "sunny",
         {
@@ -352,12 +352,12 @@ async def test_forecast_invalid_is_daytime_missing_in_twice_daily(
             ]
         },
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("weather.forecast_twice_daily")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("weather.forecast_twice_daily")
     assert state is not None
     assert state.state == "sunny"
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "twice_daily"},
@@ -394,7 +394,7 @@ async def test_forecast_invalid_is_daytime_missing_in_twice_daily(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_forecast_invalid_datetime_missing(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     service: str,
     expected: dict[str, Any],
@@ -404,10 +404,10 @@ async def test_forecast_invalid_datetime_missing(
         ("sensor.temperature", ATTR_WEATHER_TEMPERATURE, 22.3),
         ("sensor.humidity", ATTR_WEATHER_HUMIDITY, 60),
     ):
-        hass.states.async_set(attr, value)
-        await hass.async_block_till_done()
+        menuai.states.async_set(attr, value)
+        await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast_twice_daily",
         "sunny",
         {
@@ -420,12 +420,12 @@ async def test_forecast_invalid_datetime_missing(
             ]
         },
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("weather.forecast_twice_daily")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("weather.forecast_twice_daily")
     assert state is not None
     assert state.state == "sunny"
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "twice_daily"},
@@ -461,17 +461,17 @@ async def test_forecast_invalid_datetime_missing(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_forecast_format_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, service: str
+    menuai: menuai, caplog: pytest.LogCaptureFixture, service: str
 ) -> None:
     """Test forecast service invalid on incorrect format."""
     for attr, _v_attr, value in (
         ("sensor.temperature", ATTR_WEATHER_TEMPERATURE, 22.3),
         ("sensor.humidity", ATTR_WEATHER_HUMIDITY, 60),
     ):
-        hass.states.async_set(attr, value)
-        await hass.async_block_till_done()
+        menuai.states.async_set(attr, value)
+        await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast_daily",
         "sunny",
         {
@@ -483,7 +483,7 @@ async def test_forecast_format_error(
             ]
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "weather.forecast_hourly",
         "sunny",
         {
@@ -494,9 +494,9 @@ async def test_forecast_format_error(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "daily"},
@@ -504,7 +504,7 @@ async def test_forecast_format_error(
         return_response=True,
     )
     assert "Forecasts is not a list, see Weather documentation" in caplog.text
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {"entity_id": "weather.forecast", "type": "hourly"},
@@ -574,7 +574,7 @@ SAVED_EXTRA_DATA_WITH_FUTURE_KEY = {
     ],
 )
 async def test_trigger_entity_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     domain: str,
     config: dict,
@@ -594,28 +594,28 @@ async def test_trigger_entity_restore_state(
         saved_state,
         restored_attributes,
     )
-    mock_restore_cache_with_extra_data(hass, ((fake_state, saved_extra_data),))
+    mock_restore_cache_with_extra_data(menuai, ((fake_state, saved_extra_data),))
     with assert_setup_component(count, domain):
         assert await async_setup_component(
-            hass,
+            menuai,
             domain,
             config,
         )
 
-        await hass.async_block_till_done()
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.state == initial_state
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         "test_event", {"condition": "cloudy", "temperature": 15, "humidity": 25}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("weather.test")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("weather.test")
 
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.state == "cloudy"
     assert state.attributes["temperature"] == 15.0
     assert state.attributes["humidity"] == 25.0
@@ -652,17 +652,17 @@ async def test_trigger_entity_restore_state(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_trigger_action(hass: HomeAssistant) -> None:
+async def test_trigger_action(menuai: menuai) -> None:
     """Test trigger entity with an action works."""
-    state = hass.states.get("weather.hello_name")
+    state = menuai.states.get("weather.hello_name")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
     context = Context()
-    hass.bus.async_fire("test_event", {"temperature": 1}, context=context)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"temperature": 1}, context=context)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.hello_name")
+    state = menuai.states.get("weather.hello_name")
     assert state.state == "sunny"
     assert state.attributes["temperature"] == 3.0
     assert state.context is context
@@ -724,18 +724,18 @@ async def test_trigger_action(hass: HomeAssistant) -> None:
 @pytest.mark.usefixtures("start_ha")
 @pytest.mark.freeze_time("2023-10-19 13:50:05")
 async def test_trigger_weather_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     service: str,
 ) -> None:
     """Test trigger weather entity with services."""
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
     context = Context()
     now = dt_util.now().isoformat()
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         "test_event",
         {
             "information": 1,
@@ -770,9 +770,9 @@ async def test_trigger_weather_services(
         },
         context=context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.state == "sunny"
     assert state.attributes["temperature"] == 3.0
     assert state.attributes["humidity"] == 3.0
@@ -787,7 +787,7 @@ async def test_trigger_weather_services(
     assert state.attributes["apparent_temperature"] == 3.0
     assert state.context is context
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -799,7 +799,7 @@ async def test_trigger_weather_services(
     )
     assert response == snapshot
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -811,7 +811,7 @@ async def test_trigger_weather_services(
     )
     assert response == snapshot
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -825,11 +825,11 @@ async def test_trigger_weather_services(
 
 
 async def test_restore_weather_save_state(
-    hass: HomeAssistant, hass_storage: dict[str, Any], snapshot: SnapshotAssertion
+    menuai: menuai, menuai_storage: dict[str, Any], snapshot: SnapshotAssertion
 ) -> None:
     """Test Restore saved state for Weather trigger template."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": {
@@ -845,23 +845,23 @@ async def test_restore_weather_save_state(
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         "test_event", {"condition": "cloudy", "temperature": 15, "humidity": 25}
     )
-    await hass.async_block_till_done()
-    entity = hass.states.get("weather.test")
+    await menuai.async_block_till_done()
+    entity = menuai.states.get("weather.test")
 
     # Trigger saving state
-    await async_mock_restore_state_shutdown_restart(hass)
+    await async_mock_restore_state_shutdown_restart(menuai)
 
-    assert len(hass_storage[RESTORE_STATE_KEY]["data"]) == 1
-    state = hass_storage[RESTORE_STATE_KEY]["data"][0]["state"]
+    assert len(menuai_storage[RESTORE_STATE_KEY]["data"]) == 1
+    state = menuai_storage[RESTORE_STATE_KEY]["data"][0]["state"]
     assert state["entity_id"] == entity.entity_id
-    extra_data = hass_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
+    extra_data = menuai_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
     assert extra_data == snapshot
 
 
@@ -892,7 +892,7 @@ SAVED_EXTRA_DATA_MISSING_KEY = {
     ],
 )
 async def test_trigger_entity_restore_state_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     saved_attributes: dict,
     saved_extra_data: dict | None,
 ) -> None:
@@ -903,9 +903,9 @@ async def test_trigger_entity_restore_state_fail(
         None,
         saved_attributes,
     )
-    mock_restore_cache_with_extra_data(hass, ((saved_state, saved_extra_data),))
+    mock_restore_cache_with_extra_data(menuai, ((saved_state, saved_extra_data),))
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": {
@@ -921,19 +921,19 @@ async def test_trigger_entity_restore_state_fail(
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("temperature") is None
 
 
-async def test_new_style_template_state_text(hass: HomeAssistant) -> None:
+async def test_new_style_template_state_text(menuai: menuai) -> None:
     """Test the state text of a template."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "weather",
         {
             "weather": [
@@ -942,7 +942,7 @@ async def test_new_style_template_state_text(hass: HomeAssistant) -> None:
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": {
@@ -984,9 +984,9 @@ async def test_new_style_template_state_text(hass: HomeAssistant) -> None:
         ("sensor.dew_point", ATTR_WEATHER_DEW_POINT, 2.2),
         ("sensor.apparent_temperature", ATTR_WEATHER_APPARENT_TEMPERATURE, 25),
     ):
-        hass.states.async_set(attr, value)
-        await hass.async_block_till_done()
-        state = hass.states.get("weather.test")
+        menuai.states.async_set(attr, value)
+        await menuai.async_block_till_done()
+        state = menuai.states.get("weather.test")
         assert state is not None
         assert state.state == "sunny"
         assert state.attributes.get(v_attr) == value

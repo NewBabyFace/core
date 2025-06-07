@@ -10,8 +10,8 @@ from tesla_fleet_api.const import Scope
 from tesla_fleet_api.teslemetry import EnergySite, Vehicle
 from teslemetry_stream import TeslemetryStream, TeslemetryStreamVehicle
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.config_entries import ConfigEntry
+from menuai.helpers.device_registry import DeviceInfo
 
 from .coordinator import (
     TeslemetryEnergyHistoryCoordinator,

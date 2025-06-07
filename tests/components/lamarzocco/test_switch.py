@@ -8,15 +8,15 @@ from pylamarzocco.exceptions import RequestNotSuccessful
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import WAKE_UP_SLEEP_ENTRY_IDS, async_init_integration
 
@@ -24,15 +24,15 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the La Marzocco switches."""
-    with patch("homeassistant.components.lamarzocco.PLATFORMS", [Platform.SWITCH]):
-        await async_init_integration(hass, mock_config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    with patch("menuai.components.lamarzocco.PLATFORMS", [Platform.SWITCH]):
+        await async_init_integration(menuai, mock_config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -52,7 +52,7 @@ async def test_switches(
     ],
 )
 async def test_switches_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_name: str,
@@ -60,13 +60,13 @@ async def test_switches_actions(
     kwargs: dict[str, Any],
 ) -> None:
     """Test the La Marzocco switches."""
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
     serial_number = mock_lamarzocco.serial_number
 
     control_fn = getattr(mock_lamarzocco, method_name)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -78,7 +78,7 @@ async def test_switches_actions(
     assert len(control_fn.mock_calls) == 1
     control_fn.assert_called_once_with(enabled=False, **kwargs)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -92,7 +92,7 @@ async def test_switches_actions(
 
 
 async def test_auto_on_off_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -100,12 +100,12 @@ async def test_auto_on_off_switches(
 ) -> None:
     """Test the auto on off/switches."""
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
     serial_number = mock_lamarzocco.serial_number
 
     for wake_up_sleep_entry_id in WAKE_UP_SLEEP_ENTRY_IDS:
-        state = hass.states.get(
+        state = menuai.states.get(
             f"switch.{serial_number}_auto_on_off_{wake_up_sleep_entry_id}"
         )
         assert state
@@ -115,7 +115,7 @@ async def test_auto_on_off_switches(
         assert entry
         assert entry == snapshot(name=f"entry.auto_on_off_{wake_up_sleep_entry_id}")
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {
@@ -134,7 +134,7 @@ async def test_auto_on_off_switches(
 
         mock_lamarzocco.set_wakeup_schedule.assert_called_with(wake_up_sleep_entry)
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {
@@ -147,22 +147,22 @@ async def test_auto_on_off_switches(
 
 
 async def test_switch_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the La Marzocco switches."""
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
     serial_number = mock_lamarzocco.serial_number
 
-    state = hass.states.get(f"switch.{serial_number}")
+    state = menuai.states.get(f"switch.{serial_number}")
     assert state
 
     mock_lamarzocco.set_power.side_effect = RequestNotSuccessful("Boom")
 
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {
@@ -172,8 +172,8 @@ async def test_switch_exceptions(
         )
     assert exc_info.value.translation_key == "switch_off_error"
 
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {
@@ -183,12 +183,12 @@ async def test_switch_exceptions(
         )
     assert exc_info.value.translation_key == "switch_on_error"
 
-    state = hass.states.get(f"switch.{serial_number}_auto_on_off_os2oswx")
+    state = menuai.states.get(f"switch.{serial_number}_auto_on_off_os2oswx")
     assert state
 
     mock_lamarzocco.set_wakeup_schedule.side_effect = RequestNotSuccessful("Boom")
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {

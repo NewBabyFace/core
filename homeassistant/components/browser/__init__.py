@@ -4,9 +4,9 @@ import webbrowser
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 ATTR_URL = "url"
 ATTR_URL_DEFAULT = "https://www.google.com"
@@ -29,10 +29,10 @@ def _browser_url(service: ServiceCall) -> None:
     webbrowser.open(service.data[ATTR_URL])
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Listen for browse_url events."""
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_BROWSE_URL,
         _browser_url,

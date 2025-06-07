@@ -21,22 +21,22 @@ from slixmpp.plugins.xep_0363.http_upload import (
 from slixmpp.xmlstream.xmlstream import NotConnectedError
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_PASSWORD,
     CONF_RECIPIENT,
     CONF_RESOURCE,
     CONF_ROOM,
     CONF_SENDER,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, template as template_helper
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, template as template_helper
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> XmppNotificationService:
@@ -82,16 +82,16 @@ async def async_get_service(
         config.get(CONF_TLS),
         config.get(CONF_VERIFY),
         config.get(CONF_ROOM),
-        hass,
+        menuai,
     )
 
 
 class XmppNotificationService(BaseNotificationService):
     """Implement the notification service for Jabber (XMPP)."""
 
-    def __init__(self, sender, resource, password, recipient, tls, verify, room, hass):
+    def __init__(self, sender, resource, password, recipient, tls, verify, room, menuai):
         """Initialize the service."""
-        self._hass = hass
+        self._menuai = menuai
         self._sender = sender
         self._resource = resource
         self._password = password
@@ -114,7 +114,7 @@ class XmppNotificationService(BaseNotificationService):
             self._tls,
             self._verify,
             self._room,
-            self._hass,
+            self._menuai,
             text,
             timeout,
             data,
@@ -128,7 +128,7 @@ async def async_send_message(  # noqa: C901
     use_tls,
     verify_certificate,
     room,
-    hass,
+    menuai,
     message,
     timeout=None,
     data=None,
@@ -142,7 +142,7 @@ async def async_send_message(  # noqa: C901
             """Initialize the Jabber Bot."""
             super().__init__(sender, password)
 
-            self.loop = hass.loop
+            self.loop = menuai.loop
 
             self.force_starttls = use_tls
             self.use_ipv6 = False
@@ -237,14 +237,14 @@ async def async_send_message(  # noqa: C901
             """
             if data.get(ATTR_URL_TEMPLATE):
                 _LOGGER.debug("Got url template: %s", data[ATTR_URL_TEMPLATE])
-                templ = template_helper.Template(data[ATTR_URL_TEMPLATE], hass)
+                templ = template_helper.Template(data[ATTR_URL_TEMPLATE], menuai)
                 get_url = template_helper.render_complex(templ, None)
                 url = await self.upload_file_from_url(get_url, timeout=timeout)
             elif data.get(ATTR_URL):
                 url = await self.upload_file_from_url(data[ATTR_URL], timeout=timeout)
             elif data.get(ATTR_PATH_TEMPLATE):
                 _LOGGER.debug("Got path template: %s", data[ATTR_PATH_TEMPLATE])
-                templ = template_helper.Template(data[ATTR_PATH_TEMPLATE], hass)
+                templ = template_helper.Template(data[ATTR_PATH_TEMPLATE], menuai)
                 get_path = template_helper.render_complex(templ, None)
                 url = await self.upload_file_from_path(get_path, timeout=timeout)
             elif data.get(ATTR_PATH):
@@ -271,7 +271,7 @@ async def async_send_message(  # noqa: C901
                     url, verify=data.get(ATTR_VERIFY, True), timeout=timeout
                 )
 
-            result = await hass.async_add_executor_job(get_url, url)
+            result = await menuai.async_add_executor_job(get_url, url)
 
             if result.status_code >= HTTPStatus.BAD_REQUEST:
                 _LOGGER.error("Could not load file from %s", url)
@@ -314,10 +314,10 @@ async def async_send_message(  # noqa: C901
             """Upload a file from a local file path via XEP_0363."""
             _LOGGER.debug("Uploading file from path, %s", path)
 
-            if not hass.config.is_allowed_path(path):
+            if not menuai.config.is_allowed_path(path):
                 raise PermissionError("Could not access file. Path not allowed")
 
-            input_file = await hass.async_add_executor_job(self._read_upload_file, path)
+            input_file = await menuai.async_add_executor_job(self._read_upload_file, path)
             filesize = len(input_file)
             _LOGGER.debug("Filesize is %s bytes", filesize)
 

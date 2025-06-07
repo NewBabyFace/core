@@ -4,29 +4,29 @@ from unittest.mock import MagicMock
 
 from pydeako.discover import DevicesNotFoundException
 
-from homeassistant.components.deako.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.deako.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     pydeako_discoverer_mock: MagicMock,
     mock_deako_setup: MagicMock,
 ) -> None:
     """Test finding a Deako device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     # Confirmation form
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     pydeako_discoverer_mock.return_value.get_address.assert_called_once()
@@ -35,7 +35,7 @@ async def test_found(
 
 
 async def test_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     pydeako_discoverer_mock: MagicMock,
     mock_deako_setup: MagicMock,
 ) -> None:
@@ -44,15 +44,15 @@ async def test_not_found(
         DevicesNotFoundException()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     # Confirmation form
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
@@ -62,15 +62,15 @@ async def test_not_found(
 
 
 async def test_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_deako_setup: MagicMock,
 ) -> None:
     """Test flow aborts when already configured."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 

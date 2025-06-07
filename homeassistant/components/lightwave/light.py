@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import LIGHTWAVE_LINK
 
@@ -16,7 +16,7 @@ MAX_BRIGHTNESS = 255
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -26,7 +26,7 @@ async def async_setup_platform(
         return
 
     lights = []
-    lwlink = hass.data[LIGHTWAVE_LINK]
+    lwlink = menuai.data[LIGHTWAVE_LINK]
 
     for device_id, device_config in discovery_info.items():
         name = device_config[CONF_NAME]

@@ -14,10 +14,10 @@ from pytrafikverket import (
 )
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.trafikverket_train.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.trafikverket_train.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, SOURCE_USER, ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import ENTRY_CONFIG, OPTIONS_CONFIG
 
@@ -25,7 +25,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, get_trains: list[TrainStopModel]
+    menuai: menuai, get_trains: list[TrainStopModel]
 ) -> None:
     """Test unload an entry."""
     entry = MockConfigEntry(
@@ -37,30 +37,30 @@ async def test_unload_entry(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
             return_value=get_trains,
         ) as mock_tv_train,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert len(mock_tv_train.mock_calls) == 1
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_auth_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_trains: list[TrainStopModel],
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -74,24 +74,24 @@ async def test_auth_failed(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
+        "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
         side_effect=InvalidAuthentication,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_ERROR
 
-    active_flows = entry.async_get_active_flows(hass, (SOURCE_REAUTH))
+    active_flows = entry.async_get_active_flows(menuai, (SOURCE_REAUTH))
     for flow in active_flows:
         assert flow == snapshot
 
 
 async def test_no_stations(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_trains: list[TrainStopModel],
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -105,20 +105,20 @@ async def test_no_stations(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
+        "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
         side_effect=NoTrainStationFound,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_migrate_entity_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_trains: list[TrainStopModel],
     snapshot: SnapshotAssertion,
     entity_registry: EntityRegistry,
@@ -133,7 +133,7 @@ async def test_migrate_entity_unique_id(
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     entity = entity_registry.async_get_or_create(
         DOMAIN,
@@ -145,15 +145,15 @@ async def test_migrate_entity_unique_id(
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
             return_value=get_trains,
         ),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
@@ -162,7 +162,7 @@ async def test_migrate_entity_unique_id(
 
 
 async def test_migrate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_trains: list[TrainStopModel],
     get_train_stations: list[StationInfoModel],
 ) -> None:
@@ -177,23 +177,23 @@ async def test_migrate_entry(
         entry_id="1",
         unique_id="321",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_train_stations,
         ),
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
             return_value=get_trains,
         ),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
@@ -213,7 +213,7 @@ async def test_migrate_entry(
 
 
 async def test_migrate_entry_from_future_version_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_trains: list[TrainStopModel],
 ) -> None:
     """Test migrate entry from future version fails."""
@@ -226,10 +226,10 @@ async def test_migrate_entry_from_future_version_fails(
         minor_version=1,
         entry_id="1",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
 
@@ -243,7 +243,7 @@ async def test_migrate_entry_from_future_version_fails(
         (Exception),
     ],
 )
-async def test_migrate_entry_fails(hass: HomeAssistant, side_effect: Exception) -> None:
+async def test_migrate_entry_fails(menuai: menuai, side_effect: Exception) -> None:
     """Test migrate entry fails."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -254,22 +254,22 @@ async def test_migrate_entry_fails(hass: HomeAssistant, side_effect: Exception) 
         minor_version=1,
         entry_id="1",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.config_flow.TrafikverketTrain.async_search_train_stations",
             side_effect=side_effect(),
         ),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
 
 
 async def test_migrate_entry_fails_multiple_stations(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_multiple_train_stations: list[StationInfoModel],
 ) -> None:
     """Test migrate entry fails on multiple stations found."""
@@ -283,15 +283,15 @@ async def test_migrate_entry_fails_multiple_stations(
         entry_id="1",
         unique_id="321",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
+            "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_stations",
             side_effect=get_multiple_train_stations,
         ),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.MIGRATION_ERROR

@@ -14,35 +14,35 @@ from typing import Any
 
 from sqlalchemy.orm.session import Session
 
-from homeassistant.components.recorder import (
+from menuai.components.recorder import (
     DOMAIN as RECORDER_DOMAIN,
     get_instance,
     history,
     statistics,
 )
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
     StatisticResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     REVOLUTIONS_PER_MINUTE,
     UnitOfIrradiance,
     UnitOfSoundPressure,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, State, callback, split_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.entity import entity_sources
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.loader import async_suggest_report_issue
-from homeassistant.util import dt as dt_util
-from homeassistant.util.async_ import run_callback_threadsafe
-from homeassistant.util.enum import try_parse_enum
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, State, callback, split_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.entity import entity_sources
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.loader import async_suggest_report_issue
+from menuai.util import dt as dt_util
+from menuai.util.async_ import run_callback_threadsafe
+from menuai.util.enum import try_parse_enum
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     ATTR_LAST_RESET,
@@ -83,15 +83,15 @@ EQUIVALENT_UNITS = {
 
 
 # Keep track of entities for which a warning about decreasing value has been logged
-SEEN_DIP: HassKey[set[str]] = HassKey(f"{DOMAIN}_seen_total_increasing_dip")
-WARN_DIP: HassKey[set[str]] = HassKey(f"{DOMAIN}_warn_total_increasing_dip")
+SEEN_DIP: menuaiKey[set[str]] = menuaiKey(f"{DOMAIN}_seen_total_increasing_dip")
+WARN_DIP: menuaiKey[set[str]] = menuaiKey(f"{DOMAIN}_warn_total_increasing_dip")
 # Keep track of entities for which a warning about negative value has been logged
-WARN_NEGATIVE: HassKey[set[str]] = HassKey(f"{DOMAIN}_warn_total_increasing_negative")
+WARN_NEGATIVE: menuaiKey[set[str]] = menuaiKey(f"{DOMAIN}_warn_total_increasing_negative")
 # Keep track of entities for which a warning about unsupported unit has been logged
-WARN_UNSUPPORTED_UNIT: HassKey[set[str]] = HassKey(f"{DOMAIN}_warn_unsupported_unit")
-WARN_UNSTABLE_UNIT: HassKey[set[str]] = HassKey(f"{DOMAIN}_warn_unstable_unit")
+WARN_UNSUPPORTED_UNIT: menuaiKey[set[str]] = menuaiKey(f"{DOMAIN}_warn_unsupported_unit")
+WARN_UNSTABLE_UNIT: menuaiKey[set[str]] = menuaiKey(f"{DOMAIN}_warn_unstable_unit")
 # Keep track of entities for which a warning about statistics mean algorithm change has been logged
-WARN_STATISTICS_MEAN_CHANGED: HassKey[set[str]] = HassKey(
+WARN_STATISTICS_MEAN_CHANGED: menuaiKey[set[str]] = menuaiKey(
     f"{DOMAIN}_warn_statistics_mean_change"
 )
 # Link to dev statistics where issues around LTS can be fixed
@@ -101,16 +101,16 @@ UNITS_CHANGED_ISSUE = "units_changed"
 MEAN_TYPE_CHANGED_ISSUE = "mean_type_changed"
 
 
-def _get_sensor_states(hass: HomeAssistant) -> list[State]:
+def _get_sensor_states(menuai: menuai) -> list[State]:
     """Get the current state of all sensors for which to compile statistics."""
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     # We check for state class first before calling the filter
     # function as the filter function is much more expensive
     # than checking the state class
     entity_filter = instance.entity_filter
     return [
         state
-        for state in hass.states.all(DOMAIN)
+        for state in menuai.states.all(DOMAIN)
         if (state_class := state.attributes.get(ATTR_STATE_CLASS))
         and (
             type(state_class) is SensorStateClass
@@ -238,7 +238,7 @@ def _is_numeric(state: State) -> bool:
 
 
 def _normalize_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     old_metadatas: dict[str, tuple[int, StatisticMetaData]],
     fstates: list[tuple[float, State]],
     entity_id: str,
@@ -261,10 +261,10 @@ def _normalize_states(
 
         all_units = _get_units(fstates)
         if not _equivalent_units(all_units):
-            if WARN_UNSTABLE_UNIT not in hass.data:
-                hass.data[WARN_UNSTABLE_UNIT] = set()
-            if entity_id not in hass.data[WARN_UNSTABLE_UNIT]:
-                hass.data[WARN_UNSTABLE_UNIT].add(entity_id)
+            if WARN_UNSTABLE_UNIT not in menuai.data:
+                menuai.data[WARN_UNSTABLE_UNIT] = set()
+            if entity_id not in menuai.data[WARN_UNSTABLE_UNIT]:
+                menuai.data[WARN_UNSTABLE_UNIT].add(entity_id)
                 extra = ""
                 if old_metadata:
                     extra = (
@@ -296,10 +296,10 @@ def _normalize_states(
         state_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
         # Exclude states with unsupported unit from statistics
         if state_unit not in valid_units:
-            if WARN_UNSUPPORTED_UNIT not in hass.data:
-                hass.data[WARN_UNSUPPORTED_UNIT] = set()
-            if entity_id not in hass.data[WARN_UNSUPPORTED_UNIT]:
-                hass.data[WARN_UNSUPPORTED_UNIT].add(entity_id)
+            if WARN_UNSUPPORTED_UNIT not in menuai.data:
+                menuai.data[WARN_UNSUPPORTED_UNIT] = set()
+            if entity_id not in menuai.data[WARN_UNSUPPORTED_UNIT]:
+                menuai.data[WARN_UNSUPPORTED_UNIT].add(entity_id)
                 _LOGGER.warning(
                     (
                         "The unit of %s (%s) cannot be converted to the unit of"
@@ -332,17 +332,17 @@ def _normalize_states(
     return statistics_unit, valid_fstates
 
 
-def _suggest_report_issue(hass: HomeAssistant, entity_id: str) -> str:
+def _suggest_report_issue(menuai: menuai, entity_id: str) -> str:
     """Suggest to report an issue."""
-    entity_info = entity_sources(hass).get(entity_id)
+    entity_info = entity_sources(menuai).get(entity_id)
 
     return async_suggest_report_issue(
-        hass, integration_domain=entity_info["domain"] if entity_info else None
+        menuai, integration_domain=entity_info["domain"] if entity_info else None
     )
 
 
 def warn_dip(
-    hass: HomeAssistant, entity_id: str, state: State, previous_fstate: float
+    menuai: menuai, entity_id: str, state: State, previous_fstate: float
 ) -> None:
     """Log a warning once if a sensor with state_class_total has a decreasing value.
 
@@ -350,16 +350,16 @@ def warn_dip(
     rounding issues with databases storing the state as a single precision float, which
     was fixed in recorder DB version 20.
     """
-    if SEEN_DIP not in hass.data:
-        hass.data[SEEN_DIP] = set()
-    if entity_id not in hass.data[SEEN_DIP]:
-        hass.data[SEEN_DIP].add(entity_id)
+    if SEEN_DIP not in menuai.data:
+        menuai.data[SEEN_DIP] = set()
+    if entity_id not in menuai.data[SEEN_DIP]:
+        menuai.data[SEEN_DIP].add(entity_id)
         return
-    if WARN_DIP not in hass.data:
-        hass.data[WARN_DIP] = set()
-    if entity_id not in hass.data[WARN_DIP]:
-        hass.data[WARN_DIP].add(entity_id)
-        entity_info = entity_sources(hass).get(entity_id)
+    if WARN_DIP not in menuai.data:
+        menuai.data[WARN_DIP] = set()
+    if entity_id not in menuai.data[WARN_DIP]:
+        menuai.data[WARN_DIP].add(entity_id)
+        entity_info = entity_sources(menuai).get(entity_id)
         domain = entity_info["domain"] if entity_info else None
         if domain in ["energy", "growatt_server", "solaredge"]:
             return
@@ -374,17 +374,17 @@ def warn_dip(
             state.state,
             previous_fstate,
             state.last_updated.isoformat(),
-            _suggest_report_issue(hass, entity_id),
+            _suggest_report_issue(menuai, entity_id),
         )
 
 
-def warn_negative(hass: HomeAssistant, entity_id: str, state: State) -> None:
+def warn_negative(menuai: menuai, entity_id: str, state: State) -> None:
     """Log a warning once if a sensor with state_class_total has a negative value."""
-    if WARN_NEGATIVE not in hass.data:
-        hass.data[WARN_NEGATIVE] = set()
-    if entity_id not in hass.data[WARN_NEGATIVE]:
-        hass.data[WARN_NEGATIVE].add(entity_id)
-        entity_info = entity_sources(hass).get(entity_id)
+    if WARN_NEGATIVE not in menuai.data:
+        menuai.data[WARN_NEGATIVE] = set()
+    if entity_id not in menuai.data[WARN_NEGATIVE]:
+        menuai.data[WARN_NEGATIVE].add(entity_id)
+        entity_info = entity_sources(menuai).get(entity_id)
         domain = entity_info["domain"] if entity_info else None
         _LOGGER.warning(
             (
@@ -395,12 +395,12 @@ def warn_negative(hass: HomeAssistant, entity_id: str, state: State) -> None:
             f"from integration {domain} " if domain else "",
             state.state,
             state.last_updated.isoformat(),
-            _suggest_report_issue(hass, entity_id),
+            _suggest_report_issue(menuai, entity_id),
         )
 
 
 def reset_detected(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     fstate: float,
     previous_fstate: float | None,
@@ -411,11 +411,11 @@ def reset_detected(
         return False
 
     if 0.9 * previous_fstate <= fstate < previous_fstate:
-        warn_dip(hass, entity_id, state, previous_fstate)
+        warn_dip(menuai, entity_id, state, previous_fstate)
 
     if fstate < 0:
-        warn_negative(hass, entity_id, state)
-        raise HomeAssistantError
+        warn_negative(menuai, entity_id, state)
+        raise menuaiError
 
     return fstate < 0.9 * previous_fstate
 
@@ -452,7 +452,7 @@ def _timestamp_to_isoformat_or_none(timestamp: float | None) -> str | None:
 
 
 def compile_statistics(  # noqa: C901
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
     start: datetime.datetime,
     end: datetime.datetime,
@@ -460,7 +460,7 @@ def compile_statistics(  # noqa: C901
     """Compile statistics for all entities during start-end."""
     result: list[StatisticResult] = []
 
-    sensor_states = _get_sensor_states(hass)
+    sensor_states = _get_sensor_states(menuai)
     wanted_statistics = _wanted_statistics(sensor_states)
     # Get history between start and end
     entities_full_history = [
@@ -471,7 +471,7 @@ def compile_statistics(  # noqa: C901
     history_list: dict[str, list[State]] = {}
     if entities_full_history:
         history_list = history.get_full_significant_states_with_session(
-            hass,
+            menuai,
             session,
             start - datetime.timedelta.resolution,
             end,
@@ -485,7 +485,7 @@ def compile_statistics(  # noqa: C901
     ]
     if entities_significant_history:
         _history_list = history.get_full_significant_states_with_session(
-            hass,
+            menuai,
             session,
             start - datetime.timedelta.resolution,
             end,
@@ -513,7 +513,7 @@ def compile_statistics(  # noqa: C901
     # that are not in the metadata table and we are not working
     # with them anyway.
     old_metadatas = statistics.get_metadata_with_session(
-        get_instance(hass), session, statistic_ids=set(entities_with_float_states)
+        get_instance(menuai), session, statistic_ids=set(entities_with_float_states)
     )
     to_process: list[tuple[str, str | None, str, list[tuple[float, State]]]] = []
     to_query: set[str] = set()
@@ -522,7 +522,7 @@ def compile_statistics(  # noqa: C901
         if not (maybe_float_states := entities_with_float_states.get(entity_id)):
             continue
         statistics_unit, valid_float_states = _normalize_states(
-            hass,
+            menuai,
             old_metadatas,
             maybe_float_states,
             entity_id,
@@ -535,7 +535,7 @@ def compile_statistics(  # noqa: C901
             to_query.add(entity_id)
 
     last_stats = statistics.get_latest_short_term_statistics_with_session(
-        hass, session, to_query, {"last_reset", "state", "sum"}, metadata=old_metadatas
+        menuai, session, to_query, {"last_reset", "state", "sum"}, metadata=old_metadatas
     )
     for (  # pylint: disable=too-many-nested-blocks
         entity_id,
@@ -552,10 +552,10 @@ def compile_statistics(  # noqa: C901
             if not _equivalent_units(
                 {old_metadata[1]["unit_of_measurement"], statistics_unit}
             ):
-                if WARN_UNSTABLE_UNIT not in hass.data:
-                    hass.data[WARN_UNSTABLE_UNIT] = set()
-                if entity_id not in hass.data[WARN_UNSTABLE_UNIT]:
-                    hass.data[WARN_UNSTABLE_UNIT].add(entity_id)
+                if WARN_UNSTABLE_UNIT not in menuai.data:
+                    menuai.data[WARN_UNSTABLE_UNIT] = set()
+                if entity_id not in menuai.data[WARN_UNSTABLE_UNIT]:
+                    menuai.data[WARN_UNSTABLE_UNIT].add(entity_id)
                     _LOGGER.warning(
                         (
                             "The unit of %s (%s) cannot be converted to the unit of"
@@ -578,10 +578,10 @@ def compile_statistics(  # noqa: C901
                 is not StatisticMeanType.NONE
                 and mean_type != old_mean_type
             ):
-                if WARN_STATISTICS_MEAN_CHANGED not in hass.data:
-                    hass.data[WARN_STATISTICS_MEAN_CHANGED] = set()
-                if entity_id not in hass.data[WARN_STATISTICS_MEAN_CHANGED]:
-                    hass.data[WARN_STATISTICS_MEAN_CHANGED].add(entity_id)
+                if WARN_STATISTICS_MEAN_CHANGED not in menuai.data:
+                    menuai.data[WARN_STATISTICS_MEAN_CHANGED] = set()
+                if entity_id not in menuai.data[WARN_STATISTICS_MEAN_CHANGED]:
+                    menuai.data[WARN_STATISTICS_MEAN_CHANGED].add(entity_id)
                     _LOGGER.warning(
                         (
                             "The statistics mean algorithm for %s have changed from %s to %s."
@@ -685,7 +685,7 @@ def compile_statistics(  # noqa: C901
                 elif state_class == SensorStateClass.TOTAL_INCREASING:
                     try:
                         if old_state is None or reset_detected(
-                            hass, entity_id, fstate, new_state, state
+                            menuai, entity_id, fstate, new_state, state
                         ):
                             reset = True
                             _LOGGER.info(
@@ -699,7 +699,7 @@ def compile_statistics(  # noqa: C901
                                 fstate,
                                 state.last_updated.isoformat(),
                             )
-                    except HomeAssistantError:
+                    except menuaiError:
                         continue
 
                 if reset:
@@ -734,12 +734,12 @@ def compile_statistics(  # noqa: C901
 
 
 def list_statistic_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     statistic_ids: list[str] | tuple[str] | None = None,
     statistic_type: str | None = None,
 ) -> dict:
     """Return all or filtered statistic_ids and meta data."""
-    entities = _get_sensor_states(hass)
+    entities = _get_sensor_states(menuai)
 
     result: dict[str, StatisticMetaData] = {}
 
@@ -853,21 +853,21 @@ def _update_issues(
 
 
 def update_statistics_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: Session,
 ) -> None:
     """Validate statistics."""
-    instance = get_instance(hass)
-    sensor_states = hass.states.all(DOMAIN)
+    instance = get_instance(menuai)
+    sensor_states = menuai.states.all(DOMAIN)
     metadatas = statistics.get_metadata_with_session(
         instance, session, statistic_source=RECORDER_DOMAIN
     )
 
     @callback
-    def get_sensor_statistics_issues(hass: HomeAssistant) -> set[str]:
+    def get_sensor_statistics_issues(menuai: menuai) -> set[str]:
         """Return a list of statistics issues."""
         issues = set()
-        issue_registry = ir.async_get(hass)
+        issue_registry = ir.async_get(menuai)
         for issue in issue_registry.issues.values():
             if (
                 issue.domain != DOMAIN
@@ -884,7 +884,7 @@ def update_statistics_issues(
         return issues
 
     issues = run_callback_threadsafe(
-        hass.loop, get_sensor_statistics_issues, hass
+        menuai.loop, get_sensor_statistics_issues, menuai
     ).result()
 
     def create_issue_registry_issue(
@@ -894,7 +894,7 @@ def update_statistics_issues(
         issue_id = f"{issue_type}_{statistic_id}"
         issues.discard(issue_id)
         ir.create_issue(
-            hass,
+            menuai,
             DOMAIN,
             issue_id,
             data=data | {"issue_type": issue_type},
@@ -910,20 +910,20 @@ def update_statistics_issues(
         metadatas,
     )
     for issue_id in issues:
-        hass.loop.call_soon_threadsafe(ir.async_delete_issue, hass, DOMAIN, issue_id)
+        menuai.loop.call_soon_threadsafe(ir.async_delete_issue, menuai, DOMAIN, issue_id)
 
 
 def validate_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, list[statistics.ValidationIssue]]:
     """Validate statistics."""
     validation_result = defaultdict(list)
 
-    sensor_states = hass.states.all(DOMAIN)
-    metadatas = statistics.get_metadata(hass, statistic_source=RECORDER_DOMAIN)
+    sensor_states = menuai.states.all(DOMAIN)
+    metadatas = statistics.get_metadata(menuai, statistic_source=RECORDER_DOMAIN)
     sensor_entity_ids = {i.entity_id for i in sensor_states}
     sensor_statistic_ids = set(metadatas)
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     entity_filter = instance.entity_filter
 
     def create_statistic_validation_issue(

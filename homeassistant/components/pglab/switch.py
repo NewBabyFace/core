@@ -7,10 +7,10 @@ from typing import Any
 from pypglab.device import Device as PyPGLabDevice
 from pypglab.relay import Relay as PyPGLabRelay
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import PGLabConfigEntry
 from .discovery import PGLabDiscovery
@@ -20,7 +20,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PGLabConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -35,7 +35,7 @@ async def async_setup_entry(
 
     # Register the callback to create the switch entity when discovered.
     pglab_discovery = config_entry.runtime_data
-    await pglab_discovery.register_platform(hass, Platform.SWITCH, async_discover)
+    await pglab_discovery.register_platform(menuai, Platform.SWITCH, async_discover)
 
 
 class PGLabSwitch(PGLabEntity, SwitchEntity):

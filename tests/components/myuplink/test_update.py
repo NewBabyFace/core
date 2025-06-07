@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -10,13 +10,13 @@ from tests.common import MockConfigEntry
 
 
 async def test_update_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_myuplink_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test update state."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("update.gotham_city_firmware")
+    state = menuai.states.get("update.gotham_city_firmware")
     assert state is not None
     assert state.state == "off"

@@ -9,9 +9,9 @@ from aiohttp import web
 from synology_dsm.api.photos import SynoPhotosAlbum, SynoPhotosItem
 from synology_dsm.exceptions import SynologyDSMException
 
-from homeassistant.components import http
-from homeassistant.components.media_player import MediaClass
-from homeassistant.components.media_source import (
+from menuai.components import http
+from menuai.components.media_player import MediaClass
+from menuai.components.media_source import (
     BrowseError,
     BrowseMediaSource,
     MediaSource,
@@ -19,8 +19,8 @@ from homeassistant.components.media_source import (
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import DOMAIN, SHARED_SUFFIX
 from .coordinator import SynologyDSMConfigEntry, SynologyDSMData
@@ -28,13 +28,13 @@ from .coordinator import SynologyDSMConfigEntry, SynologyDSMData
 LOGGER = getLogger(__name__)
 
 
-async def async_get_media_source(hass: HomeAssistant) -> MediaSource:
+async def async_get_media_source(menuai: menuai) -> MediaSource:
     """Set up Synology media source."""
-    entries = hass.config_entries.async_entries(
+    entries = menuai.config_entries.async_entries(
         DOMAIN, include_disabled=False, include_ignore=False
     )
-    hass.http.register_view(SynologyDsmMediaView(hass))
-    return SynologyPhotosMediaSource(hass, entries)
+    menuai.http.register_view(SynologyDsmMediaView(menuai))
+    return SynologyPhotosMediaSource(menuai, entries)
 
 
 class SynologyPhotosMediaSourceIdentifier:
@@ -72,10 +72,10 @@ class SynologyPhotosMediaSource(MediaSource):
 
     name = "Synology Photos"
 
-    def __init__(self, hass: HomeAssistant, entries: list[ConfigEntry]) -> None:
+    def __init__(self, menuai: menuai, entries: list[ConfigEntry]) -> None:
         """Initialize Synology source."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
         self.entries = entries
 
     async def async_browse_media(
@@ -83,7 +83,7 @@ class SynologyPhotosMediaSource(MediaSource):
         item: MediaSourceItem,
     ) -> BrowseMediaSource:
         """Return media."""
-        if not self.hass.config_entries.async_loaded_entries(DOMAIN):
+        if not self.menuai.config_entries.async_loaded_entries(DOMAIN):
             raise BrowseError("Diskstation not initialized")
         return BrowseMediaSource(
             domain=DOMAIN,
@@ -118,7 +118,7 @@ class SynologyPhotosMediaSource(MediaSource):
             ]
         identifier = SynologyPhotosMediaSourceIdentifier(item.identifier)
         entry: SynologyDSMConfigEntry | None = (
-            self.hass.config_entries.async_entry_for_domain_unique_id(
+            self.menuai.config_entries.async_entry_for_domain_unique_id(
                 DOMAIN, identifier.unique_id
             )
         )
@@ -259,21 +259,21 @@ class SynologyPhotosMediaSource(MediaSource):
         return str(thumbnail)
 
 
-class SynologyDsmMediaView(http.HomeAssistantView):
+class SynologyDsmMediaView(http.menuaiView):
     """Synology Media Finder View."""
 
     url = "/synology_dsm/{source_dir_id}/{location:.*}"
     name = "synology_dsm"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the media view."""
-        self.hass = hass
+        self.menuai = menuai
 
     async def get(
         self, request: web.Request, source_dir_id: str, location: str
     ) -> web.Response:
         """Start a GET request."""
-        if not self.hass.config_entries.async_loaded_entries(DOMAIN):
+        if not self.menuai.config_entries.async_loaded_entries(DOMAIN):
             raise web.HTTPNotFound
         # location: {cache_key}/{filename}
         cache_key, file_name, passphrase = location.split("/")
@@ -287,7 +287,7 @@ class SynologyDsmMediaView(http.HomeAssistantView):
             raise web.HTTPNotFound
 
         entry: SynologyDSMConfigEntry | None = (
-            self.hass.config_entries.async_entry_for_domain_unique_id(
+            self.menuai.config_entries.async_entry_for_domain_unique_id(
                 DOMAIN, source_dir_id
             )
         )

@@ -8,12 +8,12 @@ from typing import Any
 
 from miio import Device as MiioDevice
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     DOMAIN as PLATFORM_DOMAIN,
     NumberEntity,
     NumberEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_MODEL,
     DEGREE,
@@ -21,10 +21,10 @@ from homeassistant.const import (
     EntityCategory,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_FLOW_TYPE,
@@ -286,7 +286,7 @@ FAVORITE_LEVEL_VALUES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -310,7 +310,7 @@ async def async_setup_entry(
     for feature, description in NUMBER_TYPES.items():
         if feature == FEATURE_SET_LED_BRIGHTNESS and model != MODEL_FAN_ZA5:
             # Delete LED bightness entity created by mistake if it exists
-            entity_reg = er.async_get(hass)
+            entity_reg = er.async_get(menuai)
             entity_id = entity_reg.async_get_entity_id(
                 PLATFORM_DOMAIN, DOMAIN, f"{description.key}_{config_entry.unique_id}"
             )

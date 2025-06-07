@@ -1,7 +1,7 @@
 """Support for Melnor RainCloud sprinkler water timer."""
 
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import SIGNAL_UPDATE_RAINCLOUD
 
@@ -45,11 +45,11 @@ class RainCloudEntity(Entity):
         """Return the name of the sensor."""
         return self._name
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_UPDATE_RAINCLOUD, self._update_callback
+                self.menuai, SIGNAL_UPDATE_RAINCLOUD, self._update_callback
             )
         )
 

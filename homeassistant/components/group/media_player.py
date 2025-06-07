@@ -8,7 +8,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     ATTR_MEDIA_SEEK_POSITION,
@@ -24,8 +24,8 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     CONF_ENTITIES,
@@ -45,21 +45,21 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 KEY_ANNOUNCE = "announce"
 KEY_CLEAR_PLAYLIST = "clear_playlist"
@@ -84,7 +84,7 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -100,12 +100,12 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize MediaPlayer Group config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITIES]
     )
@@ -117,7 +117,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_media_player(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    menuai: menuai, name: str, validated_config: dict[str, Any]
 ) -> MediaPlayerGroup:
     """Create a preview sensor."""
     return MediaPlayerGroup(
@@ -249,16 +249,16 @@ class MediaPlayerGroup(MediaPlayerEntity):
 
         async_state_changed_listener(None)
         return async_track_state_change_event(
-            self.hass, self._entities, async_state_changed_listener
+            self.menuai, self._entities, async_state_changed_listener
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register listeners."""
         for entity_id in self._entities:
-            new_state = self.hass.states.get(entity_id)
+            new_state = self.menuai.states.get(entity_id)
             self.async_update_supported_features(entity_id, new_state)
         async_track_state_change_event(
-            self.hass, self._entities, self.async_on_state_change
+            self.menuai, self._entities, self.async_on_state_change
         )
         self.async_update_group_state()
         self.async_write_ha_state()
@@ -276,7 +276,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_clear_playlist(self) -> None:
         """Clear players playlist."""
         data = {ATTR_ENTITY_ID: self._features[KEY_CLEAR_PLAYLIST]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_CLEAR_PLAYLIST,
             data,
@@ -286,7 +286,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_media_next_track(self) -> None:
         """Send next track command."""
         data = {ATTR_ENTITY_ID: self._features[KEY_TRACKS]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_NEXT_TRACK,
             data,
@@ -296,7 +296,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_media_pause(self) -> None:
         """Send pause command."""
         data = {ATTR_ENTITY_ID: self._features[KEY_PAUSE_PLAY_STOP]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_PAUSE,
             data,
@@ -306,7 +306,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_media_play(self) -> None:
         """Send play command."""
         data = {ATTR_ENTITY_ID: self._features[KEY_PAUSE_PLAY_STOP]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_PLAY,
             data,
@@ -316,7 +316,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_media_previous_track(self) -> None:
         """Send previous track command."""
         data = {ATTR_ENTITY_ID: self._features[KEY_TRACKS]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_PREVIOUS_TRACK,
             data,
@@ -329,7 +329,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
             ATTR_ENTITY_ID: self._features[KEY_SEEK],
             ATTR_MEDIA_SEEK_POSITION: position,
         }
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_SEEK,
             data,
@@ -339,7 +339,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_media_stop(self) -> None:
         """Send stop command."""
         data = {ATTR_ENTITY_ID: self._features[KEY_PAUSE_PLAY_STOP]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_STOP,
             data,
@@ -352,7 +352,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
             ATTR_ENTITY_ID: self._features[KEY_VOLUME],
             ATTR_MEDIA_VOLUME_MUTED: mute,
         }
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_VOLUME_MUTE,
             data,
@@ -370,7 +370,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
         }
         if kwargs:
             data.update(kwargs)
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             data,
@@ -383,7 +383,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
             ATTR_ENTITY_ID: self._features[KEY_SHUFFLE],
             ATTR_MEDIA_SHUFFLE: shuffle,
         }
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_SHUFFLE_SET,
             data,
@@ -393,7 +393,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_turn_on(self) -> None:
         """Forward the turn_on command to all media in the media group."""
         data = {ATTR_ENTITY_ID: self._features[KEY_ON_OFF]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_TURN_ON,
             data,
@@ -406,7 +406,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
             ATTR_ENTITY_ID: self._features[KEY_VOLUME],
             ATTR_MEDIA_VOLUME_LEVEL: volume,
         }
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_VOLUME_SET,
             data,
@@ -416,7 +416,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_turn_off(self) -> None:
         """Forward the turn_off command to all media in the media group."""
         data = {ATTR_ENTITY_ID: self._features[KEY_ON_OFF]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_TURN_OFF,
             data,
@@ -426,14 +426,14 @@ class MediaPlayerGroup(MediaPlayerEntity):
     async def async_volume_up(self) -> None:
         """Turn volume up for media player(s)."""
         for entity in self._features[KEY_VOLUME]:
-            volume_level = self.hass.states.get(entity).attributes["volume_level"]  # type: ignore[union-attr]
+            volume_level = self.menuai.states.get(entity).attributes["volume_level"]  # type: ignore[union-attr]
             if volume_level < 1:
                 await self.async_set_volume_level(min(1, volume_level + 0.1))
 
     async def async_volume_down(self) -> None:
         """Turn volume down for media player(s)."""
         for entity in self._features[KEY_VOLUME]:
-            volume_level = self.hass.states.get(entity).attributes["volume_level"]  # type: ignore[union-attr]
+            volume_level = self.menuai.states.get(entity).attributes["volume_level"]  # type: ignore[union-attr]
             if volume_level > 0:
                 await self.async_set_volume_level(max(0, volume_level - 0.1))
 
@@ -443,7 +443,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
         states = [
             state.state
             for entity_id in self._entities
-            if (state := self.hass.states.get(entity_id)) is not None
+            if (state := self.menuai.states.get(entity_id)) is not None
         ]
 
         # Set group as unavailable if all members are unavailable or missing

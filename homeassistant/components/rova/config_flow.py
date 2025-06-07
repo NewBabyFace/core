@@ -6,7 +6,7 @@ from requests.exceptions import ConnectTimeout, HTTPError
 from rova.rova import Rova
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import CONF_HOUSE_NUMBER, CONF_HOUSE_NUMBER_SUFFIX, CONF_ZIP_CODE, DOMAIN
 
@@ -34,7 +34,7 @@ class RovaConfigFlow(ConfigFlow, domain=DOMAIN):
             api = Rova(zip_code, number, suffix)
 
             try:
-                if not await self.hass.async_add_executor_job(api.is_rova_area):
+                if not await self.menuai.async_add_executor_job(api.is_rova_area):
                     errors = {"base": "invalid_rova_area"}
             except (ConnectTimeout, HTTPError):
                 errors = {"base": "cannot_connect"}

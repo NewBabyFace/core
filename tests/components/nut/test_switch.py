@@ -5,17 +5,17 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.nut.const import DOMAIN, INTEGRATION_SUPPORTED_COMMANDS
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.nut.const import DOMAIN, INTEGRATION_SUPPORTED_COMMANDS
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .util import async_init_integration
 
@@ -35,7 +35,7 @@ from tests.common import async_load_fixture
     ],
 )
 async def test_switch_ups(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, model: str
+    menuai: menuai, entity_registry: er.EntityRegistry, model: str
 ) -> None:
     """Tests that there are no standard switches."""
 
@@ -45,12 +45,12 @@ async def test_switch_ups(
     }
 
     await async_init_integration(
-        hass,
+        menuai,
         model,
         list_commands_return_value=list_commands_return_value,
     )
 
-    switch = hass.states.get("switch.ups1_power_outlet_1")
+    switch = menuai.states.get("switch.ups1_power_outlet_1")
     assert not switch
 
 
@@ -64,7 +64,7 @@ async def test_switch_ups(
     ],
 )
 async def test_switch_pdu_dynamic_outlets(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     model: str,
     unique_id_base: str,
@@ -83,12 +83,12 @@ async def test_switch_pdu_dynamic_outlets(
         list_commands_return_value[command] = command
 
     ups_fixture = f"{model}.json"
-    list_vars = json.loads(await async_load_fixture(hass, ups_fixture, DOMAIN))
+    list_vars = json.loads(await async_load_fixture(menuai, ups_fixture, DOMAIN))
 
     run_command = AsyncMock()
 
     await async_init_integration(
-        hass,
+        menuai,
         model,
         list_vars=list_vars,
         list_commands_return_value=list_commands_return_value,
@@ -100,11 +100,11 @@ async def test_switch_pdu_dynamic_outlets(
     assert entry
     assert entry.unique_id == f"{unique_id_base}_outlet.1.load.poweronoff"
 
-    switch = hass.states.get(entity_id)
+    switch = menuai.states.get(entity_id)
     assert switch
     assert switch.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -113,7 +113,7 @@ async def test_switch_pdu_dynamic_outlets(
 
     run_command.assert_called_with("ups1", "outlet.1.load.off")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -122,21 +122,21 @@ async def test_switch_pdu_dynamic_outlets(
 
     run_command.assert_called_with("ups1", "outlet.1.load.on")
 
-    switch = hass.states.get("switch.ups1_power_outlet_25")
+    switch = menuai.states.get("switch.ups1_power_outlet_25")
     assert not switch
 
-    switch = hass.states.get("switch.ups1_power_outlet_a25")
+    switch = menuai.states.get("switch.ups1_power_outlet_a25")
     assert not switch
 
 
 async def test_switch_pdu_dynamic_outlets_state_unknown(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test switch entity with missing status is reported as unknown."""
 
     config_entry = await async_init_integration(
-        hass,
+        menuai,
         list_ups={"ups1": "UPS 1"},
         list_vars={
             "outlet.count": "1",
@@ -154,6 +154,6 @@ async def test_switch_pdu_dynamic_outlets_state_unknown(
     assert entry
     assert entry.unique_id == f"{config_entry.entry_id}_outlet.1.load.poweronoff"
 
-    switch = hass.states.get(entity_id)
+    switch = menuai.states.get(entity_id)
     assert switch
     assert switch.state == STATE_UNKNOWN

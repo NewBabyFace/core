@@ -8,24 +8,24 @@ import re
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import cloud, mqtt, webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import cloud, mqtt, webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_GPS_ACCURACY,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_WEBHOOK_ID,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_when_setup
-from homeassistant.util.json import json_loads
+from menuai.helpers.typing import ConfigType
+from menuai.setup import async_when_setup
+from menuai.util.json import json_loads
 
 from .config_flow import CONF_SECRET
 from .const import DOMAIN
@@ -69,15 +69,15 @@ CONFIG_SCHEMA = vol.All(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize OwnTracks component."""
-    hass.data[DOMAIN] = {"config": config[DOMAIN], "devices": {}, "unsub": None}
+    menuai.data[DOMAIN] = {"config": config[DOMAIN], "devices": {}, "unsub": None}
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up OwnTracks entry."""
-    config = hass.data[DOMAIN]["config"]
+    config = menuai.data[DOMAIN]["config"]
     max_gps_accuracy = config.get(CONF_MAX_GPS_ACCURACY)
     waypoint_import = config.get(CONF_WAYPOINT_IMPORT)
     waypoint_whitelist = config.get(CONF_WAYPOINT_WHITELIST)
@@ -87,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     mqtt_topic = config.get(CONF_MQTT_TOPIC)
 
     context = OwnTracksContext(
-        hass,
+        menuai,
         secret,
         max_gps_accuracy,
         waypoint_import,
@@ -99,41 +99,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     webhook_id = config.get(CONF_WEBHOOK_ID) or entry.data[CONF_WEBHOOK_ID]
 
-    hass.data[DOMAIN]["context"] = context
+    menuai.data[DOMAIN]["context"] = context
 
-    async_when_setup(hass, "mqtt", async_connect_mqtt)
+    async_when_setup(menuai, "mqtt", async_connect_mqtt)
 
-    webhook.async_register(hass, DOMAIN, "OwnTracks", webhook_id, handle_webhook)
+    webhook.async_register(menuai, DOMAIN, "OwnTracks", webhook_id, handle_webhook)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    hass.data[DOMAIN]["unsub"] = async_dispatcher_connect(
-        hass, DOMAIN, async_handle_message
+    menuai.data[DOMAIN]["unsub"] = async_dispatcher_connect(
+        menuai, DOMAIN, async_handle_message
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload an OwnTracks config entry."""
-    webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    hass.data[DOMAIN]["unsub"]()
+    webhook.async_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
+    menuai.data[DOMAIN]["unsub"]()
 
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Remove an OwnTracks config entry."""
     if not entry.data.get("cloudhook"):
         return
 
-    await cloud.async_delete_cloudhook(hass, entry.data[CONF_WEBHOOK_ID])
+    await cloud.async_delete_cloudhook(menuai, entry.data[CONF_WEBHOOK_ID])
 
 
-async def async_connect_mqtt(hass, component):
+async def async_connect_mqtt(menuai, component):
     """Subscribe to MQTT topic."""
-    context = hass.data[DOMAIN]["context"]
+    context = menuai.data[DOMAIN]["context"]
 
     @callback
     def async_handle_mqtt_message(msg):
@@ -146,22 +146,22 @@ async def async_connect_mqtt(hass, component):
             return
 
         message["topic"] = msg.topic
-        async_dispatcher_send(hass, DOMAIN, hass, context, message)
+        async_dispatcher_send(menuai, DOMAIN, menuai, context, message)
 
-    await mqtt.async_subscribe(hass, context.mqtt_topic, async_handle_mqtt_message, 1)
+    await mqtt.async_subscribe(menuai, context.mqtt_topic, async_handle_mqtt_message, 1)
 
     return True
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> web.Response:
     """Handle webhook callback.
 
     iOS sets the "topic" as part of the payload.
     Android does not set a topic but adds headers to the request.
     """
-    context = hass.data[DOMAIN]["context"]
+    context = menuai.data[DOMAIN]["context"]
     topic_base = re.sub("/#$", "", context.mqtt_topic)
 
     try:
@@ -187,7 +187,7 @@ async def handle_webhook(
             # Keep it as a 200 response so the incorrect packet is discarded
             return web.json_response([])
 
-    async_dispatcher_send(hass, DOMAIN, hass, context, message)
+    async_dispatcher_send(menuai, DOMAIN, menuai, context, message)
 
     response = [
         {
@@ -197,7 +197,7 @@ async def handle_webhook(
             "tid": "".join(p[0] for p in person.name.split(" ")[:2]),
             "tst": int(person.last_updated.timestamp()),
         }
-        for person in hass.states.async_all("person")
+        for person in menuai.states.async_all("person")
         if "latitude" in person.attributes and "longitude" in person.attributes
     ]
 
@@ -219,7 +219,7 @@ class OwnTracksContext:
 
     def __init__(
         self,
-        hass,
+        menuai,
         secret,
         max_gps_accuracy,
         import_waypoints,
@@ -229,7 +229,7 @@ class OwnTracksContext:
         mqtt_topic,
     ):
         """Initialize an OwnTracks context."""
-        self.hass = hass
+        self.menuai = menuai
         self.secret = secret
         self.max_gps_accuracy = max_gps_accuracy
         self.mobile_beacons_active = defaultdict(set)
@@ -285,14 +285,14 @@ class OwnTracksContext:
         self._pending_msg.append(data)
 
     @callback
-    def async_see_beacons(self, hass, dev_id, kwargs_param):
+    def async_see_beacons(self, menuai, dev_id, kwargs_param):
         """Set active beacons to the current location."""
         kwargs = kwargs_param.copy()
 
         # Mobile beacons should always be set to the location of the
         # tracking device. I get the device state and make the necessary
         # changes to kwargs.
-        device_tracker_state = hass.states.get(f"device_tracker.{dev_id}")
+        device_tracker_state = menuai.states.get(f"device_tracker.{dev_id}")
 
         if device_tracker_state is not None:
             acc = device_tracker_state.attributes.get(ATTR_GPS_ACCURACY)

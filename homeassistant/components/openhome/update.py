@@ -8,16 +8,16 @@ from typing import Any
 import aiohttp
 from async_upnp_client.client import UpnpError
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -33,7 +33,7 @@ async def async_setup_entry(
 
     _LOGGER.debug("Setting up config entry: %s", config_entry.unique_id)
 
-    device = hass.data[DOMAIN][config_entry.entry_id]
+    device = menuai.data[DOMAIN][config_entry.entry_id]
 
     entity = OpenhomeUpdateEntity(device)
 
@@ -94,6 +94,6 @@ class OpenhomeUpdateEntity(UpdateEntity):
             if self.latest_version:
                 await self._device.update_firmware()
         except (TimeoutError, aiohttp.ClientError, UpnpError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error updating {self._device.device.friendly_name}: {err}"
             ) from err

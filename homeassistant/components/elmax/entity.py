@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from elmax_api.model.endpoint import DeviceEndpoint
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import ElmaxCoordinator

@@ -7,14 +7,14 @@ import logging
 
 from miio import DeviceException
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .typing import XiaomiMiioConfigEntry
@@ -27,7 +27,7 @@ XIAOMI_STATE_ARMING_VALUE = "oning"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -67,7 +67,7 @@ class XiaomiGatewayAlarm(AlarmControlPanelEntity):
     async def _try_command(self, mask_error, func, *args, **kwargs):
         """Call a device command handling error messages."""
         try:
-            result = await self.hass.async_add_executor_job(
+            result = await self.menuai.async_add_executor_job(
                 partial(func, *args, **kwargs)
             )
             _LOGGER.debug("Response received from miio device: %s", result)
@@ -89,7 +89,7 @@ class XiaomiGatewayAlarm(AlarmControlPanelEntity):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._gateway.alarm.status)
+            state = await self.menuai.async_add_executor_job(self._gateway.alarm.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False

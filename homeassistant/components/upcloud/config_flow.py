@@ -9,9 +9,9 @@ import requests.exceptions
 import upcloud_api
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
-from homeassistant.core import callback
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from menuai.core import callback
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 from .coordinator import UpCloudConfigEntry
@@ -42,7 +42,7 @@ class UpCloudConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors = {}
         try:
-            await self.hass.async_add_executor_job(manager.authenticate)
+            await self.menuai.async_add_executor_job(manager.authenticate)
         except upcloud_api.UpCloudAPIError:
             errors["base"] = "invalid_auth"
             _LOGGER.debug("invalid_auth", exc_info=True)

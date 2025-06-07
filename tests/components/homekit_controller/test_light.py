@@ -8,15 +8,15 @@ from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import Service, ServicesTypes
 from aiohomekit.testing import FakeController
 
-from homeassistant.components.homekit_controller.const import KNOWN_DEVICES
-from homeassistant.components.light import (
+from menuai.components.homekit_controller.const import KNOWN_DEVICES
+from menuai.components.light import (
     ATTR_COLOR_MODE,
     ATTR_SUPPORTED_COLOR_MODES,
     ColorMode,
 )
-from homeassistant.const import ATTR_SUPPORTED_FEATURES, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_SUPPORTED_FEATURES, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -61,14 +61,14 @@ def create_lightbulb_service_with_color_temp(accessory: Accessory) -> Service:
 
 
 async def test_switch_change_light_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit light on and off again."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_hs
+        menuai, get_next_aid(), create_lightbulb_service_with_hs
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": "light.testdevice", "brightness": 255, "hs_color": [4, 5]},
@@ -84,7 +84,7 @@ async def test_switch_change_light_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": "light.testdevice", "brightness": 255, "color_temp": 300},
@@ -100,7 +100,7 @@ async def test_switch_change_light_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light", "turn_off", {"entity_id": "light.testdevice"}, blocking=True
     )
     helper.async_assert_service_values(
@@ -112,14 +112,14 @@ async def test_switch_change_light_state(
 
 
 async def test_switch_change_light_state_color_temp(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn change color_temp."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_color_temp
+        menuai, get_next_aid(), create_lightbulb_service_with_color_temp
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": "light.testdevice", "brightness": 255, "color_temp": 400},
@@ -136,10 +136,10 @@ async def test_switch_change_light_state_color_temp(
 
 
 async def test_switch_read_light_state_dimmer(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit light accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_lightbulb_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_lightbulb_service)
 
     # Initial state is that the light is off
     state = await helper.poll_and_get_state()
@@ -173,13 +173,13 @@ async def test_switch_read_light_state_dimmer(
 
 
 async def test_switch_push_light_state_dimmer(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit light accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_lightbulb_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_lightbulb_service)
 
     # Initial state is that the light is off
-    state = hass.states.get(LIGHT_BULB_ENTITY_ID)
+    state = menuai.states.get(LIGHT_BULB_ENTITY_ID)
     assert state.state == "off"
 
     state = await helper.async_update(
@@ -203,11 +203,11 @@ async def test_switch_push_light_state_dimmer(
 
 
 async def test_switch_read_light_state_hs(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit light accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_hs
+        menuai, get_next_aid(), create_lightbulb_service_with_hs
     )
 
     # Initial state is that the light is off
@@ -270,15 +270,15 @@ async def test_switch_read_light_state_hs(
 
 
 async def test_switch_push_light_state_hs(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit light accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_hs
+        menuai, get_next_aid(), create_lightbulb_service_with_hs
     )
 
     # Initial state is that the light is off
-    state = hass.states.get(LIGHT_BULB_ENTITY_ID)
+    state = menuai.states.get(LIGHT_BULB_ENTITY_ID)
     assert state.state == "off"
 
     state = await helper.async_update(
@@ -305,11 +305,11 @@ async def test_switch_push_light_state_hs(
 
 
 async def test_switch_read_light_state_color_temp(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the color_temp of a  light accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_color_temp
+        menuai, get_next_aid(), create_lightbulb_service_with_color_temp
     )
 
     # Initial state is that the light is off
@@ -337,15 +337,15 @@ async def test_switch_read_light_state_color_temp(
 
 
 async def test_switch_push_light_state_color_temp(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit light accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_color_temp
+        menuai, get_next_aid(), create_lightbulb_service_with_color_temp
     )
 
     # Initial state is that the light is off
-    state = hass.states.get(LIGHT_BULB_ENTITY_ID)
+    state = menuai.states.get(LIGHT_BULB_ENTITY_ID)
     assert state.state == "off"
 
     state = await helper.async_update(
@@ -362,11 +362,11 @@ async def test_switch_push_light_state_color_temp(
 
 
 async def test_light_becomes_unavailable_but_recovers(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test transition to and from unavailable state."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_color_temp
+        menuai, get_next_aid(), create_lightbulb_service_with_color_temp
     )
 
     # Initial state is that the light is off
@@ -399,36 +399,36 @@ async def test_light_becomes_unavailable_but_recovers(
 
 
 async def test_light_unloaded_removed(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test entity and HKDevice are correctly unloaded and removed."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_lightbulb_service_with_color_temp
+        menuai, get_next_aid(), create_lightbulb_service_with_color_temp
     )
 
     # Initial state is that the light is off
     state = await helper.poll_and_get_state()
     assert state.state == "off"
 
-    unload_result = await hass.config_entries.async_unload(helper.config_entry.entry_id)
+    unload_result = await menuai.config_entries.async_unload(helper.config_entry.entry_id)
     assert unload_result is True
 
     # Make sure entity is set to unavailable state
-    assert hass.states.get(helper.entity_id).state == STATE_UNAVAILABLE
+    assert menuai.states.get(helper.entity_id).state == STATE_UNAVAILABLE
 
     # Make sure HKDevice is no longer set to poll this accessory
-    conn = hass.data[KNOWN_DEVICES]["00:00:00:00:00:00"]
+    conn = menuai.data[KNOWN_DEVICES]["00:00:00:00:00:00"]
     assert not conn.pollable_characteristics
 
-    await hass.config_entries.async_remove(helper.config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(helper.config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Make sure entity is removed
-    assert hass.states.get(helper.entity_id) is None
+    assert menuai.states.get(helper.entity_id) is None
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -439,7 +439,7 @@ async def test_migrate_unique_id(
         "homekit_controller",
         f"homekit-00:00:00:00:00:00-{aid}-8",
     )
-    await setup_test_component(hass, aid, create_lightbulb_service_with_color_temp)
+    await setup_test_component(menuai, aid, create_lightbulb_service_with_color_temp)
 
     assert (
         entity_registry.async_get(light_entry.entity_id).unique_id
@@ -448,7 +448,7 @@ async def test_migrate_unique_id(
 
 
 async def test_only_migrate_once(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -464,7 +464,7 @@ async def test_only_migrate_once(
         "homekit_controller",
         f"00:00:00:00:00:00_{aid}_8",
     )
-    await setup_test_component(hass, aid, create_lightbulb_service_with_color_temp)
+    await setup_test_component(menuai, aid, create_lightbulb_service_with_color_temp)
 
     assert (
         entity_registry.async_get(old_light_entry.entity_id).unique_id

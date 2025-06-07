@@ -8,19 +8,19 @@ import logging
 import requests
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
-from homeassistant.util.dt import utcnow
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle
+from menuai.util.dt import utcnow
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,13 +46,13 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Open Hardware Monitor platform."""
-    data = OpenHardwareMonitorData(config, hass)
+    data = OpenHardwareMonitorData(config, menuai)
     if data.data is None:
         raise PlatformNotReady
     add_entities(data.devices, True)
@@ -133,11 +133,11 @@ class OpenHardwareMonitorDevice(SensorEntity):
 class OpenHardwareMonitorData:
     """Class used to pull data from OHM and create sensors."""
 
-    def __init__(self, config, hass):
+    def __init__(self, config, menuai):
         """Initialize the Open Hardware Monitor data-handler."""
         self.data = None
         self._config = config
-        self._hass = hass
+        self._menuai = menuai
         self.devices = []
         self.initialize(utcnow())
 

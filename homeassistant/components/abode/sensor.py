@@ -8,15 +8,15 @@ from typing import cast
 
 from jaraco.abode.devices.sensor import Sensor
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import LIGHT_LUX, PERCENTAGE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import LIGHT_LUX, PERCENTAGE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AbodeSystem
 from .const import DOMAIN
@@ -61,12 +61,12 @@ SENSOR_TYPES: tuple[AbodeSensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Abode sensor devices."""
-    data: AbodeSystem = hass.data[DOMAIN]
+    data: AbodeSystem = menuai.data[DOMAIN]
 
     async_add_entities(
         AbodeSensor(data, device, description)

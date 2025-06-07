@@ -6,14 +6,14 @@ from typing import Any, Final
 
 from duotecno.unit import SensUnit
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DuotecnoConfigEntry
 from .entity import DuotecnoEntity, api_call
@@ -30,7 +30,7 @@ PRESETMODES_REVERSE: Final = {value: key for key, value in PRESETMODES.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DuotecnoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

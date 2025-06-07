@@ -19,8 +19,8 @@ from samsungtvws.event import ED_INSTALLED_APP_EVENT
 from samsungtvws.exceptions import ResponseError
 from samsungtvws.remote import ChannelEmitCommand
 
-from homeassistant.components.samsungtv.const import DOMAIN, WEBSOCKET_SSL_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.samsungtv.const import DOMAIN, WEBSOCKET_SSL_PORT
+from menuai.core import menuai
 
 from .const import SAMPLE_DEVICE_INFO_WIFI
 
@@ -31,7 +31,7 @@ from tests.common import async_load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.samsungtv.async_setup_entry", return_value=True
+        "menuai.components.samsungtv.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -40,14 +40,14 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def silent_ssdp_scanner() -> Generator[None]:
     """Start SSDP component and get Scanner, prevent actual SSDP traffic."""
     with (
-        patch("homeassistant.components.ssdp.Scanner._async_start_ssdp_listeners"),
-        patch("homeassistant.components.ssdp.Scanner._async_stop_ssdp_listeners"),
-        patch("homeassistant.components.ssdp.Scanner.async_scan"),
+        patch("menuai.components.ssdp.Scanner._async_start_ssdp_listeners"),
+        patch("menuai.components.ssdp.Scanner._async_stop_ssdp_listeners"),
+        patch("menuai.components.ssdp.Scanner.async_scan"),
         patch(
-            "homeassistant.components.ssdp.Server._async_start_upnp_servers",
+            "menuai.components.ssdp.Server._async_start_upnp_servers",
         ),
         patch(
-            "homeassistant.components.ssdp.Server._async_stop_upnp_servers",
+            "menuai.components.ssdp.Server._async_stop_upnp_servers",
         ),
     ):
         yield
@@ -57,7 +57,7 @@ def silent_ssdp_scanner() -> Generator[None]:
 def samsungtv_mock_async_get_local_ip() -> Generator[None]:
     """Mock upnp util's async_get_local_ip."""
     with patch(
-        "homeassistant.components.samsungtv.media_player.async_get_local_ip",
+        "menuai.components.samsungtv.media_player.async_get_local_ip",
         return_value=(AddressFamily.AF_INET, "10.10.10.10"),
     ):
         yield
@@ -67,7 +67,7 @@ def samsungtv_mock_async_get_local_ip() -> Generator[None]:
 def fake_host_fixture() -> Generator[None]:
     """Patch gethostbyname."""
     with patch(
-        "homeassistant.components.samsungtv.config_flow.socket.gethostbyname",
+        "menuai.components.samsungtv.config_flow.socket.gethostbyname",
         return_value="10.20.43.21",
     ):
         yield
@@ -76,7 +76,7 @@ def fake_host_fixture() -> Generator[None]:
 @pytest.fixture(autouse=True)
 def app_list_delay_fixture() -> Generator[None]:
     """Patch APP_LIST_DELAY."""
-    with patch("homeassistant.components.samsungtv.media_player.APP_LIST_DELAY", 0):
+    with patch("menuai.components.samsungtv.media_player.APP_LIST_DELAY", 0):
         yield
 
 
@@ -84,7 +84,7 @@ def app_list_delay_fixture() -> Generator[None]:
 def upnp_factory_fixture() -> Generator[Mock]:
     """Patch UpnpFactory."""
     with patch(
-        "homeassistant.components.samsungtv.media_player.UpnpFactory",
+        "menuai.components.samsungtv.media_player.UpnpFactory",
         autospec=True,
     ) as upnp_factory_class:
         upnp_factory: Mock = upnp_factory_class.return_value
@@ -106,7 +106,7 @@ def upnp_device_fixture(upnp_factory: Mock) -> Mock:
 def dmr_device_fixture(upnp_device: Mock) -> Generator[Mock]:
     """Patch async_upnp_client."""
     with patch(
-        "homeassistant.components.samsungtv.media_player.DmrDevice",
+        "menuai.components.samsungtv.media_player.DmrDevice",
         autospec=True,
     ) as dmr_device_class:
         dmr_device: Mock = dmr_device_class.return_value
@@ -141,7 +141,7 @@ def dmr_device_fixture(upnp_device: Mock) -> Generator[Mock]:
 def upnp_notify_server_fixture(upnp_factory: Mock) -> Generator[Mock]:
     """Patch async_upnp_client."""
     with patch(
-        "homeassistant.components.samsungtv.media_player.AiohttpNotifyServer",
+        "menuai.components.samsungtv.media_player.AiohttpNotifyServer",
         autospec=True,
     ) as notify_server_class:
         notify_server: Mock = notify_server_class.return_value
@@ -156,7 +156,7 @@ def remote_legacy_fixture() -> Generator[Mock]:
     remote_legacy.__enter__ = Mock()
     remote_legacy.__exit__ = Mock()
     with patch(
-        "homeassistant.components.samsungtv.bridge.Remote", return_value=remote_legacy
+        "menuai.components.samsungtv.bridge.Remote", return_value=remote_legacy
     ):
         yield remote_legacy
 
@@ -165,7 +165,7 @@ def remote_legacy_fixture() -> Generator[Mock]:
 def rest_api_fixture() -> Generator[Mock]:
     """Patch the samsungtvws SamsungTVAsyncRest."""
     with patch(
-        "homeassistant.components.samsungtv.bridge.SamsungTVAsyncRest",
+        "menuai.components.samsungtv.bridge.SamsungTVAsyncRest",
         autospec=True,
     ) as rest_api_class:
         rest_api_class.return_value.rest_device_info.return_value = (
@@ -175,7 +175,7 @@ def rest_api_fixture() -> Generator[Mock]:
 
 
 @pytest.fixture(name="rest_api_non_ssl_only")
-def rest_api_fixture_non_ssl_only(hass: HomeAssistant) -> Generator[None]:
+def rest_api_fixture_non_ssl_only(menuai: menuai) -> Generator[None]:
     """Patch the samsungtvws SamsungTVAsyncRest non-ssl only."""
 
     class MockSamsungTVAsyncRest:
@@ -191,11 +191,11 @@ def rest_api_fixture_non_ssl_only(hass: HomeAssistant) -> Generator[None]:
             if self.port == WEBSOCKET_SSL_PORT:
                 raise ResponseError
             return await async_load_json_object_fixture(
-                hass, "device_info_UE48JU6400.json", DOMAIN
+                menuai, "device_info_UE48JU6400.json", DOMAIN
             )
 
     with patch(
-        "homeassistant.components.samsungtv.bridge.SamsungTVAsyncRest",
+        "menuai.components.samsungtv.bridge.SamsungTVAsyncRest",
         MockSamsungTVAsyncRest,
     ):
         yield
@@ -205,7 +205,7 @@ def rest_api_fixture_non_ssl_only(hass: HomeAssistant) -> Generator[None]:
 def rest_api_failure_fixture() -> Generator[None]:
     """Patch the samsungtvws SamsungTVAsyncRest."""
     with patch(
-        "homeassistant.components.samsungtv.bridge.SamsungTVAsyncRest",
+        "menuai.components.samsungtv.bridge.SamsungTVAsyncRest",
         autospec=True,
     ) as rest_api_class:
         rest_api_class.return_value.rest_device_info.side_effect = ResponseError
@@ -216,7 +216,7 @@ def rest_api_failure_fixture() -> Generator[None]:
 def remote_encrypted_websocket_failing_fixture() -> Generator[None]:
     """Patch the samsungtvws SamsungTVEncryptedWSAsyncRemote."""
     with patch(
-        "homeassistant.components.samsungtv.bridge.SamsungTVEncryptedWSAsyncRemote.start_listening",
+        "menuai.components.samsungtv.bridge.SamsungTVEncryptedWSAsyncRemote.start_listening",
         side_effect=OSError,
     ):
         yield
@@ -259,7 +259,7 @@ def remote_websocket_fixture() -> Generator[Mock]:
     )
 
     with patch(
-        "homeassistant.components.samsungtv.bridge.SamsungTVWSAsyncRemote",
+        "menuai.components.samsungtv.bridge.SamsungTVWSAsyncRemote",
         return_value=remote_websocket,
     ):
         yield remote_websocket
@@ -289,7 +289,7 @@ def remote_encrypted_websocket_fixture() -> Generator[Mock]:
     )
 
     with patch(
-        "homeassistant.components.samsungtv.bridge.SamsungTVEncryptedWSAsyncRemote",
+        "menuai.components.samsungtv.bridge.SamsungTVEncryptedWSAsyncRemote",
     ) as remotews_class:
         remotews_class.return_value = remote_encrypted_websocket
         yield remote_encrypted_websocket

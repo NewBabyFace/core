@@ -10,9 +10,9 @@ from pyairnow import WebServiceAPI
 from pyairnow.conv import aqi_to_concentration
 from pyairnow.errors import AirNowError, InvalidJsonError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_API_AQI,
@@ -45,7 +45,7 @@ class AirNowDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AirNowConfigEntry,
         session: ClientSession,
         api_key: str,
@@ -62,7 +62,7 @@ class AirNowDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.airnow = WebServiceAPI(api_key, session=session)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

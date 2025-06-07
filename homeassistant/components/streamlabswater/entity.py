@@ -1,8 +1,8 @@
 """Base entity for Streamlabs integration."""
 
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import DOMAIN as menuai_DOMAIN
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import StreamlabsCoordinator, StreamlabsData
 
@@ -23,7 +23,7 @@ class StreamlabsWaterEntity(CoordinatorEntity[StreamlabsCoordinator]):
         self._location_id = location_id
         self._attr_unique_id = f"{location_id}-{key}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(HOMEASSISTANT_DOMAIN, location_id)},
+            identifiers={(menuai_DOMAIN, location_id)},
             name=self.location_data.name,
         )
 

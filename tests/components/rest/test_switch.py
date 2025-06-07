@@ -6,18 +6,18 @@ import httpx
 import pytest
 import respx
 
-from homeassistant.components.rest import DOMAIN
-from homeassistant.components.rest.switch import (
+from menuai.components.rest import DOMAIN
+from menuai.components.rest.switch import (
     CONF_BODY_OFF,
     CONF_BODY_ON,
     CONF_STATE_RESOURCE,
 )
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SCAN_INTERVAL,
     SwitchDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_ENTITY_PICTURE,
@@ -40,11 +40,11 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.trigger_template_entity import CONF_PICTURE
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.trigger_template_entity import CONF_PICTURE
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import assert_setup_component, async_fire_time_changed
 
@@ -71,12 +71,12 @@ def http_success_code(request: pytest.FixtureRequest) -> HTTPStatus:
 
 
 async def test_setup_missing_config(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup with configuration missing required entries."""
     config = {SWITCH_DOMAIN: {CONF_PLATFORM: DOMAIN}}
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
     assert_setup_component(0, SWITCH_DOMAIN)
     assert (
         "Invalid config for 'switch' from integration 'rest': required key 'resource' "
@@ -85,12 +85,12 @@ async def test_setup_missing_config(
 
 
 async def test_setup_missing_schema(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup with resource missing schema."""
     config = {SWITCH_DOMAIN: {CONF_PLATFORM: DOMAIN, CONF_RESOURCE: "localhost"}}
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
     assert_setup_component(0, SWITCH_DOMAIN)
     assert (
         "Invalid config for 'switch' from integration 'rest': invalid url"
@@ -100,45 +100,45 @@ async def test_setup_missing_schema(
 
 @respx.mock
 async def test_setup_failed_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup when connection error occurs."""
     respx.get(RESOURCE).mock(side_effect=httpx.ConnectError(""))
     config = {SWITCH_DOMAIN: {CONF_PLATFORM: DOMAIN, CONF_RESOURCE: RESOURCE}}
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
     assert_setup_component(0, SWITCH_DOMAIN)
     assert "No route to resource/endpoint" in caplog.text
 
 
 @respx.mock
 async def test_setup_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup when connection timeout occurs."""
     respx.get(RESOURCE).mock(side_effect=httpx.TimeoutException(""))
     config = {SWITCH_DOMAIN: {CONF_PLATFORM: DOMAIN, CONF_RESOURCE: RESOURCE}}
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
     assert_setup_component(0, SWITCH_DOMAIN)
     assert "No route to resource/endpoint" in caplog.text
 
 
 @respx.mock
-async def test_setup_minimum(hass: HomeAssistant) -> None:
+async def test_setup_minimum(menuai: menuai) -> None:
     """Test setup with minimum configuration."""
     route = respx.get(RESOURCE) % HTTPStatus.OK
     config = {SWITCH_DOMAIN: {CONF_PLATFORM: DOMAIN, CONF_RESOURCE: RESOURCE}}
     with assert_setup_component(1, SWITCH_DOMAIN):
-        assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+        await menuai.async_block_till_done()
     assert route.call_count == 2
 
 
 @respx.mock
-async def test_setup_query_params(hass: HomeAssistant) -> None:
+async def test_setup_query_params(menuai: menuai) -> None:
     """Test setup with query params."""
     route = respx.get("http://localhost/?search=something") % HTTPStatus.OK
     config = {
@@ -149,14 +149,14 @@ async def test_setup_query_params(hass: HomeAssistant) -> None:
         }
     }
     with assert_setup_component(1, SWITCH_DOMAIN):
-        assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+        await menuai.async_block_till_done()
 
     assert route.call_count == 2
 
 
 @respx.mock
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(menuai: menuai) -> None:
     """Test setup with valid configuration."""
     route = respx.get(RESOURCE) % HTTPStatus.OK
     config = {
@@ -169,14 +169,14 @@ async def test_setup(hass: HomeAssistant) -> None:
             CONF_BODY_OFF: "custom off text",
         }
     }
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
     assert route.call_count == 2
     assert_setup_component(1, SWITCH_DOMAIN)
 
 
 @respx.mock
-async def test_setup_with_state_resource(hass: HomeAssistant) -> None:
+async def test_setup_with_state_resource(menuai: menuai) -> None:
     """Test setup with valid configuration."""
     respx.get(RESOURCE) % HTTPStatus.NOT_FOUND
     route = respx.get("http://localhost/state") % HTTPStatus.OK
@@ -191,14 +191,14 @@ async def test_setup_with_state_resource(hass: HomeAssistant) -> None:
             CONF_BODY_OFF: "custom off text",
         }
     }
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
     assert route.call_count == 2
     assert_setup_component(1, SWITCH_DOMAIN)
 
 
 @respx.mock
-async def test_setup_with_templated_headers_params(hass: HomeAssistant) -> None:
+async def test_setup_with_templated_headers_params(menuai: menuai) -> None:
     """Test setup with valid configuration."""
     route = respx.get(RESOURCE) % HTTPStatus.OK
     config = {
@@ -216,8 +216,8 @@ async def test_setup_with_templated_headers_params(hass: HomeAssistant) -> None:
             },
         }
     }
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
     assert route.call_count == 2
     last_call = route.calls[-1]
     last_request: httpx.Request = last_call.request
@@ -231,7 +231,7 @@ async def test_setup_with_templated_headers_params(hass: HomeAssistant) -> None:
 # Tests for REST switch platform.
 
 
-async def _async_setup_test_switch(hass: HomeAssistant) -> None:
+async def _async_setup_test_switch(menuai: menuai) -> None:
     respx.get(RESOURCE) % HTTPStatus.OK
 
     headers = {"Content-type": CONTENT_TYPE_JSON}
@@ -243,216 +243,216 @@ async def _async_setup_test_switch(hass: HomeAssistant) -> None:
         CONF_STATE_RESOURCE: STATE_RESOURCE,
         CONF_HEADERS: headers,
     }
-    assert await async_setup_component(hass, SWITCH_DOMAIN, {SWITCH_DOMAIN: config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, {SWITCH_DOMAIN: config})
+    await menuai.async_block_till_done()
     assert_setup_component(1, SWITCH_DOMAIN)
 
-    assert hass.states.get("switch.foo").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.foo").state == STATE_UNKNOWN
     respx.reset()
 
 
 @respx.mock
-async def test_name(hass: HomeAssistant) -> None:
+async def test_name(menuai: menuai) -> None:
     """Test the name."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
-    state = hass.states.get("switch.foo")
+    state = menuai.states.get("switch.foo")
     assert state.attributes[ATTR_FRIENDLY_NAME] == NAME
 
 
 @respx.mock
-async def test_device_class(hass: HomeAssistant) -> None:
+async def test_device_class(menuai: menuai) -> None:
     """Test the device class."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
-    state = hass.states.get("switch.foo")
+    state = menuai.states.get("switch.foo")
     assert state.attributes[ATTR_DEVICE_CLASS] == DEVICE_CLASS
 
 
 @respx.mock
-async def test_is_on_before_update(hass: HomeAssistant) -> None:
+async def test_is_on_before_update(menuai: menuai) -> None:
     """Test is_on in initial state."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
-    state = hass.states.get("switch.foo")
+    state = menuai.states.get("switch.foo")
     assert state.state == STATE_UNKNOWN
 
 
 @respx.mock
 async def test_turn_on_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     http_success_code: HTTPStatus,
 ) -> None:
     """Test turn_on."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     route = respx.post(RESOURCE) % http_success_code
     respx.get(RESOURCE).mock(side_effect=httpx.RequestError)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "switch.foo"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     last_call = route.calls[-1]
     last_request: httpx.Request = last_call.request
     assert last_request.content.decode() == "ON"
-    assert hass.states.get("switch.foo").state == STATE_ON
+    assert menuai.states.get("switch.foo").state == STATE_ON
 
 
 @respx.mock
-async def test_turn_on_status_not_ok(hass: HomeAssistant) -> None:
+async def test_turn_on_status_not_ok(menuai: menuai) -> None:
     """Test turn_on when error status returned."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     route = respx.post(RESOURCE) % HTTPStatus.INTERNAL_SERVER_ERROR
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "switch.foo"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     last_call = route.calls[-1]
     last_request: httpx.Request = last_call.request
     assert last_request.content.decode() == "ON"
-    assert hass.states.get("switch.foo").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.foo").state == STATE_UNKNOWN
 
 
 @respx.mock
-async def test_turn_on_timeout(hass: HomeAssistant) -> None:
+async def test_turn_on_timeout(menuai: menuai) -> None:
     """Test turn_on when timeout occurs."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     respx.post(RESOURCE).mock(side_effect=httpx.TimeoutException(""))
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "switch.foo"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.foo").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.foo").state == STATE_UNKNOWN
 
 
 @respx.mock
 async def test_turn_off_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     http_success_code: HTTPStatus,
 ) -> None:
     """Test turn_off."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     route = respx.post(RESOURCE) % http_success_code
     respx.get(RESOURCE).mock(side_effect=httpx.RequestError)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.foo"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     last_call = route.calls[-1]
     last_request: httpx.Request = last_call.request
     assert last_request.content.decode() == "OFF"
 
-    assert hass.states.get("switch.foo").state == STATE_OFF
+    assert menuai.states.get("switch.foo").state == STATE_OFF
 
 
 @respx.mock
-async def test_turn_off_status_not_ok(hass: HomeAssistant) -> None:
+async def test_turn_off_status_not_ok(menuai: menuai) -> None:
     """Test turn_off when error status returned."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     route = respx.post(RESOURCE) % HTTPStatus.INTERNAL_SERVER_ERROR
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.foo"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     last_call = route.calls[-1]
     last_request: httpx.Request = last_call.request
     assert last_request.content.decode() == "OFF"
 
-    assert hass.states.get("switch.foo").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.foo").state == STATE_UNKNOWN
 
 
 @respx.mock
-async def test_turn_off_timeout(hass: HomeAssistant) -> None:
+async def test_turn_off_timeout(menuai: menuai) -> None:
     """Test turn_off when timeout occurs."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     respx.post(RESOURCE).mock(side_effect=httpx.TimeoutException(""))
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.foo"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.foo").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.foo").state == STATE_UNKNOWN
 
 
 @respx.mock
-async def test_update_when_on(hass: HomeAssistant) -> None:
+async def test_update_when_on(menuai: menuai) -> None:
     """Test update when switch is on."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     respx.get(RESOURCE).respond(text="ON")
-    async_fire_time_changed(hass, utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.foo").state == STATE_ON
+    assert menuai.states.get("switch.foo").state == STATE_ON
 
 
 @respx.mock
-async def test_update_when_off(hass: HomeAssistant) -> None:
+async def test_update_when_off(menuai: menuai) -> None:
     """Test update when switch is off."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     respx.get(RESOURCE).respond(text="OFF")
-    async_fire_time_changed(hass, utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.foo").state == STATE_OFF
+    assert menuai.states.get("switch.foo").state == STATE_OFF
 
 
 @respx.mock
-async def test_update_when_unknown(hass: HomeAssistant) -> None:
+async def test_update_when_unknown(menuai: menuai) -> None:
     """Test update when unknown status returned."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     respx.get(RESOURCE).respond(text="unknown status")
-    async_fire_time_changed(hass, utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.foo").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.foo").state == STATE_UNKNOWN
 
 
 @respx.mock
-async def test_update_timeout(hass: HomeAssistant) -> None:
+async def test_update_timeout(menuai: menuai) -> None:
     """Test update when timeout occurs."""
-    await _async_setup_test_switch(hass)
+    await _async_setup_test_switch(menuai)
 
     respx.get(RESOURCE).mock(side_effect=httpx.TimeoutException(""))
-    async_fire_time_changed(hass, utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.foo").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.foo").state == STATE_UNKNOWN
 
 
 @respx.mock
 async def test_entity_config(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test entity configuration."""
 
@@ -471,12 +471,12 @@ async def test_entity_config(
         },
     }
 
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get("switch.rest_switch").unique_id == "very_unique"
 
-    state = hass.states.get("switch.rest_switch")
+    state = menuai.states.get("switch.rest_switch")
     assert state.state == "unknown"
     assert state.attributes == {
         ATTR_ENTITY_PICTURE: "blabla.png",
@@ -487,7 +487,7 @@ async def test_entity_config(
 
 @respx.mock
 async def test_availability(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test entity configuration."""
 
@@ -496,7 +496,7 @@ async def test_availability(
         json={"beer": 1},
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         {
             SWITCH_DOMAIN: {
@@ -513,10 +513,10 @@ async def test_availability(
             },
         },
     )
-    await async_setup_component(hass, "homeassistant", {})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "menuai", {})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.rest_switch")
+    state = menuai.states.get("switch.rest_switch")
     assert state
     assert state.state == STATE_ON
     assert state.attributes["icon"] == "mdi:1"
@@ -526,15 +526,15 @@ async def test_availability(
         status_code=HTTPStatus.OK,
         json={"x": 1},
     )
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {ATTR_ENTITY_ID: ["switch.rest_switch"]},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.rest_switch")
+    state = menuai.states.get("switch.rest_switch")
     assert state
     assert state.state == STATE_UNAVAILABLE
     assert "icon" not in state.attributes
@@ -544,15 +544,15 @@ async def test_availability(
         status_code=HTTPStatus.OK,
         json={"beer": 0},
     )
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {ATTR_ENTITY_ID: ["switch.rest_switch"]},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.rest_switch")
+    state = menuai.states.get("switch.rest_switch")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes["icon"] == "mdi:0"
@@ -561,7 +561,7 @@ async def test_availability(
 
 @respx.mock
 async def test_availability_blocks_is_on_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test availability blocks is_on_template from rendering."""
@@ -580,25 +580,25 @@ async def test_availability_blocks_is_on_template(
         },
     }
 
-    assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-    await hass.async_block_till_done()
-    await async_setup_component(hass, "homeassistant", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+    await menuai.async_block_till_done()
+    await async_setup_component(menuai, "menuai", {})
+    await menuai.async_block_till_done()
 
     assert error not in caplog.text
 
-    state = hass.states.get("switch.block_template")
+    state = menuai.states.get("switch.block_template")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
     respx.clear()
     respx.get("http://localhost").respond(status_code=HTTPStatus.OK, content="50")
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {ATTR_ENTITY_ID: ["switch.block_template"]},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert error in caplog.text

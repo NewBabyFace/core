@@ -13,13 +13,13 @@ from asyncsleepiq import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, PRESSURE, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, PRESSURE, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, IS_IN_BED, SLEEP_NUMBER
 from .coordinator import (
@@ -51,11 +51,11 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up sleepiq component."""
     if DOMAIN in config:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": SOURCE_IMPORT}, data=config[DOMAIN]
             )
         )
@@ -63,13 +63,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the SleepIQ config entry."""
     conf = entry.data
     email = conf[CONF_USERNAME]
     password = conf[CONF_PASSWORD]
 
-    client_session = async_get_clientsession(hass)
+    client_session = async_get_clientsession(menuai)
 
     gateway = AsyncSleepIQ(client_session=client_session)
 
@@ -92,35 +92,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except SleepIQAPIException as err:
         raise ConfigEntryNotReady(str(err) or "Error reading from SleepIQ API") from err
 
-    await _async_migrate_unique_ids(hass, entry, gateway)
+    await _async_migrate_unique_ids(menuai, entry, gateway)
 
-    coordinator = SleepIQDataUpdateCoordinator(hass, entry, gateway)
-    pause_coordinator = SleepIQPauseUpdateCoordinator(hass, entry, gateway)
+    coordinator = SleepIQDataUpdateCoordinator(menuai, entry, gateway)
+    pause_coordinator = SleepIQPauseUpdateCoordinator(menuai, entry, gateway)
 
     # Call the SleepIQ API to refresh data
     await coordinator.async_config_entry_first_refresh()
     await pause_coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = SleepIQData(
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = SleepIQData(
         data_coordinator=coordinator,
         pause_coordinator=pause_coordinator,
         client=gateway,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload the config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
 
 
 async def _async_migrate_unique_ids(
-    hass: HomeAssistant, entry: ConfigEntry, gateway: AsyncSleepIQ
+    menuai: menuai, entry: ConfigEntry, gateway: AsyncSleepIQ
 ) -> None:
     """Migrate old unique ids."""
     names_to_ids = {
@@ -161,4 +161,4 @@ async def _async_migrate_unique_ids(
         )
         return {"new_unique_id": new_unique_id}
 
-    await er.async_migrate_entries(hass, entry.entry_id, _async_migrator)
+    await er.async_migrate_entries(menuai, entry.entry_id, _async_migrator)

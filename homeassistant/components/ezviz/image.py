@@ -8,12 +8,12 @@ from propcache.api import cached_property
 from pyezvizapi.exceptions import PyEzvizError
 from pyezvizapi.utils import decrypt_image
 
-from homeassistant.components.image import Image, ImageEntity, ImageEntityDescription
-from homeassistant.config_entries import SOURCE_IGNORE
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.image import Image, ImageEntity, ImageEntityDescription
+from menuai.config_entries import SOURCE_IGNORE
+from menuai.const import CONF_PASSWORD
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import EzvizConfigEntry, EzvizDataUpdateCoordinator
@@ -28,7 +28,7 @@ IMAGE_TYPE = ImageEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -37,7 +37,7 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
 
     async_add_entities(
-        EzvizLastMotion(hass, coordinator, camera) for camera in coordinator.data
+        EzvizLastMotion(menuai, coordinator, camera) for camera in coordinator.data
     )
 
 
@@ -45,18 +45,18 @@ class EzvizLastMotion(EzvizEntity, ImageEntity):
     """Return Last Motion Image from Ezviz Camera."""
 
     def __init__(
-        self, hass: HomeAssistant, coordinator: EzvizDataUpdateCoordinator, serial: str
+        self, menuai: menuai, coordinator: EzvizDataUpdateCoordinator, serial: str
     ) -> None:
         """Initialize a image entity."""
         EzvizEntity.__init__(self, coordinator, serial)
-        ImageEntity.__init__(self, hass)
+        ImageEntity.__init__(self, menuai)
         self._attr_unique_id = f"{serial}_{IMAGE_TYPE.key}"
         self.entity_description = IMAGE_TYPE
         self._attr_image_url = self.data["last_alarm_pic"]
         self._attr_image_last_updated = dt_util.parse_datetime(
             str(self.data["last_alarm_time"])
         )
-        camera = hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, serial)
+        camera = menuai.config_entries.async_entry_for_domain_unique_id(DOMAIN, serial)
         self.alarm_image_password = (
             camera.data[CONF_PASSWORD]
             if camera and camera.source != SOURCE_IGNORE

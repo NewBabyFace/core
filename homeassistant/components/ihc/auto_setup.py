@@ -6,10 +6,10 @@ import os.path
 from defusedxml import ElementTree
 import voluptuous as vol
 
-from homeassistant.config import load_yaml_config_file
-from homeassistant.const import CONF_TYPE, CONF_UNIT_OF_MEASUREMENT, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
+from menuai.config import load_yaml_config_file
+from menuai.const import CONF_TYPE, CONF_UNIT_OF_MEASUREMENT, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
 
 from .const import (
     AUTO_SETUP_YAML,
@@ -84,7 +84,7 @@ AUTO_SETUP_SCHEMA = vol.Schema(
 )
 
 
-def autosetup_ihc_products(hass: HomeAssistant, config, ihc_controller, controller_id):
+def autosetup_ihc_products(menuai: menuai, config, ihc_controller, controller_id):
     """Auto setup of IHC products from the IHC project file."""
     if not (project_xml := ihc_controller.get_project()):
         _LOGGER.error("Unable to read project from IHC controller")
@@ -92,7 +92,7 @@ def autosetup_ihc_products(hass: HomeAssistant, config, ihc_controller, controll
     project = ElementTree.fromstring(project_xml)
 
     # If an auto setup file exist in the configuration it will override
-    yaml_path = hass.config.path(AUTO_SETUP_YAML)
+    yaml_path = menuai.config.path(AUTO_SETUP_YAML)
     if not os.path.isfile(yaml_path):
         yaml_path = os.path.join(os.path.dirname(__file__), AUTO_SETUP_YAML)
     yaml = load_yaml_config_file(yaml_path)
@@ -107,7 +107,7 @@ def autosetup_ihc_products(hass: HomeAssistant, config, ihc_controller, controll
         platform_setup = auto_setup_conf[platform]
         discovery_info = get_discovery_info(platform_setup, groups, controller_id)
         if discovery_info:
-            discovery.load_platform(hass, platform, DOMAIN, discovery_info, config)
+            discovery.load_platform(menuai, platform, DOMAIN, discovery_info, config)
 
     return True
 

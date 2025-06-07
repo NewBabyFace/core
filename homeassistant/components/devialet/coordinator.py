@@ -5,9 +5,9 @@ import logging
 
 from devialet import DevialetApi
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -24,11 +24,11 @@ class DevialetCoordinator(DataUpdateCoordinator[None]):
     config_entry: DevialetConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: DevialetConfigEntry, client: DevialetApi
+        self, menuai: menuai, entry: DevialetConfigEntry, client: DevialetApi
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

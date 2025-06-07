@@ -9,9 +9,9 @@ from pytile import async_login
 from pytile.errors import InvalidAuthError, TileError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN, LOGGER
 
@@ -45,7 +45,7 @@ class TileFlowHandler(ConfigFlow, domain=DOMAIN):
         assert self._password
 
         errors = {}
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
 
         try:
             await async_login(self._username, self._password, session=session)
@@ -63,9 +63,9 @@ class TileFlowHandler(ConfigFlow, domain=DOMAIN):
         data = {CONF_USERNAME: self._username, CONF_PASSWORD: self._password}
 
         if existing_entry := await self.async_set_unique_id(self._username):
-            self.hass.config_entries.async_update_entry(existing_entry, data=data)
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(existing_entry.entry_id)
+            self.menuai.config_entries.async_update_entry(existing_entry, data=data)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(existing_entry.entry_id)
             )
             return self.async_abort(reason="reauth_successful")
 

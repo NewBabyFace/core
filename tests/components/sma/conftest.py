@@ -12,8 +12,8 @@ from pysma.definitions import sensor_map
 from pysma.sensor import Sensors
 import pytest
 
-from homeassistant.components.sma.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.sma.const import DOMAIN
+from menuai.core import menuai
 
 from . import MOCK_DEVICE, MOCK_USER_INPUT
 
@@ -21,7 +21,7 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return the default mocked config entry."""
 
     return MockConfigEntry(
@@ -38,7 +38,7 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock the setup entry."""
     with patch(
-        "homeassistant.components.sma.async_setup_entry", return_value=True
+        "menuai.components.sma.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -46,7 +46,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 @pytest.fixture
 def mock_sma_client() -> Generator[MagicMock]:
     """Mock the SMA client."""
-    with patch("homeassistant.components.sma.pysma.SMA", autospec=True) as client:
+    with patch("menuai.components.sma.pysma.SMA", autospec=True) as client:
         client.return_value.device_info.return_value = MOCK_DEVICE
         client.new_session.return_value = True
         client.return_value.get_sensors.return_value = Sensors(

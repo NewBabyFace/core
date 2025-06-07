@@ -27,8 +27,8 @@ from pyatv.interface import (
     PushUpdater,
 )
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -37,10 +37,10 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import AppleTvConfigEntry, AppleTVManager
 from .browse_media import build_app_list
@@ -73,7 +73,7 @@ SUPPORT_APPLE_TV = (
 )
 
 
-# Map features in pyatv to Home Assistant
+# Map features in pyatv to MenuAI
 SUPPORT_FEATURE_MAPPING = {
     FeatureName.PlayUrl: MediaPlayerEntityFeature.BROWSE_MEDIA
     | MediaPlayerEntityFeature.PLAY_MEDIA,
@@ -98,7 +98,7 @@ SUPPORT_FEATURE_MAPPING = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AppleTvConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -154,7 +154,7 @@ class AppleTvMediaPlayer(
 
         if atv.features.in_state(FeatureState.Available, FeatureName.AppList):
             self.manager.config_entry.async_create_task(
-                self.hass, self._update_app_list(), eager_start=True
+                self.menuai, self._update_app_list(), eager_start=True
             )
 
     async def _update_app_list(self) -> None:
@@ -335,9 +335,9 @@ class AppleTvMediaPlayer(
 
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
-            media_id = async_process_play_media_url(self.hass, play_item.url)
+            media_id = async_process_play_media_url(self.menuai, play_item.url)
             media_type = MediaType.MUSIC
 
         if self._is_feature_available(FeatureName.StreamFile) and (
@@ -472,7 +472,7 @@ class AppleTvMediaPlayer(
             }
 
         cur_item = await media_source.async_browse_media(
-            self.hass, media_content_id, **kwargs
+            self.menuai, media_content_id, **kwargs
         )
 
         # If media content id is not None, we're browsing into a media source

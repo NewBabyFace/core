@@ -7,15 +7,15 @@ import logging
 from rfk101py.rfk101py import rfk101py
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the IDTECK proximity card component."""
     conf = config[DOMAIN]
     for unit in conf:
@@ -51,9 +51,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         name = unit[CONF_NAME]
 
         try:
-            reader = IdteckReader(hass, host, port, name)
+            reader = IdteckReader(menuai, host, port, name)
             reader.connect()
-            hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, reader.stop)
+            menuai.bus.listen_once(EVENT_menuai_STOP, reader.stop)
         except OSError as error:
             _LOGGER.error("Error creating %s. %s", name, error)
             return False
@@ -64,9 +64,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class IdteckReader:
     """Representation of an IDTECK proximity card reader."""
 
-    def __init__(self, hass, host, port, name):
+    def __init__(self, menuai, host, port, name):
         """Initialize the reader."""
-        self.hass = hass
+        self.menuai = menuai
         self._host = host
         self._port = port
         self._name = name
@@ -78,8 +78,8 @@ class IdteckReader:
         self._connection = rfk101py(self._host, self._port, self._callback)
 
     def _callback(self, card):
-        """Send a keycard event message into Home Assistant whenever a card is read."""
-        self.hass.bus.fire(
+        """Send a keycard event message into MenuAI whenever a card is read."""
+        self.menuai.bus.fire(
             EVENT_IDTECK_PROX_KEYCARD, {"card": card, "name": self._name}
         )
 

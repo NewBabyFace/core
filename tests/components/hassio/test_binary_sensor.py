@@ -1,14 +1,14 @@
-"""The tests for the hassio binary sensors."""
+"""The tests for the menuaiio binary sensors."""
 
 import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.hassio import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.menuaiio import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .common import MOCK_REPOSITORIES, MOCK_STORE_ADDONS
 
@@ -28,7 +28,7 @@ def mock_all(
     resolution_info: AsyncMock,
 ) -> None:
     """Mock all setup requests."""
-    aioclient_mock.post("http://127.0.0.1/homeassistant/options", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/options", json={"result": "ok"})
     aioclient_mock.post("http://127.0.0.1/supervisor/options", json={"result": "ok"})
     aioclient_mock.get(
         "http://127.0.0.1/info",
@@ -36,8 +36,8 @@ def mock_all(
             "result": "ok",
             "data": {
                 "supervisor": "222",
-                "homeassistant": "0.110.0",
-                "hassos": "1.2.3",
+                "menuai": "0.110.0",
+                "menuaios": "1.2.3",
             },
         },
     )
@@ -48,7 +48,7 @@ def mock_all(
             "data": {
                 "result": "ok",
                 "data": {
-                    "chassis": "vm",
+                    "cmenuaiis": "vm",
                     "operating_system": "Debian GNU/Linux 10 (buster)",
                     "kernel": "4.19.0-6-amd64",
                 },
@@ -164,7 +164,7 @@ def mock_all(
     ],
 )
 async def test_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     expected: str,
     addon_state: str,
@@ -172,28 +172,28 @@ async def test_binary_sensor(
     entity_registry: er.EntityRegistry,
     addon_installed: AsyncMock,
 ) -> None:
-    """Test hassio OS and addons binary sensor."""
+    """Test menuaiio OS and addons binary sensor."""
     addon_installed.return_value.state = addon_state
     config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
-            hass,
-            "hassio",
-            {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
+            menuai,
+            "menuaiio",
+            {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "menuaiio": {}},
         )
         assert result
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify that the entity is disabled by default.
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
     # Enable the entity.
     entity_registry.async_update_entity(entity_id, disabled_by=None)
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Verify that the entity have the expected state.
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == expected

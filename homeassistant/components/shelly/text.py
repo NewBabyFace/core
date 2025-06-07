@@ -7,13 +7,13 @@ from typing import Final
 
 from aioshelly.const import RPC_GENERATIONS
 
-from homeassistant.components.text import (
+from menuai.components.text import (
     DOMAIN as TEXT_PLATFORM,
     TextEntity,
     TextEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ShellyConfigEntry
 from .entity import (
@@ -45,7 +45,7 @@ RPC_TEXT_ENTITIES: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -55,7 +55,7 @@ async def async_setup_entry(
         assert coordinator
 
         async_setup_entry_rpc(
-            hass, config_entry, async_add_entities, RPC_TEXT_ENTITIES, RpcText
+            menuai, config_entry, async_add_entities, RPC_TEXT_ENTITIES, RpcText
         )
 
         # the user can remove virtual components from the device configuration, so
@@ -64,7 +64,7 @@ async def async_setup_entry(
             coordinator.device.config, TEXT_PLATFORM
         )
         async_remove_orphaned_entities(
-            hass,
+            menuai,
             config_entry.entry_id,
             coordinator.mac,
             TEXT_PLATFORM,

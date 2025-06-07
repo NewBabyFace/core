@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from homeassistant.components.risco import CannotConnectError, UnauthorizedError
-from homeassistant.components.risco.const import DOMAIN
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.components.risco import CannotConnectError, UnauthorizedError
+from menuai.components.risco.const import DOMAIN
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
 
 from .util import TEST_SITE_NAME, TEST_SITE_UUID, system_mock
 
@@ -25,20 +25,20 @@ SECOND_ARMED_ENTITY_ID = SECOND_ENTITY_ID + "_armed"
 
 @pytest.mark.parametrize("exception", [CannotConnectError, UnauthorizedError])
 async def test_error_on_login(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     login_with_error,
     cloud_config_entry,
 ) -> None:
     """Test error on login."""
-    await hass.config_entries.async_setup(cloud_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(cloud_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert not entity_registry.async_is_registered(FIRST_ENTITY_ID)
     assert not entity_registry.async_is_registered(SECOND_ENTITY_ID)
 
 
 async def test_cloud_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     two_zone_cloud,
@@ -62,7 +62,7 @@ async def test_cloud_setup(
 
 
 async def _check_cloud_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     zones: dict[int, Any],
     triggered: bool,
     entity_id: str,
@@ -73,34 +73,34 @@ async def _check_cloud_state(
         "triggered",
         new_callable=PropertyMock(return_value=triggered),
     ):
-        await async_update_entity(hass, entity_id)
-        await hass.async_block_till_done()
+        await async_update_entity(menuai, entity_id)
+        await menuai.async_block_till_done()
 
         expected_triggered = STATE_ON if triggered else STATE_OFF
-        assert hass.states.get(entity_id).state == expected_triggered
-        assert hass.states.get(entity_id).attributes["zone_id"] == zone_id
+        assert menuai.states.get(entity_id).state == expected_triggered
+        assert menuai.states.get(entity_id).attributes["zone_id"] == zone_id
 
 
 async def test_cloud_states(
-    hass: HomeAssistant, two_zone_cloud, setup_risco_cloud
+    menuai: menuai, two_zone_cloud, setup_risco_cloud
 ) -> None:
     """Test the various alarm states."""
-    await _check_cloud_state(hass, two_zone_cloud, True, FIRST_ENTITY_ID, 0)
-    await _check_cloud_state(hass, two_zone_cloud, False, FIRST_ENTITY_ID, 0)
-    await _check_cloud_state(hass, two_zone_cloud, True, SECOND_ENTITY_ID, 1)
-    await _check_cloud_state(hass, two_zone_cloud, False, SECOND_ENTITY_ID, 1)
+    await _check_cloud_state(menuai, two_zone_cloud, True, FIRST_ENTITY_ID, 0)
+    await _check_cloud_state(menuai, two_zone_cloud, False, FIRST_ENTITY_ID, 0)
+    await _check_cloud_state(menuai, two_zone_cloud, True, SECOND_ENTITY_ID, 1)
+    await _check_cloud_state(menuai, two_zone_cloud, False, SECOND_ENTITY_ID, 1)
 
 
 @pytest.mark.parametrize("exception", [CannotConnectError, UnauthorizedError])
 async def test_error_on_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     connect_with_error,
     local_config_entry,
 ) -> None:
     """Test error on connect."""
-    await hass.config_entries.async_setup(local_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(local_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert not entity_registry.async_is_registered(FIRST_ENTITY_ID)
     assert not entity_registry.async_is_registered(SECOND_ENTITY_ID)
     assert not entity_registry.async_is_registered(FIRST_ALARMED_ENTITY_ID)
@@ -108,7 +108,7 @@ async def test_error_on_connect(
 
 
 async def test_local_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     two_zone_local,
@@ -138,7 +138,7 @@ async def test_local_setup(
 
 
 async def _check_local_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     zones: dict[int, Any],
     entity_property: str,
     value: bool,
@@ -152,22 +152,22 @@ async def _check_local_state(
         new_callable=PropertyMock(return_value=value),
     ):
         await callback(zone_id, zones[zone_id])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         expected_value = STATE_ON if value else STATE_OFF
-        assert hass.states.get(entity_id).state == expected_value
-        assert hass.states.get(entity_id).attributes["zone_id"] == zone_id
+        assert menuai.states.get(entity_id).state == expected_value
+        assert menuai.states.get(entity_id).attributes["zone_id"] == zone_id
 
 
 @pytest.fixture
 def mock_zone_handler():
     """Create a mock for add_zone_handler."""
-    with patch("homeassistant.components.risco.RiscoLocal.add_zone_handler") as mock:
+    with patch("menuai.components.risco.RiscoLocal.add_zone_handler") as mock:
         yield mock
 
 
 async def test_local_states(
-    hass: HomeAssistant, two_zone_local, mock_zone_handler, setup_risco_local
+    menuai: menuai, two_zone_local, mock_zone_handler, setup_risco_local
 ) -> None:
     """Test the various zone states."""
     callback = mock_zone_handler.call_args.args[0]
@@ -175,21 +175,21 @@ async def test_local_states(
     assert callback is not None
 
     await _check_local_state(
-        hass, two_zone_local, "triggered", True, FIRST_ENTITY_ID, 0, callback
+        menuai, two_zone_local, "triggered", True, FIRST_ENTITY_ID, 0, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "triggered", False, FIRST_ENTITY_ID, 0, callback
+        menuai, two_zone_local, "triggered", False, FIRST_ENTITY_ID, 0, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "triggered", True, SECOND_ENTITY_ID, 1, callback
+        menuai, two_zone_local, "triggered", True, SECOND_ENTITY_ID, 1, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "triggered", False, SECOND_ENTITY_ID, 1, callback
+        menuai, two_zone_local, "triggered", False, SECOND_ENTITY_ID, 1, callback
     )
 
 
 async def test_alarmed_local_states(
-    hass: HomeAssistant, two_zone_local, mock_zone_handler, setup_risco_local
+    menuai: menuai, two_zone_local, mock_zone_handler, setup_risco_local
 ) -> None:
     """Test the various zone alarmed states."""
     callback = mock_zone_handler.call_args.args[0]
@@ -197,21 +197,21 @@ async def test_alarmed_local_states(
     assert callback is not None
 
     await _check_local_state(
-        hass, two_zone_local, "alarmed", True, FIRST_ALARMED_ENTITY_ID, 0, callback
+        menuai, two_zone_local, "alarmed", True, FIRST_ALARMED_ENTITY_ID, 0, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "alarmed", False, FIRST_ALARMED_ENTITY_ID, 0, callback
+        menuai, two_zone_local, "alarmed", False, FIRST_ALARMED_ENTITY_ID, 0, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "alarmed", True, SECOND_ALARMED_ENTITY_ID, 1, callback
+        menuai, two_zone_local, "alarmed", True, SECOND_ALARMED_ENTITY_ID, 1, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "alarmed", False, SECOND_ALARMED_ENTITY_ID, 1, callback
+        menuai, two_zone_local, "alarmed", False, SECOND_ALARMED_ENTITY_ID, 1, callback
     )
 
 
 async def test_armed_local_states(
-    hass: HomeAssistant, two_zone_local, mock_zone_handler, setup_risco_local
+    menuai: menuai, two_zone_local, mock_zone_handler, setup_risco_local
 ) -> None:
     """Test the various zone armed states."""
     callback = mock_zone_handler.call_args.args[0]
@@ -219,21 +219,21 @@ async def test_armed_local_states(
     assert callback is not None
 
     await _check_local_state(
-        hass, two_zone_local, "armed", True, FIRST_ARMED_ENTITY_ID, 0, callback
+        menuai, two_zone_local, "armed", True, FIRST_ARMED_ENTITY_ID, 0, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "armed", False, FIRST_ARMED_ENTITY_ID, 0, callback
+        menuai, two_zone_local, "armed", False, FIRST_ARMED_ENTITY_ID, 0, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "armed", True, SECOND_ARMED_ENTITY_ID, 1, callback
+        menuai, two_zone_local, "armed", True, SECOND_ARMED_ENTITY_ID, 1, callback
     )
     await _check_local_state(
-        hass, two_zone_local, "armed", False, SECOND_ARMED_ENTITY_ID, 1, callback
+        menuai, two_zone_local, "armed", False, SECOND_ARMED_ENTITY_ID, 1, callback
     )
 
 
 async def _check_system_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     system: MagicMock,
     entity_property: str,
     value: bool,
@@ -245,19 +245,19 @@ async def _check_system_state(
         new_callable=PropertyMock(return_value=value),
     ):
         await callback(system)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         expected_value = STATE_ON if value else STATE_OFF
         if entity_property == "ac_trouble":
             entity_property = "a_c_trouble"
         entity_id = f"binary_sensor.test_site_name_{entity_property}"
-        assert hass.states.get(entity_id).state == expected_value
+        assert menuai.states.get(entity_id).state == expected_value
 
 
 @pytest.fixture
 def mock_system_handler():
     """Create a mock for add_system_handler."""
-    with patch("homeassistant.components.risco.RiscoLocal.add_system_handler") as mock:
+    with patch("menuai.components.risco.RiscoLocal.add_system_handler") as mock:
         yield mock
 
 
@@ -270,15 +270,15 @@ def system_only_local():
             system, "name", new_callable=PropertyMock(return_value=TEST_SITE_NAME)
         ),
         patch(
-            "homeassistant.components.risco.RiscoLocal.zones",
+            "menuai.components.risco.RiscoLocal.zones",
             new_callable=PropertyMock(return_value={}),
         ),
         patch(
-            "homeassistant.components.risco.RiscoLocal.partitions",
+            "menuai.components.risco.RiscoLocal.partitions",
             new_callable=PropertyMock(return_value={}),
         ),
         patch(
-            "homeassistant.components.risco.RiscoLocal.system",
+            "menuai.components.risco.RiscoLocal.system",
             new_callable=PropertyMock(return_value=system),
         ),
     ):
@@ -286,7 +286,7 @@ def system_only_local():
 
 
 async def test_system_states(
-    hass: HomeAssistant, system_only_local, mock_system_handler, setup_risco_local
+    menuai: menuai, system_only_local, mock_system_handler, setup_risco_local
 ) -> None:
     """Test the various zone states."""
     callback = mock_system_handler.call_args.args[0]
@@ -305,8 +305,8 @@ async def test_system_states(
     ]
     for entity_property in properties:
         await _check_system_state(
-            hass, system_only_local, entity_property, True, callback
+            menuai, system_only_local, entity_property, True, callback
         )
         await _check_system_state(
-            hass, system_only_local, entity_property, False, callback
+            menuai, system_only_local, entity_property, False, callback
         )

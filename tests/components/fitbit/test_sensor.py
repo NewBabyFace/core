@@ -9,12 +9,12 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests_mock.mocker import Mocker
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fitbit.const import DOMAIN, OAUTH2_TOKEN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util.unit_system import (
+from menuai.components.fitbit.const import DOMAIN, OAUTH2_TOKEN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util.unit_system import (
     METRIC_SYSTEM,
     US_CUSTOMARY_SYSTEM,
     UnitSystem,
@@ -229,7 +229,7 @@ def mock_token_refresh(requests_mock: Mocker) -> None:
     ],
 )
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -245,10 +245,10 @@ async def test_sensors(
         api_resource, timeseries_response(api_resource.replace("/", "-"), api_value)
     )
     await integration_setup()
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     entry = entity_registry.async_get(entity_id)
     assert entry
@@ -260,7 +260,7 @@ async def test_sensors(
     [([DEVICE_RESPONSE_CHARGE_2, DEVICE_RESPONSE_ARIA_AIR], ["devices/battery"])],
 )
 async def test_device_battery(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     entity_registry: er.EntityRegistry,
@@ -268,10 +268,10 @@ async def test_device_battery(
     """Test battery level sensor for devices."""
 
     assert await integration_setup()
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    state = hass.states.get("sensor.charge_2_battery")
+    state = menuai.states.get("sensor.charge_2_battery")
     assert state
     assert state.state == "Medium"
     assert state.attributes == {
@@ -286,7 +286,7 @@ async def test_device_battery(
     assert entry
     assert entry.unique_id == f"{PROFILE_USER_ID}_devices/battery_816713257"
 
-    state = hass.states.get("sensor.aria_air_battery")
+    state = menuai.states.get("sensor.aria_air_battery")
     assert state
     assert state.state == "High"
     assert state.attributes == {
@@ -307,7 +307,7 @@ async def test_device_battery(
     [([DEVICE_RESPONSE_CHARGE_2, DEVICE_RESPONSE_ARIA_AIR], ["devices/battery"])],
 )
 async def test_device_battery_level(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     entity_registry: er.EntityRegistry,
@@ -315,10 +315,10 @@ async def test_device_battery_level(
     """Test battery level sensor for devices."""
 
     assert await integration_setup()
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    state = hass.states.get("sensor.charge_2_battery_level")
+    state = menuai.states.get("sensor.charge_2_battery_level")
     assert state
     assert state.state == "60"
     assert state.attributes == {
@@ -328,7 +328,7 @@ async def test_device_battery_level(
         "unit_of_measurement": "%",
     }
 
-    state = hass.states.get("sensor.aria_air_battery_level")
+    state = menuai.states.get("sensor.aria_air_battery_level")
     assert state
     assert state.state == "95"
     assert state.attributes == {
@@ -347,7 +347,7 @@ async def test_device_battery_level(
         "expected_unit",
     ),
     [
-        # Defaults to home assistant unit system unless UK
+        # Defaults to MenuAI unit system unless UK
         (["body/weight"], "en_US", "default", "kg"),
         (["body/weight"], "en_GB", "default", "st"),
         (["body/weight"], "es_ES", "default", "kg"),
@@ -364,7 +364,7 @@ async def test_device_battery_level(
     ],
 )
 async def test_profile_local(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -374,10 +374,10 @@ async def test_profile_local(
 
     register_timeseries("body/weight", timeseries_response("body-weight", "175"))
     await integration_setup()
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    state = hass.states.get("sensor.first_l_weight")
+    state = menuai.states.get("sensor.first_l_weight")
     assert state
     assert state.attributes.get("unit_of_measurement") == expected_unit
 
@@ -413,7 +413,7 @@ async def test_profile_local(
     ],
 )
 async def test_sleep_time_clock_format(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -427,7 +427,7 @@ async def test_sleep_time_clock_format(
     )
     assert await integration_setup()
 
-    state = hass.states.get("sensor.first_l_sleep_start_time")
+    state = menuai.states.get("sensor.first_l_sleep_start_time")
     assert state
     assert state.state == expected_state
 
@@ -437,7 +437,7 @@ async def test_sleep_time_clock_format(
     [(["activity"])],
 )
 async def test_activity_scope_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -461,7 +461,7 @@ async def test_activity_scope_config_entry(
         )
     assert await integration_setup()
 
-    states = hass.states.async_all()
+    states = menuai.states.async_all()
     assert {s.entity_id for s in states} == {
         "sensor.first_l_activity_calories",
         "sensor.first_l_calories",
@@ -481,7 +481,7 @@ async def test_activity_scope_config_entry(
     [(["heartrate"])],
 )
 async def test_heartrate_scope_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -494,7 +494,7 @@ async def test_heartrate_scope_config_entry(
     )
     assert await integration_setup()
 
-    states = hass.states.async_all()
+    states = menuai.states.async_all()
     assert {s.entity_id for s in states} == {
         "sensor.first_l_resting_heart_rate",
     }
@@ -505,7 +505,7 @@ async def test_heartrate_scope_config_entry(
     [(["nutrition"], METRIC_SYSTEM), (["nutrition"], US_CUSTOMARY_SYSTEM)],
 )
 async def test_nutrition_scope_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -513,7 +513,7 @@ async def test_nutrition_scope_config_entry(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test nutrition sensors are enabled."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     register_timeseries(
         "foods/log/water",
         timeseries_response("foods-log-water", "99"),
@@ -524,11 +524,11 @@ async def test_nutrition_scope_config_entry(
     )
     assert await integration_setup()
 
-    state = hass.states.get("sensor.first_l_water")
+    state = menuai.states.get("sensor.first_l_water")
     assert state
     assert (state.state, state.attributes) == snapshot
 
-    state = hass.states.get("sensor.first_l_calories_in")
+    state = menuai.states.get("sensor.first_l_calories_in")
     assert state
     assert (state.state, state.attributes) == snapshot
 
@@ -538,7 +538,7 @@ async def test_nutrition_scope_config_entry(
     [(["sleep"])],
 )
 async def test_sleep_scope_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -561,7 +561,7 @@ async def test_sleep_scope_config_entry(
         )
     assert await integration_setup()
 
-    states = hass.states.async_all()
+    states = menuai.states.async_all()
     assert {s.entity_id for s in states} == {
         "sensor.first_l_awakenings_count",
         "sensor.first_l_sleep_efficiency",
@@ -579,7 +579,7 @@ async def test_sleep_scope_config_entry(
     [(["weight"])],
 )
 async def test_weight_scope_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -589,7 +589,7 @@ async def test_weight_scope_config_entry(
     register_timeseries("body/weight", timeseries_response("body-weight", "0"))
     assert await integration_setup()
 
-    states = hass.states.async_all()
+    states = menuai.states.async_all()
     assert [s.entity_id for s in states] == [
         "sensor.first_l_weight",
     ]
@@ -600,7 +600,7 @@ async def test_weight_scope_config_entry(
     [(["settings"], [DEVICE_RESPONSE_CHARGE_2])],
 )
 async def test_settings_scope_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -609,7 +609,7 @@ async def test_settings_scope_config_entry(
 
     assert await integration_setup()
 
-    states = hass.states.async_all()
+    states = menuai.states.async_all()
     assert [s.entity_id for s in states] == [
         "sensor.charge_2_battery",
         "sensor.charge_2_battery_level",
@@ -625,7 +625,7 @@ async def test_settings_scope_config_entry(
     ],
 )
 async def test_sensor_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     requests_mock: Mocker,
@@ -641,12 +641,12 @@ async def test_sensor_update_failed(
 
     assert await integration_setup()
 
-    state = hass.states.get("sensor.first_l_resting_heart_rate")
+    state = menuai.states.get("sensor.first_l_resting_heart_rate")
     assert state
     assert state.state == "unavailable"
 
     # Verify the config entry is in a normal state (no reauth required)
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert not flows
 
 
@@ -655,7 +655,7 @@ async def test_sensor_update_failed(
     [(["heartrate"])],
 )
 async def test_sensor_update_failed_requires_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     requests_mock: Mocker,
@@ -673,12 +673,12 @@ async def test_sensor_update_failed_requires_reauth(
 
     assert await integration_setup()
 
-    state = hass.states.get("sensor.first_l_resting_heart_rate")
+    state = menuai.states.get("sensor.first_l_resting_heart_rate")
     assert state
     assert state.state == "unavailable"
 
     # Verify that reauth is required
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
@@ -688,7 +688,7 @@ async def test_sensor_update_failed_requires_reauth(
     [(["heartrate"])],
 )
 async def test_sensor_update_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     requests_mock: Mocker,
@@ -716,14 +716,14 @@ async def test_sensor_update_success(
 
     assert await integration_setup()
 
-    state = hass.states.get("sensor.first_l_resting_heart_rate")
+    state = menuai.states.get("sensor.first_l_resting_heart_rate")
     assert state
     assert state.state == "60"
 
-    await async_update_entity(hass, "sensor.first_l_resting_heart_rate")
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, "sensor.first_l_resting_heart_rate")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.first_l_resting_heart_rate")
+    state = menuai.states.get("sensor.first_l_resting_heart_rate")
     assert state
     assert state.state == "70"
 
@@ -733,7 +733,7 @@ async def test_sensor_update_success(
     [(["settings"], None)],
 )
 async def test_device_battery_level_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     requests_mock: Mocker,
@@ -765,20 +765,20 @@ async def test_device_battery_level_update_failed(
 
     assert await integration_setup()
 
-    state = hass.states.get("sensor.charge_2_battery")
+    state = menuai.states.get("sensor.charge_2_battery")
     assert state
     assert state.state == "Medium"
 
     # Request an update for the entity which will fail
-    await async_update_entity(hass, "sensor.charge_2_battery")
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, "sensor.charge_2_battery")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.charge_2_battery")
+    state = menuai.states.get("sensor.charge_2_battery")
     assert state
     assert state.state == "unavailable"
 
     # Verify the config entry is in a normal state (no reauth required)
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert not flows
 
 
@@ -787,7 +787,7 @@ async def test_device_battery_level_update_failed(
     [(["settings"], None)],
 )
 async def test_device_battery_level_reauth_required(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     config_entry: MockConfigEntry,
@@ -815,20 +815,20 @@ async def test_device_battery_level_reauth_required(
 
     assert await integration_setup()
 
-    state = hass.states.get("sensor.charge_2_battery")
+    state = menuai.states.get("sensor.charge_2_battery")
     assert state
     assert state.state == "Medium"
 
     # Request an update for the entity which will fail
-    await async_update_entity(hass, "sensor.charge_2_battery")
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, "sensor.charge_2_battery")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.charge_2_battery")
+    state = menuai.states.get("sensor.charge_2_battery")
     assert state
     assert state.state == "unavailable"
 
     # Verify that reauth is required
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
@@ -855,7 +855,7 @@ async def test_device_battery_level_reauth_required(
     ids=("missing", "valid", "zero"),
 )
 async def test_resting_heart_rate_responses(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     register_timeseries: Callable[[str, dict[str, Any]], None],
@@ -885,6 +885,6 @@ async def test_resting_heart_rate_responses(
     )
     assert await integration_setup()
 
-    state = hass.states.get("sensor.first_l_resting_heart_rate")
+    state = menuai.states.get("sensor.first_l_resting_heart_rate")
     assert state
     assert state.state == expected_state

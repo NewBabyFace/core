@@ -16,30 +16,30 @@ from wsdiscovery.scope import Scope
 from wsdiscovery.service import Service
 from zeep.exceptions import Fault
 
-from homeassistant.components.ffmpeg import CONF_EXTRA_ARGUMENTS
-from homeassistant.components.stream import (
+from menuai.components.ffmpeg import CONF_EXTRA_ARGUMENTS
+from menuai.components.stream import (
     CONF_RTSP_TRANSPORT,
     CONF_USE_WALLCLOCK_AS_TIMESTAMPS,
     RTSP_TRANSPORTS,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import (
     CONF_DEVICE_ID,
@@ -77,10 +77,10 @@ def wsdiscovery() -> list[Service]:
         discovery.stop()
 
 
-async def async_discovery(hass: HomeAssistant) -> list[dict[str, Any]]:
+async def async_discovery(menuai: menuai) -> list[dict[str, Any]]:
     """Return if there are devices that can be discovered."""
     LOGGER.debug("Starting ONVIF discovery")
-    services = await hass.async_add_executor_job(wsdiscovery)
+    services = await menuai.async_add_executor_job(wsdiscovery)
 
     devices = []
     for service in services:
@@ -180,9 +180,9 @@ class OnvifFlowHandler(ConfigFlow, domain=DOMAIN):
         self, discovery_info: DhcpServiceInfo
     ) -> ConfigFlowResult:
         """Handle dhcp discovery."""
-        hass = self.hass
+        menuai = self.menuai
         mac = discovery_info.macaddress
-        registry = dr.async_get(self.hass)
+        registry = dr.async_get(self.menuai)
         if not (
             device := registry.async_get_device(
                 connections={(dr.CONNECTION_NETWORK_MAC, mac)}
@@ -191,15 +191,15 @@ class OnvifFlowHandler(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="no_devices_found")
         for entry_id in device.config_entries:
             if (
-                not (entry := hass.config_entries.async_get_entry(entry_id))
+                not (entry := menuai.config_entries.async_get_entry(entry_id))
                 or entry.domain != DOMAIN
                 or entry.state is ConfigEntryState.LOADED
             ):
                 continue
-            if hass.config_entries.async_update_entry(
+            if menuai.config_entries.async_update_entry(
                 entry, data=entry.data | {CONF_HOST: discovery_info.ip}
             ):
-                hass.async_create_task(self.hass.config_entries.async_reload(entry_id))
+                menuai.async_create_task(self.menuai.config_entries.async_reload(entry_id))
         return self.async_abort(reason="already_configured")
 
     async def async_step_device(
@@ -224,7 +224,7 @@ class OnvifFlowHandler(ConfigFlow, domain=DOMAIN):
                     }
                     return await self.async_step_configure()
 
-        discovery = await async_discovery(self.hass)
+        discovery = await async_discovery(self.menuai)
         for device in discovery:
             configured = any(
                 entry.unique_id == device[CONF_DEVICE_ID]
@@ -297,7 +297,7 @@ class OnvifFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         device = get_device(
-            self.hass,
+            self.menuai,
             self.onvif_config[CONF_HOST],
             self.onvif_config[CONF_PORT],
             self.onvif_config[CONF_USERNAME],

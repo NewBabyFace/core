@@ -7,10 +7,10 @@ import logging
 
 import aiohttp
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .entity import DoorBirdEntity
 from .models import DoorBirdConfigEntry, DoorBirdData
@@ -23,7 +23,7 @@ _TIMEOUT = 15  # seconds
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DoorBirdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -108,17 +108,17 @@ class DoorBirdCamera(DoorBirdEntity, Camera):
         self._last_update = now
         return self._last_image
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         event_to_entity_id = self._door_bird_data.event_entity_ids
         for event in self._door_station.events:
             event_to_entity_id[event] = self.entity_id
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from events."""
         event_to_entity_id = self._door_bird_data.event_entity_ids
         for event in self._door_station.events:
             # If the clear api was called, the events may not be in the dict
             event_to_entity_id.pop(event, None)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()

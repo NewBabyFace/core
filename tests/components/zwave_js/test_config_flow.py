@@ -18,9 +18,9 @@ from zwave_js_server.exceptions import FailedCommand
 from zwave_js_server.model.node import Node
 from zwave_js_server.version import VersionInfo
 
-from homeassistant import config_entries, data_entry_flow
-from homeassistant.components.zwave_js.config_flow import TITLE, get_usb_ports
-from homeassistant.components.zwave_js.const import (
+from menuai import config_entries, data_entry_flow
+from menuai.components.zwave_js.config_flow import TITLE, get_usb_ports
+from menuai.components.zwave_js.const import (
     ADDON_SLUG,
     CONF_ADDON_DEVICE,
     CONF_ADDON_LR_S2_ACCESS_CONTROL_KEY,
@@ -38,13 +38,13 @@ from homeassistant.components.zwave_js.const import (
     CONF_USB_PATH,
     DOMAIN,
 )
-from homeassistant.components.zwave_js.helpers import SERVER_VERSION_TIMEOUT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.zwave_js.helpers import SERVER_VERSION_TIMEOUT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.usb import UsbServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry, async_capture_events
 
@@ -118,7 +118,7 @@ def get_addon_discovery_info_fixture(get_addon_discovery_info: AsyncMock) -> Asy
 def setup_entry_fixture() -> Generator[AsyncMock]:
     """Mock entry setup."""
     with patch(
-        "homeassistant.components.zwave_js.async_setup_entry", return_value=True
+        "menuai.components.zwave_js.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -127,7 +127,7 @@ def setup_entry_fixture() -> Generator[AsyncMock]:
 def unload_entry_fixture() -> Generator[AsyncMock]:
     """Mock entry unload."""
     with patch(
-        "homeassistant.components.zwave_js.async_unload_entry", return_value=True
+        "menuai.components.zwave_js.async_unload_entry", return_value=True
     ) as mock_unload_entry:
         yield mock_unload_entry
 
@@ -136,7 +136,7 @@ def unload_entry_fixture() -> Generator[AsyncMock]:
 def mock_supervisor_fixture() -> Generator[None]:
     """Mock Supervisor."""
     with patch(
-        "homeassistant.components.zwave_js.config_flow.is_hassio", return_value=True
+        "menuai.components.zwave_js.config_flow.is_menuaiio", return_value=True
     ):
         yield
 
@@ -145,7 +145,7 @@ def mock_supervisor_fixture() -> Generator[None]:
 def mock_addon_setup_time() -> Generator[None]:
     """Mock add-on setup sleep time."""
     with patch(
-        "homeassistant.components.zwave_js.config_flow.ADDON_SETUP_TIMEOUT", new=0
+        "menuai.components.zwave_js.config_flow.ADDON_SETUP_TIMEOUT", new=0
     ):
         yield
 
@@ -168,7 +168,7 @@ def serial_port_fixture() -> ListPortInfo:
 def mock_list_ports_fixture(serial_port) -> Generator[MagicMock]:
     """Mock list ports."""
     with patch(
-        "homeassistant.components.zwave_js.config_flow.list_ports.comports"
+        "menuai.components.zwave_js.config_flow.list_ports.comports"
     ) as mock_list_ports:
         another_port = copy(serial_port)
         another_port.device = "/new"
@@ -188,7 +188,7 @@ def mock_list_ports_fixture(serial_port) -> Generator[MagicMock]:
 def mock_usb_serial_by_id_fixture() -> Generator[MagicMock]:
     """Mock usb serial by id."""
     with patch(
-        "homeassistant.components.zwave_js.config_flow.usb.get_serial_by_id"
+        "menuai.components.zwave_js.config_flow.usb.get_serial_by_id"
     ) as mock_usb_serial_by_id:
         mock_usb_serial_by_id.side_effect = lambda x: x
         yield mock_usb_serial_by_id
@@ -204,30 +204,30 @@ def mock_sdk_version(client: MagicMock) -> Generator[None]:
         client.driver.controller.data["sdkVersion"] = original_sdk_version
 
 
-async def test_manual(hass: HomeAssistant) -> None:
+async def test_manual(menuai: menuai) -> None:
     """Test we create an entry with manual step."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "url": "ws://localhost:3000",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Z-Wave JS"
@@ -277,16 +277,16 @@ async def slow_server_version(*args: Any) -> Any:
         ),
     ],
 )
-async def test_manual_errors(hass: HomeAssistant, url: str, error: str) -> None:
+async def test_manual_errors(menuai: menuai, url: str, error: str) -> None:
     """Test all errors with a manual set up."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": url,
@@ -321,25 +321,25 @@ async def test_manual_errors(hass: HomeAssistant, url: str, error: str) -> None:
     ],
 )
 async def test_reconfigure_manual_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
     url: str,
     error: str,
 ) -> None:
     """Test all errors with a manual set up in a reconfigure flow."""
     entry = integration
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": url,
@@ -350,7 +350,7 @@ async def test_reconfigure_manual_errors(
     assert result["errors"] == {"base": error}
 
 
-async def test_manual_already_configured(hass: HomeAssistant) -> None:
+async def test_manual_already_configured(menuai: menuai) -> None:
     """Test that only one unique instance is allowed."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -362,16 +362,16 @@ async def test_manual_already_configured(hass: HomeAssistant) -> None:
         title=TITLE,
         unique_id="1234",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://1.1.1.1:3001",
@@ -387,7 +387,7 @@ async def test_manual_already_configured(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_supervisor_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
 ) -> None:
     """Test flow started from Supervisor discovery."""
@@ -400,10 +400,10 @@ async def test_supervisor_discovery(
     addon_options["lr_s2_access_control_key"] = "new654"
     addon_options["lr_s2_authenticated_key"] = "new321"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -413,15 +413,15 @@ async def test_supervisor_discovery(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TITLE
@@ -443,13 +443,13 @@ async def test_supervisor_discovery(
 
 @pytest.mark.usefixtures("supervisor")
 @pytest.mark.parametrize("server_version_side_effect", [TimeoutError()])
-async def test_supervisor_discovery_cannot_connect(hass: HomeAssistant) -> None:
+async def test_supervisor_discovery_cannot_connect(menuai: menuai) -> None:
     """Test Supervisor discovery and cannot connect."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -462,7 +462,7 @@ async def test_supervisor_discovery_cannot_connect(hass: HomeAssistant) -> None:
 
 
 async def test_clean_discovery_on_user_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor,
     addon_running,
     addon_options,
@@ -477,10 +477,10 @@ async def test_clean_discovery_on_user_create(
     addon_options["lr_s2_access_control_key"] = "new654"
     addon_options["lr_s2_authenticated_key"] = "new321"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -490,21 +490,21 @@ async def test_clean_discovery_on_user_create(
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": False}
     )
 
@@ -513,22 +513,22 @@ async def test_clean_discovery_on_user_create(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "url": "ws://localhost:3000",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TITLE
     assert result["data"] == {
@@ -549,7 +549,7 @@ async def test_clean_discovery_on_user_create(
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_abort_discovery_with_existing_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
 ) -> None:
     """Test discovery flow is aborted if an entry already exists."""
@@ -560,12 +560,12 @@ async def test_abort_discovery_with_existing_entry(
         title=TITLE,
         unique_id="1234",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -580,9 +580,9 @@ async def test_abort_discovery_with_existing_entry(
 
 
 @pytest.mark.usefixtures("supervisor", "addon_installed", "addon_info")
-async def test_abort_hassio_discovery_with_existing_flow(hass: HomeAssistant) -> None:
-    """Test hassio discovery flow is aborted when another discovery has happened."""
-    result = await hass.config_entries.flow.async_init(
+async def test_abort_menuaiio_discovery_with_existing_flow(menuai: menuai) -> None:
+    """Test menuaiio discovery flow is aborted when another discovery has happened."""
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -590,10 +590,10 @@ async def test_abort_hassio_discovery_with_existing_flow(hass: HomeAssistant) ->
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -606,12 +606,12 @@ async def test_abort_hassio_discovery_with_existing_flow(hass: HomeAssistant) ->
 
 
 @pytest.mark.usefixtures("supervisor", "addon_installed", "addon_info")
-async def test_abort_hassio_discovery_for_other_addon(hass: HomeAssistant) -> None:
-    """Test hassio discovery flow is aborted for a non official add-on discovery."""
-    result2 = await hass.config_entries.flow.async_init(
+async def test_abort_menuaiio_discovery_for_other_addon(menuai: menuai) -> None:
+    """Test menuaiio discovery flow is aborted for a non official add-on discovery."""
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config={
                 "addon": "Other Z-Wave JS",
                 "host": "host1",
@@ -646,12 +646,12 @@ async def test_abort_hassio_discovery_for_other_addon(hass: HomeAssistant) -> No
                 manufacturer="Nabu Casa",
             ),
             "/dev/zwa2",
-            "Home Assistant Connect ZWA-2",
+            "MenuAI Connect ZWA-2",
         ),
     ],
 )
 async def test_usb_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_addon: AsyncMock,
     mock_usb_serial_by_id: MagicMock,
     set_addon_options: AsyncMock,
@@ -661,7 +661,7 @@ async def test_usb_discovery(
     discovery_name: str,
 ) -> None:
     """Test usb discovery success path."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=usb_discovery_info,
@@ -672,7 +672,7 @@ async def test_usb_discovery(
     assert result["step_id"] == "installation_type"
     assert result["menu_options"] == ["intent_recommended", "intent_custom"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
@@ -680,16 +680,16 @@ async def test_usb_discovery(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_zwave_js")
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "s0_legacy_key": "new123",
@@ -721,16 +721,16 @@ async def test_usb_discovery(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -754,7 +754,7 @@ async def test_usb_discovery(
 
 @pytest.mark.usefixtures("supervisor", "addon_installed")
 async def test_usb_discovery_addon_not_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
     mock_usb_serial_by_id: MagicMock,
     set_addon_options: AsyncMock,
@@ -763,7 +763,7 @@ async def test_usb_discovery_addon_not_running(
     """Test usb discovery when add-on is installed but not running."""
     addon_options["device"] = "/dev/incorrect_device"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -773,7 +773,7 @@ async def test_usb_discovery_addon_not_running(
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
@@ -792,7 +792,7 @@ async def test_usb_discovery_addon_not_running(
         "lr_s2_authenticated_key": "",
     }
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "s0_legacy_key": "new123",
@@ -824,16 +824,16 @@ async def test_usb_discovery_addon_not_running(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -857,7 +857,7 @@ async def test_usb_discovery_addon_not_running(
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_usb_discovery_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
     mock_usb_serial_by_id: MagicMock,
     set_addon_options: AsyncMock,
@@ -872,7 +872,7 @@ async def test_usb_discovery_migration(
     addon_options["device"] = "/dev/ttyUSB0"
     entry = integration
     assert client.connect.call_count == 1
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         unique_id="1234",
         data={
@@ -917,10 +917,10 @@ async def test_usb_discovery_migration(
     client.driver.controller.async_restore_nvm = AsyncMock(side_effect=mock_restore_nvm)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -930,26 +930,26 @@ async def test_usb_discovery_migration(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
         assert len(events) == 1
         assert events[0].data["progress"] == 0.5
         events.clear()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.unique_id == "4321"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
     assert result["type"] is FlowResultType.SHOW_PROGRESS
@@ -958,19 +958,19 @@ async def test_usb_discovery_migration(
         "core_zwave_js", AddonsOptions(config={"device": USB_DISCOVERY_INFO.device})
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_args == call("core_zwave_js")
 
     version_info.home_id = 5678
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "restore_nvm"
     assert client.connect.call_count == 2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert client.connect.call_count == 4
     assert entry.state is config_entries.ConfigEntryState.LOADED
     assert client.driver.controller.async_restore_nvm.call_count == 1
@@ -978,7 +978,7 @@ async def test_usb_discovery_migration(
     assert events[0].data["progress"] == 0.25
     assert events[1].data["progress"] == 0.75
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "migration_successful"
@@ -991,7 +991,7 @@ async def test_usb_discovery_migration(
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_usb_discovery_migration_restore_driver_ready_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
     mock_usb_serial_by_id: MagicMock,
     set_addon_options: AsyncMock,
@@ -1003,7 +1003,7 @@ async def test_usb_discovery_migration_restore_driver_ready_timeout(
     addon_options["device"] = "/dev/ttyUSB0"
     entry = integration
     assert client.connect.call_count == 1
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         unique_id="1234",
         data={
@@ -1045,10 +1045,10 @@ async def test_usb_discovery_migration_restore_driver_ready_timeout(
     client.driver.controller.async_restore_nvm = AsyncMock(side_effect=mock_restore_nvm)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -1058,26 +1058,26 @@ async def test_usb_discovery_migration_restore_driver_ready_timeout(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
         assert len(events) == 1
         assert events[0].data["progress"] == 0.5
         events.clear()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
@@ -1085,21 +1085,21 @@ async def test_usb_discovery_migration_restore_driver_ready_timeout(
         "core_zwave_js", AddonsOptions(config={"device": USB_DISCOVERY_INFO.device})
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_args == call("core_zwave_js")
 
     with patch(
-        ("homeassistant.components.zwave_js.config_flow.DRIVER_READY_TIMEOUT"),
+        ("menuai.components.zwave_js.config_flow.DRIVER_READY_TIMEOUT"),
         new=0,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
         assert result["type"] is FlowResultType.SHOW_PROGRESS
         assert result["step_id"] == "restore_nvm"
         assert client.connect.call_count == 2
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.connect.call_count == 4
         assert entry.state is config_entries.ConfigEntryState.LOADED
         assert client.driver.controller.async_restore_nvm.call_count == 1
@@ -1107,7 +1107,7 @@ async def test_usb_discovery_migration_restore_driver_ready_timeout(
         assert events[0].data["progress"] == 0.25
         assert events[1].data["progress"] == 0.75
 
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "migration_successful"
@@ -1119,7 +1119,7 @@ async def test_usb_discovery_migration_restore_driver_ready_timeout(
 
 @pytest.mark.usefixtures("supervisor", "addon_installed")
 async def test_discovery_addon_not_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
@@ -1127,10 +1127,10 @@ async def test_discovery_addon_not_running(
     """Test discovery with add-on already installed but not running."""
     addon_options["device"] = None
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -1138,15 +1138,15 @@ async def test_discovery_addon_not_running(
         ),
     )
 
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/test",
@@ -1179,16 +1179,16 @@ async def test_discovery_addon_not_running(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -1212,16 +1212,16 @@ async def test_discovery_addon_not_running(
 
 @pytest.mark.usefixtures("supervisor", "addon_not_installed", "addon_info")
 async def test_discovery_addon_not_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_addon: AsyncMock,
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
 ) -> None:
     """Test discovery with add-on not installed."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -1229,24 +1229,24 @@ async def test_discovery_addon_not_installed(
         ),
     )
 
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["step_id"] == "install_addon"
     assert result["type"] is FlowResultType.SHOW_PROGRESS
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_zwave_js")
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/test",
@@ -1279,16 +1279,16 @@ async def test_discovery_addon_not_installed(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -1311,12 +1311,12 @@ async def test_discovery_addon_not_installed(
 
 
 @pytest.mark.usefixtures("supervisor", "addon_info")
-async def test_abort_usb_discovery_with_existing_flow(hass: HomeAssistant) -> None:
+async def test_abort_usb_discovery_with_existing_flow(menuai: menuai) -> None:
     """Test usb discovery flow is aborted when another discovery has happened."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Z-Wave JS",
             slug=ADDON_SLUG,
@@ -1325,9 +1325,9 @@ async def test_abort_usb_discovery_with_existing_flow(hass: HomeAssistant) -> No
     )
 
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -1337,7 +1337,7 @@ async def test_abort_usb_discovery_with_existing_flow(hass: HomeAssistant) -> No
 
 
 @pytest.mark.usefixtures("supervisor", "addon_installed")
-async def test_usb_discovery_with_existing_usb_flow(hass: HomeAssistant) -> None:
+async def test_usb_discovery_with_existing_usb_flow(menuai: menuai) -> None:
     """Test usb discovery allows more than one USB flow in progress."""
     first_usb_info = UsbServiceInfo(
         device="/dev/other_device",
@@ -1347,7 +1347,7 @@ async def test_usb_discovery_with_existing_usb_flow(hass: HomeAssistant) -> None
         description="zwave radio",
         manufacturer="test",
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=first_usb_info,
@@ -1356,7 +1356,7 @@ async def test_usb_discovery_with_existing_usb_flow(hass: HomeAssistant) -> None
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -1364,20 +1364,20 @@ async def test_usb_discovery_with_existing_usb_flow(hass: HomeAssistant) -> None
     assert result2["type"] is FlowResultType.MENU
     assert result2["step_id"] == "installation_type"
 
-    usb_flows_in_progress = hass.config_entries.flow.async_progress_by_handler(
+    usb_flows_in_progress = menuai.config_entries.flow.async_progress_by_handler(
         DOMAIN, match_context={"source": config_entries.SOURCE_USB}
     )
 
     assert len(usb_flows_in_progress) == 2
 
     for flow in (result, result2):
-        hass.config_entries.flow.async_abort(flow["flow_id"])
+        menuai.config_entries.flow.async_abort(flow["flow_id"])
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
 
 @pytest.mark.usefixtures("supervisor", "addon_info")
-async def test_abort_usb_discovery_addon_required(hass: HomeAssistant) -> None:
+async def test_abort_usb_discovery_addon_required(menuai: menuai) -> None:
     """Test usb discovery aborted when existing entry not using add-on."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -1385,9 +1385,9 @@ async def test_abort_usb_discovery_addon_required(hass: HomeAssistant) -> None:
         title=TITLE,
         unique_id="1234",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -1396,9 +1396,9 @@ async def test_abort_usb_discovery_addon_required(hass: HomeAssistant) -> None:
     assert result["reason"] == "addon_required"
 
 
-async def test_usb_discovery_requires_supervisor(hass: HomeAssistant) -> None:
+async def test_usb_discovery_requires_supervisor(menuai: menuai) -> None:
     """Test usb discovery flow is aborted when there is no supervisor."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -1409,13 +1409,13 @@ async def test_usb_discovery_requires_supervisor(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_usb_discovery_same_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
     mock_usb_serial_by_id: MagicMock,
 ) -> None:
     """Test usb discovery flow is aborted when the add-on device is discovered."""
     addon_options["device"] = USB_DISCOVERY_INFO.device
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=USB_DISCOVERY_INFO,
@@ -1431,11 +1431,11 @@ async def test_usb_discovery_same_device(
     [CP2652_ZIGBEE_DISCOVERY_INFO],
 )
 async def test_abort_usb_discovery_aborts_specific_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     usb_discovery_info: UsbServiceInfo,
 ) -> None:
     """Test usb discovery flow is aborted on specific devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=usb_discovery_info,
@@ -1445,24 +1445,24 @@ async def test_abort_usb_discovery_aborts_specific_devices(
 
 
 @pytest.mark.usefixtures("supervisor")
-async def test_not_addon(hass: HomeAssistant) -> None:
+async def test_not_addon(menuai: menuai) -> None:
     """Test opting out of add-on on Supervisor."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": False}
     )
 
@@ -1471,20 +1471,20 @@ async def test_not_addon(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "url": "ws://localhost:3000",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TITLE
@@ -1506,7 +1506,7 @@ async def test_not_addon(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_addon_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
 ) -> None:
     """Test add-on already running on Supervisor."""
@@ -1518,14 +1518,14 @@ async def test_addon_running(
     addon_options["lr_s2_access_control_key"] = "new654"
     addon_options["lr_s2_authenticated_key"] = "new321"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
@@ -1534,17 +1534,17 @@ async def test_addon_running(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"use_addon": True}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TITLE
@@ -1626,7 +1626,7 @@ async def test_addon_running(
     ],
 )
 async def test_addon_running_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
     abort_reason: str,
 ) -> None:
@@ -1634,21 +1634,21 @@ async def test_addon_running_failures(
     addon_options["device"] = "/test"
     addon_options["network_key"] = "abc123"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1658,7 +1658,7 @@ async def test_addon_running_failures(
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_addon_running_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_options: dict[str, Any],
 ) -> None:
     """Test that only one unique instance is allowed when add-on is running."""
@@ -1686,24 +1686,24 @@ async def test_addon_running_already_configured(
         title=TITLE,
         unique_id=1234,  # Unique ID is purposely set to int to test migration logic
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1721,34 +1721,34 @@ async def test_addon_running_already_configured(
 
 @pytest.mark.usefixtures("supervisor", "addon_installed", "addon_info")
 async def test_addon_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
 ) -> None:
     """Test add-on already installed but not running on Supervisor."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/test",
@@ -1781,16 +1781,16 @@ async def test_addon_installed(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -1815,34 +1815,34 @@ async def test_addon_installed(
 @pytest.mark.usefixtures("supervisor", "addon_installed", "addon_info")
 @pytest.mark.parametrize("start_addon_side_effect", [SupervisorError()])
 async def test_addon_installed_start_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
 ) -> None:
     """Test add-on start failure when add-on is installed."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/test",
@@ -1873,8 +1873,8 @@ async def test_addon_installed_start_failure(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -1904,34 +1904,34 @@ async def test_addon_installed_start_failure(
     ],
 )
 async def test_addon_installed_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
 ) -> None:
     """Test all failures when add-on is installed."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/test",
@@ -1962,8 +1962,8 @@ async def test_addon_installed_failures(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -1974,34 +1974,34 @@ async def test_addon_installed_failures(
 @pytest.mark.usefixtures("supervisor", "addon_installed", "addon_info")
 @pytest.mark.parametrize("set_addon_options_side_effect", [SupervisorError()])
 async def test_addon_installed_set_options_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
 ) -> None:
     """Test all failures when add-on is installed."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/test",
@@ -2036,17 +2036,17 @@ async def test_addon_installed_set_options_failure(
 
 
 @pytest.mark.usefixtures("supervisor", "addon_installed")
-async def test_addon_installed_usb_ports_failure(hass: HomeAssistant) -> None:
+async def test_addon_installed_usb_ports_failure(menuai: menuai) -> None:
     """Test usb ports failure when add-on is installed."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
@@ -2054,10 +2054,10 @@ async def test_addon_installed_usb_ports_failure(hass: HomeAssistant) -> None:
     assert result["step_id"] == "on_supervisor"
 
     with patch(
-        "homeassistant.components.zwave_js.config_flow.async_get_usb_ports",
+        "menuai.components.zwave_js.config_flow.async_get_usb_ports",
         side_effect=OSError("test_error"),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"use_addon": True}
         )
 
@@ -2067,7 +2067,7 @@ async def test_addon_installed_usb_ports_failure(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("supervisor", "addon_installed", "addon_info")
 async def test_addon_installed_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
 ) -> None:
@@ -2088,30 +2088,30 @@ async def test_addon_installed_already_configured(
         title=TITLE,
         unique_id="1234",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/new",
@@ -2142,8 +2142,8 @@ async def test_addon_installed_already_configured(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -2161,27 +2161,27 @@ async def test_addon_installed_already_configured(
 
 @pytest.mark.usefixtures("supervisor", "addon_not_installed", "addon_info")
 async def test_addon_not_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_addon: AsyncMock,
     set_addon_options: AsyncMock,
     start_addon: AsyncMock,
 ) -> None:
     """Test add-on not installed."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -2189,16 +2189,16 @@ async def test_addon_not_installed(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_zwave_js")
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "usb_path": "/test",
@@ -2231,16 +2231,16 @@ async def test_addon_not_installed(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -2264,36 +2264,36 @@ async def test_addon_not_installed(
 
 @pytest.mark.usefixtures("supervisor", "addon_not_installed")
 async def test_install_addon_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_addon: AsyncMock,
 ) -> None:
     """Test add-on install failure."""
     install_addon.side_effect = SupervisorError()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_custom"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_zwave_js")
 
@@ -2302,33 +2302,33 @@ async def test_install_addon_failure(
 
 
 async def test_reconfigure_manual(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
     """Test manual settings in reconfigure flow."""
     entry = integration
-    hass.config_entries.async_update_entry(entry, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, unique_id="1234")
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"url": "ws://1.1.1.1:3001"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -2340,29 +2340,29 @@ async def test_reconfigure_manual(
 
 
 async def test_reconfigure_manual_different_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow manual step connecting to different device."""
     entry = integration
-    hass.config_entries.async_update_entry(entry, unique_id="5678")
+    menuai.config_entries.async_update_entry(entry, unique_id="5678")
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"url": "ws://1.1.1.1:3001"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "different_device"
@@ -2370,43 +2370,43 @@ async def test_reconfigure_manual_different_device(
 
 @pytest.mark.usefixtures("supervisor")
 async def test_reconfigure_not_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow and opting out of add-on on Supervisor."""
     entry = integration
-    hass.config_entries.async_update_entry(entry, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, unique_id="1234")
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": False}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:3000",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -2419,7 +2419,7 @@ async def test_reconfigure_not_addon(
 
 @pytest.mark.usefixtures("supervisor")
 async def test_reconfigure_not_addon_with_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_entry: AsyncMock,
     unload_entry: AsyncMock,
     integration: MockConfigEntry,
@@ -2427,7 +2427,7 @@ async def test_reconfigure_not_addon_with_addon(
 ) -> None:
     """Test reconfigure flow opting out of add-on on Supervisor with add-on."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         data={**entry.data, "url": "ws://host1:3001", "use_addon": True},
         unique_id="1234",
@@ -2437,19 +2437,19 @@ async def test_reconfigure_not_addon_with_addon(
     assert unload_entry.call_count == 0
     setup_entry.reset_mock()
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": False}
     )
 
@@ -2462,13 +2462,13 @@ async def test_reconfigure_not_addon_with_addon(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:3000",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -2480,13 +2480,13 @@ async def test_reconfigure_not_addon_with_addon(
     assert unload_entry.call_count == 1
 
     # avoid unload entry in teardown
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
 
 @pytest.mark.usefixtures("supervisor")
 async def test_reconfigure_not_addon_with_addon_stop_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_entry: AsyncMock,
     unload_entry: AsyncMock,
     integration: MockConfigEntry,
@@ -2495,7 +2495,7 @@ async def test_reconfigure_not_addon_with_addon_stop_fail(
     """Test reconfigure flow opting out of add-on and add-on stop error."""
     stop_addon.side_effect = SupervisorError("Boom!")
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         data={**entry.data, "url": "ws://host1:3001", "use_addon": True},
         unique_id="1234",
@@ -2505,22 +2505,22 @@ async def test_reconfigure_not_addon_with_addon_stop_fail(
     assert unload_entry.call_count == 0
     setup_entry.reset_mock()
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": False}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert stop_addon.call_count == 1
     assert stop_addon.call_args == call("core_zwave_js")
@@ -2533,7 +2533,7 @@ async def test_reconfigure_not_addon_with_addon_stop_fail(
     assert setup_entry.call_count == 1
     assert unload_entry.call_count == 1
     # avoid unload entry in teardown
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
 
@@ -2599,7 +2599,7 @@ async def test_reconfigure_not_addon_with_addon_stop_fail(
     ],
 )
 async def test_reconfigure_addon_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     addon_options: dict[str, Any],
@@ -2614,33 +2614,33 @@ async def test_reconfigure_addon_running(
     addon_options.update(old_addon_options)
     entry = integration
     data = {**entry.data, **entry_data}
-    hass.config_entries.async_update_entry(entry, data=data, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, data=data, unique_id="1234")
 
     assert entry.data["url"] == "ws://test.org"
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         new_addon_options,
     )
@@ -2655,9 +2655,9 @@ async def test_reconfigure_addon_running(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_args == call("core_zwave_js")
 
@@ -2724,7 +2724,7 @@ async def test_reconfigure_addon_running(
     ],
 )
 async def test_reconfigure_addon_running_no_changes(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     addon_options: dict[str, Any],
@@ -2738,37 +2738,37 @@ async def test_reconfigure_addon_running_no_changes(
     addon_options.update(old_addon_options)
     entry = integration
     data = {**entry.data, **entry_data}
-    hass.config_entries.async_update_entry(entry, data=data, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, data=data, unique_id="1234")
 
     assert entry.data["url"] == "ws://test.org"
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         new_addon_options,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     new_addon_options["device"] = new_addon_options.pop("usb_path")
     assert set_addon_options.call_count == 0
@@ -2883,7 +2883,7 @@ async def different_device_server_version(*args):
     ],
 )
 async def test_reconfigure_different_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     addon_options: dict[str, Any],
@@ -2898,33 +2898,33 @@ async def test_reconfigure_different_device(
     addon_options.update(old_addon_options)
     entry = integration
     data = {**entry.data, **entry_data}
-    hass.config_entries.async_update_entry(entry, data=data, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, data=data, unique_id="1234")
 
     assert entry.data["url"] == "ws://test.org"
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         new_addon_options,
     )
@@ -2938,13 +2938,13 @@ async def test_reconfigure_different_device(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_count == 1
     assert restart_addon.call_args == call("core_zwave_js")
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     # Default emulate_hardware is False.
     addon_options = {"emulate_hardware": False} | old_addon_options
@@ -2958,13 +2958,13 @@ async def test_reconfigure_different_device(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_count == 2
     assert restart_addon.call_args == call("core_zwave_js")
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "different_device"
@@ -3045,7 +3045,7 @@ async def test_reconfigure_different_device(
     ],
 )
 async def test_reconfigure_addon_restart_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     addon_options: dict[str, Any],
@@ -3060,33 +3060,33 @@ async def test_reconfigure_addon_restart_failed(
     addon_options.update(old_addon_options)
     entry = integration
     data = {**entry.data, **entry_data}
-    hass.config_entries.async_update_entry(entry, data=data, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, data=data, unique_id="1234")
 
     assert entry.data["url"] == "ws://test.org"
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         new_addon_options,
     )
@@ -3100,13 +3100,13 @@ async def test_reconfigure_addon_restart_failed(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_count == 1
     assert restart_addon.call_args == call("core_zwave_js")
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     # The legacy network key should not be reset.
     old_addon_options.pop("network_key")
@@ -3117,13 +3117,13 @@ async def test_reconfigure_addon_restart_failed(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_count == 2
     assert restart_addon.call_args == call("core_zwave_js")
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "addon_start_failed"
@@ -3135,7 +3135,7 @@ async def test_reconfigure_addon_restart_failed(
 @pytest.mark.usefixtures("supervisor", "addon_running", "restart_addon")
 @pytest.mark.parametrize("server_version_side_effect", [aiohttp.ClientError("Boom")])
 async def test_reconfigure_addon_running_server_info_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     addon_options: dict[str, Any],
@@ -3167,37 +3167,37 @@ async def test_reconfigure_addon_running_server_info_failure(
     }
     addon_options.update(old_addon_options)
     entry = integration
-    hass.config_entries.async_update_entry(entry, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, unique_id="1234")
 
     assert entry.data["url"] == "ws://test.org"
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         new_addon_options,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
@@ -3269,7 +3269,7 @@ async def test_reconfigure_addon_running_server_info_failure(
     ],
 )
 async def test_reconfigure_addon_not_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     install_addon: AsyncMock,
     integration: MockConfigEntry,
@@ -3285,26 +3285,26 @@ async def test_reconfigure_addon_not_installed(
     addon_options.update(old_addon_options)
     entry = integration
     data = {**entry.data, **entry_data}
-    hass.config_entries.async_update_entry(entry, data=data, unique_id="1234")
+    menuai.config_entries.async_update_entry(entry, data=data, unique_id="1234")
 
     assert entry.data["url"] == "ws://test.org"
 
     assert client.connect.call_count == 1
     assert client.disconnect.call_count == 0
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -3312,16 +3312,16 @@ async def test_reconfigure_addon_not_installed(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_zwave_js")
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_addon_reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         new_addon_options,
     )
@@ -3335,14 +3335,14 @@ async def test_reconfigure_addon_not_installed(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert start_addon.call_count == 1
     assert start_addon.call_args == call("core_zwave_js")
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -3355,10 +3355,10 @@ async def test_reconfigure_addon_not_installed(
     assert client.disconnect.call_count == 1
 
 
-async def test_zeroconf(hass: HomeAssistant) -> None:
+async def test_zeroconf(menuai: menuai) -> None:
     """Test zeroconf discovery."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -3377,15 +3377,15 @@ async def test_zeroconf(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TITLE
@@ -3406,21 +3406,21 @@ async def test_zeroconf(hass: HomeAssistant) -> None:
 
 
 async def test_reconfigure_migrate_no_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
 ) -> None:
     """Test migration flow fails when not using add-on."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": False}
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
@@ -3431,21 +3431,21 @@ async def test_reconfigure_migrate_no_addon(
 
 @pytest.mark.usefixtures("mock_sdk_version")
 async def test_reconfigure_migrate_low_sdk_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
 ) -> None:
     """Test migration flow fails with too low controller SDK version."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
@@ -3475,7 +3475,7 @@ async def test_reconfigure_migrate_low_sdk_version(
     ],
 )
 async def test_reconfigure_migrate_with_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     device_registry: dr.DeviceRegistry,
     multisensor_6: Node,
@@ -3496,7 +3496,7 @@ async def test_reconfigure_migrate_with_addon(
     entry = integration
     assert client.connect.call_count == 1
     assert client.driver.controller.home_id == 3245146787
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         data={
             "url": "ws://localhost:3000",
@@ -3575,42 +3575,42 @@ async def test_reconfigure_migrate_with_addon(
     client.driver.controller.async_restore_nvm = AsyncMock(side_effect=mock_restore_nvm)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
         assert len(events) == 1
         assert events[0].data["progress"] == 0.5
         events.clear()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
     assert entry.unique_id == reset_unique_id
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_serial_port"
@@ -3625,7 +3625,7 @@ async def test_reconfigure_migrate_with_addon(
     get_server_version.side_effect = None
     version_info.home_id = 5678
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USB_PATH: "/test",
@@ -3649,11 +3649,11 @@ async def test_reconfigure_migrate_with_addon(
     controller_node.device_config.data["manufacturer"] = "New Device Manufacturer"
     client.driver.controller.data["homeId"] = 5678
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_args == call("core_zwave_js")
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert entry.unique_id == "5678"
     get_server_version.side_effect = restore_server_version_side_effect
@@ -3663,7 +3663,7 @@ async def test_reconfigure_migrate_with_addon(
     assert result["step_id"] == "restore_nvm"
     assert client.connect.call_count == 2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert client.connect.call_count == 4
     assert entry.state is config_entries.ConfigEntryState.LOADED
     assert client.driver.controller.async_restore_nvm.call_count == 1
@@ -3671,7 +3671,7 @@ async def test_reconfigure_migrate_with_addon(
     assert events[0].data["progress"] == 0.25
     assert events[1].data["progress"] == 0.75
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "migration_successful"
@@ -3704,7 +3704,7 @@ async def test_reconfigure_migrate_with_addon(
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_reconfigure_migrate_reset_driver_ready_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     restart_addon: AsyncMock,
@@ -3716,7 +3716,7 @@ async def test_reconfigure_migrate_reset_driver_ready_timeout(
     version_info.home_id = 4321
     entry = integration
     assert client.connect.call_count == 1
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         unique_id="1234",
         data={
@@ -3759,15 +3759,15 @@ async def test_reconfigure_migrate_reset_driver_ready_timeout(
     client.driver.controller.async_restore_nvm = AsyncMock(side_effect=mock_restore_nvm)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
@@ -3776,31 +3776,31 @@ async def test_reconfigure_migrate_reset_driver_ready_timeout(
 
     with (
         patch(
-            ("homeassistant.components.zwave_js.config_flow.DRIVER_READY_TIMEOUT"),
+            ("menuai.components.zwave_js.config_flow.DRIVER_READY_TIMEOUT"),
             new=0,
         ),
         patch("pathlib.Path.write_bytes") as mock_file,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
         assert result["type"] is FlowResultType.SHOW_PROGRESS
         assert result["step_id"] == "backup_nvm"
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
         assert len(events) == 1
         assert events[0].data["progress"] == 0.5
         events.clear()
 
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
     assert entry.unique_id == "4321"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_serial_port"
@@ -3808,7 +3808,7 @@ async def test_reconfigure_migrate_reset_driver_ready_timeout(
     assert data_schema is not None
     assert data_schema.schema[CONF_USB_PATH]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USB_PATH: "/test",
@@ -3821,19 +3821,19 @@ async def test_reconfigure_migrate_reset_driver_ready_timeout(
         "core_zwave_js", AddonsOptions(config={"device": "/test"})
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_args == call("core_zwave_js")
 
     version_info.home_id = 5678
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "restore_nvm"
     assert client.connect.call_count == 2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert client.connect.call_count == 4
     assert entry.state is config_entries.ConfigEntryState.LOADED
     assert client.driver.controller.async_restore_nvm.call_count == 1
@@ -3841,7 +3841,7 @@ async def test_reconfigure_migrate_reset_driver_ready_timeout(
     assert events[0].data["progress"] == 0.25
     assert events[1].data["progress"] == 0.75
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "migration_successful"
@@ -3854,7 +3854,7 @@ async def test_reconfigure_migrate_reset_driver_ready_timeout(
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_reconfigure_migrate_restore_driver_ready_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     restart_addon: AsyncMock,
@@ -3863,7 +3863,7 @@ async def test_reconfigure_migrate_restore_driver_ready_timeout(
     """Test migration flow with driver ready timeout after nvm restore."""
     entry = integration
     assert client.connect.call_count == 1
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         unique_id="1234",
         data={
@@ -3905,41 +3905,41 @@ async def test_reconfigure_migrate_restore_driver_ready_timeout(
     client.driver.controller.async_restore_nvm = AsyncMock(side_effect=mock_restore_nvm)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
         assert len(events) == 1
         assert events[0].data["progress"] == 0.5
         events.clear()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_serial_port"
@@ -3947,7 +3947,7 @@ async def test_reconfigure_migrate_restore_driver_ready_timeout(
     assert data_schema is not None
     assert data_schema.schema[CONF_USB_PATH]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USB_PATH: "/test",
@@ -3960,21 +3960,21 @@ async def test_reconfigure_migrate_restore_driver_ready_timeout(
         "core_zwave_js", AddonsOptions(config={"device": "/test"})
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert restart_addon.call_args == call("core_zwave_js")
 
     with patch(
-        ("homeassistant.components.zwave_js.config_flow.DRIVER_READY_TIMEOUT"),
+        ("menuai.components.zwave_js.config_flow.DRIVER_READY_TIMEOUT"),
         new=0,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
         assert result["type"] is FlowResultType.SHOW_PROGRESS
         assert result["step_id"] == "restore_nvm"
         assert client.connect.call_count == 2
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.connect.call_count == 4
         assert entry.state is config_entries.ConfigEntryState.LOADED
         assert client.driver.controller.async_restore_nvm.call_count == 1
@@ -3982,7 +3982,7 @@ async def test_reconfigure_migrate_restore_driver_ready_timeout(
         assert events[0].data["progress"] == 0.25
         assert events[1].data["progress"] == 0.75
 
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "migration_successful"
@@ -3993,13 +3993,13 @@ async def test_reconfigure_migrate_restore_driver_ready_timeout(
 
 
 async def test_reconfigure_migrate_backup_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
     client: MagicMock,
 ) -> None:
     """Test backup failure."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
 
@@ -4007,19 +4007,19 @@ async def test_reconfigure_migrate_backup_failure(
         side_effect=FailedCommand("test_error", "unknown_error")
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "backup_failed"
@@ -4027,13 +4027,13 @@ async def test_reconfigure_migrate_backup_failure(
 
 
 async def test_reconfigure_migrate_backup_file_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
     client: MagicMock,
 ) -> None:
     """Test backup file failure."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
 
@@ -4045,28 +4045,28 @@ async def test_reconfigure_migrate_backup_file_failure(
         side_effect=mock_backup_nvm_raw
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes", side_effect=OSError("test_error")):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "backup_failed"
@@ -4075,7 +4075,7 @@ async def test_reconfigure_migrate_backup_file_failure(
 
 @pytest.mark.usefixtures("supervisor", "addon_running")
 async def test_reconfigure_migrate_start_addon_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     restart_addon: AsyncMock,
@@ -4084,7 +4084,7 @@ async def test_reconfigure_migrate_start_addon_failure(
     """Test add-on start failure during migration."""
     restart_addon.side_effect = SupervisorError("Boom!")
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
 
@@ -4103,40 +4103,40 @@ async def test_reconfigure_migrate_start_addon_failure(
 
     client.driver.async_hard_reset = AsyncMock(side_effect=mock_reset_controller)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_serial_port"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USB_PATH: "/test",
@@ -4151,8 +4151,8 @@ async def test_reconfigure_migrate_start_addon_failure(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "addon_start_failed"
@@ -4161,14 +4161,14 @@ async def test_reconfigure_migrate_start_addon_failure(
 
 @pytest.mark.usefixtures("supervisor", "addon_running", "restart_addon")
 async def test_reconfigure_migrate_restore_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
     set_addon_options: AsyncMock,
 ) -> None:
     """Test restore failure."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
 
@@ -4190,40 +4190,40 @@ async def test_reconfigure_migrate_restore_failure(
         side_effect=FailedCommand("test_error", "unknown_error")
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "choose_serial_port"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USB_PATH: "/test",
@@ -4234,17 +4234,17 @@ async def test_reconfigure_migrate_restore_failure(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "restore_nvm"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client.driver.controller.async_restore_nvm.call_count == 1
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "restore_failed"
@@ -4254,42 +4254,42 @@ async def test_reconfigure_migrate_restore_failure(
     assert description_placeholders["file_url"]
     assert description_placeholders["file_name"]
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "restore_nvm"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client.driver.controller.async_restore_nvm.call_count == 2
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "restore_failed"
 
-    hass.config_entries.flow.async_abort(result["flow_id"])
+    menuai.config_entries.flow.async_abort(result["flow_id"])
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
     assert "keep_old_devices" not in entry.data
 
 
 async def test_get_driver_failure_intent_migrate(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
 ) -> None:
     """Test get driver failure in intent migrate step."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
@@ -4299,7 +4299,7 @@ async def test_get_driver_failure_intent_migrate(
 
 
 async def test_get_driver_failure_instruct_unplug(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
@@ -4316,46 +4316,46 @@ async def test_get_driver_failure_instruct_unplug(
         side_effect=mock_backup_nvm_raw
     )
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "config_entry_not_loaded"
 
 
 async def test_hard_reset_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
     client: MagicMock,
 ) -> None:
     """Test hard reset failure."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
 
@@ -4370,42 +4370,42 @@ async def test_hard_reset_failure(
         side_effect=FailedCommand("test_error", "unknown_error")
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reset_failed"
 
 
 async def test_choose_serial_port_usb_ports_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
     client: MagicMock,
 ) -> None:
     """Test choose serial port usb ports failure."""
     entry = integration
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry, unique_id="1234", data={**entry.data, "use_addon": True}
     )
 
@@ -4424,56 +4424,56 @@ async def test_choose_serial_port_usb_ports_failure(
 
     client.driver.async_hard_reset = AsyncMock(side_effect=mock_reset_controller)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_migrate"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "intent_migrate"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "backup_nvm"
 
     with patch("pathlib.Path.write_bytes") as mock_file:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert client.driver.controller.async_backup_nvm_raw.call_count == 1
         assert mock_file.call_count == 1
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "instruct_unplug"
     assert entry.state is config_entries.ConfigEntryState.NOT_LOADED
 
     with patch(
-        "homeassistant.components.zwave_js.config_flow.async_get_usb_ports",
+        "menuai.components.zwave_js.config_flow.async_get_usb_ports",
         side_effect=OSError("test_error"),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "usb_ports_failed"
 
 
 @pytest.mark.usefixtures("supervisor", "addon_installed")
 async def test_configure_addon_usb_ports_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
 ) -> None:
     """Test configure addon usb ports failure."""
     entry = integration
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_reconfigure"}
     )
 
@@ -4481,10 +4481,10 @@ async def test_configure_addon_usb_ports_failure(
     assert result["step_id"] == "on_supervisor_reconfigure"
 
     with patch(
-        "homeassistant.components.zwave_js.config_flow.async_get_usb_ports",
+        "menuai.components.zwave_js.config_flow.async_get_usb_ports",
         side_effect=OSError("test_error"),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"use_addon": True}
         )
         assert result["type"] is FlowResultType.ABORT
@@ -4521,20 +4521,20 @@ async def test_get_usb_ports_sorting() -> None:
 
 @pytest.mark.usefixtures("supervisor", "addon_not_installed", "addon_info")
 async def test_intent_recommended_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_addon: AsyncMock,
     start_addon: AsyncMock,
     set_addon_options: AsyncMock,
 ) -> None:
     """Test the intent_recommended step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "installation_type"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_recommended"}
     )
 
@@ -4542,9 +4542,9 @@ async def test_intent_recommended_user(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_zwave_js")
 
@@ -4560,7 +4560,7 @@ async def test_intent_recommended_user(
     assert data_schema.schema.get(CONF_LR_S2_ACCESS_CONTROL_KEY) is None
     assert data_schema.schema.get(CONF_LR_S2_AUTHENTICATED_KEY) is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USB_PATH: "/test",
@@ -4587,16 +4587,16 @@ async def test_intent_recommended_user(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 
@@ -4637,12 +4637,12 @@ async def test_intent_recommended_user(
                 manufacturer="Nabu Casa",
             ),
             "/dev/zwa2",
-            "Home Assistant Connect ZWA-2",
+            "MenuAI Connect ZWA-2",
         ),
     ],
 )
 async def test_recommended_usb_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_addon: AsyncMock,
     mock_usb_serial_by_id: MagicMock,
     set_addon_options: AsyncMock,
@@ -4652,7 +4652,7 @@ async def test_recommended_usb_discovery(
     discovery_name: str,
 ) -> None:
     """Test usb discovery success path."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USB},
         data=usb_discovery_info,
@@ -4663,7 +4663,7 @@ async def test_recommended_usb_discovery(
     assert result["step_id"] == "installation_type"
     assert result["menu_options"] == ["intent_recommended", "intent_custom"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "intent_recommended"}
     )
 
@@ -4671,9 +4671,9 @@ async def test_recommended_usb_discovery(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_zwave_js")
 
@@ -4697,16 +4697,16 @@ async def test_recommended_usb_discovery(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.async_setup", return_value=True
+            "menuai.components.zwave_js.async_setup", return_value=True
         ) as mock_setup,
         patch(
-            "homeassistant.components.zwave_js.async_setup_entry",
+            "menuai.components.zwave_js.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        await hass.async_block_till_done()
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_zwave_js")
 

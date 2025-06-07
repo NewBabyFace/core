@@ -22,14 +22,14 @@ from async_upnp_client.ssdp import (
 from async_upnp_client.ssdp_listener import SsdpDevice, SsdpDeviceTracker, SsdpListener
 from async_upnp_client.utils import CaseInsensitiveDict
 
-from homeassistant import config_entries
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, MATCH_ALL
-from homeassistant.core import HassJob, HomeAssistant, callback as core_callback
-from homeassistant.helpers import discovery_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.service_info.ssdp import (
+from menuai import config_entries
+from menuai.const import EVENT_menuai_STOP, MATCH_ALL
+from menuai.core import menuaiJob, menuai, callback as core_callback
+from menuai.helpers import discovery_flow
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.service_info.ssdp import (
     ATTR_NT as _ATTR_NT,
     ATTR_ST as _ATTR_ST,
     ATTR_UPNP_DEVICE_TYPE as _ATTR_UPNP_DEVICE_TYPE,
@@ -38,7 +38,7 @@ from homeassistant.helpers.service_info.ssdp import (
     ATTR_UPNP_UDN as _ATTR_UPNP_UDN,
     SsdpServiceInfo as _SsdpServiceInfo,
 )
-from homeassistant.util.async_ import create_eager_task
+from menuai.util.async_ import create_eager_task
 
 from .common import async_build_source_set
 from .const import DOMAIN
@@ -60,7 +60,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 SsdpChange = Enum("SsdpChange", "ALIVE BYEBYE UPDATE")
-type SsdpHassJobCallback = HassJob[
+type SsdpmenuaiJobCallback = menuaiJob[
     [_SsdpServiceInfo, SsdpChange], Coroutine[Any, Any, None] | None
 ]
 
@@ -75,14 +75,14 @@ SSDP_SOURCE_SSDP_CHANGE_MAPPING: Mapping[SsdpSource, SsdpChange] = {
 
 @core_callback
 def _async_process_callbacks(
-    hass: HomeAssistant,
-    callbacks: list[SsdpHassJobCallback],
+    menuai: menuai,
+    callbacks: list[SsdpmenuaiJobCallback],
     discovery_info: _SsdpServiceInfo,
     ssdp_change: SsdpChange,
 ) -> None:
     for callback in callbacks:
         try:
-            hass.async_run_hass_job(
+            menuai.async_run_menuai_job(
                 callback, discovery_info, ssdp_change, background=True
             )
         except Exception:
@@ -148,14 +148,14 @@ class Scanner:
     """Class to manage SSDP searching and SSDP advertisements."""
 
     def __init__(
-        self, hass: HomeAssistant, integration_matchers: IntegrationMatchers
+        self, menuai: menuai, integration_matchers: IntegrationMatchers
     ) -> None:
         """Initialize class."""
-        self.hass = hass
+        self.menuai = menuai
         self._cancel_scan: Callable[[], None] | None = None
         self._ssdp_listeners: list[SsdpListener] = []
         self._device_tracker = SsdpDeviceTracker()
-        self._callbacks: list[tuple[SsdpHassJobCallback, dict[str, str]]] = []
+        self._callbacks: list[tuple[SsdpmenuaiJobCallback, dict[str, str]]] = []
         self._description_cache: DescriptionCache | None = None
         self.integration_matchers = integration_matchers
 
@@ -165,7 +165,7 @@ class Scanner:
         return list(self._device_tracker.devices.values())
 
     async def async_register_callback(
-        self, callback: SsdpHassJobCallback, match_dict: dict[str, str] | None = None
+        self, callback: SsdpmenuaiJobCallback, match_dict: dict[str, str] | None = None
     ) -> Callable[[], None]:
         """Register a callback."""
         if match_dict is None:
@@ -179,7 +179,7 @@ class Scanner:
             for headers in ssdp_device.all_combined_headers.values():
                 if _async_headers_match(headers, lower_match_dict):
                     _async_process_callbacks(
-                        self.hass,
+                        self.menuai,
                         [callback],
                         await self._async_headers_to_discovery_info(
                             ssdp_device, headers
@@ -234,19 +234,19 @@ class Scanner:
 
     async def async_start(self) -> None:
         """Start the scanners."""
-        session = async_get_clientsession(self.hass, verify_ssl=False)
+        session = async_get_clientsession(self.menuai, verify_ssl=False)
         requester = AiohttpSessionRequester(session, True, 10)
         self._description_cache = DescriptionCache(requester)
 
         await self._async_start_ssdp_listeners()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.async_stop)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self.async_stop)
         self._cancel_scan = async_track_time_interval(
-            self.hass, self.async_scan, SCAN_INTERVAL, name="SSDP scanner"
+            self.menuai, self.async_scan, SCAN_INTERVAL, name="SSDP scanner"
         )
 
         async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             config_entries.signal_discovered_config_entry_removed(DOMAIN),
             self._handle_config_entry_removed,
         )
@@ -257,7 +257,7 @@ class Scanner:
     async def _async_start_ssdp_listeners(self) -> None:
         """Start the SSDP Listeners."""
         # Devices are shared between all sources.
-        for source_ip in await async_build_source_set(self.hass):
+        for source_ip in await async_build_source_set(self.menuai):
             source_ip_str = str(source_ip)
             if source_ip.version == 6:
                 assert source_ip.scope_id is not None
@@ -302,7 +302,7 @@ class Scanner:
     def _async_get_matching_callbacks(
         self,
         combined_headers: CaseInsensitiveDict,
-    ) -> list[SsdpHassJobCallback]:
+    ) -> list[SsdpmenuaiJobCallback]:
         """Return a list of callbacks that match."""
         return [
             callback
@@ -327,7 +327,7 @@ class Scanner:
         _, info_desc = self._description_cache.peek_description_dict(location)
         if info_desc is None:
             # Fetch info desc in separate task and process from there.
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 self._ssdp_listener_process_callback_with_lookup(
                     ssdp_device, dst, source
                 ),
@@ -383,11 +383,11 @@ class Scanner:
         discovery_info = discovery_info_from_headers_and_description(
             ssdp_device, combined_headers, info_desc
         )
-        discovery_info.x_homeassistant_matching_domains = matching_domains
+        discovery_info.x_menuai_matching_domains = matching_domains
 
         if callbacks and not skip_callbacks:
             ssdp_change = SSDP_SOURCE_SSDP_CHANGE_MAPPING[source]
-            _async_process_callbacks(self.hass, callbacks, discovery_info, ssdp_change)
+            _async_process_callbacks(self.menuai, callbacks, discovery_info, ssdp_change)
 
         # Config flows should only be created for alive/update messages from alive devices
         if source == SsdpSource.ADVERTISEMENT_BYEBYE:
@@ -405,7 +405,7 @@ class Scanner:
         for domain in matching_domains:
             _LOGGER.debug("Discovered %s at %s", domain, ssdp_device.location)
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 domain,
                 {"source": config_entries.SOURCE_SSDP},
                 discovery_info,
@@ -416,14 +416,14 @@ class Scanner:
         self, byebye_discovery_info: _SsdpServiceInfo
     ) -> None:
         """Dismiss all discoveries for the given address."""
-        for flow in self.hass.config_entries.flow.async_progress_by_init_data_type(
+        for flow in self.menuai.config_entries.flow.async_progress_by_init_data_type(
             _SsdpServiceInfo,
             lambda service_info: bool(
                 service_info.ssdp_st == byebye_discovery_info.ssdp_st
                 and service_info.ssdp_location == byebye_discovery_info.ssdp_location
             ),
         ):
-            self.hass.config_entries.flow.async_abort(flow["flow_id"])
+            self.menuai.config_entries.flow.async_abort(flow["flow_id"])
 
     async def _async_get_description_dict(
         self, location: str | None

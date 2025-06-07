@@ -9,11 +9,11 @@ import subprocess
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from homeassistant.components.camera import Camera
-from homeassistant.const import CONF_FILE_PATH, CONF_NAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.camera import Camera
+from menuai.const import CONF_FILE_PATH, CONF_NAME, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_HORIZONTAL_FLIP,
@@ -43,7 +43,7 @@ def kill_raspistill(*args):
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -58,9 +58,9 @@ def setup_platform(
         _LOGGER.error("'raspistill' was not found")
         return
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, kill_raspistill)
+    menuai.bus.listen_once(EVENT_menuai_STOP, kill_raspistill)
 
-    setup_config = hass.data[DOMAIN]
+    setup_config = menuai.data[DOMAIN]
     file_path = setup_config[CONF_FILE_PATH]
 
     def delete_temp_file(*args):
@@ -75,10 +75,10 @@ def setup_platform(
         with NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
             file_path = temp_file.name
         setup_config[CONF_FILE_PATH] = file_path
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, delete_temp_file)
+        menuai.bus.listen_once(EVENT_menuai_STOP, delete_temp_file)
 
     # Check whether the file path has been whitelisted
-    elif not hass.config.is_allowed_path(file_path):
+    elif not menuai.config.is_allowed_path(file_path):
         _LOGGER.error("'%s' is not a whitelisted directory", file_path)
         return
 
@@ -133,7 +133,7 @@ class RaspberryCamera(Camera):
             cmd_args.append(str(device_info[CONF_OVERLAY_TIMESTAMP]))
 
         # The raspistill process started below must run "forever" in
-        # the background until killed when Home Assistant is stopped.
+        # the background until killed when MenuAI is stopped.
         # Therefore it must not be wrapped with "with", since that
         # waits for the subprocess to exit before continuing.
         subprocess.Popen(  # pylint: disable=consider-using-with

@@ -5,14 +5,14 @@ from unittest.mock import patch
 import librouteros
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.mikrotik.const import (
+from menuai import config_entries
+from menuai.components.mikrotik.const import (
     CONF_ARP_PING,
     CONF_DETECTION_TIME,
     CONF_FORCE_DHCP,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -20,8 +20,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -71,16 +71,16 @@ def mock_api_connection_error():
         yield
 
 
-async def test_flow_works(hass: HomeAssistant, api) -> None:
+async def test_flow_works(menuai: menuai, api) -> None:
     """Test config flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
 
@@ -92,20 +92,20 @@ async def test_flow_works(hass: HomeAssistant, api) -> None:
     assert result["data"][CONF_PORT] == 8278
 
 
-async def test_options(hass: HomeAssistant, api) -> None:
+async def test_options(menuai: menuai, api) -> None:
     """Test updating options."""
     entry = MockConfigEntry(domain=DOMAIN, data=DEMO_CONFIG_ENTRY)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "device_tracker"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_DETECTION_TIME: 30,
@@ -122,42 +122,42 @@ async def test_options(hass: HomeAssistant, api) -> None:
     }
 
 
-async def test_host_already_configured(hass: HomeAssistant, auth_error) -> None:
+async def test_host_already_configured(menuai: menuai, auth_error) -> None:
     """Test host already configured."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=DEMO_CONFIG_ENTRY)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_connection_error(hass: HomeAssistant, conn_error) -> None:
+async def test_connection_error(menuai: menuai, conn_error) -> None:
     """Test error when connection is unsuccessful."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_wrong_credentials(hass: HomeAssistant, auth_error) -> None:
+async def test_wrong_credentials(menuai: menuai, auth_error) -> None:
     """Test error when credentials are wrong."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
 
@@ -168,15 +168,15 @@ async def test_wrong_credentials(hass: HomeAssistant, auth_error) -> None:
     }
 
 
-async def test_reauth_success(hass: HomeAssistant, api) -> None:
+async def test_reauth_success(menuai: menuai, api) -> None:
     """Test we can reauth."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=DEMO_USER_INPUT,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -185,7 +185,7 @@ async def test_reauth_success(hass: HomeAssistant, api) -> None:
         CONF_USERNAME: "username",
     }
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PASSWORD: "test-password",
@@ -196,20 +196,20 @@ async def test_reauth_success(hass: HomeAssistant, api) -> None:
     assert result2["reason"] == "reauth_successful"
 
 
-async def test_reauth_failed(hass: HomeAssistant, auth_error) -> None:
+async def test_reauth_failed(menuai: menuai, auth_error) -> None:
     """Test reauth fails due to wrong password."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=DEMO_USER_INPUT,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PASSWORD: "test-wrong-password",
@@ -222,20 +222,20 @@ async def test_reauth_failed(hass: HomeAssistant, auth_error) -> None:
     }
 
 
-async def test_reauth_failed_conn_error(hass: HomeAssistant, conn_error) -> None:
+async def test_reauth_failed_conn_error(menuai: menuai, conn_error) -> None:
     """Test reauth failed due to connection error."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=DEMO_USER_INPUT,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PASSWORD: "test-wrong-password",

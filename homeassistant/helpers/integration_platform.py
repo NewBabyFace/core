@@ -10,21 +10,21 @@ import logging
 from types import ModuleType
 from typing import Any
 
-from homeassistant.const import EVENT_COMPONENT_LOADED
-from homeassistant.core import Event, HassJob, HomeAssistant, callback
-from homeassistant.loader import (
+from menuai.const import EVENT_COMPONENT_LOADED
+from menuai.core import Event, menuaiJob, menuai, callback
+from menuai.loader import (
     Integration,
     async_get_integrations,
     async_get_loaded_integration,
     async_register_preload_platform,
-    bind_hass,
+    bind_menuai,
 )
-from homeassistant.setup import ATTR_COMPONENT, EventComponentLoaded
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.logging import catch_log_exception
+from menuai.setup import ATTR_COMPONENT, EventComponentLoaded
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.logging import catch_log_exception
 
 _LOGGER = logging.getLogger(__name__)
-DATA_INTEGRATION_PLATFORMS: HassKey[list[IntegrationPlatform]] = HassKey(
+DATA_INTEGRATION_PLATFORMS: menuaiKey[list[IntegrationPlatform]] = menuaiKey(
     "integration_platforms"
 )
 
@@ -34,13 +34,13 @@ class IntegrationPlatform:
     """An integration platform."""
 
     platform_name: str
-    process_job: HassJob[[HomeAssistant, str, Any], Awaitable[None] | None]
+    process_job: menuaiJob[[menuai, str, Any], Awaitable[None] | None]
     seen_components: set[str]
 
 
 @callback
 def _async_integration_platform_component_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_platforms: list[IntegrationPlatform],
     event: Event[EventComponentLoaded],
 ) -> None:
@@ -48,7 +48,7 @@ def _async_integration_platform_component_loaded(
     if "." in (component_name := event.data[ATTR_COMPONENT]):
         return
 
-    integration = async_get_loaded_integration(hass, component_name)
+    integration = async_get_loaded_integration(menuai, component_name)
     # First filter out platforms that the integration already processed.
     integration_platforms_by_name: dict[str, IntegrationPlatform] = {}
     for integration_platform in integration_platforms:
@@ -79,7 +79,7 @@ def _async_integration_platform_component_loaded(
 
     if can_use_cache:
         _process_integration_platforms(
-            hass,
+            menuai,
             integration,
             platforms,
             integration_platforms_by_name,
@@ -88,16 +88,16 @@ def _async_integration_platform_component_loaded(
 
     # At least one of the platforms is not loaded, we need to load them
     # so we have to fall back to creating a task.
-    hass.async_create_task_internal(
+    menuai.async_create_task_internal(
         _async_process_integration_platforms_for_component(
-            hass, integration, platforms_that_exist, integration_platforms_by_name
+            menuai, integration, platforms_that_exist, integration_platforms_by_name
         ),
         eager_start=True,
     )
 
 
 async def _async_process_integration_platforms_for_component(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: Integration,
     platforms_that_exist: list[str],
     integration_platforms_by_name: dict[str, IntegrationPlatform],
@@ -114,7 +114,7 @@ async def _async_process_integration_platforms_for_component(
         return
 
     if futures := _process_integration_platforms(
-        hass,
+        menuai,
         integration,
         platforms,
         integration_platforms_by_name,
@@ -124,7 +124,7 @@ async def _async_process_integration_platforms_for_component(
 
 @callback
 def _process_integration_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: Integration,
     platforms: dict[str, ModuleType],
     integration_platforms_by_name: dict[str, IntegrationPlatform],
@@ -138,9 +138,9 @@ def _process_integration_platforms(
         for platform_name, platform in platforms.items()
         if (integration_platform := integration_platforms_by_name[platform_name])
         and (
-            future := hass.async_run_hass_job(
+            future := menuai.async_run_menuai_job(
                 integration_platform.process_job,
-                hass,
+                menuai,
                 integration.domain,
                 platform,
             )
@@ -153,34 +153,34 @@ def _format_err(name: str, platform_name: str, *args: Any) -> str:
     return f"Exception in {name} when processing platform '{platform_name}': {args}"
 
 
-@bind_hass
+@bind_menuai
 async def async_process_integration_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform_name: str,
     # Any = platform.
-    process_platform: Callable[[HomeAssistant, str, Any], Awaitable[None] | None],
+    process_platform: Callable[[menuai, str, Any], Awaitable[None] | None],
     wait_for_platforms: bool = False,
 ) -> None:
     """Process a specific platform for all current and future loaded integrations."""
-    if DATA_INTEGRATION_PLATFORMS not in hass.data:
-        integration_platforms = hass.data[DATA_INTEGRATION_PLATFORMS] = []
-        hass.bus.async_listen(
+    if DATA_INTEGRATION_PLATFORMS not in menuai.data:
+        integration_platforms = menuai.data[DATA_INTEGRATION_PLATFORMS] = []
+        menuai.bus.async_listen(
             EVENT_COMPONENT_LOADED,
             partial(
                 _async_integration_platform_component_loaded,
-                hass,
+                menuai,
                 integration_platforms,
             ),
         )
     else:
-        integration_platforms = hass.data[DATA_INTEGRATION_PLATFORMS]
+        integration_platforms = menuai.data[DATA_INTEGRATION_PLATFORMS]
 
     # Tell the loader that it should try to pre-load the integration
     # for any future components that are loaded so we can reduce the
     # amount of import executor usage.
-    async_register_preload_platform(hass, platform_name)
-    top_level_components = hass.config.top_level_components.copy()
-    process_job = HassJob(
+    async_register_preload_platform(menuai, platform_name)
+    top_level_components = menuai.config.top_level_components.copy()
+    process_job = menuaiJob(
         catch_log_exception(
             process_platform,
             partial(_format_err, str(process_platform), platform_name),
@@ -204,12 +204,12 @@ async def async_process_integration_platforms(
     # 2. We want the behavior to be the same as if the integration that has
     #    the integration platform is loaded after the platform is processed.
     #
-    # We use hass.async_create_task instead of asyncio.create_task because
+    # We use menuai.async_create_task instead of asyncio.create_task because
     # we want to make sure that startup waits for the task to complete.
     #
-    future = hass.async_create_task_internal(
+    future = menuai.async_create_task_internal(
         _async_process_integration_platforms(
-            hass, platform_name, top_level_components.copy(), process_job
+            menuai, platform_name, top_level_components.copy(), process_job
         ),
         eager_start=True,
     )
@@ -218,13 +218,13 @@ async def async_process_integration_platforms(
 
 
 async def _async_process_integration_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform_name: str,
     top_level_components: set[str],
-    process_job: HassJob,
+    process_job: menuaiJob,
 ) -> None:
     """Process integration platforms for a component."""
-    integrations = await async_get_integrations(hass, top_level_components)
+    integrations = await async_get_integrations(menuai, top_level_components)
     loaded_integrations: list[Integration] = [
         integration
         for integration in integrations.values()
@@ -248,8 +248,8 @@ async def _async_process_integration_platforms(
             )
             continue
 
-        if future := hass.async_run_hass_job(
-            process_job, hass, integration.domain, platform
+        if future := menuai.async_run_menuai_job(
+            process_job, menuai, integration.domain, platform
         ):
             futures.append(future)
 

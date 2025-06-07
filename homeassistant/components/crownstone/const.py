@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 # Platforms
 DOMAIN: Final = "crownstone"

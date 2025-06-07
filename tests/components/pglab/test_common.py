@@ -2,7 +2,7 @@
 
 import json
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import async_fire_mqtt_message
 
@@ -35,7 +35,7 @@ def get_device_discovery_payload(
 
 
 async def send_discovery_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     payload: dict[str, any] | None,
 ) -> None:
     """Send the discovery message to make E-BOARD device discoverable."""
@@ -43,8 +43,8 @@ async def send_discovery_message(
     topic = "pglab/discovery/E-BOARD-DD53AC85/config"
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         topic,
         json.dumps(payload if payload is not None else ""),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

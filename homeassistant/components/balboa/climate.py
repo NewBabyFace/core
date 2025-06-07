@@ -8,20 +8,20 @@ from typing import Any
 from pybalboa import SpaClient, SpaControl
 from pybalboa.enums import HeatMode, HeatState, TemperatureUnit
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_HALVES,
     PRECISION_WHOLE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BalboaConfigEntry
 from .const import DOMAIN
@@ -45,7 +45,7 @@ TEMPERATURE_UNIT_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BalboaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -98,7 +98,7 @@ class BalboaClimateEntity(BalboaEntity, ClimateEntity):
     @property
     def precision(self) -> float:
         """Return the precision of the system."""
-        if self.hass.config.units.temperature_unit == UnitOfTemperature.CELSIUS:
+        if self.menuai.config.units.temperature_unit == UnitOfTemperature.CELSIUS:
             return PRECISION_HALVES
         return PRECISION_WHOLE
 

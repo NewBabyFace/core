@@ -6,15 +6,15 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config as hass_config
-from homeassistant.components import notify
-from homeassistant.components.smtp.const import DOMAIN
-from homeassistant.components.smtp.notify import MailNotificationService
-from homeassistant.const import SERVICE_RELOAD
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.setup import async_setup_component
-from homeassistant.util.ssl import create_client_context
+from menuai import config as menuai_config
+from menuai.components import notify
+from menuai.components.smtp.const import DOMAIN
+from menuai.components.smtp.notify import MailNotificationService
+from menuai.const import SERVICE_RELOAD
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.setup import async_setup_component
+from menuai.util.ssl import create_client_context
 
 from tests.common import get_fixture_path
 
@@ -27,14 +27,14 @@ class MockSMTP(MailNotificationService):
         return msg.as_string(), recipients
 
 
-async def test_reload_notify(hass: HomeAssistant) -> None:
+async def test_reload_notify(menuai: menuai) -> None:
     """Verify we can reload the notify service."""
 
     with patch(
-        "homeassistant.components.smtp.notify.MailNotificationService.connection_is_valid"
+        "menuai.components.smtp.notify.MailNotificationService.connection_is_valid"
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             notify.DOMAIN,
             {
                 notify.DOMAIN: [
@@ -47,27 +47,27 @@ async def test_reload_notify(hass: HomeAssistant) -> None:
                 ]
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.services.has_service(notify.DOMAIN, DOMAIN)
+    assert menuai.services.has_service(notify.DOMAIN, DOMAIN)
 
     yaml_path = get_fixture_path("configuration.yaml", "smtp")
     with (
-        patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path),
+        patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path),
         patch(
-            "homeassistant.components.smtp.notify.MailNotificationService.connection_is_valid"
+            "menuai.components.smtp.notify.MailNotificationService.connection_is_valid"
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert not hass.services.has_service(notify.DOMAIN, DOMAIN)
-    assert hass.services.has_service(notify.DOMAIN, "smtp_reloaded")
+    assert not menuai.services.has_service(notify.DOMAIN, DOMAIN)
+    assert menuai.services.has_service(notify.DOMAIN, "smtp_reloaded")
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def message():
         "testuser",
         "testpass",
         ["recip1@example.com", "testrecip@test.com"],
-        "Home Assistant",
+        "MenuAI",
         0,
         True,
         create_client_context(),
@@ -139,12 +139,12 @@ EMAIL_DATA = [
     ],
 )
 def test_send_message(
-    hass: HomeAssistant, message_data, data, content_type, message
+    menuai: menuai, message_data, data, content_type, message
 ) -> None:
     """Verify if we can send messages of all types correctly."""
     sample_email = "<mock@mock>"
-    message.hass = hass
-    hass.config.allowlist_external_dirs.add(Path("tests/testing_config").resolve())
+    message.menuai = menuai
+    menuai.config.allowlist_external_dirs.add(Path("tests/testing_config").resolve())
     with patch("email.utils.make_msgid", return_value=sample_email):
         result, _ = message.send_message(message_data, data=data)
         assert content_type in result
@@ -161,7 +161,7 @@ def test_send_message(
     ],
 )
 def test_sending_insecure_files_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     message_data,
     data,
     content_type,
@@ -169,7 +169,7 @@ def test_sending_insecure_files_fails(
 ) -> None:
     """Verify if we cannot send messages with insecure attachments."""
     sample_email = "<mock@mock>"
-    message.hass = hass
+    message.menuai = menuai
     with (
         patch("email.utils.make_msgid", return_value=sample_email),
         pytest.raises(ServiceValidationError) as exc,
@@ -185,16 +185,16 @@ def test_sending_insecure_files_fails(
     assert exc.value.translation_placeholders["file_name"] == "test.jpg"
 
 
-def test_send_text_message(hass: HomeAssistant, message) -> None:
+def test_send_text_message(menuai: menuai, message) -> None:
     """Verify if we can send simple text message."""
     expected = (
         '^Content-Type: text/plain; charset="us-ascii"\n'
         "MIME-Version: 1.0\n"
         "Content-Transfer-Encoding: 7bit\n"
-        "Subject: Home Assistant\n"
+        "Subject: MenuAI\n"
         "To: recip1@example.com,testrecip@test.com\n"
-        "From: Home Assistant <test@test.com>\n"
-        "X-Mailer: Home Assistant\n"
+        "From: MenuAI <test@test.com>\n"
+        "X-Mailer: MenuAI\n"
         "Date: [^\n]+\n"
         "Message-Id: <[^@]+@[^>]+>\n"
         "\n"
@@ -218,7 +218,7 @@ def test_send_text_message(hass: HomeAssistant, message) -> None:
         "Verify email recipient can be overwritten by target arg.",
     ],
 )
-def test_send_target_message(target, hass: HomeAssistant, message) -> None:
+def test_send_target_message(target, menuai: menuai, message) -> None:
     """Verify if we can send email to correct recipient."""
     sample_email = "<mock@mock>"
     message_data = "Test msg"
